@@ -49,7 +49,11 @@ column_rename_for_filter = {
     'resultsQualificationPositionNumber': 'Qual. Pos.', 
     'q1End': 'Out at Q1', 
     'q2End': 'Out at Q2', 
-    'q3Top10': 'Q3 Top 10'}
+    'q3Top10': 'Q3 Top 10',
+    'numberOfStops': 'Number of Stops',
+    'averageStopTime': 'Average Stop Time',
+    'totalStopTime': 'Total Stop Time'
+    }
 
 DATA_DIR = 'data_files/'
 
@@ -174,7 +178,13 @@ columns_to_display = {'grandPrixYear': st.column_config.NumberColumn("Year", for
         "Qual. Pos.", format="%d", min_value=1, max_value=20, step=1, default=1),
     'q1End': st.column_config.CheckboxColumn("Out at Q1"),
     'q2End': st.column_config.CheckboxColumn("Out at Q2"),
-    'q3Top10': st.column_config.CheckboxColumn("Q3 Top 10")
+    'q3Top10': st.column_config.CheckboxColumn("Q3 Top 10"),
+    'numberOfStops': st.column_config.NumberColumn(
+        "Number of Stops", format="%d", min_value=0, max_value=5, step=1, default=0),
+    'averageStopTime': st.column_config.NumberColumn(
+        "Avg Stop Time (s)", format="%d", min_value=0, max_value=20, step=1, default=0),
+    'totalStopTime': st.column_config.NumberColumn(
+        "Total Stop Time (s)", format="%d", min_value=0, max_value=100, step=1, default=0)
 }
 
 next_race_columns_to_display = {
@@ -190,16 +200,21 @@ next_race_columns_to_display = {
 @st.cache_data
 def load_data(nrows):
     fullResults = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t', nrows=nrows, usecols=['grandPrixYear', 'grandPrixName', 'resultsDriverName', 'resultsPodium', 'resultsTop5', 'resultsTop10', 'constructorName',  'resultsStartingGridPositionNumber', 'resultsFinalPositionNumber', 
-    'positionsGained', 'short_date', 'raceId_results', 'grandPrixRaceId', 'DNF', 'averagePracticePosition', 'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'q1End', 'q2End', 'q3Top10'])
+    'positionsGained', 'short_date', 'raceId_results', 'grandPrixRaceId', 'DNF', 'averagePracticePosition', 'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'q1End', 'q2End', 'q3Top10', 'resultsDriverId'])
+    
+    pitStops = pd.read_csv(path.join(DATA_DIR, 'f1PitStopsData_Grouped.csv'), sep='\t', nrows=nrows, usecols=['raceId', 'driverId', 'constructorId', 'numberOfStops', 'averageStopTime', 'totalStopTime'])
+
+    fullResults = pd.merge(fullResults, pitStops, left_on=['raceId_results', 'resultsDriverId'], right_on=['raceId', 'driverId'], how='left', suffixes=['_results', '_pitStops'])
     
     return fullResults
 
 data = load_data(10000)
+print(data.columns)
 
 data['averagePracticePosition'] = data['averagePracticePosition'].round(2)
 
 column_names = data.columns.tolist()
-column_names.sort()
+#column_names.sort()
 
 # Convert columns to appropriate types to allow for NaN values
 data['resultsStartingGridPositionNumber'] = data['resultsStartingGridPositionNumber'].astype('Int64')
@@ -209,6 +224,9 @@ data['averagePracticePosition'] = data['averagePracticePosition'].astype('Float6
 data['lastFPPositionNumber'] = data['lastFPPositionNumber'].astype('Int64')
 data['resultsQualificationPositionNumber'] = data['resultsQualificationPositionNumber'].astype('Int64')
 data['short_date'] = pd.to_datetime(data['short_date'])
+data['numberOfStops'] = data['numberOfStops'].astype('Int64')
+data['averageStopTime'] = data['averageStopTime'].astype('Float64')
+data['totalStopTime'] = data['totalStopTime'].astype('Float64')
 
 if st.checkbox('Filter Results'):
     # Create a dictionary to store selected filters for multiple columns
@@ -316,8 +334,10 @@ if st.checkbox('Filter Results'):
     # Display the filtered results
 
     st.write(f"Number of filtered results: {len(filtered_data)}")
+    filtered_data = filtered_data.sort_values(by=['grandPrixYear', 'resultsFinalPositionNumber'], ascending=[False, True])
     st.dataframe(filtered_data, column_config=columns_to_display, column_order=['grandPrixYear', 'grandPrixName', 'constructorName', 'resultsDriverName', 'resultsPodium', 'resultsTop5',
-         'resultsTop10','resultsStartingGridPositionNumber','resultsFinalPositionNumber','positionsGained', 'DNF', 'resultsQualificationPositionNumber', 'q1End', 'q2End', 'q3Top10', 'averagePracticePosition',  'lastFPPositionNumber'], hide_index=True, width=2400, height=600)
+         'resultsTop10','resultsStartingGridPositionNumber','resultsFinalPositionNumber','positionsGained', 'DNF', 'resultsQualificationPositionNumber',
+           'q1End', 'q2End', 'q3Top10', 'averagePracticePosition',  'lastFPPositionNumber','numberOfStops', 'averageStopTime', 'totalStopTime'], hide_index=True, width=2400, height=600)
 
     ##st.button("Clear multiselect", on_click=clear_multi)
 
