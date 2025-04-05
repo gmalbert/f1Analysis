@@ -11,7 +11,7 @@ from pandas.api.types import (
     is_object_dtype,
     is_bool_dtype
 )
-import re
+#import re
 
 #variable_to_change = "helloWorld123"
 #variable_changed = re.sub( r"([A-Z])|([0-9]+)", r" \1\2", variable_to_change).strip()
@@ -20,6 +20,16 @@ import re
 
 ##### to do: modify variable names for display
 
+def reset_filters():
+    # Assuming you have filters stored in session state
+    for key in st.session_state.keys():
+        if key.startswith('filter_'):
+            st.session_state[key] = None  # or any default value
+
+#def reset():
+#    st.session_state.selection = ' All'
+
+#st.sidebar.button('Reset', on_click=reset_filters())
 
 column_rename_for_filter = {
     'constructorName': 'Constructor', 
@@ -32,7 +42,14 @@ column_rename_for_filter = {
     'resultsStartingGridPositionNumber': 'Starting Position',
     'resultsTop10': 'Top 10',
     'resultsTop5': 'Top 5',
-    'short_date': 'Race Date'}
+    'short_date': 'Race Date',
+    'DNF' : 'DNF', 
+    'averagePracticePosition': 'Average Practice Pos.', 
+    'lastFPPositionNumber': 'Last FP Pos.', 
+    'resultsQualificationPositionNumber': 'Qual. Pos.', 
+    'q1End': 'Out at Q1', 
+    'q2End': 'Out at Q2', 
+    'q3Top10': 'Q3 Top 10'}
 
 DATA_DIR = 'data_files/'
 
@@ -130,7 +147,7 @@ weather_columns_to_display = {
 }
 
 st.image(path.join(DATA_DIR, 'formula1_logo.png'))
-st.title(f'F1 Races from {raceNoEarlierThan} to {current_year-1}')
+st.title(f'F1 Races from {raceNoEarlierThan} to {current_year}')
 
 columns_to_display = {'grandPrixYear': st.column_config.NumberColumn("Year", format="%d"),
     'grandPrixName': st.column_config.TextColumn("Grand Prix"),
@@ -147,7 +164,17 @@ columns_to_display = {'grandPrixYear': st.column_config.NumberColumn("Year", for
         "Positions Gained", format="%d", min_value=-10, max_value=10, step=1, default=0),
     'short_date': None,
     'raceId_results': None,
-    'grandPrixRaceId': None
+    'grandPrixRaceId': None,
+    'DNF': st.column_config.CheckboxColumn("DNF"),
+    'averagePracticePosition': st.column_config.NumberColumn(
+        "Avg Practice Pos.", format="%d", min_value=1, max_value=20, step=1, default=1),
+    'lastFPPositionNumber': st.column_config.NumberColumn(
+        "Last FP Pos.", format="%d", min_value=1, max_value=20, step=1, default=1),
+    'resultsQualificationPositionNumber': st.column_config.NumberColumn(
+        "Qual. Pos.", format="%d", min_value=1, max_value=20, step=1, default=1),
+    'q1End': st.column_config.CheckboxColumn("Out at Q1"),
+    'q2End': st.column_config.CheckboxColumn("Out at Q2"),
+    'q3Top10': st.column_config.CheckboxColumn("Q3 Top 10")
 }
 
 next_race_columns_to_display = {
@@ -163,11 +190,13 @@ next_race_columns_to_display = {
 @st.cache_data
 def load_data(nrows):
     fullResults = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t', nrows=nrows, usecols=['grandPrixYear', 'grandPrixName', 'resultsDriverName', 'resultsPodium', 'resultsTop5', 'resultsTop10', 'constructorName',  'resultsStartingGridPositionNumber', 'resultsFinalPositionNumber', 
-    'positionsGained', 'short_date', 'raceId_results', 'grandPrixRaceId'])
+    'positionsGained', 'short_date', 'raceId_results', 'grandPrixRaceId', 'DNF', 'averagePracticePosition', 'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'q1End', 'q2End', 'q3Top10'])
     
     return fullResults
 
 data = load_data(10000)
+
+data['averagePracticePosition'] = data['averagePracticePosition'].round(2)
 
 column_names = data.columns.tolist()
 column_names.sort()
@@ -176,6 +205,9 @@ column_names.sort()
 data['resultsStartingGridPositionNumber'] = data['resultsStartingGridPositionNumber'].astype('Int64')
 data['resultsFinalPositionNumber'] = data['resultsFinalPositionNumber'].astype('Int64')
 data['positionsGained'] = data['positionsGained'].astype('Int64')
+data['averagePracticePosition'] = data['averagePracticePosition'].astype('Float64')
+data['lastFPPositionNumber'] = data['lastFPPositionNumber'].astype('Int64')
+data['resultsQualificationPositionNumber'] = data['resultsQualificationPositionNumber'].astype('Int64')
 data['short_date'] = pd.to_datetime(data['short_date'])
 
 if st.checkbox('Filter Results'):
@@ -184,17 +216,17 @@ if st.checkbox('Filter Results'):
 
     # Iterate over the columns to display and create a filter for each
     for column in column_names:
+
+        for old_column, new_column in column_rename_for_filter.items():
+            if column == old_column: 
+                column_friendly_name = new_column
         
-        if is_numeric_dtype(data[column]) and (data[column].dtype in ('np.int64', 'np.float64', 'Int64', 'int64') ):
+        if is_numeric_dtype(data[column]) and (data[column].dtype in ('np.int64', 'np.float64', 'Int64', 'int64', 'Float64') ):
 
             # Do not display if the column is in the exclusion list noted at the top of the file
             if column not in exclusionList:
-                min_val, max_val = int(data[column].min()), int(data[column].max())
-                
-                for old_column, new_column in column_rename_for_filter.items():
-                    if column == old_column:
-                        column_friendly_name = new_column
-                
+                min_val, max_val = int(data[column].min()), int(data[column].max())           
+                                
                 selected_range = st.sidebar.slider(
                     f"Filter by {column_friendly_name}",
                     min_value=min_val,
@@ -217,10 +249,6 @@ if st.checkbox('Filter Results'):
             min_val = formatted_min_val
             max_val = formatted_max_val
 
-            for old_column, new_column in column_rename_for_filter.items():
-                    if column == old_column:
-                        column_friendly_name = new_column
-
             selected_range = st.sidebar.slider(
                 f"Filter by {column_friendly_name}",
                 min_value=min_val,
@@ -233,12 +261,9 @@ if st.checkbox('Filter Results'):
 
         elif data[column].dtype ==bool:
             
-            for old_column, new_column in column_rename_for_filter.items():
-                    if column == old_column:
-                        column_friendly_name = new_column
-            
+           
             selected_value = st.sidebar.checkbox(
-                f"Show only {column_friendly_name} = True",
+                f"{column_friendly_name}",
                 value=False,
                 key=f"checkbox_filter_{column}"
             )
@@ -289,8 +314,16 @@ if st.checkbox('Filter Results'):
             print(f"Length of filtered data after exact match filter on {column}: {len(filtered_data)}")
 
     # Display the filtered results
+
     st.write(f"Number of filtered results: {len(filtered_data)}")
-    st.dataframe(filtered_data, column_config=columns_to_display, hide_index=True, width=2400, height=600)
+    st.dataframe(filtered_data, column_config=columns_to_display, column_order=['grandPrixYear', 'grandPrixName', 'constructorName', 'resultsDriverName', 'resultsPodium', 'resultsTop5',
+         'resultsTop10','resultsStartingGridPositionNumber','resultsFinalPositionNumber','positionsGained', 'DNF', 'resultsQualificationPositionNumber', 'q1End', 'q2End', 'q3Top10', 'averagePracticePosition',  'lastFPPositionNumber'], hide_index=True, width=2400, height=600)
+
+    ##st.button("Clear multiselect", on_click=clear_multi)
+
+#if st.button("Reset Filters"):
+#    reset_filters()
+#    st.experimental_rerun()
 
     # Add visualizations for the filtered data
     st.subheader("Positions Gained")
