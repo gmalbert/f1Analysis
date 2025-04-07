@@ -371,6 +371,13 @@ if st.checkbox('Filter Results'):
     st.subheader("Positions Gained")
     st.line_chart(filtered_data, x='short_date', x_label='Date', y='positionsGained', y_label='Positions Gained', use_container_width=True)
     st.scatter_chart(filtered_data, x='short_date', x_label='Date', y='positionsGained', y_label='Positions Gained', use_container_width=True)
+    
+    st.subheader("Practice Position vs Final Position")
+   
+    st.scatter_chart(filtered_data, x='lastFPPositionNumber', x_label='Last FP Position', y='resultsFinalPositionNumber', y_label='Final Position', use_container_width=True)
+
+    st.subheader("Starting Position vs Final Position")
+    st.scatter_chart(filtered_data, x='resultsStartingGridPositionNumber', x_label='Starting Position', y='resultsFinalPositionNumber', y_label='Final Position', use_container_width=True)
 
 if st.checkbox(f"Show {current_year} Schedule"):
     st.title(f"{current_year} Races:")
@@ -386,8 +393,11 @@ if st.checkbox("Show Next Race"):
 
     st.subheader("Next Race:")
     nextRace = raceSchedule[raceSchedule['date'] >= datetime.datetime.now()]
-    nextRace['date']= nextRace['date'].dt.strftime('%Y-%m-%d')
-    nextRace = nextRace.sort_values(by=['date', 'time'], ascending=[True, True]).head(1)
+    # Create a copy of the slice to avoid the warning
+    nextRace = nextRace.sort_values(by=['date', 'time'], ascending=[True, True]).head(1).copy()
+
+    # Modify the 'date' column safely
+    nextRace['date'] = nextRace['date'].dt.strftime('%Y-%m-%d')
     st.dataframe(nextRace, column_config=next_race_columns_to_display, hide_index=True, 
         column_order=['date', 'time', 'fullName', 'courseLength', 'turns', 'laps'])
 
