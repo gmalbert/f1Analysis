@@ -20,6 +20,8 @@ from pandas.api.types import (
 
 ##### to do: modify variable names for display
 
+
+
 def reset_filters():
     # Assuming you have filters stored in session state
     for key in st.session_state.keys():
@@ -51,16 +53,31 @@ column_rename_for_filter = {
     'q2End': 'Out at Q2', 
     'q3Top10': 'Q3 Top 10',
     'numberOfStops': 'Number of Stops',
-    'averageStopTime': 'Average Stop Time',
-    'totalStopTime': 'Total Stop Time'
+    'averageStopTime': 'Average Stop Time (s)',
+    'totalStopTime': 'Total Stop Time (s)'
     }
+
+individual_race_grouped_columns_to_display = {
+    'resultsDriverName': st.column_config.TextColumn("Name"),
+    'average_starting_position': st.column_config.NumberColumn("Avg Starting Pos.", format="%d"),
+    'average_ending_position': st.column_config.NumberColumn("Avg Final Pos.", format="%d"),
+    'average_positions_gained': st.column_config.NumberColumn("Avg Positions Gained", format="%d"),
+    'driver_races': st.column_config.NumberColumn("# of Races", format="%d")
+}
 
 DATA_DIR = 'data_files/'
 
 current_year = datetime.datetime.now().year
 raceNoEarlierThan = current_year - 10
 
-exclusionList = ['grandPrixRaceId', 'raceId_results']
+st.set_page_config(
+   page_title="Formula 1 Analysis",
+   page_icon=path.join(DATA_DIR, 'favicon.png'),
+   layout="wide",
+   initial_sidebar_state="expanded"
+)
+
+exclusionList = ['grandPrixRaceId', 'raceId_results', 'constructorId', 'driverId', 'resultsDriverId', 'raceId', 'id', 'id_grandPrix', 'id_schedule']
 
 @st.cache_data
 def load_data_schedule(nrows):
@@ -76,7 +93,7 @@ schedule_columns_to_display = {
     'fullName': st.column_config.TextColumn("Name"),
     'date': st.column_config.DateColumn("Date", format="YYYY-MM-DD"),
     'time': st.column_config.TimeColumn("Time", format="HH:MM"),
-    'courseLength': st.column_config.NumberColumn("Course Length (km)", format="%d"),
+    'courseLength': st.column_config.NumberColumn("Lap Length (km)", format="%d"),
     'laps': st.column_config.NumberColumn("Number of Laps", format="%d"),
     'turns': st.column_config.NumberColumn("Number of Turns", format="%d"),
     'distance': st.column_config.NumberColumn("Distance (km)", format="%d"),
@@ -184,14 +201,19 @@ columns_to_display = {'grandPrixYear': st.column_config.NumberColumn("Year", for
     'averageStopTime': st.column_config.NumberColumn(
         "Avg Stop Time (s)", format="%d", min_value=0, max_value=20, step=1, default=0),
     'totalStopTime': st.column_config.NumberColumn(
-        "Total Stop Time (s)", format="%d", min_value=0, max_value=100, step=1, default=0)
+        "Total Stop Time (s)", format="%d", min_value=0, max_value=100, step=1, default=0),
+    'driverId': None,
+    'constructorId': None,
+    'raceId': None,
+    'resultsDriverId': None
+
 }
 
 next_race_columns_to_display = {
     'date': st.column_config.DateColumn("Date", format="YYYY-MM-DD"),
     'time': st.column_config.TextColumn("Time"),
     'fullName': st.column_config.TextColumn("Grand Prix"),
-    'courseLength': st.column_config.TextColumn("Course Length (km)"),
+    'courseLength': st.column_config.TextColumn("Lap Length (km)"),
     'turns': st.column_config.TextColumn("Number of Turns"),
     'laps': st.column_config.TextColumn("Number of Laps")    
 
@@ -209,7 +231,7 @@ def load_data(nrows):
     return fullResults
 
 data = load_data(10000)
-print(data.columns)
+print(data['short_date'].max())
 
 data['averagePracticePosition'] = data['averagePracticePosition'].round(2)
 
@@ -389,8 +411,6 @@ if st.checkbox("Show Next Race"):
     st.write(f"Total number of results: {len(detailsOfNextRace)}")
     st.dataframe(detailsOfNextRace, column_config=columns_to_display, hide_index=True, width=800, height=600)
 
-    ### add groupby stats for average place, average improvement, DNFs, etc.
-    #races_and_weather_grouped = races_and_weather.groupby
     # Group by without 'grandPrixYear'
     individual_race_grouped = detailsOfNextRace.groupby(['resultsDriverName']).agg(
         average_starting_position=('resultsStartingGridPositionNumber', 'mean'),
@@ -399,10 +419,14 @@ if st.checkbox("Show Next Race"):
         driver_races=('resultsFinalPositionNumber', 'count')
     ).reset_index()
 
+    # Rename the columns for better readability
     individual_race_grouped = individual_race_grouped.sort_values(by=['average_ending_position'], ascending=[True])
 
+    st.subheader(f"Driver Performance in {nextRace['fullName'].head(1).values[0]}:")
+    st.write(f"Total number of results: {len(individual_race_grouped)}")
+    
     # Display the grouped data without index
-    st.dataframe(individual_race_grouped, hide_index=True, width=800, height=600)
+    st.dataframe(individual_race_grouped, hide_index=True, width=800, height=600, column_config=individual_race_grouped_columns_to_display)
 
 if st.checkbox('Show Raw Data'):
 
