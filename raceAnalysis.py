@@ -28,6 +28,16 @@ def reset_filters():
         if key.startswith('filter_'):
             st.session_state[key] = None  # or any default value
 
+def highlight_correlation(val):
+
+    if val >= 0.6 and val < 1.0:            
+        color = 'green'
+    elif val <= -0.6:
+        color = 'red' 
+    else:
+        color = 'white'
+    return f'background-color: {color}'
+
 #def reset():
 #    st.session_state.selection = ' All'
 
@@ -78,6 +88,13 @@ st.set_page_config(
 )
 
 exclusionList = ['grandPrixRaceId', 'raceId_results', 'constructorId', 'driverId', 'resultsDriverId', 'raceId', 'id', 'id_grandPrix', 'id_schedule']
+
+@st.cache_data
+def load_correlation(nrows):
+    correlation_matrix = pd.read_csv(path.join(DATA_DIR, 'f1PositionCorrelation.csv'), sep='\t', nrows=nrows)
+
+    return correlation_matrix
+correlation_matrix = load_correlation(10000)
 
 @st.cache_data
 def load_data_schedule(nrows):
@@ -208,6 +225,41 @@ columns_to_display = {'grandPrixYear': st.column_config.NumberColumn("Year", for
     'resultsDriverId': None
 
 }
+
+correlation_columns_to_display = {
+    'Unnamed: 0': st.column_config.TextColumn("Field"),
+    'resultsPodium': st.column_config.NumberColumn("Podium", format="%.3f"),
+    'resultsTop5': st.column_config.NumberColumn("Top 5", format="%.3f"),
+    'resultsTop10': st.column_config.NumberColumn("Top 10", format="%.3f"),
+    'resultsStartingGridPositionNumber': st.column_config.NumberColumn(
+        "Starting Grid Position", format="%.3f"),
+    'resultsFinalPositionNumber': st.column_config.NumberColumn(
+        "Final Position", format="%.3f"),
+    'positionsGained': st.column_config.NumberColumn(
+        "Positions Gained", format="%.3f"),
+    'DNF': st.column_config.NumberColumn("DNF", format="%.3f"),
+    'averagePracticePosition': st.column_config.NumberColumn(
+        "Avg Practice Pos.", format="%.3f"),
+    'grandPrixLaps': st.column_config.NumberColumn(
+        "Laps", format="%.3f"),
+    'lastFPPositionNumber': st.column_config.NumberColumn(
+        "Last FP Pos.", format="%.3f"),
+    'resultsQualificationPositionNumber': st.column_config.NumberColumn(
+        "Qual. Pos.", format="%.3f"),
+    'constructorTotalRaceStarts': st.column_config.NumberColumn(
+        "Constructor Race Starts", format="%.3f"),
+    'constructorTotalRaceWins': st.column_config.NumberColumn(
+        "Constructor Race Wins", format="%.3f"),
+    'constructorTotalPolePositions': st.column_config.NumberColumn(
+        "Constructor Pole Pos.", format="%.3f"),
+    'turns': st.column_config.NumberColumn("Turns", format="%.3f"),    
+    'q1End': st.column_config.NumberColumn("Out at Q1", format="%.3f"),
+    'q2End': st.column_config.NumberColumn("Out at Q2", format="%.3f"),
+    'q3Top10': st.column_config.NumberColumn("Q3 Top 10", format="%.3f"),
+    'numberOfStops': st.column_config.NumberColumn("Number of Stops", format="%.3f"),
+
+}
+
 
 next_race_columns_to_display = {
     'date': st.column_config.DateColumn("Date", format="YYYY-MM-DD"),
@@ -444,3 +496,13 @@ if st.checkbox('Show Raw Data'):
 
     st.dataframe(data, column_config=columns_to_display,
         hide_index=True,  width=800, height=600)
+
+if st.checkbox('Show Correlations'):
+    st.subheader("Correlation Matrix")
+    #correlation_matrix = load_correlation(10000)
+    #st.dataframe(correlation_matrix)
+    styled_correlation_matrix = correlation_matrix.style.map(highlight_correlation, subset=correlation_matrix.columns[1:])
+    st.dataframe(styled_correlation_matrix, column_config=correlation_columns_to_display, hide_index=True, width=800, height=600)
+
+    #st.line_chart(correlation_matrix, use_container_width=True)
+    #st.bar_chart(correlation_matrix, use_container_width=True)
