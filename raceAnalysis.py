@@ -64,14 +64,20 @@ column_rename_for_filter = {
     'q3Top10': 'Q3 Top 10',
     'numberOfStops': 'Number of Stops',
     'averageStopTime': 'Average Stop Time (s)',
-    'totalStopTime': 'Total Stop Time (s)'
+    'totalStopTime': 'Total Stop Time (s)',
+    'grandPrixLaps': 'Laps', 
+    'constructorTotalRaceStarts': 'Constructor Total Starts',
+    'constructorTotalRaceWins': 'Constructor Total Wins',
+    'constructorTotalPolePositions': 'Constructor Total Pole Positions',
+    'turns': 'Turns'
     }
+
 
 individual_race_grouped_columns_to_display = {
     'resultsDriverName': st.column_config.TextColumn("Name"),
-    'average_starting_position': st.column_config.NumberColumn("Avg Starting Pos.", format="%d"),
-    'average_ending_position': st.column_config.NumberColumn("Avg Final Pos.", format="%d"),
-    'average_positions_gained': st.column_config.NumberColumn("Avg Positions Gained", format="%d"),
+    'average_starting_position': st.column_config.NumberColumn("Avg Starting Pos.", format="%.2f"),
+    'average_ending_position': st.column_config.NumberColumn("Avg Final Pos.", format="%.2f"),
+    'average_positions_gained': st.column_config.NumberColumn("Avg Positions Gained", format="%.2f"),
     'driver_races': st.column_config.NumberColumn("# of Races", format="%d")
 }
 
@@ -170,10 +176,10 @@ weatherData = load_weather_data(10000)
 
 weather_columns_to_display = {
     'short_date': st.column_config.DateColumn("Date", format="YYYY-MM-DD"),
-    'average_temp': st.column_config.NumberColumn("Average Temperature (F)", format="%d"),
-    'total_precipitation': st.column_config.NumberColumn("Precipitation (in)", format="%d"),
-    'average_humidity': st.column_config.NumberColumn("Average Humidity (%)", format="%d"),
-    'average_wind_speed': st.column_config.NumberColumn("Average Wind Speed (mph)", format="%d"),
+    'average_temp': st.column_config.NumberColumn("Average Temperature (F)", format="%.2f"),
+    'total_precipitation': st.column_config.NumberColumn("Precipitation (in)", format="%.2f"),
+    'average_humidity': st.column_config.NumberColumn("Average Humidity (%)", format="%.2f"),
+    'average_wind_speed': st.column_config.NumberColumn("Average Wind Speed (mph)", format="%.2f"),
     'grandPrixId': None,
     'countryId': None,
     'abbreviation': None,
@@ -222,7 +228,17 @@ columns_to_display = {'grandPrixYear': st.column_config.NumberColumn("Year", for
     'driverId': None,
     'constructorId': None,
     'raceId': None,
-    'resultsDriverId': None
+    'resultsDriverId': None,
+    'grandPrixLaps': st.column_config.NumberColumn(
+        "Laps", format="%d", min_value=0, max_value=100, step=1, default=0),
+    'constructorTotalRaceStarts': st.column_config.NumberColumn(
+        "Constructor Total Starts", format="%d", min_value=0, max_value=100, step=1, default=0),
+    'constructorTotalRaceWins': st.column_config.NumberColumn(
+        "Constructor Total Wins", format="%d", min_value=0, max_value=100, step=1, default=0), 
+    'constructorTotalPolePositions': st.column_config.NumberColumn(
+        "Constructor Total Pole Pos.", format="%d", min_value=0, max_value=100, step=1, default=0),
+    'turns': st.column_config.NumberColumn(
+        "Turns", format="%d", min_value=0, max_value=100, step=1, default=0),
 
 }
 
@@ -256,7 +272,7 @@ correlation_columns_to_display = {
     'q1End': st.column_config.NumberColumn("Out at Q1", format="%.3f"),
     'q2End': st.column_config.NumberColumn("Out at Q2", format="%.3f"),
     'q3Top10': st.column_config.NumberColumn("Q3 Top 10", format="%.3f"),
-    'numberOfStops': st.column_config.NumberColumn("Number of Stops", format="%.3f"),
+    'numberOfStops': st.column_config.NumberColumn("Number of Stops", format="%.3f")
 
 }
 
@@ -274,7 +290,8 @@ next_race_columns_to_display = {
 @st.cache_data
 def load_data(nrows):
     fullResults = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t', nrows=nrows, usecols=['grandPrixYear', 'grandPrixName', 'resultsDriverName', 'resultsPodium', 'resultsTop5', 'resultsTop10', 'constructorName',  'resultsStartingGridPositionNumber', 'resultsFinalPositionNumber', 
-    'positionsGained', 'short_date', 'raceId_results', 'grandPrixRaceId', 'DNF', 'averagePracticePosition', 'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'q1End', 'q2End', 'q3Top10', 'resultsDriverId'])
+    'positionsGained', 'short_date', 'raceId_results', 'grandPrixRaceId', 'DNF', 'averagePracticePosition', 'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'q1End', 'q2End', 'q3Top10', 'resultsDriverId', 
+    'grandPrixLaps', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns'])
     
     pitStops = pd.read_csv(path.join(DATA_DIR, 'f1PitStopsData_Grouped.csv'), sep='\t', nrows=nrows, usecols=['raceId', 'driverId', 'constructorId', 'numberOfStops', 'averageStopTime', 'totalStopTime'])
 
@@ -413,6 +430,9 @@ if st.checkbox('Filter Results'):
          'resultsTop10','resultsStartingGridPositionNumber','resultsFinalPositionNumber','positionsGained', 'DNF', 'resultsQualificationPositionNumber',
            'q1End', 'q2End', 'q3Top10', 'averagePracticePosition',  'lastFPPositionNumber','numberOfStops', 'averageStopTime', 'totalStopTime'], hide_index=True, width=2400, height=600)
 
+    positionCorrelation = filtered_data[[
+    'lastFPPositionNumber', 'resultsFinalPositionNumber', 'resultsStartingGridPositionNumber','grandPrixLaps', 'averagePracticePosition', 'DNF', 'resultsTop10', 'resultsTop5', 'resultsPodium', 
+    'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 'positionsGained', 'q1End', 'q2End', 'q3Top10']].corr(method='pearson')
     ##st.button("Clear multiselect", on_click=clear_multi)
 
 #if st.button("Reset Filters"):
@@ -430,6 +450,11 @@ if st.checkbox('Filter Results'):
 
     st.subheader("Starting Position vs Final Position")
     st.scatter_chart(filtered_data, x='resultsStartingGridPositionNumber', x_label='Starting Position', y='resultsFinalPositionNumber', y_label='Final Position', use_container_width=True)
+
+    correlation_matrix = positionCorrelation.style.map(highlight_correlation, subset=positionCorrelation.columns[1:])
+    
+    # Display the correlation matrix
+    st.dataframe(correlation_matrix, column_config=correlation_columns_to_display, hide_index=True, width=800, height=600)
 
 if st.checkbox(f"Show {current_year} Schedule"):
     st.title(f"{current_year} Races:")
@@ -497,12 +522,36 @@ if st.checkbox('Show Raw Data'):
     st.dataframe(data, column_config=columns_to_display,
         hide_index=True,  width=800, height=600)
 
-if st.checkbox('Show Correlations'):
+if st.checkbox('Show Correlations for all races'):
     st.subheader("Correlation Matrix")
-    #correlation_matrix = load_correlation(10000)
-    #st.dataframe(correlation_matrix)
-    styled_correlation_matrix = correlation_matrix.style.map(highlight_correlation, subset=correlation_matrix.columns[1:])
-    st.dataframe(styled_correlation_matrix, column_config=correlation_columns_to_display, hide_index=True, width=800, height=600)
+    
+    # Rename rows and columns in the correlation matrix
+    correlation_matrix = correlation_matrix.rename(
+        index={
+            'resultsPodium': 'Podium',
+            'resultsTop5': 'Top 5',
+            'resultsTop10': 'Top 10',
+            'resultsStartingGridPositionNumber': 'Starting Grid Position',
+            'resultsFinalPositionNumber': 'Final Position',
+            'positionsGained': 'Positions Gained',
+            'DNF': 'DNF',
+            'averagePracticePosition': 'Avg Practice Pos.',
+            'grandPrixLaps': 'Laps',
+            'lastFPPositionNumber': 'Last FP Pos.',
+            'resultsQualificationPositionNumber': 'Qual. Pos.',
+            'constructorTotalRaceStarts': 'Constructor Race Starts',
+            'constructorTotalRaceWins': 'Constructor Race Wins',
+            'constructorTotalPolePositions': 'Constructor Pole Pos.',
+            'turns': 'Turns',
+            'q1End': 'Out at Q1',
+            'q2End': 'Out at Q2',
+            'q3Top10': 'Q3 Top 10',
+            'numberOfStops': 'Number of Stops'
+        }
+    )
 
-    #st.line_chart(correlation_matrix, use_container_width=True)
-    #st.bar_chart(correlation_matrix, use_container_width=True)
+    # Apply styling to highlight correlations
+    correlation_matrix = correlation_matrix.style.map(highlight_correlation, subset=correlation_matrix.columns[1:])
+    
+    # Display the correlation matrix
+    st.dataframe(correlation_matrix, column_config=correlation_columns_to_display, hide_index=True, width=800, height=600)
