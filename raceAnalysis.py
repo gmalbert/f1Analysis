@@ -296,16 +296,16 @@ correlation_columns_to_display = {
     'q3Top10': st.column_config.NumberColumn("Q3 Top 10", format="%.3f"),
     'numberOfStops': st.column_config.NumberColumn("Number of Stops", format="%.3f"),
     'driverBestStartingGridPosition': st.column_config.NumberColumn(
-        "Best Starting Grid Pos.", format="%d", min_value=0, max_value=100, step=1, default=0),
-    'driverBestRaceResult': st.column_config.NumberColumn("Best Result", format="%d", min_value=0, max_value=100, step=1, default=0),
+        "Best Starting Grid Pos.", format="%.3f", min_value=0, max_value=100, step=1, default=0),
+    'driverBestRaceResult': st.column_config.NumberColumn("Best Result", format="%.3f", min_value=0, max_value=100, step=1, default=0),
     'driverTotalChampionshipWins': st.column_config.NumberColumn(
-        "Total Championship Wins", format="%d", min_value=0, max_value=100, step=1, default=0),
-    'driverTotalRaceEntries': st.column_config.NumberColumn("Total Race Entries", format="%d", min_value=0, max_value=100, step=1, default=0),   
-    'driverTotalRaceStarts': st.column_config.NumberColumn("Total Race Starts", format="%d", min_value=0, max_value=100, step=1, default=0),   
-    'driverTotalRaceWins': st.column_config.NumberColumn("Total Wins", format="%d", min_value=0, max_value=100, step=1, default=0),   
-    'driverTotalRaceLaps': st.column_config.NumberColumn("Total Laps", format="%d", min_value=0, max_value=100, step=1, default=0),   
-    'driverTotalPodiums': st.column_config.NumberColumn("Total Podiums", format="%d", min_value=0, max_value=100, step=1, default=0),
-    'driverTotalPolePositions': st.column_config.NumberColumn("Total Pole Positions", format="%d", min_value=0, max_value=100, step=1, default=0)
+        "Total Championship Wins", format="%.3f", min_value=0, max_value=100, step=1, default=0),
+    'driverTotalRaceEntries': st.column_config.NumberColumn("Total Race Entries", format="%.3f", min_value=0, max_value=100, step=1, default=0),   
+    'driverTotalRaceStarts': st.column_config.NumberColumn("Total Race Starts", format="%.3f", min_value=0, max_value=100, step=1, default=0),   
+    'driverTotalRaceWins': st.column_config.NumberColumn("Total Wins", format="%.3f", min_value=0, max_value=100, step=1, default=0),   
+    'driverTotalRaceLaps': st.column_config.NumberColumn("Total Laps", format="%.3f", min_value=0, max_value=100, step=1, default=0),   
+    'driverTotalPodiums': st.column_config.NumberColumn("Total Podiums", format="%.3f", min_value=0, max_value=100, step=1, default=0),
+    'driverTotalPolePositions': st.column_config.NumberColumn("Total Pole Positions", format="%.3f", min_value=0, max_value=100, step=1, default=0)
 }
 
 
