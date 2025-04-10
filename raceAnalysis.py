@@ -69,9 +69,20 @@ column_rename_for_filter = {
     'constructorTotalRaceStarts': 'Constructor Total Starts',
     'constructorTotalRaceWins': 'Constructor Total Wins',
     'constructorTotalPolePositions': 'Constructor Total Pole Positions',
-    'turns': 'Turns'
+    'turns': 'Turns',
+    'driverBestStartingGridPosition': 'Best Starting Grid Position (Driver)',
+    'driverBestRaceResult': 'Best Result (Driver)',
+    'driverTotalChampionshipWins': 'Total Championship Wins (Driver)',
+    'driverTotalRaceEntries': 'Total Entries (Driver)', 
+    'driverTotalRaceStarts': 'Total Starts (Driver)',
+    'driverTotalRaceWins': 'Total Wins (Driver)', 
+    'driverTotalRaceLaps': 'Total Laps (Driver)', 
+    'driverTotalPodiums': 'Total Podiums (Driver)',
+    'driverTotalPolePositions': 'Total Pole Positions (Driver)'
     }
 
+
+            
 
 individual_race_grouped_columns_to_display = {
     'resultsDriverName': st.column_config.TextColumn("Name"),
@@ -239,6 +250,17 @@ columns_to_display = {'grandPrixYear': st.column_config.NumberColumn("Year", for
         "Constructor Total Pole Pos.", format="%d", min_value=0, max_value=100, step=1, default=0),
     'turns': st.column_config.NumberColumn(
         "Turns", format="%d", min_value=0, max_value=100, step=1, default=0),
+    'driverBestStartingGridPosition': st.column_config.NumberColumn(
+        "Best Starting Grid Pos.", format="%d", min_value=0, max_value=100, step=1, default=0),
+    'driverBestRaceResult': st.column_config.NumberColumn("Best Result", format="%d", min_value=0, max_value=100, step=1, default=0),
+    'driverTotalChampionshipWins': st.column_config.NumberColumn(
+        "Total Championship Wins", format="%d", min_value=0, max_value=100, step=1, default=0),
+    'driverTotalRaceEntries': st.column_config.NumberColumn("Total Race Entries", format="%d", min_value=0, max_value=100, step=1, default=0),   
+    'driverTotalRaceStarts': st.column_config.NumberColumn("Total Race Starts", format="%d", min_value=0, max_value=100, step=1, default=0),   
+    'driverTotalRaceWins': st.column_config.NumberColumn("Total Wins", format="%d", min_value=0, max_value=100, step=1, default=0),   
+    'driverTotalRaceLaps': st.column_config.NumberColumn("Total Laps", format="%d", min_value=0, max_value=100, step=1, default=0),   
+    'driverTotalPodiums': st.column_config.NumberColumn("Total Podiums", format="%d", min_value=0, max_value=100, step=1, default=0),
+    'driverTotalPolePositions': st.column_config.NumberColumn("Total Pole Positions", format="%d", min_value=0, max_value=100, step=1, default=0),
 
 }
 
@@ -272,8 +294,18 @@ correlation_columns_to_display = {
     'q1End': st.column_config.NumberColumn("Out at Q1", format="%.3f"),
     'q2End': st.column_config.NumberColumn("Out at Q2", format="%.3f"),
     'q3Top10': st.column_config.NumberColumn("Q3 Top 10", format="%.3f"),
-    'numberOfStops': st.column_config.NumberColumn("Number of Stops", format="%.3f")
-
+    'numberOfStops': st.column_config.NumberColumn("Number of Stops", format="%.3f"),
+    'driverBestStartingGridPosition': st.column_config.NumberColumn(
+        "Best Starting Grid Pos.", format="%d", min_value=0, max_value=100, step=1, default=0),
+    'driverBestRaceResult': st.column_config.NumberColumn("Best Result", format="%d", min_value=0, max_value=100, step=1, default=0),
+    'driverTotalChampionshipWins': st.column_config.NumberColumn(
+        "Total Championship Wins", format="%d", min_value=0, max_value=100, step=1, default=0),
+    'driverTotalRaceEntries': st.column_config.NumberColumn("Total Race Entries", format="%d", min_value=0, max_value=100, step=1, default=0),   
+    'driverTotalRaceStarts': st.column_config.NumberColumn("Total Race Starts", format="%d", min_value=0, max_value=100, step=1, default=0),   
+    'driverTotalRaceWins': st.column_config.NumberColumn("Total Wins", format="%d", min_value=0, max_value=100, step=1, default=0),   
+    'driverTotalRaceLaps': st.column_config.NumberColumn("Total Laps", format="%d", min_value=0, max_value=100, step=1, default=0),   
+    'driverTotalPodiums': st.column_config.NumberColumn("Total Podiums", format="%d", min_value=0, max_value=100, step=1, default=0),
+    'driverTotalPolePositions': st.column_config.NumberColumn("Total Pole Positions", format="%d", min_value=0, max_value=100, step=1, default=0)
 }
 
 
@@ -291,7 +323,10 @@ next_race_columns_to_display = {
 def load_data(nrows):
     fullResults = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t', nrows=nrows, usecols=['grandPrixYear', 'grandPrixName', 'resultsDriverName', 'resultsPodium', 'resultsTop5', 'resultsTop10', 'constructorName',  'resultsStartingGridPositionNumber', 'resultsFinalPositionNumber', 
     'positionsGained', 'short_date', 'raceId_results', 'grandPrixRaceId', 'DNF', 'averagePracticePosition', 'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'q1End', 'q2End', 'q3Top10', 'resultsDriverId', 
-    'grandPrixLaps', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns'])
+    'grandPrixLaps', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns',
+    'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions',
+           'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums'
+    ])
     
     pitStops = pd.read_csv(path.join(DATA_DIR, 'f1PitStopsData_Grouped.csv'), sep='\t', nrows=nrows, usecols=['raceId', 'driverId', 'constructorId', 'numberOfStops', 'averageStopTime', 'totalStopTime'])
 
@@ -318,6 +353,8 @@ data['short_date'] = pd.to_datetime(data['short_date'])
 data['numberOfStops'] = data['numberOfStops'].astype('Int64')
 data['averageStopTime'] = data['averageStopTime'].astype('Float64')
 data['totalStopTime'] = data['totalStopTime'].astype('Float64')
+data['driverBestStartingGridPosition'] = data['driverBestStartingGridPosition'].astype('Int64')
+data['driverBestRaceResult'] = data['driverBestRaceResult'].astype('Int64')
 
 if st.checkbox('Filter Results'):
     # Create a dictionary to store selected filters for multiple columns
@@ -428,11 +465,15 @@ if st.checkbox('Filter Results'):
     filtered_data = filtered_data.sort_values(by=['grandPrixYear', 'resultsFinalPositionNumber'], ascending=[False, True])
     st.dataframe(filtered_data, column_config=columns_to_display, column_order=['grandPrixYear', 'grandPrixName', 'constructorName', 'resultsDriverName', 'resultsPodium', 'resultsTop5',
          'resultsTop10','resultsStartingGridPositionNumber','resultsFinalPositionNumber','positionsGained', 'DNF', 'resultsQualificationPositionNumber',
-           'q1End', 'q2End', 'q3Top10', 'averagePracticePosition',  'lastFPPositionNumber','numberOfStops', 'averageStopTime', 'totalStopTime'], hide_index=True, width=2400, height=600)
+           'q1End', 'q2End', 'q3Top10', 'averagePracticePosition',  'lastFPPositionNumber','numberOfStops', 'averageStopTime', 'totalStopTime',
+           'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions',
+           'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums'
+           ], hide_index=True, width=2400, height=600)
 
     positionCorrelation = filtered_data[[
     'lastFPPositionNumber', 'resultsFinalPositionNumber', 'resultsStartingGridPositionNumber','grandPrixLaps', 'averagePracticePosition', 'DNF', 'resultsTop10', 'resultsTop5', 'resultsPodium', 
-    'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 'positionsGained', 'q1End', 'q2End', 'q3Top10']].corr(method='pearson')
+    'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 'positionsGained', 'q1End', 'q2End', 'q3Top10',  'driverBestStartingGridPosition', 
+    'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums']].corr(method='pearson')
     ##st.button("Clear multiselect", on_click=clear_multi)
 
 #if st.button("Reset Filters"):
@@ -454,7 +495,7 @@ if st.checkbox('Filter Results'):
     correlation_matrix = positionCorrelation.style.map(highlight_correlation, subset=positionCorrelation.columns[1:])
     
     # Display the correlation matrix
-    st.dataframe(correlation_matrix, column_config=correlation_columns_to_display, hide_index=True, width=800, height=600)
+    st.dataframe(correlation_matrix, column_config=correlation_columns_to_display, width=800, height=600)
 
 if st.checkbox(f"Show {current_year} Schedule"):
     st.title(f"{current_year} Races:")
