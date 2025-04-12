@@ -11,7 +11,7 @@ from pandas.api.types import (
     is_object_dtype,
     is_bool_dtype
 )
-#import re
+import altair as alt
 
 #variable_to_change = "helloWorld123"
 #variable_changed = re.sub( r"([A-Z])|([0-9]+)", r" \1\2", variable_to_change).strip()
@@ -57,19 +57,19 @@ column_rename_for_filter = {
     'short_date': 'Race Date',
     'DNF' : 'DNF', 
     'averagePracticePosition': 'Average Practice Pos.', 
-    'lastFPPositionNumber': 'Last FP Pos.', 
-    'resultsQualificationPositionNumber': 'Qual. Pos.', 
+    'lastFPPositionNumber': 'Last Free Practice Pos.', 
+    'resultsQualificationPositionNumber': 'Qualifying Pos.', 
     'q1End': 'Out at Q1', 
     'q2End': 'Out at Q2', 
     'q3Top10': 'Q3 Top 10',
     'numberOfStops': 'Number of Stops',
-    'averageStopTime': 'Average Stop Time (s)',
-    'totalStopTime': 'Total Stop Time (s)',
-    'grandPrixLaps': 'Laps', 
-    'constructorTotalRaceStarts': 'Constructor Total Starts',
-    'constructorTotalRaceWins': 'Constructor Total Wins',
-    'constructorTotalPolePositions': 'Constructor Total Pole Positions',
-    'turns': 'Turns',
+    'averageStopTime': 'Average Pit Stop Time (s)',
+    'totalStopTime': 'Total Pit Stop Time (s)',
+    'grandPrixLaps': 'Laps (Race)', 
+    'constructorTotalRaceStarts': 'Constructor Total Starts (Constructor)',
+    'constructorTotalRaceWins': 'Constructor Total Wins (Constructor)',
+    'constructorTotalPolePositions': 'Total Pole Positions (Constructor)',
+    'turns': 'Turns (Race)',
     'driverBestStartingGridPosition': 'Best Starting Grid Position (Driver)',
     'driverBestRaceResult': 'Best Result (Driver)',
     'driverTotalChampionshipWins': 'Total Championship Wins (Driver)',
@@ -78,14 +78,13 @@ column_rename_for_filter = {
     'driverTotalRaceWins': 'Total Wins (Driver)', 
     'driverTotalRaceLaps': 'Total Laps (Driver)', 
     'driverTotalPodiums': 'Total Podiums (Driver)',
-    'driverTotalPolePositions': 'Total Pole Positions (Driver)'
-    }
-
-
-            
+    'driverTotalPolePositions': 'Total Pole Positions (Driver)',
+    'activeDriver': 'Active Driver (Raced this year)'
+    }         
 
 individual_race_grouped_columns_to_display = {
-    'resultsDriverName': st.column_config.TextColumn("Name"),
+    'resultsDriverName': st.column_config.TextColumn("Driver"),
+    'constructorName': st.column_config.TextColumn("Constructor"),
     'average_starting_position': st.column_config.NumberColumn("Avg Starting Pos.", format="%.2f"),
     'average_ending_position': st.column_config.NumberColumn("Avg Final Pos.", format="%.2f"),
     'average_positions_gained': st.column_config.NumberColumn("Avg Positions Gained", format="%.2f"),
@@ -217,6 +216,7 @@ columns_to_display = {'grandPrixYear': st.column_config.NumberColumn("Year", for
         "Final Position", format="%d", min_value=1, max_value=20, step=1, default=1),
     'positionsGained': st.column_config.NumberColumn(
         "Positions Gained", format="%d", min_value=-10, max_value=10, step=1, default=0),
+    'activeDriver': None,
     'short_date': None,
     'raceId_results': None,
     'grandPrixRaceId': None,
@@ -323,8 +323,8 @@ next_race_columns_to_display = {
 def load_data(nrows):
     fullResults = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t', nrows=nrows, usecols=['grandPrixYear', 'grandPrixName', 'resultsDriverName', 'resultsPodium', 'resultsTop5', 'resultsTop10', 'constructorName',  'resultsStartingGridPositionNumber', 'resultsFinalPositionNumber', 
     'positionsGained', 'short_date', 'raceId_results', 'grandPrixRaceId', 'DNF', 'averagePracticePosition', 'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'q1End', 'q2End', 'q3Top10', 'resultsDriverId', 
-    'grandPrixLaps', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns',
-    'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions',
+    'grandPrixLaps', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 'resultsReasonRetired',
+    'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'activeDriver',
            'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums'
     ])
     
@@ -335,12 +335,11 @@ def load_data(nrows):
     return fullResults
 
 data = load_data(10000)
-print(data['short_date'].max())
+## Most recent date with weather
+#print(data['short_date'].max())
 
+# Round averagePracticePosition to 2 decimal places
 data['averagePracticePosition'] = data['averagePracticePosition'].round(2)
-
-column_names = data.columns.tolist()
-#column_names.sort()
 
 # Convert columns to appropriate types to allow for NaN values
 data['resultsStartingGridPositionNumber'] = data['resultsStartingGridPositionNumber'].astype('Int64')
@@ -356,13 +355,19 @@ data['totalStopTime'] = data['totalStopTime'].astype('Float64')
 data['driverBestStartingGridPosition'] = data['driverBestStartingGridPosition'].astype('Int64')
 data['driverBestRaceResult'] = data['driverBestRaceResult'].astype('Int64')
 
+column_names = data.columns.tolist()
+#column_names.sort()
+
 if st.checkbox('Filter Results'):
     # Create a dictionary to store selected filters for multiple columns
     filters = {}
+    #print(column_names)
+
+    filters_for_reset = {}
 
     # Iterate over the columns to display and create a filter for each
     for column in column_names:
-
+        
         for old_column, new_column in column_rename_for_filter.items():
             if column == old_column: 
                 column_friendly_name = new_column
@@ -381,6 +386,19 @@ if st.checkbox('Filter Results'):
                     step=1,
                     key=f"range_filter_{column}"
             )
+                filters_for_reset[column] = {
+                    'key': f"range_filter_{column}",
+                    'column': column,
+                    'dtype': data[column].dtype,
+                    'min': min_val,
+                    'max': max_val,
+                    'selected_range': selected_range
+                }
+                #filters_for_reset['type'] = data[column].dtype
+                #filters_for_reset['min'] = min_val
+                #filters_for_reset['max'] = max_val
+                #filters_for_reset['selected_range'] = selected_range
+
                 filters[column] = selected_range
         elif is_datetime64_any_dtype(data[column]):
             # Allow range selection for datetime columns
@@ -403,6 +421,24 @@ if st.checkbox('Filter Results'):
                 format="YYYY-MM-DD",
                 key=f"range_filter_{column}"
             )
+            
+            filters_for_reset[column] = {
+                    'key': f"range_filter_{column}",
+                    'column': column,
+                    'dtype': data[column].dtype,
+                    'min': min_val,
+                    'max': max_val,
+                    'selected_range': selected_range
+                }
+            print(filters_for_reset)
+            #filters_for_reset['key'] = ['key': f"range_filter_{column}", 'column': column, 'dtype': data[column].dtype, 'min': min_val, 'max': max_val, 'selected_range': selected_range]
+            #print(filters_for_reset['key'])
+            #filters_for_reset['column'] = column
+            #filters_for_reset['type'] = data[column].dtype
+            #filters_for_reset['min'] = min_val
+            #filters_for_reset['max'] = max_val
+            #filters_for_reset['selected_range'] = selected_range
+            
             filters[column] = selected_range
 
         elif data[column].dtype ==bool:
@@ -415,6 +451,23 @@ if st.checkbox('Filter Results'):
             )
             if selected_value:
                 filters[column] = True
+
+            #filters_for_reset['key'] = 'checkbox_filter_' + {column}
+            #filters_for_reset['column'] = column
+            #filters_for_reset['type'] = data[column].dtype
+            #filters_for_reset['min'] = False
+            #filters_for_reset['max'] = True
+            #filters_for_reset['selected_range'] = selected_value
+
+            filters_for_reset[column] = {
+                    'key': f"checkbox_filter_{column}",
+                    'column': column,
+                    'dtype': data[column].dtype,
+                    'min': min_val,
+                    'max': max_val,
+                    'selected_range': selected_range
+                }
+
         else:
             unique_values = data[column].dropna().unique().tolist()
             unique_values.sort()
@@ -431,12 +484,26 @@ if st.checkbox('Filter Results'):
                     key=f"filter_{column}"
             )
 
+                filters_for_reset[column] = {
+                    'key': f"filter_{column}",
+                    'column': column,
+                    'dtype': data[column].dtype,
+                    'min': min_val,
+                    'max': max_val,
+                    'selected_range': selected_value
+                }
+
+                #filters_for_reset['column'] = column
+                #filters_for_reset['type'] = data[column].dtype
+                #filters_for_reset['min'] = False
+                #filters_for_reset['max'] = True
+                #filters_for_reset['selected_range'] = selected_value
+
             # Add the selected value to the filters dictionary if it's not 'All'
                 if selected_value != ' All':
                     filters[column] = selected_value
 
     # Apply the filters dynamically
-
     filtered_data = data.copy()
 
     for column, value in filters.items():
@@ -458,15 +525,41 @@ if st.checkbox('Filter Results'):
                 (filtered_data[column] == value) | (filtered_data[column].isna())
             ]
             print(f"Length of filtered data after exact match filter on {column}: {len(filtered_data)}")
-
     # Display the filtered results
+
+    #for key, filter_details in filters_for_reset.items():
+    #    key = filter_details.get('key')
+    #    column = filter_details.get('column')
+    #    dtype = filter_details.get('dtype')
+    #    min_val = filter_details.get('min')
+    #    max_val = filter_details.get('max')
+    #    selected_range = filter_details.get('selected_range')
+        
+    #    print(f"Key: {key}, Column: {column}, Type: {dtype}, Min: {min_val}, Max: {max_val}, Selected Range: {selected_range}")
+        # Reset the filters in session state
+        
+    #if st.button('Reset Filters'):
+    #    # Reset all filters in session state
+    #    for key, filter_details in filters_for_reset.items():
+    #        print([filter_details['key']])
+    #        if filter_details['key'].startswith('range_filter_'):
+    #            st.session_state[filter_details['key']] = (filter_details['min'], filter_details['max'])
+    #        elif filter_details['key'].startswith('checkbox_filter_'):
+    #            st.session_state[filter_details['key']] = False
+    #        elif filter_details['key'].startswith('filter_'):
+    #            st.session_state[filter_details['key']] = ' All'
+        #st.session_state.clear()  # Clear all session state variables
+       # resultsDriverName = 'All'  # Reset the filter to 'All'
+        # Simulate a rerun by setting query parameters
+    #    st.experimental_rerun()
+        #st.rerun()
 
     st.write(f"Number of filtered results: {len(filtered_data)}")
     filtered_data = filtered_data.sort_values(by=['grandPrixYear', 'resultsFinalPositionNumber'], ascending=[False, True])
     st.dataframe(filtered_data, column_config=columns_to_display, column_order=['grandPrixYear', 'grandPrixName', 'constructorName', 'resultsDriverName', 'resultsPodium', 'resultsTop5',
          'resultsTop10','resultsStartingGridPositionNumber','resultsFinalPositionNumber','positionsGained', 'DNF', 'resultsQualificationPositionNumber',
            'q1End', 'q2End', 'q3Top10', 'averagePracticePosition',  'lastFPPositionNumber','numberOfStops', 'averageStopTime', 'totalStopTime',
-           'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions',
+           'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'resultsReasonRetired',
            'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums'
            ], hide_index=True, width=2400, height=600)
 
@@ -492,10 +585,91 @@ if st.checkbox('Filter Results'):
     st.subheader("Starting Position vs Final Position")
     st.scatter_chart(filtered_data, x='resultsStartingGridPositionNumber', x_label='Starting Position', y='resultsFinalPositionNumber', y_label='Final Position', use_container_width=True)
 
+    st.subheader("Average Practice Position vs Final Position")
+    st.scatter_chart(filtered_data, x='averagePracticePosition', x_label='Average Practice Position', y='resultsFinalPositionNumber', y_label='Final Position', use_container_width=True)
+
     correlation_matrix = positionCorrelation.style.map(highlight_correlation, subset=positionCorrelation.columns[1:])
     
+    st.subheader("Correlation Matrix")
+    st.caption("Correlation values range from -1 to 1, where -1 indicates a perfect negative correlation, 0 indicates no correlation, and 1 indicates a perfect positive correlation.")
     # Display the correlation matrix
     st.dataframe(correlation_matrix, column_config=correlation_columns_to_display, width=800, height=600)
+
+    driver_performance = filtered_data.groupby(['grandPrixYear', 'resultsDriverName']).agg(
+        average_final_position=('resultsFinalPositionNumber', 'mean'),
+        total_podiums=('resultsPodium', 'sum')
+    ).reset_index()
+    
+    st.subheader("Driver Performance Over Time")
+
+    # Create an Altair chart for driver performance
+    chart = alt.Chart(driver_performance).mark_line().encode(
+        x=alt.X('grandPrixYear:O', title='Year', axis=alt.Axis(format='d')),  # Format x-axis as integers
+        y=alt.Y('average_final_position', title='Average Final Position'),
+        color='resultsDriverName',  # Different lines for each driver
+        tooltip=['grandPrixYear', 'resultsDriverName', 'average_final_position']  # Add tooltips for interactivity
+    ).properties(width=800, height=400)
+
+    # Display the Altair chart
+    st.altair_chart(chart, use_container_width=True)
+
+    constructor_performance = filtered_data.groupby(['grandPrixYear', 'constructorName']).agg(
+    total_wins=('resultsFinalPositionNumber', lambda x: (x == 1).sum()),
+    total_podiums=('resultsPodium', 'sum'),
+    total_pole_positions=('constructorTotalPolePositions', 'sum')
+    ).reset_index()
+    
+    st.subheader("Constructor Dominance Over the Years")
+    st.bar_chart(constructor_performance, x='grandPrixYear', y=['total_wins', 'total_podiums'], color='constructorName', x_label='Year', y_label='Wins and Podiums', use_container_width=True)
+
+    st.subheader("Impact of Starting Grid Position on Final Position")
+    st.scatter_chart(filtered_data, x='resultsStartingGridPositionNumber', x_label='Starting Pos.', y_label='Final Pos.', y='resultsFinalPositionNumber', use_container_width=True)
+
+    st.subheader("Pit Stop Analysis")
+    st.scatter_chart(filtered_data, x='averageStopTime', x_label='Avg. Stop Time', y='resultsFinalPositionNumber', y_label='Final Pos.', use_container_width=True)
+
+    driver_vs_constructor = filtered_data.groupby(['constructorName', 'resultsDriverName']).agg(
+    positionsGained=('positionsGained', 'sum'),
+    average_final_position=('resultsFinalPositionNumber', 'mean')
+    ).reset_index()
+    
+    st.subheader("Driver vs Constructor Performance")
+    driver_vs_constructor['average_final_position'] = driver_vs_constructor['average_final_position'].round(2)
+    st.dataframe(driver_vs_constructor, hide_index=True)
+
+    dnf_reasons = filtered_data[filtered_data['DNF']].groupby('resultsReasonRetired').size().reset_index(name='count')
+    st.subheader("Reasons for DNFs")
+    st.bar_chart(dnf_reasons, x='resultsReasonRetired', x_label='Reason', y='count', y_label='Count', use_container_width=True)
+
+    # Create a pie chart for DNF reasons
+    dnf_pie_chart = alt.Chart(dnf_reasons).mark_arc().encode(
+    theta=alt.Theta(field='count', type='quantitative', title='Count'),
+    color=alt.Color(field='resultsReasonRetired', type='nominal', title='Reason'),
+    tooltip=['resultsReasonRetired', 'count']  # Add tooltips for interactivity
+    ).properties(width=400,height=400)
+
+    # Display the pie chart
+    st.altair_chart(dnf_pie_chart, use_container_width=True)
+
+    st.subheader("Track Characteristics and Performance")
+    st.scatter_chart(filtered_data, x='turns', y='resultsFinalPositionNumber', use_container_width=True)
+
+    season_summary = filtered_data[filtered_data['grandPrixYear'] == current_year].groupby('resultsDriverName').agg(
+    positions_gained =('positionsGained', 'sum'),
+    total_podiums=('resultsPodium', 'sum')
+    ).reset_index()
+    
+    st.subheader(f"{current_year} Season Summary")
+    st.dataframe(season_summary, hide_index=True)
+
+    driver_consistency = filtered_data.groupby('resultsDriverName').agg(
+    finishing_position_std=('resultsFinalPositionNumber', 'std')
+    ).reset_index()
+    
+    st.subheader("Driver Consistency")
+    st.caption("(Lower is Better)")
+    st.bar_chart(driver_consistency, x='resultsDriverName', x_label='Driver', y_label='Standard Deviation - Finishing', y='finishing_position_std', use_container_width=True)
+   
 
 if st.checkbox(f"Show {current_year} Schedule"):
     st.title(f"{current_year} Races:")
@@ -539,8 +713,8 @@ if st.checkbox("Show Next Race"):
     st.write(f"Total number of results: {len(detailsOfNextRace)}")
     st.dataframe(detailsOfNextRace, column_config=columns_to_display, hide_index=True, width=800, height=600)
 
-    # Group by without 'grandPrixYear'
     individual_race_grouped = detailsOfNextRace.groupby(['resultsDriverName']).agg(
+        #activeDriver = ('activeDriver', 'first'),
         average_starting_position=('resultsStartingGridPositionNumber', 'mean'),
         average_ending_position=('resultsFinalPositionNumber', 'mean'),
         average_positions_gained=('positionsGained', 'mean'),
@@ -550,11 +724,25 @@ if st.checkbox("Show Next Race"):
     # Rename the columns for better readability
     individual_race_grouped = individual_race_grouped.sort_values(by=['average_ending_position'], ascending=[True])
 
+    individual_race_grouped_constructor = detailsOfNextRace.groupby(['constructorName']).agg(
+        #activeDriver = ('activeDriver', 'first'),
+        average_starting_position=('resultsStartingGridPositionNumber', 'mean'),
+        average_ending_position=('resultsFinalPositionNumber', 'mean'),
+        average_positions_gained=('positionsGained', 'mean'),
+        driver_races=('resultsFinalPositionNumber', 'count')
+    ).reset_index()
+
+    # Rename the columns for better readability
+    individual_race_grouped_constructor = individual_race_grouped_constructor.sort_values(by=['average_ending_position'], ascending=[True])
+
     st.subheader(f"Driver Performance in {nextRace['fullName'].head(1).values[0]}:")
     st.write(f"Total number of results: {len(individual_race_grouped)}")
     
     # Display the grouped data without index
     st.dataframe(individual_race_grouped, hide_index=True, width=800, height=600, column_config=individual_race_grouped_columns_to_display)
+
+    st.subheader(f"Constructor Performance in {nextRace['fullName'].head(1).values[0]}:")
+    st.dataframe(individual_race_grouped_constructor, hide_index=True, width=800, height=600, column_config=individual_race_grouped_columns_to_display)
 
 if st.checkbox('Show Raw Data'):
 
