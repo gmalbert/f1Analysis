@@ -702,6 +702,7 @@ if st.checkbox("Show Next Race"):
     st.subheader(f"Weather Data for {weather_with_grandprix['fullName'].head(1).values[0]}:")
     st.write(f"Total number of weather records: {len(weather_with_grandprix)}")
 
+    weather_with_grandprix = weather_with_grandprix.sort_values(by='short_date', ascending = False)
     st.dataframe(weather_with_grandprix, column_config=weather_columns_to_display, hide_index=True)
 
     st.subheader("Past Results:")
