@@ -1,4 +1,6 @@
-import datetime as dt
+#import datetime as dt
+from datetime import date, timedelta
+import datetime
 import pandas as pd
 from os import path
 import os
@@ -10,7 +12,7 @@ from openmeteo_sdk.Variable import Variable
 
 DATA_DIR = 'data_files/'
 
-current_year = dt.datetime.now().year
+current_year = datetime.datetime.now().year
 raceNoEarlierThan = current_year - 10
 
 ##### Pit Stops
@@ -60,18 +62,13 @@ results_and_drivers_and_constructors.rename(columns={'name': 'constructorName', 
                                                      'totalPolePositions_results': 'driverTotalPolePositions', 
                                                      'totalPodiums_results': 'driverTotalPodiums', 'totalPodiumRaces': 'constructorTotalPodiumRaces', 'totalPolePositions_constructors': 'constructorTotalPolePositions', 'totalFastestLaps_constructors': 'constructorTotalFastestLaps'}, inplace=True)
 
-#print(results_and_drivers_and_constructors.columns)
-
 results_and_drivers_and_constructors_and_grandprix = pd.merge(results_and_drivers_and_constructors, races_and_grandPrix, left_on='raceId', right_on='raceIdFromGrandPrix', how='inner', suffixes=['_results', '_grandprix'])
-
-#print(results_and_drivers_and_constructors_and_grandprix.columns)
 
 results_and_drivers_and_constructors_and_grandprix_and_qualifying = pd.merge(results_and_drivers_and_constructors_and_grandprix, qualifying, left_on=['raceIdFromGrandPrix', 'resultsDriverId'], right_on=['raceId', 'driverId'], how='inner', suffixes=['_results', '_qualifying']) 
 
 results_and_drivers_and_constructors_and_grandprix_and_qualifying[['grandPrixName', 'resultsQualificationPositionNumber', 'raceId_results', 'resultsDriverId',  'q1', 'q2', 'q3', 'resultsYear', 'constructorName','resultsDriverId', 'resultsDriverName',  'resultsStartingGridPositionNumber', 'resultsFinalPositionNumber', 
                                       'resultsReasonRetired', 'constructorTotalRaceEntries', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotal1And2Finishes', 'constructorTotalPodiumRaces', 
                                       'constructorTotalPolePositions', 'constructorTotalFastestLaps', 'grandPrixLaps', 'grandPrixYear', 'raceIdFromGrandPrix', 'grandPrixRaceId']]
-#results_and_drivers_and_constructors_and_grandprix_and_qualifying.columns
 
 fp1_fp2 = pd.merge(fp1, fp2, on=['raceId', 'driverId'], how='left', suffixes=['_fp1', '_fp2'])
 fp1_fp2_fp3 = pd.merge(fp1_fp2, fp3, on=['raceId', 'driverId'], how='left', suffixes=['_fp1_2', '_fp3'])
@@ -102,21 +99,9 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['q2End'] = ((results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsQualificationPositionNumber'] >10) & (results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsQualificationPositionNumber'] <=15))
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['q1End'] = (results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsQualificationPositionNumber'] >15)
 
-#results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.drop(columns=['activeDriver'], inplace=True)
-
-#for driver in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsDriverId']:
-#    if (results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['grandPrixYear'] == current_year).any() and (results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsDriverId'] == driver).all():
-#        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['activeDriver'] = True
-##        print("Its true")
-#    else:
-#        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['activeDriver'] = False
-
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['activeDriver'] = (
     results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['grandPrixYear'] == current_year
 )
-
-#results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['activeDriver'] = (results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['grandPrixYear'] == current_year)
-
 
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[['grandPrixName', 'lastFPPositionNumber', 'activeDriver', 'resultsQualificationPositionNumber', 'q1End', 'q2End', 'q3Top10', 'resultsDriverId', 'resultsReasonRetired','averagePracticePosition', 'raceId_results', 'resultsFinalPositionNumber', 'resultsPodium', 'resultsTop5', 'resultsTop10', 'fp1PositionNumber', 'fp1Time', 'fp1Gap', 
                                         'fp1Interval', 'positionsGained', 'fp1PositionNumber', 'fp2PositionNumber','fp3PositionNumber','fp4PositionNumber', 'q1', 'q2', 'q3', 'resultsYear', 'constructorName','resultsDriverId', 'resultsDriverName',  'resultsStartingGridPositionNumber', 
@@ -155,13 +140,9 @@ races = races[races['year'].between(raceNoEarlierThan, current_year)]
 circuits_and_races = pd.merge(races, circuits, left_on='circuitId', right_on='id', suffixes=['_races', '_circuits'])
 circuits_and_races[['id_races', 'circuitId', 'year', 'date', 'grandPrixId', 'latitude', 'longitude']]
 
-last_weather_date = weatherData['short_date'].max()
-print(f"Last weather date: {last_weather_date}")
+last_weather_date = datetime.datetime.strptime(weatherData['short_date'].iloc[-1],'%Y-%m-%d')
 
 circuits_and_races_lat_long = circuits_and_races[['id_races', 'latitude', 'longitude', 'date', 'grandPrixId', 'circuitId']]
-
-#ircuits_and_races_lat_long = circuits_and_races['date'] >= last_weather_date & circuits_and_races_lat_long = circuits_and_races['date'] <= dt.datetime.now()
-#rint(len(circuits_and_races_lat_long))
 
 # Setup the Open-Meteo API client with cache and retry on error
 cache_session = requests_cache.CachedSession('.cache', expire_after = -1)
@@ -170,34 +151,48 @@ openmeteo = openmeteo_requests.Client(session = retry_session)
 
 # Make sure all required weather variables are listed here
 # The order of variables in hourly or daily is important to assign them correctly below
-url = "https://archive-api.open-meteo.com/v1/archive"
 
 all_hourly_data = []
 
 full_params = []
 
-
-
 for race in circuits_and_races_lat_long.itertuples():
-    
-    if race.date < dt.datetime.now():
-        params = {
-        "latitude": race.latitude,
-	    "longitude": race.longitude,
-	    "start_date": race.date.strftime('%Y-%m-%d'),
-	    "end_date": race.date.strftime('%Y-%m-%d'),
-	    "hourly": ["temperature_2m", "precipitation", "relative_humidity_2m", "wind_speed_10m"],
-        "temperature_unit": "fahrenheit",
-        "wind_speed_unit": "mph",
-        "precipitation_unit": "inch"
-	    }
+         
+    params = {
+    "latitude": race.latitude,
+	"longitude": race.longitude,
+	"start_date": race.date.strftime('%Y-%m-%d'),
+	"end_date": race.date.strftime('%Y-%m-%d'),
+	"hourly": ["temperature_2m", "precipitation", "relative_humidity_2m", "wind_speed_10m"],
+    "temperature_unit": "fahrenheit",
+    "wind_speed_unit": "mph",
+    "precipitation_unit": "inch"
+	}
 
     full_params.append(params)
 
-
 # Loop through the list of params
 for params in full_params:
+    
+    # use different URLs depending on whether we are seeking current or past weather
+    if datetime.datetime.strptime(params['start_date'], '%Y-%m-%d') < datetime.datetime.now():
+        url = "https://archive-api.open-meteo.com/v1/archive"
+    elif datetime.datetime.strptime(params['start_date'], '%Y-%m-%d') >= datetime.datetime.now() and datetime.datetime.strptime(params['start_date'], '%Y-%m-%d') <= (datetime.datetime.now() + timedelta(days=16)):
+        url = "https://api.open-meteo.com/v1/forecast"   
+    else:
+        print("break")
+        print(datetime.datetime.strptime(params['start_date'], '%Y-%m-%d'))
+        break  
+    
+    ### these next three lines can be removed if there are issues once new weather records are available
+    ### done to limit the number of calls to the API
+
+    #new_records = False
+
+    #if datetime.datetime.strptime(params['start_date'], '%Y-%m-%d') > last_weather_date:
+    #    responses = openmeteo.weather_api(url, params=params)
     responses = openmeteo.weather_api(url, params=params)
+    ## removed to allow rerun of weather for any missed data (4/16/2025)
 
 # Process first location. Add a for-loop for multiple locations or weather models
     response = responses[0]
@@ -228,17 +223,15 @@ for params in full_params:
     all_hourly_data = pd.DataFrame(data = all_hourly_data)
 
     all_hourly_data = pd.concat([all_hourly_data, hourly_dataframe], ignore_index=True)
-    
-   # date_for_merge = 
+
+    #    new_records = True
+
 circuits_and_races_lat_long['date'] = pd.to_datetime(circuits_and_races_lat_long['date']).dt.strftime('%Y-%m-%d')
 races_and_weather = pd.merge(all_hourly_data, circuits_and_races_lat_long, left_on='short_date', right_on='date', how='inner', suffixes=['_hourly', '_lat_long'])
 
-#print(races_and_weather)
-
-
 races_and_weather.to_csv(path.join(DATA_DIR, 'f1WeatherData_AllData.csv'), columns=['date_hourly', 'latitude_hourly', 'longitude_hourly', 'temperature_2m', 'hourly_precipitation', 'relative_humidity_2m', 'short_date',
-'wind_speed_10m', 'id_races', 'grandPrixId', 'circuitId'], sep='\t')
+'wind_speed_10m', 'id_races', 'grandPrixId', 'circuitId'], sep='\t')#)
 
 races_and_weather_grouped = races_and_weather.groupby(['short_date', 'latitude_hourly', 'longitude_hourly', 'id_races', 'grandPrixId', 'circuitId']).agg(average_temp = ('temperature_2m', 'mean'), total_precipitation = ('hourly_precipitation', 'sum'), average_humidity = ('relative_humidity_2m', 'mean'), average_wind_speed = ('wind_speed_10m', 'mean')).reset_index()
 
-races_and_weather_grouped.to_csv(path.join(DATA_DIR, 'f1WeatherData_Grouped.csv'), columns=['short_date', 'id_races', 'grandPrixId', 'circuitId', 'latitude_hourly', 'longitude_hourly', 'average_temp', 'total_precipitation', 'average_humidity', 'average_wind_speed'], sep='\t')
+races_and_weather_grouped.to_csv(path.join(DATA_DIR, 'f1WeatherData_Grouped.csv'), columns=['short_date', 'id_races', 'grandPrixId', 'circuitId', 'latitude_hourly', 'longitude_hourly', 'average_temp', 'total_precipitation', 'average_humidity', 'average_wind_speed'], sep='\t')#, mode='a', header=False)

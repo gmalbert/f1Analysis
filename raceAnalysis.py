@@ -12,6 +12,7 @@ from pandas.api.types import (
     is_bool_dtype
 )
 import altair as alt
+import time
 
 #variable_to_change = "helloWorld123"
 #variable_changed = re.sub( r"([A-Z])|([0-9]+)", r" \1\2", variable_to_change).strip()
@@ -311,7 +312,7 @@ correlation_columns_to_display = {
 
 next_race_columns_to_display = {
     'date': st.column_config.DateColumn("Date", format="YYYY-MM-DD"),
-    'time': st.column_config.TextColumn("Time"),
+    'time': st.column_config.TimeColumn("Time", format="localized"),
     'fullName': st.column_config.TextColumn("Grand Prix"),
     'courseLength': st.column_config.TextColumn("Lap Length (km)"),
     'turns': st.column_config.TextColumn("Number of Turns"),
@@ -686,10 +687,26 @@ if st.checkbox("Show Next Race"):
     st.subheader("Next Race:")
     nextRace = raceSchedule[raceSchedule['date'] >= datetime.datetime.now()]
     # Create a copy of the slice to avoid the warning
+
+    
     nextRace = nextRace.sort_values(by=['date', 'time'], ascending=[True, True]).head(1).copy()
+   # nextRace['time'] = datetime.datetime.strptime(nextRace['time'], '%H:%M')
+   # print(nextRace['time'])
+   # print(type(nextRace['time']))
+   # nextRace['time'] = nextRace['time'].dt.datetime.strptime('%H:%M')
+   # local_offset_seconds = time.timezone if (time.localtime().tm_isdst == 0) else time.altzone
+    # Note: time.timezone and time.altzone have opposite signs to timedelta
+    #local_offset = datetime.timedelta(seconds=-local_offset_seconds)
+
+    # Apply the local offset to the UTC datetime object
+   # nextRace['time'] = nextRace['time'] + local_offset
 
     # Modify the 'date' column safely
-    nextRace['date'] = nextRace['date'].dt.strftime('%Y-%m-%d')
+    #nextRace['date'] = nextRace['date'].dt.strftime('%Y-%m-%d')
+    
+
+
+
     st.dataframe(nextRace, column_config=next_race_columns_to_display, hide_index=True, 
         column_order=['date', 'time', 'fullName', 'courseLength', 'turns', 'laps'])
 
