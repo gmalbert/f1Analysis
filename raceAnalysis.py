@@ -80,7 +80,8 @@ column_rename_for_filter = {
     'driverTotalRaceLaps': 'Total Laps (Driver)', 
     'driverTotalPodiums': 'Total Podiums (Driver)',
     'driverTotalPolePositions': 'Total Pole Positions (Driver)',
-    'activeDriver': 'Active Driver (Raced this year)'
+    'activeDriver': 'Active Driver (Raced this year)',
+    'yearsActive': 'Years Active'
     }         
 
 individual_race_grouped_columns_to_display = {
@@ -262,6 +263,8 @@ columns_to_display = {'grandPrixYear': st.column_config.NumberColumn("Year", for
     'driverTotalRaceLaps': st.column_config.NumberColumn("Total Laps", format="%d", min_value=0, max_value=100, step=1, default=0),   
     'driverTotalPodiums': st.column_config.NumberColumn("Total Podiums", format="%d", min_value=0, max_value=100, step=1, default=0),
     'driverTotalPolePositions': st.column_config.NumberColumn("Total Pole Positions", format="%d", min_value=0, max_value=100, step=1, default=0),
+    'yearsActive': st.column_config.NumberColumn(
+        "Years Active", format="%d", min_value=0, max_value=100, step=1, default=0),
 
 }
 
@@ -301,6 +304,8 @@ correlation_columns_to_display = {
     'driverBestRaceResult': st.column_config.NumberColumn("Best Result", format="%.3f"),
     'driverTotalChampionshipWins': st.column_config.NumberColumn(
         "Total Championship Wins", format="%.3f"),
+    'yearsActive': st.column_config.NumberColumn(
+        "Years Active", format="%.3f"),    
     'driverTotalRaceEntries': st.column_config.NumberColumn("Total Race Entries", format="%.3f"),   
     'driverTotalRaceStarts': st.column_config.NumberColumn("Total Race Starts", format="%.3f"),   
     'driverTotalRaceWins': st.column_config.NumberColumn("Total Wins", format="%.3f"),   
@@ -326,7 +331,7 @@ def load_data(nrows):
     'positionsGained', 'short_date', 'raceId_results', 'grandPrixRaceId', 'DNF', 'averagePracticePosition', 'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'q1End', 'q2End', 'q3Top10', 'resultsDriverId', 
     'grandPrixLaps', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 'resultsReasonRetired',
     'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'activeDriver',
-           'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums'
+           'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums', 'yearsActive'
     ])
     
     pitStops = pd.read_csv(path.join(DATA_DIR, 'f1PitStopsData_Grouped.csv'), sep='\t', nrows=nrows, usecols=['raceId', 'driverId', 'constructorId', 'numberOfStops', 'averageStopTime', 'totalStopTime'])
@@ -494,12 +499,6 @@ if st.checkbox('Filter Results'):
                     'selected_range': selected_value
                 }
 
-                #filters_for_reset['column'] = column
-                #filters_for_reset['type'] = data[column].dtype
-                #filters_for_reset['min'] = False
-                #filters_for_reset['max'] = True
-                #filters_for_reset['selected_range'] = selected_value
-
             # Add the selected value to the filters dictionary if it's not 'All'
                 if selected_value != ' All':
                     filters[column] = selected_value
@@ -555,7 +554,7 @@ if st.checkbox('Filter Results'):
     #    st.experimental_rerun()
         #st.rerun()
 
-    st.write(f"Number of filtered results: {len(filtered_data)}")
+    st.write(f"Number of filtered results: {len(filtered_data):,d}")
     filtered_data = filtered_data.sort_values(by=['grandPrixYear', 'resultsFinalPositionNumber'], ascending=[False, True])
     st.dataframe(filtered_data, column_config=columns_to_display, column_order=['grandPrixYear', 'grandPrixName', 'constructorName', 'resultsDriverName', 'resultsPodium', 'resultsTop5',
          'resultsTop10','resultsStartingGridPositionNumber','resultsFinalPositionNumber','positionsGained', 'DNF', 'resultsQualificationPositionNumber',
@@ -566,7 +565,7 @@ if st.checkbox('Filter Results'):
 
     positionCorrelation = filtered_data[[
     'lastFPPositionNumber', 'resultsFinalPositionNumber', 'resultsStartingGridPositionNumber','grandPrixLaps', 'averagePracticePosition', 'DNF', 'resultsTop10', 'resultsTop5', 'resultsPodium', 
-    'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 'positionsGained', 'q1End', 'q2End', 'q3Top10',  'driverBestStartingGridPosition', 
+    'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 'positionsGained', 'q1End', 'q2End', 'q3Top10',  'driverBestStartingGridPosition', 'yearsActive',
     'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums']].corr(method='pearson')
     ##st.button("Clear multiselect", on_click=clear_multi)
 
@@ -575,6 +574,9 @@ if st.checkbox('Filter Results'):
 #    st.experimental_rerun()
 
     # Add visualizations for the filtered data
+    st.subheader("Active Years v. Final Position")
+    st.scatter_chart(filtered_data, x='resultsFinalPositionNumber', x_label='Final Position', y='yearsActive', y_label='Years Active', use_container_width=True)
+    
     st.subheader("Positions Gained")
     st.line_chart(filtered_data, x='short_date', x_label='Date', y='positionsGained', y_label='Positions Gained', use_container_width=True)
     st.scatter_chart(filtered_data, x='short_date', x_label='Date', y='positionsGained', y_label='Positions Gained', use_container_width=True)
