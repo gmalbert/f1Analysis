@@ -14,6 +14,8 @@ from pandas.api.types import (
 import altair as alt
 import time
 
+
+DATA_DIR = 'data_files/'
 #variable_to_change = "helloWorld123"
 #variable_changed = re.sub( r"([A-Z])|([0-9]+)", r" \1\2", variable_to_change).strip()
 
@@ -21,7 +23,24 @@ import time
 
 ##### to do: modify variable names for display
 
+def get_last_modified_file(dir_path):
+    try:
+        files = [path.join(dir_path, f) for f in os.listdir(dir_path) if path.isfile(os.path.join(dir_path, f))]
+        if not files:
+            return None
+        
+        last_modified_file = max(files, key=path.getmtime)
+        return last_modified_file
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
 
+latest_file = get_last_modified_file(DATA_DIR)
+
+print(f"The last modified file is: {latest_file}")
+modification_time = path.getmtime(latest_file)
+readable_time = time.ctime(modification_time)
+readable_time = datetime.datetime.fromtimestamp(modification_time).strftime('%Y-%m-%d %I:%M %p')
 
 def reset_filters():
     # Assuming you have filters stored in session state
@@ -81,7 +100,9 @@ column_rename_for_filter = {
     'driverTotalPodiums': 'Total Podiums (Driver)',
     'driverTotalPolePositions': 'Total Pole Positions (Driver)',
     'activeDriver': 'Active Driver (Raced this year)',
-    'yearsActive': 'Years Active'
+    'yearsActive': 'Years Active',
+    'streetRace' : 'Street',
+    'trackRace': 'Track'
     }         
 
 individual_race_grouped_columns_to_display = {
@@ -92,8 +113,6 @@ individual_race_grouped_columns_to_display = {
     'average_positions_gained': st.column_config.NumberColumn("Avg Positions Gained", format="%.2f"),
     'driver_races': st.column_config.NumberColumn("# of Races", format="%d")
 }
-
-DATA_DIR = 'data_files/'
 
 current_year = datetime.datetime.now().year
 raceNoEarlierThan = current_year - 10
@@ -127,11 +146,11 @@ schedule_columns_to_display = {
     'round': st.column_config.NumberColumn("Round", format="%d"),
     'fullName': st.column_config.TextColumn("Name"),
     'date': st.column_config.DateColumn("Date", format="YYYY-MM-DD"),
-    'time': st.column_config.TimeColumn("Time", format="HH:MM"),
-    'courseLength': st.column_config.NumberColumn("Lap Length (km)", format="%d"),
+    'time': st.column_config.TimeColumn("Time", format="localized"),
+    'courseLength': st.column_config.NumberColumn("Lap Length (km)", format="%.3f"),
     'laps': st.column_config.NumberColumn("Number of Laps", format="%d"),
     'turns': st.column_config.NumberColumn("Number of Turns", format="%d"),
-    'distance': st.column_config.NumberColumn("Distance (km)", format="%d"),
+    'distance': st.column_config.NumberColumn("Distance (km)", format="%.3f"),
     'totalRacesHeld': st.column_config.NumberColumn("Races Held", format="%d"),
     'circuitType': st.column_config.TextColumn("Type"),
     'year': None,
@@ -204,6 +223,7 @@ weather_columns_to_display = {
 
 st.image(path.join(DATA_DIR, 'formula1_logo.png'))
 st.title(f'F1 Races from {raceNoEarlierThan} to {current_year}')
+st.caption(f"Last updated: {readable_time}")
 
 columns_to_display = {'grandPrixYear': st.column_config.NumberColumn("Year", format="%d"),
     'grandPrixName': st.column_config.TextColumn("Grand Prix"),
@@ -223,6 +243,8 @@ columns_to_display = {'grandPrixYear': st.column_config.NumberColumn("Year", for
     'raceId_results': None,
     'grandPrixRaceId': None,
     'DNF': st.column_config.CheckboxColumn("DNF"),
+    'streetRace': st.column_config.CheckboxColumn("Street Race"),
+    'trackRace': st.column_config.CheckboxColumn("Track Race"),
     'averagePracticePosition': st.column_config.NumberColumn(
         "Avg Practice Pos.", format="%d", min_value=1, max_value=20, step=1, default=1),
     'lastFPPositionNumber': st.column_config.NumberColumn(
@@ -312,8 +334,9 @@ correlation_columns_to_display = {
     'driverTotalRaceLaps': st.column_config.NumberColumn("Total Laps", format="%.3f"),   
     'driverTotalPodiums': st.column_config.NumberColumn("Total Podiums", format="%.3f"),
     'driverTotalPolePositions': st.column_config.NumberColumn("Total Pole Positions", format="%.3f"),
+    'streetRace': st.column_config.NumberColumn("Street Race", format="%.3f"), 
+    'trackRace': st.column_config.NumberColumn("Track Race", format="%.3f")
 }
-
 
 next_race_columns_to_display = {
     'date': st.column_config.DateColumn("Date", format="YYYY-MM-DD"),
@@ -325,12 +348,25 @@ next_race_columns_to_display = {
 
 }
 
+driver_vs_constructor_columns_to_display = {
+    'constructorName': st.column_config.TextColumn("Constructor"),
+    'resultsDriverName': st.column_config.TextColumn("Driver"),
+    'positionsGained': st.column_config.NumberColumn("Positions Gained", format="%d"),
+    'average_final_position': st.column_config.NumberColumn("Avg. Final Position", format="%.2f")
+}
+
+season_summary_columns_to_display = {
+    'resultsDriverName': st.column_config.TextColumn("Driver"),
+    'positions_gained': st.column_config.NumberColumn("Positions Gained", format="%d"),
+    'total_podiums': st.column_config.NumberColumn("Total Podiums", format="%d")
+}
+
 @st.cache_data
 def load_data(nrows):
     fullResults = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t', nrows=nrows, usecols=['grandPrixYear', 'grandPrixName', 'resultsDriverName', 'resultsPodium', 'resultsTop5', 'resultsTop10', 'constructorName',  'resultsStartingGridPositionNumber', 'resultsFinalPositionNumber', 
     'positionsGained', 'short_date', 'raceId_results', 'grandPrixRaceId', 'DNF', 'averagePracticePosition', 'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'q1End', 'q2End', 'q3Top10', 'resultsDriverId', 
     'grandPrixLaps', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 'resultsReasonRetired',
-    'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'activeDriver',
+    'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'activeDriver', 'streetRace', 'trackRace',
            'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums', 'yearsActive'
     ])
     
@@ -539,7 +575,7 @@ if st.checkbox('Filter Results'):
         # Reset the filters in session state
         
     #if st.button('Reset Filters'):
-    #    # Reset all filters in session state
+#    # Reset all filters in session state
     #    for key, filter_details in filters_for_reset.items():
     #        print([filter_details['key']])
     #        if filter_details['key'].startswith('range_filter_'):
@@ -556,7 +592,7 @@ if st.checkbox('Filter Results'):
 
     st.write(f"Number of filtered results: {len(filtered_data):,d}")
     filtered_data = filtered_data.sort_values(by=['grandPrixYear', 'resultsFinalPositionNumber'], ascending=[False, True])
-    st.dataframe(filtered_data, column_config=columns_to_display, column_order=['grandPrixYear', 'grandPrixName', 'constructorName', 'resultsDriverName', 'resultsPodium', 'resultsTop5',
+    st.dataframe(filtered_data, column_config=columns_to_display, column_order=['grandPrixYear', 'grandPrixName', 'streetRace', 'trackRace', 'constructorName', 'resultsDriverName', 'resultsPodium', 'resultsTop5',
          'resultsTop10','resultsStartingGridPositionNumber','resultsFinalPositionNumber','positionsGained', 'DNF', 'resultsQualificationPositionNumber',
            'q1End', 'q2End', 'q3Top10', 'averagePracticePosition',  'lastFPPositionNumber','numberOfStops', 'averageStopTime', 'totalStopTime',
            'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'resultsReasonRetired',
@@ -564,11 +600,17 @@ if st.checkbox('Filter Results'):
            ], hide_index=True, width=2400, height=600)
 
     positionCorrelation = filtered_data[[
-    'lastFPPositionNumber', 'resultsFinalPositionNumber', 'resultsStartingGridPositionNumber','grandPrixLaps', 'averagePracticePosition', 'DNF', 'resultsTop10', 'resultsTop5', 'resultsPodium', 
+    'lastFPPositionNumber', 'resultsFinalPositionNumber', 'resultsStartingGridPositionNumber','grandPrixLaps', 'averagePracticePosition', 'DNF', 'resultsTop10', 'resultsTop5', 'resultsPodium', 'streetRace', 'trackRace',
     'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 'positionsGained', 'q1End', 'q2End', 'q3Top10',  'driverBestStartingGridPosition', 'yearsActive',
     'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums']].corr(method='pearson')
     ##st.button("Clear multiselect", on_click=clear_multi)
 
+    ## Rename Correlation Rows
+    positionCorrelation.index=['Last FP Pos.', 'Final Pos.' ,'Starting Grid Position', 'Laps', 'Avg Practice Pos.', 
+     'DNF', 'Top 10', 'Top 5', 'Podium', 'Street', 'Track', 'Constructor Race Starts', 'Constructor Total Race Wins', 'Constructor Pole Pos.',
+     'Turns', 'Positions Gained', 'Out at Q1', 'Out at Q2', 'Q3 Top 10', 'Best Starting Grid Pos.', 'Years Active',
+     'Best Result', 'Total Championship Wins', 'Total Pole Positions', 'Race Entries', 'Race Starts', 'Race Wins',
+    'Race Laps', 'Total Podiums']
 #if st.button("Reset Filters"):
 #    reset_filters()
 #    st.experimental_rerun()
@@ -593,6 +635,8 @@ if st.checkbox('Filter Results'):
 
     correlation_matrix = positionCorrelation.style.map(highlight_correlation, subset=positionCorrelation.columns[1:])
     
+
+
     st.subheader("Correlation Matrix")
     st.caption("Correlation values range from -1 to 1, where -1 indicates a perfect negative correlation, 0 indicates no correlation, and 1 indicates a perfect positive correlation.")
     # Display the correlation matrix
@@ -638,7 +682,7 @@ if st.checkbox('Filter Results'):
     
     st.subheader("Driver vs Constructor Performance")
     driver_vs_constructor['average_final_position'] = driver_vs_constructor['average_final_position'].round(2)
-    st.dataframe(driver_vs_constructor, hide_index=True)
+    st.dataframe(driver_vs_constructor, hide_index=True, column_config=driver_vs_constructor_columns_to_display)
 
     dnf_reasons = filtered_data[filtered_data['DNF']].groupby('resultsReasonRetired').size().reset_index(name='count')
     st.subheader("Reasons for DNFs")
@@ -663,7 +707,7 @@ if st.checkbox('Filter Results'):
     ).reset_index()
     
     st.subheader(f"{current_year} Season Summary")
-    st.dataframe(season_summary, hide_index=True)
+    st.dataframe(season_summary, hide_index=True, column_config=season_summary_columns_to_display)
 
     driver_consistency = filtered_data.groupby('resultsDriverName').agg(
     finishing_position_std=('resultsFinalPositionNumber', 'std')
@@ -685,13 +729,13 @@ if st.checkbox(f"Show {current_year} Schedule"):
 
 
 if st.checkbox("Show Next Race"):
-
+#### fix to show current day's race
     st.subheader("Next Race:")
     nextRace = raceSchedule[raceSchedule['date'] >= datetime.datetime.now()]
     # Create a copy of the slice to avoid the warning
 
     
-    nextRace = nextRace.sort_values(by=['date', 'time'], ascending=[True, True]).head(1).copy()
+    nextRace = nextRace.sort_values(by=['date'], ascending=[True]).head(1).copy()
    # nextRace['time'] = datetime.datetime.strptime(nextRace['time'], '%H:%M')
    # print(nextRace['time'])
    # print(type(nextRace['time']))

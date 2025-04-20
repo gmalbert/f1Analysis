@@ -48,8 +48,6 @@ races_and_grandPrix.rename(columns={'id_races': 'raceIdFromGrandPrix', 'id_grand
 results_and_drivers = pd.merge(race_results, drivers, left_on='driverId', right_on='id', how='inner', suffixes=['_results', '_drivers'])
 results_and_drivers.rename(columns={'year': 'resultsYear', 'driverId': 'resultsDriverId', 'qualificationPositionNumber': 'resultsQualificationPositionNumber', 'positionNumber': 'resultsFinalPositionNumber', 'name': 'resultsDriverName', 'gridPositionNumber': 'resultsStartingGridPositionNumber', 'reasonRetired': 'resultsReasonRetired'}, inplace=True)
 
-
-
 results_and_drivers = results_and_drivers[results_and_drivers['resultsYear'] >= raceNoEarlierThan]
 
 results_and_drivers[['totalPolePositions', 'totalFastestLaps', 'totalRaceWins', 'totalRaceEntries', 'totalRaceStarts', 'totalPodiums', 'bestRaceResult', 'bestStartingGridPosition', 'totalRaceLaps']]
@@ -68,7 +66,7 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying = pd.merge(res
 
 results_and_drivers_and_constructors_and_grandprix_and_qualifying[['grandPrixName', 'resultsQualificationPositionNumber', 'raceId_results', 'resultsDriverId',  'q1', 'q2', 'q3', 'resultsYear', 'constructorName','resultsDriverId', 'resultsDriverName',  'resultsStartingGridPositionNumber', 'resultsFinalPositionNumber', 
                                       'resultsReasonRetired', 'constructorTotalRaceEntries', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotal1And2Finishes', 'constructorTotalPodiumRaces', 
-                                      'constructorTotalPolePositions', 'constructorTotalFastestLaps', 'grandPrixLaps', 'grandPrixYear', 'raceIdFromGrandPrix', 'grandPrixRaceId']]
+                                      'constructorTotalPolePositions', 'constructorTotalFastestLaps', 'grandPrixLaps', 'grandPrixYear', 'raceIdFromGrandPrix', 'grandPrixRaceId', 'circuitType']]
 
 fp1_fp2 = pd.merge(fp1, fp2, on=['raceId', 'driverId'], how='left', suffixes=['_fp1', '_fp2'])
 fp1_fp2_fp3 = pd.merge(fp1_fp2, fp3, on=['raceId', 'driverId'], how='left', suffixes=['_fp1_2', '_fp3'])
@@ -82,6 +80,8 @@ fp1_fp2_fp3_fp4.rename(columns={'driverId': 'fpDriverId', 'raceId': 'fpRaceId', 
 
 
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = pd.merge(results_and_drivers_and_constructors_and_grandprix_and_qualifying, fp1_fp2_fp3_fp4, left_on=['raceId_results', 'resultsDriverId'], right_on=['fpRaceId','fpDriverId' ], how='left', suffixes=['_results', '_practices']) 
+
+print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns)
 
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['short_date'] = pd.to_datetime(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['date']).dt.strftime('%Y-%m-%d')
 
@@ -103,6 +103,12 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
     results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['grandPrixYear'] == current_year
 )
 
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['streetRace'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['circuitType'] == 'STREET')
+
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['trackRace'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['circuitType'] == 'RACE')
+
 # Count the number of unique active years for each driver
 yearsActive = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.groupby('resultsDriverId')['grandPrixYear'].nunique().reset_index()
 
@@ -113,7 +119,7 @@ yearsActiveGroup.rename(columns={'grandPrixYear': 'yearsActive'}, inplace=True)
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.merge(
     yearsActiveGroup, on='resultsDriverId', how='left')
 
-results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[['grandPrixName', 'resultsDriverId', 'yearsActive', 'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'q1End', 'q2End', 'q3Top10', 'resultsDriverId', 'resultsReasonRetired','averagePracticePosition', 'raceId_results', 'resultsFinalPositionNumber', 'resultsPodium', 'resultsTop5', 'resultsTop10', 'fp1PositionNumber', 'fp1Time', 'fp1Gap', 
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[['grandPrixName', 'streetRace', 'trackRace', 'resultsDriverId', 'yearsActive', 'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'q1End', 'q2End', 'q3Top10', 'resultsDriverId', 'resultsReasonRetired','averagePracticePosition', 'raceId_results', 'resultsFinalPositionNumber', 'resultsPodium', 'resultsTop5', 'resultsTop10', 'fp1PositionNumber', 'fp1Time', 'fp1Gap', 
                                         'fp1Interval', 'positionsGained', 'fp1PositionNumber', 'fp2PositionNumber','fp3PositionNumber','fp4PositionNumber', 'q1', 'q2', 'q3', 'resultsYear', 'constructorName','resultsDriverId', 'resultsDriverName',  'resultsStartingGridPositionNumber', 
                                        'constructorTotalRaceEntries', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotal1And2Finishes', 'constructorTotalPodiumRaces', 
                                        'driverTotalRaceStarts', 'driverTotalPodiums', 'driverBestRaceResult',  'driverBestStartingGridPosition', 'driverTotalRaceLaps', 'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps',
@@ -124,12 +130,12 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.
                                         'fp4PositionNumber', 'resultsPodium', 'resultsTop5', 'resultsTop10', 'resultsYear', 'constructorName',  'resultsStartingGridPositionNumber', 'resultsFinalPositionNumber', 
                                       'positionsGained', 'resultsReasonRetired', 'constructorTotalRaceEntries', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotal1And2Finishes', 'constructorTotalPodiumRaces', 
                                       'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums',
-                                      'constructorTotalPolePositions', 'constructorTotalFastestLaps', 'grandPrixLaps', 'turns', 'short_date', 'DNF', 'fp1PositionNumber', 'fp2PositionNumber',
+                                      'constructorTotalPolePositions', 'constructorTotalFastestLaps', 'grandPrixLaps', 'turns', 'short_date', 'DNF', 'fp1PositionNumber', 'fp2PositionNumber', 'streetRace', 'trackRace',
                                      'fp3PositionNumber','fp4PositionNumber','averagePracticePosition', 'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'q1End', 'q2End', 'q3Top10','resultsDriverId', 'driverTotalPolePositions', 'activeDriver', 'yearsActive' ], sep='\t')
 
 positionCorrelation = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[[
     'lastFPPositionNumber', 'resultsFinalPositionNumber', 'resultsStartingGridPositionNumber','grandPrixLaps',
-    'averagePracticePosition', 'DNF', 'resultsTop10', 'resultsTop5', 'resultsPodium', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 'positionsGained', 'q1End', 'q2End', 'q3Top10',
+    'averagePracticePosition', 'DNF', 'resultsTop10', 'resultsTop5', 'resultsPodium', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 'positionsGained', 'q1End', 'q2End', 'q3Top10', 'streetRace', 'trackRace',
      'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums', 'driverTotalPolePositions', 'yearsActive']].corr(method='pearson')
 
 positionCorrelation.to_csv(path.join(DATA_DIR, 'f1PositionCorrelation.csv'), sep='\t')
@@ -260,12 +266,12 @@ if newRecords:
 else:
     ## meaning that we have all current data and don't need to rerun everything
     ## in this case, we just want to add the new data to the end of the existing dataset
+    
     races_and_weather = pd.read_csv(path.join(DATA_DIR, 'f1WeatherData_AllData.csv'), sep='\t', usecols=['date_hourly', 'latitude_hourly', 'longitude_hourly', 'temperature_2m', 'hourly_precipitation', 
     'relative_humidity_2m', 'short_date', 'wind_speed_10m', 'id_races', 'grandPrixId', 'circuitId'])
     races_and_weather_for_concat = pd.merge(all_hourly_data, circuits_and_races_lat_long, left_on='short_date', right_on='date', how='inner', suffixes=['_hourly', '_lat_long'])
     #new_hourly_data = pd.concat(all_hourly_data, ignore_index=True)
-    print(races_and_weather_for_concat.columns)
-    print(all_hourly_data.columns)
+
     # Exclude rows in races_and_weather where short_date matches any value in races_and_weather_for_concat['short_date']
     races_and_weather = races_and_weather[~races_and_weather['short_date'].isin(races_and_weather_for_concat['short_date'])]
     print(f"Prior weather records were current: {len(races_and_weather_for_concat)} added.")
