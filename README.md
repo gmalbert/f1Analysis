@@ -15,6 +15,9 @@ The CSV files and any associated .json files are included in the ```data_files``
 ## Filtering
 There are currently more than 30 ways to filter the F1 data which spans from 2015 to present. You can filter by one or all of the data fields on the left side of the page. The data dynamically updates and gives you a new total record count. 
 
+## Linear regression
+In addition to correlation coefficients, I have added several linear regressions to help predict the results of the next race. 
+
 ## Other options
 Besides filtering, you can also look at the upcoming race which shows historical and upcoming weather, the past winners, and data about the constructors. You can view the entire current season with details about each file. You can look at the raw, unfiltered data. Finally, you can view a correlation for the entire dataset.
 
@@ -24,3 +27,4 @@ The weather is pulled from [Open-Meteo's free API](https://open-meteo.com/) whic
 
 ### To do
 - Figure out a way to reset the filters.
+- Incorporate the linear regression equations for predictive race results.
