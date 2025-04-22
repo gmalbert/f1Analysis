@@ -13,6 +13,8 @@ from pandas.api.types import (
 )
 import altair as alt
 import time
+from scipy.stats import linregress
+import matplotlib.pyplot as plt
 
 
 DATA_DIR = 'data_files/'
@@ -36,17 +38,17 @@ def get_last_modified_file(dir_path):
         return None
 
 latest_file = get_last_modified_file(DATA_DIR)
-
-print(f"The last modified file is: {latest_file}")
 modification_time = path.getmtime(latest_file)
-readable_time = time.ctime(modification_time)
+#readable_time = time.ctime(modification_time)
 readable_time = datetime.datetime.fromtimestamp(modification_time).strftime('%Y-%m-%d %I:%M %p')
 
 def reset_filters():
     # Assuming you have filters stored in session state
+    print(f"Session keys: {st.session_state.keys()}")
     for key in st.session_state.keys():
         if key.startswith('filter_'):
-            st.session_state[key] = None  # or any default value
+            st.session_state[key] = None
+
 
 def highlight_correlation(val):
 
@@ -384,11 +386,11 @@ data = load_data(10000)
 data['averagePracticePosition'] = data['averagePracticePosition'].round(2)
 
 # Convert columns to appropriate types to allow for NaN values
-data['resultsStartingGridPositionNumber'] = data['resultsStartingGridPositionNumber'].astype('Int64')
-data['resultsFinalPositionNumber'] = data['resultsFinalPositionNumber'].astype('Int64')
+data['resultsStartingGridPositionNumber'] = data['resultsStartingGridPositionNumber'].astype('Float64')
+data['resultsFinalPositionNumber'] = data['resultsFinalPositionNumber'].astype('Float64')
 data['positionsGained'] = data['positionsGained'].astype('Int64')
 data['averagePracticePosition'] = data['averagePracticePosition'].astype('Float64')
-data['lastFPPositionNumber'] = data['lastFPPositionNumber'].astype('Int64')
+data['lastFPPositionNumber'] = data['lastFPPositionNumber'].astype('Float64')
 data['resultsQualificationPositionNumber'] = data['resultsQualificationPositionNumber'].astype('Int64')
 data['short_date'] = pd.to_datetime(data['short_date'])
 data['numberOfStops'] = data['numberOfStops'].astype('Int64')
@@ -633,10 +635,69 @@ if st.checkbox('Filter Results'):
     st.subheader("Average Practice Position vs Final Position")
     st.scatter_chart(filtered_data, x='averagePracticePosition', x_label='Average Practice Position', y='resultsFinalPositionNumber', y_label='Final Position', use_container_width=True)
 
+    # Perform linear regression
+
+    ## use average to fill in NaN values
+    x_avg = filtered_data['averagePracticePosition'].mean()
+    y_avg = filtered_data['resultsFinalPositionNumber'].mean()
+    x = filtered_data['averagePracticePosition'].fillna(x_avg)
+    y = filtered_data['resultsFinalPositionNumber'].fillna(y_avg)
+
+    # Ensure both x and y have the same length
+    if len(x) == len(y) and len(x) > 0:
+        slope, intercept, r_value, p_value, std_err = linregress(x, y)
+
+        # Create a scatter plot with the regression line
+        st.subheader("Linear Regression: Average Practice Position vs Final Position")
+        fig, ax = plt.subplots()
+        ax.scatter(x, y, label="Data Points", color="blue")
+        ax.plot(x, slope * x + intercept, color="red", label=f"y = {slope:.2f}x + {intercept:.2f}")
+        ax.set_xlabel("Average Practice Position")
+        ax.set_ylabel("Final Position")
+        ax.legend()
+        st.pyplot(fig, use_container_width=False)
+        st.write(f"**Regression Equation:** y = {slope:.2f}x + {intercept:.2f}")
+
+        # Display regression statistics
+        st.write(f"**Regression Statistics:**")
+        st.write(f"R-squared: {r_value**2:.2f}")
+        #st.write(f"P-value: {p_value:.2e}")
+        st.write(f"Standard Error: {std_err:.2f}")
+    else:
+        st.write("Not enough data for regression analysis.")
+
+
+    ## use average to fill in NaN values
+    x_avg = filtered_data['resultsStartingGridPositionNumber'].mean()
+    y_avg = filtered_data['resultsFinalPositionNumber'].mean()
+    x = filtered_data['resultsStartingGridPositionNumber'].fillna(x_avg)
+    y = filtered_data['resultsFinalPositionNumber'].fillna(y_avg)
+
+    # Ensure both x and y have the same length
+    if len(x) == len(y) and len(x) > 0:
+        slope, intercept, r_value, p_value, std_err = linregress(x, y)
+
+        # Create a scatter plot with the regression line
+        st.subheader("Linear Regression: Starting Position vs Final Position")
+        fig, ax = plt.subplots()
+        ax.scatter(x, y, label="Data Points", color="blue")
+        ax.plot(x, slope * x + intercept, color="red", label=f"y = {slope:.2f}x + {intercept:.2f}")
+        ax.set_xlabel("Starting Position")
+        ax.set_ylabel("Final Position")
+        ax.legend()
+        st.pyplot(fig, use_container_width=False)
+        st.write(f"**Regression Equation:** y = {slope:.2f}x + {intercept:.2f}")
+
+        # Display regression statistics
+        st.write(f"**Regression Statistics:**")
+        st.write(f"R-squared: {r_value**2:.2f}")
+        #st.write(f"P-value: {p_value:.2e}")
+        st.write(f"Standard Error: {std_err:.2f}")
+    else:
+        st.write("Not enough data for regression analysis.")
+
     correlation_matrix = positionCorrelation.style.map(highlight_correlation, subset=positionCorrelation.columns[1:])
     
-
-
     st.subheader("Correlation Matrix")
     st.caption("Correlation values range from -1 to 1, where -1 indicates a perfect negative correlation, 0 indicates no correlation, and 1 indicates a perfect positive correlation.")
     # Display the correlation matrix
