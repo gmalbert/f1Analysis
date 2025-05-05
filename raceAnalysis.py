@@ -13,6 +13,7 @@ from pandas.api.types import (
 )
 import altair as alt
 import time
+#import scipy
 from scipy.stats import linregress
 import matplotlib.pyplot as plt
 
@@ -78,6 +79,7 @@ column_rename_for_filter = {
     'resultsTop5': 'Top 5',
     'short_date': 'Race Date',
     'DNF' : 'DNF', 
+    #'resultsReasonRetired': 'Reason Retired',
     'averagePracticePosition': 'Average Practice Pos.', 
     'lastFPPositionNumber': 'Last Free Practice Pos.', 
     'resultsQualificationPositionNumber': 'Qualifying Pos.', 
@@ -126,7 +128,8 @@ st.set_page_config(
    initial_sidebar_state="expanded"
 )
 
-exclusionList = ['grandPrixRaceId', 'raceId_results', 'constructorId', 'driverId', 'resultsDriverId', 'raceId', 'id', 'id_grandPrix', 'id_schedule']
+## do not create filters for any field in this list
+exclusionList = ['grandPrixRaceId', 'raceId_results', 'resultsReasonRetired', 'constructorId', 'driverId', 'resultsDriverId', 'raceId', 'id', 'id_grandPrix', 'id_schedule']
 
 @st.cache_data
 def load_correlation(nrows):
@@ -658,11 +661,15 @@ if st.checkbox('Filter Results'):
         st.pyplot(fig, use_container_width=False)
         st.write(f"**Regression Equation:** y = {slope:.2f}x + {intercept:.2f}")
 
+        avg_practice_position_vs_final_position_regression = (f"{slope:.2f}x + {intercept:.2f}")
+        #st.write(avg_practice_position_vs_final_position_regression)
+        avg_practice_position_vs_final_position_slope = slope
+        avg_practice_position_vs_final_position_intercept = intercept
         # Display regression statistics
         st.write(f"**Regression Statistics:**")
         st.write(f"R-squared: {r_value**2:.2f}")
         #st.write(f"P-value: {p_value:.2e}")
-        st.write(f"Standard Error: {std_err:.2f}")
+        #st.write(f"Standard Error: {std_err:.2f}")
     else:
         st.write("Not enough data for regression analysis.")
 
@@ -678,7 +685,7 @@ if st.checkbox('Filter Results'):
         slope, intercept, r_value, p_value, std_err = linregress(x, y)
 
         # Create a scatter plot with the regression line
-        st.subheader("Linear Regression: Starting Position vs Final Position")
+        st.subheader("Linear Regression: Starting Position vs. Final Position")
         fig, ax = plt.subplots()
         ax.scatter(x, y, label="Data Points", color="blue")
         ax.plot(x, slope * x + intercept, color="red", label=f"y = {slope:.2f}x + {intercept:.2f}")
@@ -687,12 +694,15 @@ if st.checkbox('Filter Results'):
         ax.legend()
         st.pyplot(fig, use_container_width=False)
         st.write(f"**Regression Equation:** y = {slope:.2f}x + {intercept:.2f}")
+        starting_vs_final_position_slope = slope
+        starting_vs_final_position_intercept = intercept
+        starting_vs_final_position_regression = (f"{slope:.2f}x + {intercept:.2f}")
 
         # Display regression statistics
         st.write(f"**Regression Statistics:**")
         st.write(f"R-squared: {r_value**2:.2f}")
         #st.write(f"P-value: {p_value:.2e}")
-        st.write(f"Standard Error: {std_err:.2f}")
+        #st.write(f"Standard Error: {std_err:.2f}")
     else:
         st.write("Not enough data for regression analysis.")
 
@@ -793,30 +803,13 @@ if st.checkbox("Show Next Race"):
 #### fix to show current day's race
     st.subheader("Next Race:")
     nextRace = raceSchedule[raceSchedule['date'] >= datetime.datetime.now()]
-    # Create a copy of the slice to avoid the warning
 
+    # Create a copy of the slice to avoid the warning
     
     nextRace = nextRace.sort_values(by=['date'], ascending=[True]).head(1).copy()
-   # nextRace['time'] = datetime.datetime.strptime(nextRace['time'], '%H:%M')
-   # print(nextRace['time'])
-   # print(type(nextRace['time']))
-   # nextRace['time'] = nextRace['time'].dt.datetime.strptime('%H:%M')
-   # local_offset_seconds = time.timezone if (time.localtime().tm_isdst == 0) else time.altzone
-    # Note: time.timezone and time.altzone have opposite signs to timedelta
-    #local_offset = datetime.timedelta(seconds=-local_offset_seconds)
-
-    # Apply the local offset to the UTC datetime object
-   # nextRace['time'] = nextRace['time'] + local_offset
-
-    # Modify the 'date' column safely
-    #nextRace['date'] = nextRace['date'].dt.strftime('%Y-%m-%d')
-    
-
-
 
     st.dataframe(nextRace, column_config=next_race_columns_to_display, hide_index=True, 
         column_order=['date', 'time', 'fullName', 'courseLength', 'turns', 'laps'])
-
 
     # Limit detailsOfNextRace by the grandPrixId of the next race
     next_race_id = nextRace['grandPrixId'].head(1).values[0]
@@ -871,7 +864,7 @@ if st.checkbox("Show Next Race"):
 
 if st.checkbox('Show Raw Data'):
 
-    st.write(f"Total number of results: {len(data)}")
+    st.write(f"Total number of results: {len(data):,d}")
 
     st.dataframe(data, column_config=columns_to_display,
         hide_index=True,  width=800, height=600)
@@ -908,4 +901,4 @@ if st.checkbox('Show Correlations for all races'):
     correlation_matrix = correlation_matrix.style.map(highlight_correlation, subset=correlation_matrix.columns[1:])
     
     # Display the correlation matrix
-    st.dataframe(correlation_matrix, column_config=correlation_columns_to_display, hide_index=True, width=800, height=600)
+    st.dataframe(correlation_matrix, column_config=correlation_columns_to_display, hide_index=True, width=800 , height=600)

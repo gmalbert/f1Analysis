@@ -100,8 +100,7 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['q1End'] = (results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsQualificationPositionNumber'] >15)
 
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['activeDriver'] = (
-    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['grandPrixYear'] == current_year
-)
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['grandPrixYear'] == current_year)
 
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['streetRace'] = (
     results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['circuitType'] == 'STREET')
