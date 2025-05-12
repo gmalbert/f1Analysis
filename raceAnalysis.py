@@ -16,7 +16,15 @@ import time
 #import scipy
 from scipy.stats import linregress
 import matplotlib.pyplot as plt
-
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
+from sklearn.inspection import permutation_importance
+from sklearn.impute import SimpleImputer
+import seaborn as sns
 
 DATA_DIR = 'data_files/'
 #variable_to_change = "helloWorld123"
@@ -55,7 +63,7 @@ def highlight_correlation(val):
 
     if val >= 0.6 and val < 1.0:            
         color = 'green'
-    elif val <= -0.6:
+    elif val < -0.6:
         color = 'red' 
     else:
         color = 'white'
@@ -118,6 +126,18 @@ individual_race_grouped_columns_to_display = {
     'driver_races': st.column_config.NumberColumn("# of Races", format="%d")
 }
 
+flags_safety_cars_columns_to_display = {
+    'grandPrixYear': st.column_config.NumberColumn("Year", format="%d"),
+    'round': st.column_config.NumberColumn("Round", format="%d"),
+    'raceId': None,
+    'grandPrixId': None,
+    'SafetyCarStatus': st.column_config.NumberColumn("Safety Car", format="%d"),
+    'redFlag': st.column_config.NumberColumn("Red Flag"),
+    'yellowFlag': st.column_config.NumberColumn("Yellow Flag"),
+
+}
+
+
 current_year = datetime.datetime.now().year
 raceNoEarlierThan = current_year - 10
 
@@ -146,6 +166,14 @@ def load_data_schedule(nrows):
     return raceSchedule
 
 raceSchedule = load_data_schedule(10000)
+
+@st.cache_data
+def load_data_race_messages(nrows):
+    race_messages = pd.read_csv(path.join(DATA_DIR, 'grouped_race_control_messages.csv'),sep='\t')
+
+    return race_messages
+
+race_messages = load_data_race_messages(10000)
 
 schedule_columns_to_display = {
     'round': st.column_config.NumberColumn("Round", format="%d"),
@@ -233,6 +261,7 @@ st.caption(f"Last updated: {readable_time}")
 columns_to_display = {'grandPrixYear': st.column_config.NumberColumn("Year", format="%d"),
     'grandPrixName': st.column_config.TextColumn("Grand Prix"),
     'constructorName': st.column_config.TextColumn("Constructor"),
+    'resultsReasonRetired': st.column_config.TextColumn("Reason Retired"),
     'resultsDriverName': st.column_config.TextColumn("Driver"),
     'resultsPodium': st.column_config.CheckboxColumn("Podium"),
     'resultsTop5': st.column_config.CheckboxColumn("Top 5"),
@@ -247,6 +276,7 @@ columns_to_display = {'grandPrixYear': st.column_config.NumberColumn("Year", for
     'short_date': None,
     'raceId_results': None,
     'grandPrixRaceId': None,
+    'bestQualifyingTime_sec': st.column_config.NumberColumn("Best Qualifying Time (s)", format="%.3f"),
     'DNF': st.column_config.CheckboxColumn("DNF"),
     'streetRace': st.column_config.CheckboxColumn("Street Race"),
     'trackRace': st.column_config.CheckboxColumn("Track Race"),
@@ -268,6 +298,28 @@ columns_to_display = {'grandPrixYear': st.column_config.NumberColumn("Year", for
     'driverId': None,
     'constructorId': None,
     'raceId': None,
+    'constructorId_results': None,
+    'driverId_results': None,
+    'id': None,
+    'name': None,
+    'fullName': None,
+    'countryId': None,
+    'bestChampionshipPosition': st.column_config.NumberColumn(
+        "Best Championship Pos.", format="%d", min_value=0, max_value=20, step=1, default=0),
+    'bestStartingGridPosition': st.column_config.NumberColumn(
+        "Best Starting Grid Pos.", format="%d", min_value=0, max_value=20, step=1, default=0),  
+    'bestRaceResult': st.column_config.NumberColumn(
+        "Best Race Result", format="%d", min_value=0, max_value=20, step=1, default=0),    
+    'bestChampionshipPosition': st.column_config.NumberColumn(
+        "Best Championship Pos.", format="%d", min_value=0, max_value=20, step=1, default=0), 
+    'totalChampionshipWins': st.column_config.NumberColumn(
+        "Total Championship Wins", format="%d", min_value=0, max_value=20, step=1, default=0), 
+    'totalRaceStarts': st.column_config.NumberColumn(
+        "Total Starts", format="%d", min_value=0, max_value=20, step=1, default=0),   
+    'totalRaceEntries': st.column_config.NumberColumn(
+        "Total Entries", format="%d", min_value=0, max_value=20, step=1, default=0),       
+    'totalRaceWins': st.column_config.NumberColumn(
+        "Total Wins", format="%d", min_value=0, max_value=20, step=1, default=0),             
     'resultsDriverId': None,
     'grandPrixLaps': st.column_config.NumberColumn(
         "Laps", format="%d", min_value=0, max_value=100, step=1, default=0),
@@ -281,6 +333,31 @@ columns_to_display = {'grandPrixYear': st.column_config.NumberColumn("Year", for
         "Turns", format="%d", min_value=0, max_value=100, step=1, default=0),
     'driverBestStartingGridPosition': st.column_config.NumberColumn(
         "Best Starting Grid Pos.", format="%d", min_value=0, max_value=100, step=1, default=0),
+    'total1And2Finishes': st.column_config.NumberColumn(
+        "Total 1st and 2nd", format="%d", min_value=0, max_value=20, step=1, default=0),     
+    'totalRaceLaps': st.column_config.NumberColumn(
+        "Total Laps", format="%d", min_value=0, max_value=20, step=1, default=0),     
+    'totalPodiums': st.column_config.NumberColumn(
+        "Total Podiums", format="%d", min_value=0, max_value=20, step=1, default=0),  
+    'totalPodiumRaces': st.column_config.NumberColumn(
+        "Total Podium Races", format="%d", min_value=0, max_value=20, step=1, default=0),   
+    'totalPoints': st.column_config.NumberColumn(
+        "Total Points", format="%d", min_value=0, max_value=20, step=1, default=0),         
+    'totalChampionshipPoints': st.column_config.NumberColumn(
+        "Total Champ. Points", format="%d", min_value=0, max_value=20, step=1, default=0),    
+    'totalPolePositions': st.column_config.NumberColumn(
+        "Total Pole Pos.", format="%d", min_value=0, max_value=20, step=1, default=0), 
+    'totalFastestLaps': st.column_config.NumberColumn(
+        "Total Fastest Laps", format="%d", min_value=0, max_value=20, step=1, default=0),  
+    'TeamName': None,
+    'driverId_driver_standings': None,        
+    'constructorRank': st.column_config.NumberColumn(
+        "Constructor Rank", format="%d", min_value=0, max_value=20, step=1, default=0),    
+    'driverName': None,
+    'points': st.column_config.NumberColumn(
+        "Current Year Points", format="%d", min_value=0, max_value=20, step=1, default=0),
+    'driverRank': st.column_config.NumberColumn(
+        "Current Year Rank", format="%d", min_value=0, max_value=20, step=1, default=0),                                      
     'driverBestRaceResult': st.column_config.NumberColumn("Best Result", format="%d", min_value=0, max_value=100, step=1, default=0),
     'driverTotalChampionshipWins': st.column_config.NumberColumn(
         "Total Championship Wins", format="%d", min_value=0, max_value=100, step=1, default=0),
@@ -370,14 +447,18 @@ season_summary_columns_to_display = {
 def load_data(nrows):
     fullResults = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t', nrows=nrows, usecols=['grandPrixYear', 'grandPrixName', 'resultsDriverName', 'resultsPodium', 'resultsTop5', 'resultsTop10', 'constructorName',  'resultsStartingGridPositionNumber', 'resultsFinalPositionNumber', 
     'positionsGained', 'short_date', 'raceId_results', 'grandPrixRaceId', 'DNF', 'averagePracticePosition', 'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'q1End', 'q2End', 'q3Top10', 'resultsDriverId', 
-    'grandPrixLaps', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 'resultsReasonRetired',
+    'grandPrixLaps', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 'resultsReasonRetired', 'constructorId_results',
     'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'activeDriver', 'streetRace', 'trackRace',
-           'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums', 'yearsActive'
+           'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums', 'yearsActive','bestQualifyingTime_sec'
     ])
     
     pitStops = pd.read_csv(path.join(DATA_DIR, 'f1PitStopsData_Grouped.csv'), sep='\t', nrows=nrows, usecols=['raceId', 'driverId', 'constructorId', 'numberOfStops', 'averageStopTime', 'totalStopTime'])
+    constructor_standings = pd.read_csv(path.join(DATA_DIR, 'constructor_standings.csv'), sep='\t')
+    driver_standings = pd.read_csv(path.join(DATA_DIR, 'driver_standings.csv'), sep='\t')
 
     fullResults = pd.merge(fullResults, pitStops, left_on=['raceId_results', 'resultsDriverId'], right_on=['raceId', 'driverId'], how='left', suffixes=['_results', '_pitStops'])
+    fullResults = pd.merge(fullResults, constructor_standings, left_on='constructorId_results', right_on='id', how='left', suffixes=['_results', '_constructor_standings'])
+    fullResults = pd.merge(fullResults, driver_standings, left_on='resultsDriverId', right_on='driverId', how='left', suffixes=['_results', '_driver_standings'])
     
     return fullResults
 
@@ -601,7 +682,7 @@ if st.checkbox('Filter Results'):
          'resultsTop10','resultsStartingGridPositionNumber','resultsFinalPositionNumber','positionsGained', 'DNF', 'resultsQualificationPositionNumber',
            'q1End', 'q2End', 'q3Top10', 'averagePracticePosition',  'lastFPPositionNumber','numberOfStops', 'averageStopTime', 'totalStopTime',
            'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'resultsReasonRetired',
-           'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums'
+           'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums', 
            ], hide_index=True, width=2400, height=600)
 
     positionCorrelation = filtered_data[[
@@ -787,14 +868,167 @@ if st.checkbox('Filter Results'):
     st.subheader("Driver Consistency")
     st.caption("(Lower is Better)")
     st.bar_chart(driver_consistency, x='resultsDriverName', x_label='Driver', y_label='Standard Deviation - Finishing', y='finishing_position_std', use_container_width=True)
-   
+
+    st.subheader("Predictive Data Model")
+    #st.write(f"Total number of results: {len(data):,d}")
+
+    # Display the predictive data model without index
+    # -----------------------------
+# Feature selection
+# -----------------------------
+    features = ['grandPrixName', 'constructorName', 'resultsDriverName', 
+    'resultsStartingGridPositionNumber',  'averagePracticePosition',
+    'lastFPPositionNumber', 'resultsQualificationPositionNumber',  'constructorTotalRaceStarts', 'constructorTotalRaceWins',
+    'constructorTotalPolePositions',   'driverTotalRaceEntries', 'totalPolePositions', 'points',
+    'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalPodiums', 'driverRank', 'constructorRank',
+    'driverTotalPolePositions', 'yearsActive', 'bestQualifyingTime_sec']
+    
+    
+    target = 'resultsFinalPositionNumber'
+
+    X = filtered_data[features]
+    y = filtered_data[target]
+
+# -----------------------------
+# Preprocessing
+# -----------------------------
+    categorical_features = ['grandPrixName', 'constructorName', 'resultsDriverName']
+
+    numerical_features = ['resultsStartingGridPositionNumber', 'averagePracticePosition',
+    'lastFPPositionNumber', 'resultsQualificationPositionNumber',  'constructorTotalRaceStarts', 'constructorTotalRaceWins',
+    'constructorTotalPolePositions',  'driverTotalRaceEntries','totalPolePositions', 'points',
+    'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalPodiums', 'driverRank', 'constructorRank',
+    'driverTotalPolePositions', 'yearsActive', 'bestQualifyingTime_sec']
+
+    # Imputers for missing values
+    numerical_imputer = SimpleImputer(strategy='mean')  # Replace NaN with the mean for numerical features
+    categorical_imputer = SimpleImputer(strategy='most_frequent')  # Replace NaN with the most frequent value for categorical features
+
+    # Preprocessor pipeline
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('num', Pipeline(steps=[
+                ('imputer', numerical_imputer),  # Handle missing values for numerical features
+                ('scaler', StandardScaler())    # Scale numerical features
+            ]), numerical_features),
+            ('cat', Pipeline(steps=[
+                ('imputer', categorical_imputer),  # Handle missing values for categorical features
+                ('onehot', OneHotEncoder(handle_unknown='ignore'))  # One-hot encode categorical features
+            ]), categorical_features)
+        ]
+    )
+
+# -----------------------------
+# Gradient Boosting Model Pipeline
+# -----------------------------
+    model = Pipeline(steps=[
+        ('preprocessor', preprocessor),
+        ('regressor', GradientBoostingRegressor(
+            n_estimators=200,
+            learning_rate=0.1,
+            max_depth=4,
+            random_state=42
+        ))
+    ])
+
+# -----------------------------
+# Handle missing values in the target variable (y)
+# -----------------------------
+    if y.isnull().any():
+        print(f"Number of missing values in target (y): {y.isnull().sum()}")
+        
+        # Option 1: Drop rows where y is NaN
+        #valid_indices = ~y.isnull()
+        #X = X[valid_indices]
+        #y = y[valid_indices]
+
+        # Option 2 (Alternative): Impute missing values in y with the mean
+        y = y.fillna(y.mean())
+
+    # Ensure no missing values remain in y
+    if y.isnull().any():
+        print("There are still missing values in y after handling.")
+    else:
+        print("No missing values in y. Proceeding with model training.")
+
+# -----------------------------
+# Split data & train
+# -----------------------------
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Fit the model
+    model.fit(X_train, y_train)
+
+    # Evaluate the model
+    y_pred = model.predict(X_test)
+    mse = mean_squared_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)
+
+    st.write(f"Mean Squared Error: {mse:.3f}")
+    st.write(f"R^2 Score: {r2:.3f}")
+    st.write(f"\n🔍 Model Error (MAE): {mean_absolute_error(y_test, y_pred):.2f} places")
+
+    preprocessor = model.named_steps['preprocessor']
+    regressor = model.named_steps['regressor']
+
+# Get feature names from each transformer
+    numeric_names = numerical_features
+    categorical_names = preprocessor.named_transformers_['cat'].get_feature_names_out(categorical_features)
+
+# Combine all feature names
+    all_feature_names = np.concatenate([numeric_names, categorical_names])
+
+# Step 3: Get feature importances from the regressor
+    importances = regressor.feature_importances_
+    importance_df = pd.DataFrame({
+     'Feature': all_feature_names,
+     'Importance': importances
+})
+
+# Normalize to percentage
+    importance_df['Importance (%)'] = 100 * importance_df['Importance'] / importance_df['Importance'].sum()
+
+# Sort by importance
+    importance_df = importance_df.sort_values('Importance (%)', ascending=False)
+    st.dataframe(importance_df, hide_index=True, width=800, height=800)
+
+# Display
+    print(importance_df.head(15))  # Show top 15 features
+
+# -----------------------------
+# Evaluation
+# -----------------------------
+    y_pred = model.predict(X_test)
+    mse = mean_squared_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)
+
+    print(f"Mean Squared Error: {mse:.3f}")
+    print(f"R^2 Score: {r2:.3f}")
+    print(f"🔍 Model Error (MAE): {mean_absolute_error(y_test, y_pred):.2f} places")
+
+
+# Assume you have the final transformed features (after preprocessing)
+# For example:
+    X_transformed = model.named_steps['preprocessor'].transform(X)
+    numerical_feature_names = numerical_features
+    categorical_feature_names = model.named_steps['preprocessor'].named_transformers_['cat'].named_steps['onehot'].get_feature_names_out(categorical_features)
+    
+    feature_names = np.concatenate([
+        numerical_features,
+        model.named_steps['preprocessor'].named_transformers_['cat'].get_feature_names_out(categorical_features)
+])
 
 if st.checkbox(f"Show {current_year} Schedule"):
     st.title(f"{current_year} Races:")
     
     raceSchedule = raceSchedule[raceSchedule['year'] == current_year]
+
+    #st.dataframe(race_messages)
+    
     st.write(f"Total number of races: {len(raceSchedule)}")
+    
     st.dataframe(raceSchedule, column_config=schedule_columns_to_display,
+    #st.dataframe(race_messages, column_config=schedule_columns_to_display,
         hide_index=True,  width=800, height=600, column_order=['round', 'fullName', 'date', 'time', 
         'circuitType', 'courseLength', 'laps', 'turns', 'distance', 'totalRacesHeld'])
 
@@ -802,7 +1036,7 @@ if st.checkbox(f"Show {current_year} Schedule"):
 if st.checkbox("Show Next Race"):
 #### fix to show current day's race
     st.subheader("Next Race:")
-    nextRace = raceSchedule[raceSchedule['date'] >= datetime.datetime.now()]
+    nextRace = raceSchedule[raceSchedule['date'] >= datetime.datetime.today()]
 
     # Create a copy of the slice to avoid the warning
     
@@ -827,6 +1061,8 @@ if st.checkbox("Show Next Race"):
 
     # Sort detailsOfNextRace by grandPrixYear descending and resultsFinalPositionNumber ascending
     detailsOfNextRace = detailsOfNextRace.sort_values(by=['grandPrixYear', 'resultsFinalPositionNumber'], ascending=[False, True])
+
+    
 
     st.write(f"Total number of results: {len(detailsOfNextRace)}")
     st.dataframe(detailsOfNextRace, column_config=columns_to_display, hide_index=True, width=800, height=600)
@@ -853,6 +1089,16 @@ if st.checkbox("Show Next Race"):
     # Rename the columns for better readability
     individual_race_grouped_constructor = individual_race_grouped_constructor.sort_values(by=['average_ending_position'], ascending=[True])
 
+    # Add race messages
+    st.subheader(f"Flags and Safety Cars from {nextRace['fullName'].head(1).values[0]}:")
+    
+    raceMessagesOfNextRace = race_messages[race_messages['grandPrixId'] == next_race_id]
+    raceMessagesOfNextRace = raceMessagesOfNextRace.sort_values(by='Year', ascending = False)
+
+    st.write(f"Total number of results: {len(raceMessagesOfNextRace)}")
+    st.dataframe(raceMessagesOfNextRace, hide_index=True, column_config=flags_safety_cars_columns_to_display, 
+                 column_order=['Year', 'Round', 'SafetyCarStatus', 'redFlag', 'yellowFlag'])
+
     st.subheader(f"Driver Performance in {nextRace['fullName'].head(1).values[0]}:")
     st.write(f"Total number of results: {len(individual_race_grouped)}")
     
@@ -868,6 +1114,253 @@ if st.checkbox('Show Raw Data'):
 
     st.dataframe(data, column_config=columns_to_display,
         hide_index=True,  width=800, height=600)
+
+if st.checkbox('Show Predictive Data Model'):
+    st.subheader("Predictive Data Model")
+    st.write(f"Total number of results: {len(data):,d}")
+
+    # Display the predictive data model without index
+    # -----------------------------
+# Feature selection
+# -----------------------------
+    features = ['grandPrixName', 'constructorName', 'resultsDriverName', 
+    'resultsStartingGridPositionNumber',  'averagePracticePosition',
+    'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'q1End',
+    'q2End', 'q3Top10', 'constructorTotalRaceStarts', 'constructorTotalRaceWins',
+    'constructorTotalPolePositions', 'driverTotalChampionshipWins', 'driverTotalRaceEntries',
+    'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums',
+    'driverTotalPolePositions', 'yearsActive', 'bestQualifyingTime_sec']
+    
+    target = 'resultsFinalPositionNumber'
+
+    X = data[features]
+    y = data[target]
+
+# -----------------------------
+# Preprocessing
+# -----------------------------
+    categorical_features = ['grandPrixName', 'constructorName', 'resultsDriverName']
+
+    numerical_features = ['resultsStartingGridPositionNumber', 'averagePracticePosition',
+    'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'q1End',
+    'q2End', 'q3Top10',  'constructorTotalRaceStarts', 'constructorTotalRaceWins',
+    'constructorTotalPolePositions', 'driverTotalChampionshipWins', 'driverTotalRaceEntries',
+    'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums',
+    'driverTotalPolePositions', 'yearsActive', 'bestQualifyingTime_sec']
+
+    # Imputers for missing values
+    numerical_imputer = SimpleImputer(strategy='mean')  # Replace NaN with the mean for numerical features
+    categorical_imputer = SimpleImputer(strategy='most_frequent')  # Replace NaN with the most frequent value for categorical features
+
+    # Preprocessor pipeline
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('num', Pipeline(steps=[
+                ('imputer', numerical_imputer),  # Handle missing values for numerical features
+                ('scaler', StandardScaler())    # Scale numerical features
+            ]), numerical_features),
+            ('cat', Pipeline(steps=[
+                ('imputer', categorical_imputer),  # Handle missing values for categorical features
+                ('onehot', OneHotEncoder(handle_unknown='ignore'))  # One-hot encode categorical features
+            ]), categorical_features)
+        ]
+    )
+
+# -----------------------------
+# Gradient Boosting Model Pipeline
+# -----------------------------
+    model = Pipeline(steps=[
+        ('preprocessor', preprocessor),
+        ('regressor', GradientBoostingRegressor(
+            n_estimators=200,
+            learning_rate=0.1,
+            max_depth=4,
+            random_state=42
+        ))
+    ])
+
+# -----------------------------
+# Handle missing values in the target variable (y)
+# -----------------------------
+    if y.isnull().any():
+        print(f"Number of missing values in target (y): {y.isnull().sum()}")
+        
+        # Option 1: Drop rows where y is NaN
+        #valid_indices = ~y.isnull()
+        #X = X[valid_indices]
+        #y = y[valid_indices]
+
+        # Option 2 (Alternative): Impute missing values in y with the mean
+        y = y.fillna(y.mean())
+
+    # Ensure no missing values remain in y
+    if y.isnull().any():
+        print("There are still missing values in y after handling.")
+    else:
+        print("No missing values in y. Proceeding with model training.")
+
+# -----------------------------
+# Split data & train
+# -----------------------------
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Fit the model
+    model.fit(X_train, y_train)
+
+    # Evaluate the model
+    y_pred = model.predict(X_test)
+    mse = mean_squared_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)
+
+    st.write(f"Mean Squared Error: {mse:.3f}")
+    st.write(f"R^2 Score: {r2:.3f}")
+    st.write(f"\n🔍 Model Error (MAE): {mean_absolute_error(y_test, y_pred):.2f} places")
+
+    preprocessor = model.named_steps['preprocessor']
+    regressor = model.named_steps['regressor']
+
+# Get feature names from each transformer
+    numeric_names = numerical_features
+    categorical_names = preprocessor.named_transformers_['cat'].get_feature_names_out(categorical_features)
+
+# Combine all feature names
+    all_feature_names = np.concatenate([numeric_names, categorical_names])
+
+# Step 3: Get feature importances from the regressor
+    importances = regressor.feature_importances_
+    importance_df = pd.DataFrame({
+     'Feature': all_feature_names,
+     'Importance': importances
+})
+
+# Normalize to percentage
+    importance_df['Importance (%)'] = 100 * importance_df['Importance'] / importance_df['Importance'].sum()
+
+# Sort by importance
+    importance_df = importance_df.sort_values('Importance (%)', ascending=False)
+    st.dataframe(importance_df, hide_index=True, width=800, height=800)
+
+# Display
+    print(importance_df.head(15))  # Show top 15 features
+
+# -----------------------------
+# Evaluation
+# -----------------------------
+    y_pred = model.predict(X_test)
+    mse = mean_squared_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)
+
+    print(f"Mean Squared Error: {mse:.3f}")
+    print(f"R^2 Score: {r2:.3f}")
+    print(f"🔍 Model Error (MAE): {mean_absolute_error(y_test, y_pred):.2f} places")
+
+
+# Assume you have the final transformed features (after preprocessing)
+# For example:
+    X_transformed = model.named_steps['preprocessor'].transform(X)
+    numerical_feature_names = numerical_features
+    categorical_feature_names = model.named_steps['preprocessor'].named_transformers_['cat'].named_steps['onehot'].get_feature_names_out(categorical_features)
+    
+    feature_names = np.concatenate([
+        numerical_features,
+        model.named_steps['preprocessor'].named_transformers_['cat'].get_feature_names_out(categorical_features)
+])
+
+# Convert to DataFrame
+    #print(f"Shape of X_transformed: {X_transformed.shape}")
+    #print(f"Number of feature names: {len(feature_names)}")
+    #print(f"Feature names: {feature_names}")
+    #X_df = pd.DataFrame(X_transformed)
+    #print(f"Shape of X_df: {X_df.shape}")
+    #print(X_df.head(15))
+#, columns=feature_names
+# Compute correlation matrix
+    #corr_matrix = X_df.corr().abs()
+
+# Show heatmap of correlations
+   # plt.figure(figsize=(12, 10))
+   # sns.heatmap(corr_matrix, cmap="coolwarm", vmax=1.0, square=True)
+   # plt.title("Feature Correlation Matrix")
+   # plt.tight_layout()
+   # plt.show()
+
+
+# -------------------------------------------
+# 🔍 Feature Importance Breakdown (in %)
+# -------------------------------------------
+
+# Find highly correlated pairs
+   # threshold = 0.9
+    #upper_triangle = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(bool))
+
+    #high_corr = [(col1, col2, score)
+     ##        for col1 in upper_triangle.columns
+       #      for col2 in upper_triangle.columns
+       #      if pd.notnull(upper_triangle.loc[col1, col2]) and upper_triangle.loc[col1, col2] > threshold]
+
+# Display results
+    #if high_corr:
+    #    print("Highly correlated feature pairs (r > 0.9):")
+    #    for f1, f2, score in high_corr:
+    #        print(f"{f1} <-> {f2}: {score:.3f}")
+    #else:
+    #    print("No highly correlated features found above the threshold.")
+
+    #result = permutation_importance(model, X_test, y_test, n_repeats=10, random_state=42)
+    #importances = result.importances_mean
+
+    #for i in importances.argsort()[::-1]:
+    #    print(f"{all_feature_names[i]}: {importances[i]:.4f}")
+
+# Get feature names from preprocessor
+
+    #cat_names = model.named_steps['preprocessor'].named_transformers_['cat'].get_feature_names_out(categorical_features)
+    #all_feature_names = np.concatenate([numerical_features, cat_names])
+
+# Get importances
+    #importances = model.named_steps['regressor'].feature_importances_
+    #importance_df = pd.DataFrame({
+     #   'Feature': all_feature_names,
+    #    'Importance': importances
+#})
+  #  importance_df['Importance (%)'] = 100 * importance_df['Importance'] / importance_df['Importance'].sum()
+ #   importance_df = importance_df.sort_values(by='Importance (%)', ascending=False)
+
+# Display top 15 features
+   # print("\nTop Feature Importances:")
+   # print(importance_df.head(15))
+
+# Optional: Plot
+    #plt.figure(figsize=(10, 6))
+    ##plt.barh(importance_df['Feature'].head(15), importance_df['Importance (%)'].head(15))
+    #plt.gca().invert_yaxis()
+    #plt.title("Top 15 Feature Importances (% Contribution)")
+    #plt.xlabel("Importance (%)")
+    #plt.tight_layout()
+    #plt.show()
+
+    # Transform the data using the preprocessor
+    #X_transformed = model.named_steps['preprocessor'].transform(X)
+
+    # Get feature names for numerical and categorical features
+    #numerical_feature_names = numerical_features
+    #categorical_feature_names = model.named_steps['preprocessor'].named_transformers_['cat'].named_steps['onehot'].get_feature_names_out(categorical_features)
+
+    # Combine all feature names
+    #feature_names = np.concatenate([numerical_feature_names, categorical_feature_names])
+
+    # Check if the number of feature names matches the number of columns in X_transformed
+    #if X_transformed.shape[1] != len(feature_names):
+    #    st.write(f"Shape of transformed data: {X_transformed.shape}")
+    #    st.write(f"Number of feature names: {len(feature_names)}")
+    #    raise ValueError(f"Mismatch between transformed data shape {X_transformed.shape[1]} and feature names {len(feature_names)}")
+
+    # Convert the transformed data to a DataFrame
+    #X_df = pd.DataFrame(X_transformed, columns=feature_names)
+
+    # Display the DataFrame
+    #st.write(X_df.head())
+    
 
 if st.checkbox('Show Correlations for all races'):
     st.subheader("Correlation Matrix")
