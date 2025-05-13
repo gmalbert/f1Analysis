@@ -1,5 +1,5 @@
 # Formula 1 Data Analysis
-Analysis of Formula 1 ```.json``` files based on the very generous data files from [F1DB](https://github.com/f1db/f1db). Full data analysis is available through the [Formula 1 Analysis - Streamlit app](https://f1analysis-app.streamlit.app/).
+Analysis of Formula 1 ```.json``` files based on the very generous data files from [F1DB](https://github.com/f1db/f1db) for the vast majority of the analysis. F1DB did not have race control messages which include Safety Cars and flags. For that data, I used [FastF1](https://docs.fastf1.dev/). Full data analysis is available through the [Formula 1 Analysis - Streamlit app](https://f1analysis-app.streamlit.app/).
 
 ## File organization
 There are two python files involved in this app: ```raceAnalysis.py``` and ```f1-generate-analysis.py```. The Race Analysis file is what runs the Streamlit code and displays the data, filters, charts, etc. Before that file is run, you need to run the Generate Analysis page. This creates a bunch of dataframes, and it creates several .csv files for easier retrievel during the Streamlit display. This is done so fewer calculations are required in the Streamlit app which should improve performance. However, it does require that you run the ```f1-generate-analysis.py``` before you run the Steamlit.
@@ -17,6 +17,9 @@ There are currently more than 30 ways to filter the F1 data which spans from 201
 
 ## Linear regression
 In addition to correlation coefficients, I have added several linear regressions to help predict the results of the next race. 
+
+## Predictive Data Modeling
+I used [sckit-learn](https://scikit-learn.org/stable/) to perform machine learning by using data points to predict the race winner. The model is in its infancy, and I am still trying to figure out the right data points to feed it. I'm also currently trying to predict a driver's final place rather than their final time. That means that the [Mean Absolute Error](https://www.sciencedirect.com/topics/engineering/mean-absolute-error) relates to finisher placement which feels less exact than what I need.
 
 ## Other options
 Besides filtering, you can also look at the upcoming race which shows historical and upcoming weather, the past winners, and data about the constructors. You can view the entire current season with details about each file. You can look at the raw, unfiltered data. Finally, you can view a correlation for the entire dataset.
