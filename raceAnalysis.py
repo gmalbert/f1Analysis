@@ -87,7 +87,7 @@ column_rename_for_filter = {
     'resultsTop5': 'Top 5',
     'short_date': 'Race Date',
     'DNF' : 'DNF', 
-    #'resultsReasonRetired': 'Reason Retired',
+    'resultsReasonRetired': 'Reason Retired',
     'averagePracticePosition': 'Average Practice Pos.', 
     'lastFPPositionNumber': 'Last Free Practice Pos.', 
     'resultsQualificationPositionNumber': 'Qualifying Pos.', 
@@ -98,9 +98,9 @@ column_rename_for_filter = {
     'averageStopTime': 'Average Pit Stop Time (s)',
     'totalStopTime': 'Total Pit Stop Time (s)',
     'grandPrixLaps': 'Laps (Race)', 
-    'constructorTotalRaceStarts': 'Constructor Total Starts (Constructor)',
-    'constructorTotalRaceWins': 'Constructor Total Wins (Constructor)',
-    'constructorTotalPolePositions': 'Total Pole Positions (Constructor)',
+    'constructorTotalRaceStarts': 'Constructor Total Starts',
+    'constructorTotalRaceWins': 'Constructor Total Wins',
+    'constructorTotalPolePositions': 'Total Pole Positions',
     'turns': 'Turns (Race)',
     'driverBestStartingGridPosition': 'Best Starting Grid Position (Driver)',
     'driverBestRaceResult': 'Best Result (Driver)',
@@ -114,7 +114,26 @@ column_rename_for_filter = {
     'activeDriver': 'Active Driver (Raced this year)',
     'yearsActive': 'Years Active',
     'streetRace' : 'Street',
-    'trackRace': 'Track'
+    'trackRace': 'Track', 
+    'Points': 'Points (Driver)',
+    'constructorRank': 'Constructor Rank',
+    'driverRank': 'Driver Rank',
+    'bestChampionshipPosition': 'Best Champ Pos.',
+    'bestStartingGridPosition': 'Best Starting Grid Pos.',
+    'bestRaceResult': 'Best Race Result',
+    'totalChampionshipWins': 'Total Champ Wins',
+    'totalRaceEntries': 'Total Race Entries',
+    'totalRaceStarts': 'Total Race Starts',
+    'totalRaceWins': 'Total Race Wins',
+    'total1And2Finishes': 'Total 1st and 2nd',
+    'totalRaceLaps': 'Total Race Laps',
+    'totalPodiums': 'Total Podiums',
+    'totalPodiumRaces': 'Total Podium Races',
+    'totalPoints' : 'Total Points',
+    'totalChampionshipPoints': 'Total Champ Points',
+    'totalPolePositions' : 'Total Pole Positions',
+    'totalFastestLaps': 'Total Fastest Laps',
+    'bestQualifyingTime_sec': 'Best Qualifying Time (s)',
     }         
 
 individual_race_grouped_columns_to_display = {
@@ -149,7 +168,10 @@ st.set_page_config(
 )
 
 ## do not create filters for any field in this list
-exclusionList = ['grandPrixRaceId', 'raceId_results', 'resultsReasonRetired', 'constructorId', 'driverId', 'resultsDriverId', 'raceId', 'id', 'id_grandPrix', 'id_schedule']
+exclusionList = ['grandPrixRaceId', 'raceId_results',  'constructorId', 'driverId', 'resultsDriverId', 
+                 'raceId', 'id', 'id_grandPrix', 'id_schedule', 'bestQualifyingTime_sec', 'TeamName', 'circuitId', 'grandPrixRaceId', 'grandPrixId',
+    'driverId_driver_standings', 'constructorId_results', 'driverId_results', 'driverId_driver_standings',
+    'driverName', 'driverId_driver_standings', 'countryId', 'name', 'fullName', 'points', 'abbreviation', 'shortName', 'id', 'constructorId_results', 'driverId_results',]
 
 @st.cache_data
 def load_correlation(nrows):
@@ -482,8 +504,31 @@ data['averageStopTime'] = data['averageStopTime'].astype('Float64')
 data['totalStopTime'] = data['totalStopTime'].astype('Float64')
 data['driverBestStartingGridPosition'] = data['driverBestStartingGridPosition'].astype('Int64')
 data['driverBestRaceResult'] = data['driverBestRaceResult'].astype('Int64')
+data['constructorRank'] = data['constructorRank'].astype('Int64')
+data['Points'] = data['Points'].astype('Int64')
+data['driverRank'] = data['driverRank'].astype('Int64')
+data['bestQualifyingTime_sec'] = data['bestQualifyingTime_sec'].astype('Float64')
+data['driverTotalChampionshipWins'] = data['driverTotalChampionshipWins'].astype('Int64')
+data['driverTotalRaceEntries'] = data['driverTotalRaceEntries'].astype('Int64')
+data['bestChampionshipPosition'] = data['bestChampionshipPosition'].astype('Int64')
+data['bestStartingGridPosition'] = data['bestStartingGridPosition'].astype('Int64')
+data['bestRaceResult'] = data['bestRaceResult'].astype('Int64')
+data['totalChampionshipWins'] = data['totalChampionshipWins'].astype('Int64')
+data['totalRaceStarts'] = data['totalRaceStarts'].astype('Int64')
+data['totalRaceWins'] = data['totalRaceWins'].astype('Int64')
+data['total1And2Finishes'] = data['total1And2Finishes'].astype('Int64')
+data['totalRaceLaps'] = data['totalRaceLaps'].astype('Int64')
+data['totalPodiums'] = data['totalPodiums'].astype('Int64')
+data['totalPodiumRaces'] = data['totalPodiumRaces'].astype('Int64')
+data['totalPoints'] = data['totalPoints'].astype('Float64')
+data['totalChampionshipPoints'] = data['totalChampionshipPoints'].astype('Float64')
+data['totalPolePositions'] = data['totalPolePositions'].astype('Int64')
+data['totalFastestLaps'] = data['totalFastestLaps'].astype('Int64')
+data['totalRaceEntries'] = data['totalRaceEntries'].astype('Int64')
+
 
 column_names = data.columns.tolist()
+
 #column_names.sort()
 
 if st.checkbox('Filter Results'):
@@ -1042,7 +1087,7 @@ if st.checkbox("Show Next Race"):
     
     nextRace = nextRace.sort_values(by=['date'], ascending=[True]).head(1).copy()
 
-    st.dataframe(nextRace, column_config=next_race_columns_to_display, hide_index=True, 
+    st.dataframe(nextRace, width=800, column_config=next_race_columns_to_display, hide_index=True, 
         column_order=['date', 'time', 'fullName', 'courseLength', 'turns', 'laps'])
 
     # Limit detailsOfNextRace by the grandPrixId of the next race
@@ -1054,7 +1099,7 @@ if st.checkbox("Show Next Race"):
     st.write(f"Total number of weather records: {len(weather_with_grandprix)}")
 
     weather_with_grandprix = weather_with_grandprix.sort_values(by='short_date', ascending = False)
-    st.dataframe(weather_with_grandprix, column_config=weather_columns_to_display, hide_index=True)
+    st.dataframe(weather_with_grandprix, width=800, column_config=weather_columns_to_display, hide_index=True)
 
     st.subheader("Past Results:")
     detailsOfNextRace = data[data['grandPrixRaceId'] == next_race_id]
@@ -1091,12 +1136,12 @@ if st.checkbox("Show Next Race"):
 
     # Add race messages
     st.subheader(f"Flags and Safety Cars from {nextRace['fullName'].head(1).values[0]}:")
-    
+    st.caption("Race messages, including flags, are only available going back to 2018.")
     raceMessagesOfNextRace = race_messages[race_messages['grandPrixId'] == next_race_id]
     raceMessagesOfNextRace = raceMessagesOfNextRace.sort_values(by='Year', ascending = False)
 
     st.write(f"Total number of results: {len(raceMessagesOfNextRace)}")
-    st.dataframe(raceMessagesOfNextRace, hide_index=True, column_config=flags_safety_cars_columns_to_display, 
+    st.dataframe(raceMessagesOfNextRace, hide_index=True, width=800,column_config=flags_safety_cars_columns_to_display, 
                  column_order=['Year', 'Round', 'SafetyCarStatus', 'redFlag', 'yellowFlag'])
 
     st.subheader(f"Driver Performance in {nextRace['fullName'].head(1).values[0]}:")
