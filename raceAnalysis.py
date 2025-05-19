@@ -532,11 +532,11 @@ column_names = data.columns.tolist()
 #column_names.sort()
 
 def get_features_and_target(data):
-    features = ['grandPrixName', 'constructorName', 'resultsDriverName', 
-        'resultsStartingGridPositionNumber', 'averagePracticePosition',
+    features = ['grandPrixName', 'constructorName', 'resultsDriverName', 'totalChampionshipPoints', 'driverTotalChampionshipWins',
+        'resultsStartingGridPositionNumber', 'averagePracticePosition', 'totalFastestLaps', 'total1And2Finishes',
         'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'constructorTotalRaceStarts', 
         'constructorTotalRaceWins', 'constructorTotalPolePositions', 'driverTotalRaceEntries', 
-        'totalPolePositions', 'points', 'driverTotalRaceStarts', 'driverTotalRaceWins', 
+        'totalPolePositions', 'Points', 'driverTotalRaceStarts', 'driverTotalRaceWins', 
         'driverTotalPodiums', 'driverRank', 'constructorRank', 'driverTotalPolePositions', 
         'yearsActive', 'bestQualifyingTime_sec']
     target = 'resultsFinalPositionNumber'
@@ -544,10 +544,10 @@ def get_features_and_target(data):
 
 def get_preprocessor():
     categorical_features = ['grandPrixName', 'constructorName', 'resultsDriverName']
-    numerical_features = ['resultsStartingGridPositionNumber', 'averagePracticePosition',
+    numerical_features = ['resultsStartingGridPositionNumber', 'averagePracticePosition', 'totalFastestLaps', 'totalChampionshipPoints',
         'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'constructorTotalRaceStarts', 
-        'constructorTotalRaceWins', 'constructorTotalPolePositions', 'driverTotalRaceEntries', 
-        'totalPolePositions', 'points', 'driverTotalRaceStarts', 'driverTotalRaceWins', 
+        'constructorTotalRaceWins', 'constructorTotalPolePositions', 'driverTotalRaceEntries', 'driverTotalChampionshipWins',
+        'totalPolePositions', 'Points', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'total1And2Finishes',
         'driverTotalPodiums', 'driverRank', 'constructorRank', 'driverTotalPolePositions', 
         'yearsActive', 'bestQualifyingTime_sec']
 
@@ -594,6 +594,13 @@ def train_and_evaluate_model(data):
     mae = mean_absolute_error(y_test, y_pred)
 
     return model, mse, r2, mae
+
+@st.cache_resource
+def get_trained_model():
+    model, mse, r2, mae = train_and_evaluate_model(data)
+    return model
+
+model = get_trained_model()
 
 if st.checkbox('Filter Results'):
     # Create a dictionary to store selected filters for multiple columns
@@ -1017,6 +1024,7 @@ if st.checkbox('Filter Results'):
 
     # Clean up feature names by removing 'num__'
     feature_names = [name.replace('num__', '') for name in feature_names]
+    feature_names = [name.replace('cat__', '') for name in feature_names]
 
     # Create a DataFrame for feature importances
     feature_importances_df = pd.DataFrame({
@@ -1027,8 +1035,8 @@ if st.checkbox('Filter Results'):
         #'Feature Type': ['Categorical' if 'cat' in name else 'Numerical' for name in feature_names]
     }).sort_values(by='Importance', ascending=False)
 
-    # Display the top 15 features
-    st.dataframe(feature_importances_df.head(15), hide_index=True, width=800)
+    # Display the top 50 features
+    st.dataframe(feature_importances_df.head(50), hide_index=True, width=800)
     # Display the predictive data model without index
     # -----------------------------
 
@@ -1154,8 +1162,8 @@ if st.checkbox('Show Predictive Data Model'):
     results_df['Predicted'] = y_pred
 
     # Display the first 15 rows
-    st.subheader("First 15 Results with Features")
-    st.dataframe(results_df.head(15), hide_index=True)
+    st.subheader("Predictive Results with Features")
+    st.dataframe(results_df, hide_index=True, width=800)
 
     # Display feature importances
     st.subheader("Feature Importances")
@@ -1163,6 +1171,10 @@ if st.checkbox('Show Predictive Data Model'):
     # Retrieve feature names after preprocessing
     preprocessor = model.named_steps['preprocessor']
     feature_names = preprocessor.get_feature_names_out()
+
+    # Clean up feature names by removing 'num__'
+    feature_names = [name.replace('num__', '') for name in feature_names]
+    feature_names = [name.replace('cat__', '') for name in feature_names]
 
     # Retrieve feature importances
     feature_importances = model.named_steps['regressor'].feature_importances_
@@ -1209,3 +1221,5 @@ if st.checkbox('Show Correlations for all races'):
     
     # Display the correlation matrix
     st.dataframe(correlation_matrix, column_config=correlation_columns_to_display, hide_index=True, width=800 , height=600)
+
+

@@ -47,12 +47,6 @@ for round_number in range(1, total_rounds + 1):
     driver_standings = session.results.groupby('Abbreviation')['Points'].sum()
     driver_standings = pd.Series(driver_standings)
     all_driver_standings.append(driver_standings)
-   # print(f"Round {round_number}")
-   ## print(f"Length (Constr.): {len(constructor_standings)}")
-#    print(f"Length: (Driver): {len(driver_standings)}")
-
- #   print(constructor_standings)
-  #  print(driver_standings)
 
 #######  Add round and year to dataframe for connecting in raceAnalysis.py
 #######
@@ -92,6 +86,7 @@ clean_constructor_names(all_constructor_standings_df_sorted['TeamName'])
 all_constructor_standings_df_sorted['TeamName'] = all_constructor_standings_df_sorted['TeamName'].apply(clean_constructor_names)
 
 ## Limit the drivers to only those who are active in the current season
+## Done to avoid errors when using the three-letter abbreviation which is repeated going back to 1950
 constructor_standings_with_mapping = pd.merge(constructors, all_constructor_standings_df_sorted, left_on='name', right_on='TeamName', how='right')
 active_drivers = pd.merge(results, drivers, left_on='resultsDriverId', right_on='id', how='inner')
 active_drivers = active_drivers[active_drivers['activeDriver'] == True]
