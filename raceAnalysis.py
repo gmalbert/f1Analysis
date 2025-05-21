@@ -153,6 +153,8 @@ flags_safety_cars_columns_to_display = {
     'SafetyCarStatus': st.column_config.NumberColumn("Safety Car", format="%d"),
     'redFlag': st.column_config.NumberColumn("Red Flag"),
     'yellowFlag': st.column_config.NumberColumn("Yellow Flag"),
+    'doubleYellowFlag': st.column_config.NumberColumn("Double Yellow Flag"),
+    'dnf_count': st.column_config.NumberColumn("DNF Count", format="%d")
 
 }
 
@@ -191,7 +193,7 @@ raceSchedule = load_data_schedule(10000)
 
 @st.cache_data
 def load_data_race_messages(nrows):
-    race_messages = pd.read_csv(path.join(DATA_DIR, 'grouped_race_control_messages.csv'),sep='\t')
+    race_messages = pd.read_csv(path.join(DATA_DIR, 'race_control_messages_grouped_with_dnf.csv'),sep='\t')
 
     return race_messages
 
@@ -1086,14 +1088,14 @@ if st.checkbox("Show Next Race"):
     # Sort detailsOfNextRace by grandPrixYear descending and resultsFinalPositionNumber ascending
     detailsOfNextRace = detailsOfNextRace.sort_values(by=['grandPrixYear', 'resultsFinalPositionNumber'], ascending=[False, True])
 
-    
-
     st.write(f"Total number of results: {len(detailsOfNextRace)}")
     st.dataframe(detailsOfNextRace, column_config=columns_to_display, hide_index=True, width=800, height=600)
 
+    
     individual_race_grouped = detailsOfNextRace.groupby(['resultsDriverName']).agg(
         #activeDriver = ('activeDriver', 'first'),
         average_starting_position=('resultsStartingGridPositionNumber', 'mean'),
+    
         average_ending_position=('resultsFinalPositionNumber', 'mean'),
         average_positions_gained=('positionsGained', 'mean'),
         driver_races=('resultsFinalPositionNumber', 'count')
@@ -1113,15 +1115,26 @@ if st.checkbox("Show Next Race"):
     # Rename the columns for better readability
     individual_race_grouped_constructor = individual_race_grouped_constructor.sort_values(by=['average_ending_position'], ascending=[True])
 
-    # Add race messages
+    
+
+    #dnf_summary_2024 = data[
+    #(data['grandPrixYear'] == 2024) &
+    #(data['resultsReasonRetired'].notnull()) &
+    #(data['resultsReasonRetired'] != '')
+    #].groupby('raceId').size().reset_index(name='dnf_count')
+    #st.write(dnf_summary_2024)
+
     st.subheader(f"Flags and Safety Cars from {nextRace['fullName'].head(1).values[0]}:")
     st.caption("Race messages, including flags, are only available going back to 2018.")
+    # race_control_messages_grouped_with_dnf.csv
     raceMessagesOfNextRace = race_messages[race_messages['grandPrixId'] == next_race_id]
+    #st.write(raceMessagesOfNextRace.columns)
+    #raceMessagesOfNextRace = pd.merge(raceMessagesOfNextRace, dnf_summary, on='raceId', how='left')
     raceMessagesOfNextRace = raceMessagesOfNextRace.sort_values(by='Year', ascending = False)
 
     st.write(f"Total number of results: {len(raceMessagesOfNextRace)}")
     st.dataframe(raceMessagesOfNextRace, hide_index=True, width=800,column_config=flags_safety_cars_columns_to_display, 
-                 column_order=['Year', 'Round', 'SafetyCarStatus', 'redFlag', 'yellowFlag'])
+                 column_order=['Year', 'Round', 'SafetyCarStatus', 'redFlag', 'yellowFlag', 'doubleYellowFlag', 'dnf_count'])
 
     st.subheader(f"Driver Performance in {nextRace['fullName'].head(1).values[0]}:")
     st.write(f"Total number of results: {len(individual_race_grouped)}")
