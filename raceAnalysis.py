@@ -158,6 +158,23 @@ flags_safety_cars_columns_to_display = {
 
 }
 
+predicted_position_columns_to_display = {
+    'resultsDriverName': st.column_config.TextColumn("Driver"),
+    'constructorName': st.column_config.TextColumn("Constructor"),
+    'resultsStartingGridPositionNumber': st.column_config.NumberColumn(
+        "Starting Grid Position", format="%d", min_value=1, max_value=20, step=1, default=1),
+    'resultsFinalPositionNumber': st.column_config.NumberColumn(
+        "Final Position", format="%d", min_value=1, max_value=20, step=1, default=1),
+    'PredictedFinalPosition': st.column_config.NumberColumn("Predicted Final Position", format="%.3f"),
+    'grandPrixName': None, 'totalChampionshipPoints': None, 'driverTotalChampionshipWins': None,
+    'resultsStartingGridPositionNumber': None, 'averagePracticePosition': None, 'totalFastestLaps': None, 'total1And2Finishes': None,
+    'lastFPPositionNumber': None, 'resultsQualificationPositionNumber': None, 'constructorTotalRaceStarts': None, 
+    'constructorTotalRaceWins': None, 'constructorTotalPolePositions': None, 'driverTotalRaceEntries': None, 
+    'totalPolePositions': None, 'Points': None, 'driverTotalRaceStarts': None, 'driverTotalRaceWins': None, 
+    'driverTotalPodiums': None, 'driverRank': None, 'constructorRank': None, 'driverTotalPolePositions': None, 
+    'yearsActive': None, 'bestQualifyingTime_sec': None, 'resultsDriverId': None
+}
+
 
 current_year = datetime.datetime.now().year
 raceNoEarlierThan = current_year - 10
@@ -187,6 +204,7 @@ def load_data_schedule(nrows):
     raceSchedule = pd.read_json(path.join(DATA_DIR, 'f1db-races.json'))
     grandPrix = pd.read_json(path.join(DATA_DIR, 'f1db-grands-prix.json'))
     raceSchedule = raceSchedule.merge(grandPrix, left_on='grandPrixId', right_on='id', how='inner', suffixes=['_grandPrix', '_schedule'])
+    #raceSchedule = raceSchedule.merge(grandPrix, left_on='grandPrixId', right_on='id', how='inner', suffixes=['_grandPrix', '_schedule'])
     return raceSchedule
 
 raceSchedule = load_data_schedule(10000)
@@ -319,6 +337,7 @@ columns_to_display = {'grandPrixYear': st.column_config.NumberColumn("Year", for
         "Avg Stop Time (s)", format="%d", min_value=0, max_value=20, step=1, default=0),
     'totalStopTime': st.column_config.NumberColumn(
         "Total Stop Time (s)", format="%d", min_value=0, max_value=100, step=1, default=0),
+    'activeDriver' : st.column_config.CheckboxColumn("Active"), 
     'driverId': None,
     'constructorId': None,
     'raceId': None,
@@ -1048,7 +1067,8 @@ if st.checkbox(f"Show {current_year} Schedule"):
     st.title(f"{current_year} Races:")
     
     raceSchedule = raceSchedule[raceSchedule['year'] == current_year]
-
+    #st.dataframe(raceSchedule)
+    #st.write(raceSchedule.columns)
     #st.dataframe(race_messages)
     
     st.write(f"Total number of races: {len(raceSchedule)}")
@@ -1068,11 +1088,16 @@ if st.checkbox("Show Next Race"):
     
     nextRace = nextRace.sort_values(by=['date'], ascending=[True]).head(1).copy()
 
+
     st.dataframe(nextRace, width=800, column_config=next_race_columns_to_display, hide_index=True, 
         column_order=['date', 'time', 'fullName', 'courseLength', 'turns', 'laps'])
 
     # Limit detailsOfNextRace by the grandPrixId of the next race
     next_race_id = nextRace['grandPrixId'].head(1).values[0]
+    upcoming_race = pd.merge(nextRace, raceSchedule, left_on='grandPrixId', right_on='grandPrixId', how='inner', suffixes=('_nextrace', '_races'))
+    #st.write(upcoming_race_id.columns)
+    upcoming_race = upcoming_race.sort_values(by='date_nextrace', ascending = False).head(1).copy()
+    upcoming_race_id = upcoming_race['id_grandPrix_nextrace'].unique().copy()
     
     weather_with_grandprix = weatherData[weatherData['grandPrixId'] == next_race_id]
 
@@ -1091,7 +1116,69 @@ if st.checkbox("Show Next Race"):
     st.write(f"Total number of results: {len(detailsOfNextRace)}")
     st.dataframe(detailsOfNextRace, column_config=columns_to_display, hide_index=True, width=800, height=600)
 
+    last_race = detailsOfNextRace.iloc[1]
+
+    active_drivers = data[data['activeDriver'] == True]
+    active_drivers = active_drivers['resultsDriverId'].unique()
+    input_data = detailsOfNextRace.copy()
+    input_data = input_data[input_data['raceId'] == last_race['raceId']]
+
+    features, _ = get_features_and_target(data)
+    feature_names = features.columns.tolist()
+
+    practices = pd.read_csv(path.join(DATA_DIR, 'all_practice_laps.csv'), sep='\t') 
+    #st.write(last_race['raceId'])
+    #st.write(next_race_id)
+    #st.write(upcoming_race_id)
+   # st.write(type(upcoming_race_id))
+    practices = practices[practices['id_races'] == upcoming_race_id[0]]
+    practices = practices[practices['Session'] =='FP2']
+
+    st.write(len(practices))
+
+    driver_inputs = []
+
+    for driver in active_drivers:
+        driver_data = input_data[input_data['resultsDriverId'] == driver]
+        #st.write(driver_data)
+        if len(driver_data) > 0:
+            driver_inputs.append(driver_data[feature_names])
+
+    all_active_driver_inputs = pd.concat(driver_inputs, ignore_index=True)
     
+    # Pull in the recent practice data
+    # Rank each practice
+    # include the theoretical best practice in data model
+    #if len(practices) > 0:
+    #    all_active_driver_inputs
+
+    #st.write(f"Total number of active drivers: {len(all_active_driver_inputs)}")
+    # Use your trained model to predict
+    st.subheader("Predicted Final Position:")
+    predicted_position = model.predict(all_active_driver_inputs)
+    all_active_driver_inputs['PredictedFinalPosition'] = predicted_position
+    all_active_driver_inputs.sort_values(by='PredictedFinalPosition', ascending=True, inplace=True)
+    st.dataframe(all_active_driver_inputs, hide_index=True, column_config=predicted_position_columns_to_display, width=800, height=600, 
+    column_order=['constructorName', 'resultsDriverName', 'PredictedFinalPosition'])    
+
+    
+
+   # st.write(predicted_position)
+    #st.write(f"Predicted Final Position: {predicted_position[0]:.2f}")
+    #st.dataframe(input_data, hide_index=True, width=800, height=600)
+    # Fill NaN values with the mean of the respective columns
+
+    #results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['trackRace'] = (
+    #results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['circuitType'] == 'RACE')
+
+    # most_recent_row = data.sort_values(by='short_date', ascending=False).iloc[0]
+    #most_recent_starting_grid_position = most_recent_row['resultsStartingGridPositionNumber']
+
+    #input_data['resultsStartingGridPositionNumber'] = 
+
+    #input_data = input_data.fillna(input_data.mean())
+
+
     individual_race_grouped = detailsOfNextRace.groupby(['resultsDriverName']).agg(
         #activeDriver = ('activeDriver', 'first'),
         average_starting_position=('resultsStartingGridPositionNumber', 'mean'),
