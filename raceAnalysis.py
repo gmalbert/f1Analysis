@@ -559,7 +559,7 @@ def get_features_and_target(data):
         'constructorTotalRaceWins', 'constructorTotalPolePositions', 'driverTotalRaceEntries', 
         'totalPolePositions', 'Points', 'driverTotalRaceStarts', 'driverTotalRaceWins', 
         'driverTotalPodiums', 'driverRank', 'constructorRank', 'driverTotalPolePositions', 
-        'yearsActive', 'bestQualifyingTime_sec']
+        'yearsActive', 'bestQualifyingTime_sec' ]
     target = 'resultsFinalPositionNumber'
     return data[features], data[target]
 
@@ -1082,7 +1082,10 @@ if st.checkbox(f"Show {current_year} Schedule"):
 if st.checkbox("Show Next Race"):
 #### fix to show current day's race
     st.subheader("Next Race:")
-    nextRace = raceSchedule[raceSchedule['date'] >= datetime.datetime.today()]
+
+    # include the current date in the raceSchedule
+    raceSchedule['date_only'] = pd.to_datetime(raceSchedule['date']).dt.date
+    nextRace = raceSchedule[raceSchedule['date_only'] >= datetime.datetime.today().date()]
 
     # Create a copy of the slice to avoid the warning
     
@@ -1134,28 +1137,25 @@ if st.checkbox("Show Next Race"):
     practices = practices[practices['id_races'] == upcoming_race_id[0]]
     practices = practices[practices['Session'] =='FP2']
 
-    st.write(len(practices))
+    #st.write(len(practices))
 
     driver_inputs = []
 
+    # When building driver_inputs, select features + resultsDriverId for reference
     for driver in active_drivers:
         driver_data = input_data[input_data['resultsDriverId'] == driver]
-        #st.write(driver_data)
         if len(driver_data) > 0:
-            driver_inputs.append(driver_data[feature_names])
+            # Keep resultsDriverId for reference, but do not use it for prediction
+            driver_inputs.append(driver_data[feature_names + ['resultsDriverId']])
 
     all_active_driver_inputs = pd.concat(driver_inputs, ignore_index=True)
-    
-    # Pull in the recent practice data
-    # Rank each practice
-    # include the theoretical best practice in data model
-    #if len(practices) > 0:
-    #    all_active_driver_inputs
 
-    #st.write(f"Total number of active drivers: {len(all_active_driver_inputs)}")
-    # Use your trained model to predict
-    st.subheader("Predicted Final Position:")
-    predicted_position = model.predict(all_active_driver_inputs)
+    all_active_driver_inputs = pd.merge(all_active_driver_inputs, practices, left_on='resultsDriverId', right_on='id_mapping', how='left')
+    #st.write(all_active_driver_inputs.columns)
+    #st.dataframe(all_active_driver_inputs)
+    # For prediction, drop resultsDriverId
+    X_predict = all_active_driver_inputs[feature_names]
+    predicted_position = model.predict(X_predict)
     all_active_driver_inputs['PredictedFinalPosition'] = predicted_position
     all_active_driver_inputs.sort_values(by='PredictedFinalPosition', ascending=True, inplace=True)
     st.dataframe(all_active_driver_inputs, hide_index=True, column_config=predicted_position_columns_to_display, width=800, height=600, 
