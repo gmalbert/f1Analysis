@@ -24,13 +24,17 @@ all_laps = []
 ergast = Ergast(result_type='pandas', auto_cast=True)
 
 # Loop through all seasons and rounds
-for year in range(2025, current_year + 1):
+for year in range(current_year, current_year + 1):
+#for year in range(2021, current_year + 1):
+
     season_schedule = ergast.get_race_schedule(season=year)
     # Filter the season schedule to include only past races
     #season_schedule = season_schedule[pd.to_datetime(season_schedule['raceDate']) <= pd.to_datetime(date.today())]
     total_rounds = len(season_schedule)
 
+    #for round_number in range(16,17):
     for round_number in range(1, total_rounds + 1):
+
         for session_type in ['FP1', 'FP2', 'FP3']:
             try:
                 session = fastf1.get_session(year, round_number, session_type)
@@ -78,55 +82,50 @@ for year in range(2025, current_year + 1):
                 print(f"Skipping {session_type} for {year} round {round_number}: {e}")
                 continue  # Skip to the next session
 
-# Convert all_laps to DataFrame after all loops
-all_practice_laps_df = pd.DataFrame(all_laps)
+    # Convert all_laps to DataFrame after all loops
+    all_practice_laps_df = pd.DataFrame(all_laps)
 
-# Modify speed to MPH from KM/h
-for col in ['SpeedI1', 'SpeedI2', 'SpeedFL', 'SpeedST']:
-    if col in all_practice_laps_df.columns:
-        all_practice_laps_df[f'{col}_mph'] = all_practice_laps_df[col].apply(km_to_miles)
+    # Modify speed to MPH from KM/h
+    for col in ['SpeedI1', 'SpeedI2', 'SpeedFL', 'SpeedST']:
+        if col in all_practice_laps_df.columns:
+            all_practice_laps_df[f'{col}_mph'] = all_practice_laps_df[col].apply(km_to_miles)
 
-# Convert time columns to seconds from timedelta
-for col in ['LapTime', 'Sector1Time', 'Sector2Time', 'Sector3Time', 'best_s1', 'best_s2', 'best_s3', 'best_theory_lap', 'best_theory_lap_diff']:
-    if col in all_practice_laps_df.columns:
-        all_practice_laps_df[f'{col}_sec'] = pd.to_timedelta(all_practice_laps_df[col]).dt.total_seconds()
+    # Convert time columns to seconds from timedelta
+    for col in ['LapTime', 'Sector1Time', 'Sector2Time', 'Sector3Time', 'best_s1', 'best_s2', 'best_s3', 'best_theory_lap', 'best_theory_lap_diff']:
+        if col in all_practice_laps_df.columns:
+            all_practice_laps_df[f'{col}_sec'] = pd.to_timedelta(all_practice_laps_df[col]).dt.total_seconds()
 
-# Merge with driver info
-active_drivers = pd.merge(results, drivers, left_on='resultsDriverId', right_on='id', how='inner')
-active_drivers = active_drivers[active_drivers['activeDriver'] == True]
-active_drivers = active_drivers[['id', 'name', 'abbreviation']].drop_duplicates()
+    # Merge with driver info
+    active_drivers = pd.merge(results, drivers, left_on='resultsDriverId', right_on='id', how='inner')
+    active_drivers = active_drivers[active_drivers['activeDriver'] == True]
+    active_drivers = active_drivers[['id', 'name', 'abbreviation']].drop_duplicates()
 
-print(active_drivers.head(10))
+    print(active_drivers.head(10))
 
-# Merge practice laps with driver names
-all_practice_laps_with_driver_names = pd.merge(
-    active_drivers, 
-    all_practice_laps_df, 
-    left_on='abbreviation', 
-    right_on='Driver', 
-    how='inner'
-)
+    # Merge practice laps with driver names
+    all_practice_laps_with_driver_names = pd.merge(
+        active_drivers, 
+        all_practice_laps_df, 
+        left_on='abbreviation', 
+        right_on='Driver', 
+        how='inner'
+    )
 
-#print(type(all_practice_laps_with_driver_names))
-#print(all_practice_laps_with_driver_names.head(10))
-#print(all_practice_laps_with_driver_names.shape)
+    # Merge with races info
+    races_with_mapping = pd.merge(
+        races, 
+        all_practice_laps_with_driver_names, 
+        left_on=['year', 'round'], 
+        right_on=['Year', 'Round'], 
+        how='inner', 
+        suffixes=('_races', '_mapping')
+    ).drop_duplicates()
 
-# Merge with races info
-races_with_mapping = pd.merge(
-    races, 
-    all_practice_laps_with_driver_names, 
-    left_on=['year', 'round'], 
-    right_on=['Year', 'Round'], 
-    how='inner', 
-    suffixes=('_races', '_mapping')
-).drop_duplicates()
-
-#print(races_with_mapping.head(10))
-#print(races_with_mapping.shape)
-
-##  need to remove columns to reduce number of rows and drop duplicates
-
-# Save to CSV
-races_with_mapping.to_csv(path.join(DATA_DIR, 'all_practice_laps.csv'), sep='\t', index=False)
+    # Save to CSV
+    races_with_mapping.to_csv(
+        path.join(DATA_DIR, f'all_practice_laps_{year}.csv'),
+        sep='\t',
+        index=False
+    )
 
 
