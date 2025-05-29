@@ -815,6 +815,7 @@ if st.checkbox('Filter Results'):
 
     st.write(f"Number of filtered results: {len(filtered_data):,d}")
     filtered_data = filtered_data.sort_values(by=['grandPrixYear', 'resultsFinalPositionNumber'], ascending=[False, True])
+    filtered_data = filtered_data.drop_duplicates()
     st.dataframe(filtered_data, column_config=columns_to_display, column_order=['grandPrixYear', 'grandPrixName', 'streetRace', 'trackRace', 'constructorName', 'resultsDriverName', 'resultsPodium', 'resultsTop5',
          'resultsTop10','resultsStartingGridPositionNumber','resultsFinalPositionNumber','positionsGained', 'DNF', 'resultsQualificationPositionNumber',
            'q1End', 'q2End', 'q3Top10', 'averagePracticePosition',  'lastFPPositionNumber','numberOfStops', 'averageStopTime', 'totalStopTime',
@@ -971,12 +972,122 @@ if st.checkbox('Filter Results'):
     
     st.subheader("Driver vs Constructor Performance")
     driver_vs_constructor['average_final_position'] = driver_vs_constructor['average_final_position'].round(2)
-    st.dataframe(driver_vs_constructor, hide_index=True, column_config=driver_vs_constructor_columns_to_display)
+
+    driver_vs_constructor = driver_vs_constructor.sort_values(by='average_final_position', ascending=True)
+    st.dataframe(driver_vs_constructor, hide_index=True, column_config=driver_vs_constructor_columns_to_display, width=800,
+    height=600,)
 
     dnf_reasons = filtered_data[filtered_data['DNF']].groupby('resultsReasonRetired').size().reset_index(name='count')
     st.subheader("Reasons for DNFs")
     st.bar_chart(dnf_reasons, x='resultsReasonRetired', x_label='Reason', y='count', y_label='Count', use_container_width=True)
 
+    # Crate a table for percentage of DNFs per race entries
+    #dnf_percentage = #filtered_data.groupby('resultsDriverName').agg(
+        #total_entries=('driverTotalRaceEntries', 'first'),
+    dnf_counts = (
+    filtered_data[filtered_data['DNF']]
+    .groupby(['resultsDriverName', 'driverTotalRaceEntries'])
+    .size()
+    .reset_index(name='dnf_count')
+)
+# Calculate DNF percentage
+    dnf_counts['dnf_pct'] = (dnf_counts['dnf_count'] / dnf_counts['driverTotalRaceEntries'] * 100).round(1)
+
+    dnf_counts = dnf_counts.sort_values(by='dnf_pct', ascending=False)
+    st.subheader("DNF by Driver")
+
+    st.dataframe(
+    dnf_counts,
+    column_order=['resultsDriverName', 'driverTotalRaceEntries', 'dnf_count', 'dnf_pct'],
+    hide_index=True,
+    width=800,
+    height=600, 
+    column_config={
+        'resultsDriverName': st.column_config.TextColumn("Driver"),
+        'driverTotalRaceEntries': st.column_config.NumberColumn("Total Race Entries", format="%d"),
+        'dnf_count': st.column_config.NumberColumn("DNF Count", format="%d"),
+        'dnf_pct': st.column_config.NumberColumn("DNF Percentage (%)", format="%.1f")
+        },   
+    )    
+
+    # Count the number of entries (drivers) for each race
+    race_entry_counts = (
+        filtered_data
+        #.groupby(['grandPrixName', 'grandPrixYear'])
+        .groupby(['grandPrixName'])
+        .size()
+        .reset_index(name='race_entry_count')
+)
+
+    #st.subheader("Number of Entries per Race")
+    #st.dataframe(race_entry_counts, hide_index=True)
+
+    race_dnf_counts = (
+    filtered_data[filtered_data['DNF']]
+    #.groupby(['grandPrixName', 'grandPrixYear'])
+    .groupby(['grandPrixName'])
+    .size()
+    .reset_index(name='dnf_count')
+)
+
+# Merge with total entries
+    race_dnf_stats = pd.merge(race_entry_counts, race_dnf_counts, on=['grandPrixName'], how='left')
+    race_dnf_stats['dnf_count'] = race_dnf_stats['dnf_count'].fillna(0).astype(int)
+    race_dnf_stats['dnf_pct'] = (race_dnf_stats['dnf_count'] / race_dnf_stats['race_entry_count'] * 100).round(1)
+
+    st.subheader("DNF by Race")
+    race_dnf_stats = race_dnf_stats.sort_values(by='dnf_pct', ascending=False)
+
+    st.dataframe(race_dnf_stats, hide_index=True, width=800,
+    height=600, column_order=['grandPrixName', 'race_entry_count', 'dnf_count', 'dnf_pct'],
+    column_config={
+        'grandPrixName': st.column_config.TextColumn("Grand Prix"),
+        'race_entry_count': st.column_config.NumberColumn("Total # of Entrants", format="%d"),
+        'dnf_count': st.column_config.NumberColumn("DNF Count", format="%d"),
+        'dnf_pct': st.column_config.NumberColumn("DNF Percentage (%)", format="%.1f")
+        }            
+        )
+    
+    # Count the number of entries (constructors) for each race
+    constructor_entry_counts = (
+        filtered_data
+        #.groupby(['grandPrixName', 'grandPrixYear'])
+        .groupby(['constructorName'])
+        .size()
+        .reset_index(name='constructor_entry_count')
+)
+
+    #st.subheader("Number of Entries per Race")
+    #st.dataframe(race_entry_counts, hide_index=True)
+
+    constructor_dnf_counts = (
+    filtered_data[filtered_data['DNF']]
+    #.groupby(['grandPrixName', 'grandPrixYear'])
+    .groupby(['constructorName'])
+    .size()
+    .reset_index(name='dnf_count')
+)
+
+# Merge with total entries
+    constructor_dnf_stats = pd.merge(constructor_entry_counts, constructor_dnf_counts, on=['constructorName'], how='left')
+
+    constructor_dnf_stats['dnf_count'] = constructor_dnf_stats['dnf_count'].fillna(0).astype(int)
+    constructor_dnf_stats['dnf_pct'] = (constructor_dnf_stats['dnf_count'] / constructor_dnf_stats['constructor_entry_count'] * 100).round(1)
+
+    st.subheader("DNF by Constructor")
+    constructor_dnf_stats = constructor_dnf_stats.sort_values(by='dnf_pct', ascending=False)
+
+    st.dataframe(constructor_dnf_stats, hide_index=True, width=800,
+    height=600, column_order=['constructorName', 'constructor_entry_count', 'dnf_count', 'dnf_pct'],
+    column_config={
+        'constructorName': st.column_config.TextColumn("Constructor"),
+        'constructor_entry_count': st.column_config.NumberColumn("# of Drivers Entered", format="%d"),
+        'dnf_count': st.column_config.NumberColumn("DNF Count", format="%d"),
+        'dnf_pct': st.column_config.NumberColumn("DNF Percentage (%)", format="%.1f")
+        }            
+        )
+
+    st.subheader("DNF Reasons")
     # Create a pie chart for DNF reasons
     dnf_pie_chart = alt.Chart(dnf_reasons).mark_arc().encode(
     theta=alt.Theta(field='count', type='quantitative', title='Count'),
@@ -988,7 +1099,7 @@ if st.checkbox('Filter Results'):
     st.altair_chart(dnf_pie_chart, use_container_width=True)
 
     st.subheader("Track Characteristics and Performance")
-    st.scatter_chart(filtered_data, x='turns', y='resultsFinalPositionNumber', use_container_width=True)
+    st.scatter_chart(filtered_data, x='turns', y='resultsFinalPositionNumber', use_container_width=True, x_label='Turns', y_label='Final Position')
 
     season_summary = filtered_data[filtered_data['grandPrixYear'] == current_year].groupby('resultsDriverName').agg(
     positions_gained =('positionsGained', 'sum'),
@@ -996,7 +1107,8 @@ if st.checkbox('Filter Results'):
     ).reset_index()
     
     st.subheader(f"{current_year} Season Summary")
-    st.dataframe(season_summary, hide_index=True, column_config=season_summary_columns_to_display)
+    st.dataframe(season_summary, hide_index=True, column_config=season_summary_columns_to_display, width=800,
+    height=600,)
 
     driver_consistency = filtered_data.groupby('resultsDriverName').agg(
     finishing_position_std=('resultsFinalPositionNumber', 'std')
@@ -1004,7 +1116,11 @@ if st.checkbox('Filter Results'):
     
     st.subheader("Driver Consistency")
     st.caption("(Lower is Better)")
-    st.bar_chart(driver_consistency, x='resultsDriverName', x_label='Driver', y_label='Standard Deviation - Finishing', y='finishing_position_std', use_container_width=True)
+    st.bar_chart(driver_consistency, x='resultsDriverName', x_label='Driver', y_label='Standard Deviation - Finishing', y='finishing_position_std', use_container_width=True, )
+    driver_consistency = driver_consistency.sort_values(by='finishing_position_std', ascending=True)
+    st.caption("Lower standard deviation indicates more consistent finishing positions.")
+    st.dataframe(driver_consistency, hide_index=True, column_config={'resultsDriverName': st.column_config.TextColumn("Driver"),
+        'finishing_position_std': st.column_config.NumberColumn("Standard Deviation", format="%.3f"),}, width=800, height=600,)
 
     st.subheader("Predictive Data Model")
     #st.write(f"Total number of results: {len(data):,d}")
@@ -1033,7 +1149,7 @@ if st.checkbox('Filter Results'):
     st.dataframe(results_df.head(15), hide_index=True)
 
     # Display feature importances
-    st.subheader("Feature Importances")
+    st.subheader("Feature Importance")
     
     # Retrieve feature names after preprocessing
     preprocessor = model.named_steps['preprocessor']
@@ -1102,13 +1218,7 @@ if st.checkbox("Show Next Race"):
     upcoming_race = upcoming_race.sort_values(by='date_nextrace', ascending = False).head(1).copy()
     upcoming_race_id = upcoming_race['id_grandPrix_nextrace'].unique().copy()
     
-    weather_with_grandprix = weatherData[weatherData['grandPrixId'] == next_race_id]
-
-    st.subheader(f"Weather Data for {weather_with_grandprix['fullName'].head(1).values[0]}:")
-    st.write(f"Total number of weather records: {len(weather_with_grandprix)}")
-
-    weather_with_grandprix = weather_with_grandprix.sort_values(by='short_date', ascending = False)
-    st.dataframe(weather_with_grandprix, width=800, column_config=weather_columns_to_display, hide_index=True)
+    
 
     st.subheader("Past Results:")
     detailsOfNextRace = data[data['grandPrixRaceId'] == next_race_id]
@@ -1117,7 +1227,13 @@ if st.checkbox("Show Next Race"):
     detailsOfNextRace = detailsOfNextRace.sort_values(by=['grandPrixYear', 'resultsFinalPositionNumber'], ascending=[False, True])
 
     st.write(f"Total number of results: {len(detailsOfNextRace)}")
-    st.dataframe(detailsOfNextRace, column_config=columns_to_display, hide_index=True, width=800, height=600)
+    #detailsOfNextRace = detailsOfNextRace.drop_duplicates()
+    detailsOfNextRace = detailsOfNextRace.drop_duplicates(subset=['resultsDriverName', 'grandPrixYear'])
+    st.dataframe(detailsOfNextRace, column_config=columns_to_display, hide_index=True)
+
+    #dups = detailsOfNextRace[detailsOfNextRace.duplicated(subset=['resultsDriverName', 'grandPrixYear'], keep=False)]
+    #st.caption("Dups")
+    #st.write(dups)
 
     last_race = detailsOfNextRace.iloc[1]
 
@@ -1158,6 +1274,9 @@ if st.checkbox("Show Next Race"):
     predicted_position = model.predict(X_predict)
     all_active_driver_inputs['PredictedFinalPosition'] = predicted_position
     all_active_driver_inputs.sort_values(by='PredictedFinalPosition', ascending=True, inplace=True)
+
+    st.subheader("Predictive Results for Active Drivers")
+
     st.dataframe(all_active_driver_inputs, hide_index=True, column_config=predicted_position_columns_to_display, width=800, height=600, 
     column_order=['constructorName', 'resultsDriverName', 'PredictedFinalPosition'])    
 
@@ -1231,6 +1350,14 @@ if st.checkbox("Show Next Race"):
 
     st.subheader(f"Constructor Performance in {nextRace['fullName'].head(1).values[0]}:")
     st.dataframe(individual_race_grouped_constructor, hide_index=True, width=800, height=600, column_config=individual_race_grouped_columns_to_display)
+
+    weather_with_grandprix = weatherData[weatherData['grandPrixId'] == next_race_id]
+
+    st.subheader(f"Weather Data for {weather_with_grandprix['fullName'].head(1).values[0]}:")
+    st.write(f"Total number of weather records: {len(weather_with_grandprix)}")
+
+    weather_with_grandprix = weather_with_grandprix.sort_values(by='short_date', ascending = False)
+    st.dataframe(weather_with_grandprix, width=800, column_config=weather_columns_to_display, hide_index=True)
 
 if st.checkbox('Show Raw Data'):
 
@@ -1311,6 +1438,7 @@ if st.checkbox('Show Correlations for all races'):
             'turns': 'Turns',
             'q1End': 'Out at Q1',
             'q2End': 'Out at Q2',
+
             'q3Top10': 'Q3 Top 10',
             'numberOfStops': 'Number of Stops'
         }
@@ -1321,5 +1449,8 @@ if st.checkbox('Show Correlations for all races'):
     
     # Display the correlation matrix
     st.dataframe(correlation_matrix, column_config=correlation_columns_to_display, hide_index=True, width=800 , height=600)
+
+    dnf_counts = filtered_data[filtered_data['DNF']].groupby('resultsDriverName').size().reset_index(name='dnf_count')
+    st.dataframe(dnf_counts, hide_index=True)
 
 
