@@ -17,8 +17,7 @@ results = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t')
 grandPrix = pd.read_json(path.join(DATA_DIR, 'f1db-grands-prix.json')) 
 races = pd.read_json(path.join(DATA_DIR, 'f1db-races.json')) 
 
-# Enable FastF1 caching
-fastf1.Cache.enable_cache(path.join(DATA_DIR, 'f1_cache'))
+
 
 # Initialize Ergast API
 ergast = Ergast(result_type='pandas', auto_cast=True)
