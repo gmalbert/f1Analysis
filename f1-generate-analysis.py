@@ -41,6 +41,7 @@ fp2 = pd.read_json(path.join(DATA_DIR, 'f1db-races-free-practice-2-results.json'
 fp3 = pd.read_json(path.join(DATA_DIR, 'f1db-races-free-practice-3-results.json')) 
 fp4 = pd.read_json(path.join(DATA_DIR, 'f1db-races-free-practice-4-results.json')) 
 current_practices = pd.read_csv(path.join(DATA_DIR, 'all_practice_laps.csv'), sep='\t') 
+practice_best = pd.read_csv(path.join(DATA_DIR, 'practice_best_fp1_fp2.csv'), sep='\t')
 
 races_and_grandPrix = pd.merge(races, grandPrix, left_on='grandPrixId', right_on='id', how='inner', suffixes=['_races', '_grandPrix'])
 races_and_grandPrix.rename(columns={'id_races': 'raceIdFromGrandPrix', 'id_grandPrix': 'grandPrixRaceId', 'fullName': 'grandPrixName', 'laps': 'grandPrixLaps', 'year': 'grandPrixYear'}, inplace=True)
@@ -85,7 +86,7 @@ fp1_fp2_fp3_fp4 = fp1_fp2_fp3_fp4.drop(columns=['time', 'round'], errors='ignore
 
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = pd.merge(results_and_drivers_and_constructors_and_grandprix_and_qualifying, fp1_fp2_fp3_fp4, left_on=['raceId_results', 'resultsDriverId'], right_on=['fpRaceId','fpDriverId' ], how='left', suffixes=['_results', '_practices']) 
 
-print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns)
+# print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns)
 
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['short_date'] = pd.to_datetime(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['date']).dt.strftime('%Y-%m-%d')
 
@@ -150,26 +151,56 @@ yearsActiveGroup.rename(columns={'grandPrixYear': 'yearsActive'}, inplace=True)
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.merge(
     yearsActiveGroup, on='resultsDriverId', how='left')
 
-#'best_theory_lap_sec'
-# added longer suffix to avoid column name conflicts
-
-#print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns)
-#print(current_practices.columns)
-
 # Rename columns to avoid conflicts because there were duplicates column names post merge
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.rename(columns={'round_results': 'round', 'time_results': 'time'}, inplace=True)
 
-results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = pd.merge(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices, current_practices, left_on=['raceId_results', 'resultsDriverId'], right_on=['id_races', 'id_mapping'], how='left', suffixes=['_results', '_practices'])
+# print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns.tolist())
 
-#print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns)
-results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[['grandPrixName', 'best_s1_sec', 'best_s2_sec', 'best_s2_sec', 'best_theory_lap_sec', 'SpeedI1_mph', 'SpeedI2_mph', 'SpeedFL_mph', 'SpeedST_mph']]
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = pd.merge(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices, current_practices, left_on=['raceId_results', 'resultsDriverId'], right_on=['raceId', 'driverId'], how='left', suffixes=['_results', '_practices'])
+
+# print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns.tolist())
+
+# print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns)
+# results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[['grandPrixName', 'best_s1_sec_practices', 'best_s2_sec_practices', 'best_s2_sec_practices', 'best_theory_lap_sec_practices', 'SpeedI1_mph_practices', 'SpeedI2_mph_practices', 'SpeedFL_mph_practices', 'SpeedST_mph_practices']]
 
 #results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.to_csv(path.join(DATA_DIR, 'f1Test1.csv'))
 
-print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns)
-results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.rename(columns={'round_results': 'round', 'turns_results': 'turns', 'circuitId_results': 'circuitId'}, inplace=True)
+# print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.rename(columns={'round_results': 'round', 'turns_results': 'turns', 'circuitId_results': 'circuitId',
+                                                                                                 'best_s1_sec_results': 'best_s1_sec', 'best_s2_sec_results': 'best_s2_sec', 'best_s3_sec_results': 'best_s3_sec', 'best_theory_lap_sec_results': 'best_theory_lap_sec',
+                                                                                                 'SpeedI1_mph_results': 'SpeedI1_mph', 'SpeedI2_mph_results': 'SpeedI2_mph', 'SpeedFL_mph_results': 'SpeedFL_mph', 'SpeedST_mph_results': 'SpeedST_mph'
+                                                                                                }, inplace=True)
 
 #results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.to_csv(path.join(DATA_DIR, 'f1Test2.csv'))
+
+# Read your main DataFrame (assuming it's already loaded as results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices)
+
+
+# List of columns to update from the reference table
+columns_to_update = [
+    'LapTime_sec', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec',
+    'SpeedI1_mph', 'SpeedI2_mph', 'SpeedFL_mph', 'SpeedST_mph',
+    'best_theory_lap_sec', 'Session'
+]
+
+# Drop these columns from the main DataFrame if they exist
+for col in columns_to_update:
+    if col in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.drop(columns=[col])
+
+# Merge in the updated columns using raceId and driverId as keys
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = pd.merge(
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices,
+    practice_best[['raceId', 'driverId'] + columns_to_update],
+    left_on=['raceId_results', 'resultsDriverId'],
+    right_on=['raceId', 'driverId'],
+    how='left'
+).drop_duplicates(['raceId_results', 'resultsDriverId'])
+
+# (Optional) Drop the merge keys from the reference if you don't want them in your final DataFrame
+# results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.drop(columns=['raceId', 'driverId'])
+
+# Now your main DataFrame has the updated practice columns with no suffixes or duplicates!
 
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[['grandPrixName', 'best_s1_sec', 'best_s2_sec', 'best_s2_sec', 'best_theory_lap_sec', 'SpeedI1_mph', 'SpeedI2_mph', 'SpeedFL_mph', 'SpeedST_mph', 'avgLapPace', 'q1', 'q2', 'q3', 'bestQualifyingTime', 'timeMillis_results', 'streetRace', 'trackRace', 'resultsDriverId', 'yearsActive', 'lastFPPositionNumber', 'resultsQualificationPositionNumber', 
                                         'q1End', 'q2End', 'q3Top10', 'resultsDriverId', 'resultsReasonRetired','averagePracticePosition', 'raceId_results', 'resultsFinalPositionNumber', 'resultsPodium', 'resultsTop5', 'resultsTop10', 'fp1PositionNumber', 'fp1Time', 'fp1Gap', 
@@ -185,7 +216,7 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.
                                       'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums',
                                       'constructorTotalPolePositions', 'constructorTotalFastestLaps', 'grandPrixLaps', 'turns', 'short_date', 'DNF', 'fp1PositionNumber', 'fp2PositionNumber', 'streetRace', 'trackRace', 'avgLapPace', 'timeMillis_results', 'bestQualifyingTime',
                                      'fp3PositionNumber','fp4PositionNumber','averagePracticePosition', 'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'q1End', 'q2End', 'q3Top10','resultsDriverId', 'driverTotalPolePositions', 'activeDriver', 'yearsActive',
-                                      'best_s1_sec', 'best_s2_sec', 'best_s2_sec', 'best_theory_lap_sec', 'SpeedI1_mph', 'SpeedI2_mph', 'SpeedFL_mph', 'SpeedST_mph' ], sep='\t')
+                                      'LapTime_sec', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec', 'best_theory_lap_sec', 'SpeedI1_mph', 'SpeedI2_mph', 'SpeedFL_mph', 'SpeedST_mph', 'Session' ], sep='\t')
 
 positionCorrelation = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[[
     'lastFPPositionNumber', 'resultsFinalPositionNumber', 'resultsStartingGridPositionNumber','grandPrixLaps', 
@@ -344,3 +375,63 @@ races_and_weather.to_csv(path.join(DATA_DIR, 'f1WeatherData_AllData.csv'), colum
 races_and_weather_grouped = races_and_weather.groupby(['short_date', 'latitude_hourly', 'longitude_hourly', 'id_races', 'grandPrixId', 'circuitId']).agg(average_temp = ('temperature_2m', 'mean'), total_precipitation = ('hourly_precipitation', 'sum'), average_humidity = ('relative_humidity_2m', 'mean'), average_wind_speed = ('wind_speed_10m', 'mean')).reset_index()
 
 races_and_weather_grouped.to_csv(path.join(DATA_DIR, 'f1WeatherData_Grouped.csv'), columns=['short_date', 'id_races', 'grandPrixId', 'circuitId', 'latitude_hourly', 'longitude_hourly', 'average_temp', 'total_precipitation', 'average_humidity', 'average_wind_speed'], sep='\t')#, mode='a', header=False)
+
+# drivers = pd.read_json(path.join(DATA_DIR, 'f1db-drivers.json'))
+# results = pd.read_json(path.join(DATA_DIR, 'f1db-races-race-results.json'))
+# races = pd.read_json(path.join(DATA_DIR, 'f1db-races-race_results.json')) 
+
+# active_drivers = active_drivers[active_drivers['activeDriver'] == True]
+
+# races = races[races['year'] >= 2015]
+# results =  results[results['year'] >= 2015]
+# active_drivers = pd.merge(
+#     drivers,
+#     results,
+#     left_on='id',
+#     right_on='driverId',
+#     how='inner',
+#     suffixes=['drivers', 'results']).drop_duplicates(subset=['driverId'])
+
+# active_drivers.to_csv(path.join(DATA_DIR, 'active_drivers.csv'), columns = ['driverId', 'abbreviation', 'name', 'firstName', 'lastName', 'driverNumber'], sep='\t', index=False)
+
+# # Show all rows where abbreviation and name are duplicated
+# duplicates = active_drivers[active_drivers.duplicated(subset=['abbreviation', 'name'], keep=False)]
+# print(duplicates)
+
+raceNoEarlierThan = current_year - 10
+
+race_results = pd.read_json(path.join(DATA_DIR, 'f1db-races-race-results.json')) 
+race_results = race_results[race_results['year'].between(raceNoEarlierThan, current_year-1)]
+race_results_grouped = race_results.groupby(['raceId', 'year']).agg(totalFinishers = ('positionNumber', 'count'), totalParticipants = ('positionNumber', 'size')).reset_index()
+
+# Add DNF column and calculate
+race_results_grouped['DNF'] = race_results_grouped['totalParticipants'] - race_results_grouped['totalFinishers']
+race_results_grouped.to_csv('f1RaceResultsData_Grouped.csv', columns=['raceId', 'year', 'totalFinishers', 'totalParticipants', 'DNF'], sep='\t')  #, index=False)
+
+### Active Drivers
+
+all_practices = pd.concat([fp1, fp2, fp3, fp4], ignore_index=True)
+
+all_practices =  all_practices[all_practices['year'] >= 2015]
+active_drivers = pd.merge(
+    drivers,
+    all_practices,
+    left_on='id',
+    right_on='driverId',
+    how='right',
+    suffixes=['_drivers', '_all_practices']).drop_duplicates(subset=['driverId'])
+
+active_drivers.to_csv(path.join(DATA_DIR, 'active_drivers.csv'), columns = ['driverId', 'abbreviation', 'name', 'firstName', 'lastName', 'driverNumber'], sep='\t', index=False)
+
+# Show all rows where abbreviation and name are duplicated
+duplicates = active_drivers[active_drivers.duplicated(subset=['abbreviation', 'name'], keep=False)]
+print(f"Number of duplicate drivers: {len(duplicates)}")
+print(duplicates)
+
+print("All active drivers saved to active_drivers.csv")
+
+
+print("Successfully generated F1 analysis data files.")
+
+
+

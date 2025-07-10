@@ -1,5 +1,8 @@
-import datetime
+import fastf1
+from fastf1.ergast import Ergast
 import pandas as pd
+import datetime
+import json
 from os import path
 import os
 import streamlit as st
@@ -13,6 +16,7 @@ from pandas.api.types import (
 )
 import altair as alt
 import time
+import numpy as np
 #import scipy
 from scipy.stats import linregress
 import matplotlib.pyplot as plt
@@ -27,6 +31,270 @@ from sklearn.impute import SimpleImputer
 import seaborn as sns
 
 DATA_DIR = 'data_files/'
+fastf1.Cache.enable_cache(path.join(DATA_DIR, 'f1_cache'))
+
+st.set_page_config(
+   page_title="Formula 1 Analysis",
+   page_icon=path.join(DATA_DIR, 'favicon.png'),
+   layout="wide",
+   initial_sidebar_state="expanded"
+)
+
+def km_to_miles(km):
+    return km * 0.621371
+
+
+# @st.cache_data(show_spinner="Loading latest available F1 practice and qualifying data...")
+# def get_latest_gp_data():
+#     # --- Load race lookup for grandPrixId ---
+#     with open(path.join(DATA_DIR, 'f1db-races.json'), 'r', encoding='utf-8') as f:
+#         f1db_races = json.load(f)
+
+#     year_round_to_id = {}
+#     id_to_year_round = {}
+#     for race in f1db_races:
+#         yr = int(race['year'])
+#         rnd = int(race['round'])
+#         rid = race['id']
+#         year_round_to_id[(yr, rnd)] = rid
+#         id_to_year_round.setdefault(rid, []).append((yr, rnd))
+#     for rid in id_to_year_round:
+#         id_to_year_round[rid].sort(reverse=True)
+
+#     ergast = Ergast(result_type='pandas', auto_cast=True)
+#     today = datetime.date.today()
+#     schedule = ergast.get_race_schedule(season=today.year)
+#     date_col = [col for col in schedule.columns if 'date' in col.lower()][0]
+#     schedule[date_col] = pd.to_datetime(schedule[date_col])
+
+#     upcoming = schedule[schedule[date_col] >= pd.Timestamp(today)].sort_values(date_col).head(1)
+#     if upcoming.empty:
+#         return None, None, None, None, None
+
+#     race = upcoming.iloc[0]
+#     year = int(race['season'])
+#     round_num = int(race['round'])
+#     grand_prix_id = year_round_to_id.get((year, round_num))
+#     if grand_prix_id is None:
+#         return None, None, None, None, None
+
+#     # --- 1. Try current year first ---
+#     sched = ergast.get_race_schedule(season=year)
+#     date_col_sched = [col for col in sched.columns if 'date' in col.lower()][0]
+#     sched[date_col_sched] = pd.to_datetime(sched[date_col_sched])
+#     race_row = sched[sched['round'].astype(int) == round_num]
+#     if not race_row.empty and race_row.iloc[0][date_col_sched].date() <= today:
+#         # Try practice
+#         for session_type in ['FP3', 'FP2', 'FP1']:
+#             try:
+#                 session = fastf1.get_session(year, round_num, session_type)
+#                 session.load()
+#                 if not session.laps.empty:
+#                     practice_laps = session.laps.copy()
+#                     practice_laps['Session'] = session_type
+#                     practice_laps['grandPrixId'] = grand_prix_id
+#                     break
+#             except Exception:
+#                 continue
+#         # Try qualifying
+#         try:
+#             qual_session = fastf1.get_session(year, round_num, 'Q')
+#             qual_session.load()
+#             if not qual_session.laps.empty:
+#                 qualifying_laps = qual_session.laps.copy()
+#                 qualifying_laps['Session'] = 'Q'
+#                 qualifying_laps['grandPrixId'] = grand_prix_id
+#                 st.write(f"Loaded qualifying session for {grand_prix_id} ({year}, Round {round_num})")
+#             else:
+#                 qualifying_laps = None
+#                 st.write(f"No qualifying data available for {grand_prix_id} ({year}, Round {round_num})")
+#         except Exception:
+#             qualifying_laps = None
+#             st.write("Exception loading qualifying session: No qualifying data available for the target")
+#         # If either found, return immediately
+#         if ('practice_laps' in locals() and practice_laps is not None and not practice_laps.empty) or \
+#            ('qualifying_laps' in locals() and qualifying_laps is not None and not qualifying_laps.empty):
+#             return practice_laps, qualifying_laps, grand_prix_id, year, round_num
+
+#     # --- 2. Fallback: Try previous years ---
+#     practice_laps = None
+#     qualifying_laps = None
+#     used_year = None
+#     used_round = None
+
+#     today = datetime.date.today()
+#     for yr, rnd in id_to_year_round[grand_prix_id]:
+#         # Get the race date for this year/round
+#         sched = ergast.get_race_schedule(season=yr)
+#         date_col_sched = [col for col in sched.columns if 'date' in col.lower()][0]
+#         sched[date_col_sched] = pd.to_datetime(sched[date_col_sched])
+#         race_row = sched[sched['round'].astype(int) == rnd]
+#         if race_row.empty:
+#             continue
+#         race_date = race_row.iloc[0][date_col_sched].date()
+#         if race_date > today:
+#             continue  # Skip future races
+
+#         st.write(f"Trying year={yr}, round={rnd} for grandPrixId={grand_prix_id} (race date: {race_date})")
+
+#         # Try practice
+#         for session_type in ['FP3', 'FP2', 'FP1']:
+#             try:
+#                 session = fastf1.get_session(yr, rnd, session_type)
+#                 session.load()
+#                 if not session.laps.empty:
+#                     practice_laps = session.laps.copy()
+#                     practice_laps['Session'] = session_type
+#                     practice_laps['grandPrixId'] = grand_prix_id
+#                     break
+#             except Exception as e:
+#                 print(f"{session_type} not available for year={yr}, round={rnd}: {e}")
+#         # Try qualifying
+#         try:
+#             qual_session = fastf1.get_session(yr, rnd, 'Q')
+#             qual_session.load()
+#             if not qual_session.laps.empty:
+#                 qualifying_laps = qual_session.laps.copy()
+#                 qualifying_laps['Session'] = 'Q'
+#                 qualifying_laps['grandPrixId'] = grand_prix_id
+#         except Exception as e:
+#             print(f"Qualifying not available for year={yr}, round={rnd}: {e}")
+#         # If either found, break
+#         if (practice_laps is not None and not practice_laps.empty) or (qualifying_laps is not None and not qualifying_laps.empty):
+#             used_year = yr
+#             used_round = rnd
+#             st.write(f"Using data from year={yr}, round={rnd}, grandPrixId={grand_prix_id}")
+#             break
+
+#     return practice_laps, qualifying_laps, grand_prix_id, used_year, used_round
+
+# Usage in your Streamlit app:
+#practice_laps, qualifying_laps, grand_prix_id, used_year, used_round = get_latest_gp_data()
+
+
+# --- Pull most recent available practice session (FP3, FP2, FP1) ---
+#practice_laps = None
+#for session_type in ['FP3', 'FP2', 'FP1']:
+#    try:
+#        session = fastf1.get_session(year, round_num, session_type)
+#        session.load()
+#        if not session.laps.empty:
+#            practice_laps = session.laps.copy()
+#            practice_laps['Session'] = session_type
+#            practice_laps['grandPrixId'] = grand_prix_id
+#            print(f"Loaded {session_type} for grandPrixId={grand_prix_id} ({year})")
+#            break
+#    except Exception as e:
+#        print(f"{session_type} not available for grandPrixId={grand_prix_id} ({year}): {e}")
+
+# --- Pull qualifying session ---
+#try:
+#    qual_session = fastf1.get_session(year, round_num, 'Q')
+#    qual_session.load()
+#    if not qual_session.laps.empty:
+#        qualifying_laps = qual_session.laps.copy()
+#        qualifying_laps['Session'] = 'Q'
+#        qualifying_laps['grandPrixId'] = grand_prix_id
+#        print("Loaded qualifying session.")
+#    else:
+#        qualifying_laps = None
+#        print("No qualifying data available for the target race.")
+#except Exception as e:
+#    print(f"Could not load qualifying session: {e}")
+#    qualifying_laps = None
+
+# Now you have:
+# - practice_laps: DataFrame for the most recent available practice session for the upcoming event (by grandPrixId)
+# - qualifying_laps: DataFrame for the most recent available qualifying session for the upcoming event (by grandPrixId)
+
+
+# Load race lookup for grandPrixId
+# with open(path.join(DATA_DIR, 'f1db-races.json'), 'r', encoding='utf-8') as f:
+#     f1db_races = json.load(f)
+
+# ergast = Ergast(result_type='pandas', auto_cast=True)
+# today = datetime.date.today()
+# schedule = ergast.get_race_schedule(season=today.year)
+# date_col = [col for col in schedule.columns if 'date' in col.lower()][0]
+# schedule[date_col] = pd.to_datetime(schedule[date_col])
+
+# # Find the next race (date in the future)
+# upcoming = schedule[schedule[date_col] >= pd.Timestamp(today)].sort_values(date_col).head(1)
+# if upcoming.empty:
+#     raise Exception("No upcoming race found in the schedule.")
+
+# race = upcoming.iloc[0]
+# event_name = race['raceName']
+# target_year = int(race['season'])
+
+# # Try to get this year's round and id, else fallback to previous years
+# # Build lookups
+# year_round_to_id = {}
+# id_to_year_round = {}
+# for race in f1db_races:
+#     yr = int(race['year'])
+#     rnd = int(race['round'])
+#     rid = race['id']
+#     year_round_to_id[(yr, rnd)] = rid
+#     id_to_year_round.setdefault(rid, []).append((yr, rnd))
+# for rid in id_to_year_round:
+#     id_to_year_round[rid].sort(reverse=True)  # Most recent first
+
+# # Get next race's year and round
+# race = upcoming.iloc[0]
+# year = int(race['season'])
+# round_num = int(race['round'])
+
+# # Get grandPrixId for the upcoming race
+# grand_prix_id = year_round_to_id.get((year, round_num))
+# if grand_prix_id is None:
+#     raise Exception(f"No grandPrixId found for year={year}, round={round_num}")
+
+# # Find the most recent (year, round) for this grandPrixId, not after the current year
+# candidates = [yr_rnd for yr_rnd in id_to_year_round[grand_prix_id] if yr_rnd[0] <= year]
+# if not candidates:
+#     raise Exception(f"No previous races found for grandPrixId={grand_prix_id}")
+# use_year, use_round = candidates[0]
+# print(f"Using data from year={use_year}, round={use_round}, grandPrixId={grand_prix_id}")
+
+# print(f"Target race: {event_name} ({year} Round {round_num}), grandPrixId: {grand_prix_id}")
+
+# # --- Pull most recent available practice session (FP3, FP2, FP1) ---
+# practice_laps = None
+# for session_type in ['FP3', 'FP2', 'FP1']:
+#     try:
+#         session = fastf1.get_session(year, round_num, session_type)
+#         session.load()
+#         if not session.laps.empty:
+#             practice_laps = session.laps.copy()
+#             practice_laps['Session'] = session_type
+#             practice_laps['grandPrixId'] = grand_prix_id
+#             print(f"Loaded {session_type} for {event_name} ({year})")
+#             break
+#     except Exception as e:
+#         print(f"{session_type} not available for {event_name} ({year}): {e}")
+
+# # --- Pull qualifying session ---
+# try:
+#     qual_session = fastf1.get_session(year, round_num, 'Q')
+#     qual_session.load()
+#     if not qual_session.laps.empty:
+#         qualifying_laps = qual_session.laps.copy()
+#         qualifying_laps['Session'] = 'Q'
+#         qualifying_laps['grandPrixId'] = grand_prix_id
+#         print("Loaded qualifying session.")
+#     else:
+#         qualifying_laps = None
+#         print("No qualifying data available for the target race.")
+# except Exception as e:
+#     print(f"Could not load qualifying session: {e}")
+#     qualifying_laps = None
+
+# Now you have:
+# - practice_laps: DataFrame for the most recent practice session (FP3/FP2/FP1) for the upcoming event (this year or fallback)
+# - qualifying_laps: DataFrame for the qualifying session for the upcoming event (this year or fallback)
+# Both include grandPrixId for cross-referencing
+
 #variable_to_change = "helloWorld123"
 #variable_changed = re.sub( r"([A-Z])|([0-9]+)", r" \1\2", variable_to_change).strip()
 
@@ -43,7 +311,7 @@ def get_last_modified_file(dir_path):
         last_modified_file = max(files, key=path.getmtime)
         return last_modified_file
     except Exception as e:
-        print(f"An error occurred: {e}")
+        st.write(f"An error occurred: {e}")
         return None
 
 latest_file = get_last_modified_file(DATA_DIR)
@@ -126,9 +394,9 @@ column_rename_for_filter = {
     'totalRaceStarts': 'Total Race Starts',
     'totalRaceWins': 'Total Race Wins',
     'total1And2Finishes': 'Total 1st and 2nd',
-    'totalRaceLaps': 'Total Race Laps',
-    'totalPodiums': 'Total Podiums',
-    'totalPodiumRaces': 'Total Podium Races',
+    'totalRaceLaps': 'Total Race Laps (Construtor)',
+    'totalPodiums': 'Total Podiums (Construtor)',
+    'totalPodiumRaces': 'Total Podium Races (Construtor)',
     'totalPoints' : 'Total Points',
     'totalChampionshipPoints': 'Total Champ Points',
     'totalPolePositions' : 'Total Pole Positions',
@@ -179,18 +447,14 @@ predicted_position_columns_to_display = {
 current_year = datetime.datetime.now().year
 raceNoEarlierThan = current_year - 10
 
-st.set_page_config(
-   page_title="Formula 1 Analysis",
-   page_icon=path.join(DATA_DIR, 'favicon.png'),
-   layout="wide",
-   initial_sidebar_state="expanded"
-)
+
 
 ## do not create filters for any field in this list
+## could be to avoid duplicates or not useful for filtering
 exclusionList = ['grandPrixRaceId', 'raceId_results',  'constructorId', 'driverId', 'resultsDriverId', 
                  'raceId', 'id', 'id_grandPrix', 'id_schedule', 'bestQualifyingTime_sec', 'TeamName', 'circuitId', 'grandPrixRaceId', 'grandPrixId',
-    'driverId_driver_standings', 'constructorId_results', 'driverId_results', 'driverId_driver_standings',
-    'driverName', 'driverId_driver_standings', 'countryId', 'name', 'fullName', 'points', 'abbreviation', 'shortName', 'id', 'constructorId_results', 'driverId_results',]
+                'driverId_driver_standings', 'constructorId_results', 'driverId_results', 'driverId_driver_standings',
+                'driverName', 'driverId_driver_standings', 'countryId', 'name', 'fullName', 'points', 'abbreviation', 'shortName', 'id', 'constructorId_results', 'driverId_results',]
 
 @st.cache_data
 def load_correlation(nrows):
@@ -208,6 +472,27 @@ def load_data_schedule(nrows):
     return raceSchedule
 
 raceSchedule = load_data_schedule(10000)
+
+@st.cache_data
+def load_drivers(nrows):
+    drivers = pd.read_json(path.join(DATA_DIR, 'f1db-drivers.json'))
+    return drivers
+
+drivers = load_drivers(10000)
+
+@st.cache_data
+def load_qualifying(nrows):
+    qualifying = pd.read_csv(path.join(DATA_DIR, 'all_qualifying_races.csv'), sep='\t')
+    return qualifying
+
+qualifying = load_qualifying(10000)
+
+@st.cache_data
+def load_practices(nrows):
+    practices = pd.read_csv(path.join(DATA_DIR, 'all_practice_laps.csv'), sep='\t') 
+    return practices
+
+practices = load_practices(10000)
 
 @st.cache_data
 def load_data_race_messages(nrows):
@@ -490,22 +775,39 @@ season_summary_columns_to_display = {
 def load_data(nrows):
     fullResults = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t', nrows=nrows, usecols=['grandPrixYear', 'grandPrixName', 'resultsDriverName', 'resultsPodium', 'resultsTop5', 'resultsTop10', 'constructorName',  'resultsStartingGridPositionNumber', 'resultsFinalPositionNumber', 
     'positionsGained', 'short_date', 'raceId_results', 'grandPrixRaceId', 'DNF', 'averagePracticePosition', 'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'q1End', 'q2End', 'q3Top10', 'resultsDriverId', 
-    'grandPrixLaps', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 'resultsReasonRetired', 'constructorId_results',
-    'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'activeDriver', 'streetRace', 'trackRace',
-           'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums', 'yearsActive','bestQualifyingTime_sec'
-    ])
+    'grandPrixLaps', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 'resultsReasonRetired', 'constructorId_results', 
+    'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'activeDriver', 'streetRace', 'trackRace', #'Points',
+           'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums', 'bestQualifyingTime_sec', 'yearsActive',
+           'best_s1_sec', 'best_s2_sec', 'best_s3_sec', 'best_theory_lap_sec', 'LapTime_sec', 'SpeedI1_mph', 'SpeedI2_mph', 'SpeedFL_mph', 'SpeedST_mph', 'avgLapPace'
+           ], dtype={'resultsStartingGridPositionNumber': 'Float64', 'resultsFinalPositionNumber': 'Float64', 'positionsGained': 'Int64', 'averagePracticePosition': 'Float64', 'lastFPPositionNumber': 'Float64', 'resultsQualificationPositionNumber': 'Int64'})
     
     pitStops = pd.read_csv(path.join(DATA_DIR, 'f1PitStopsData_Grouped.csv'), sep='\t', nrows=nrows, usecols=['raceId', 'driverId', 'constructorId', 'numberOfStops', 'averageStopTime', 'totalStopTime'])
     constructor_standings = pd.read_csv(path.join(DATA_DIR, 'constructor_standings.csv'), sep='\t')
     driver_standings = pd.read_csv(path.join(DATA_DIR, 'driver_standings.csv'), sep='\t')
 
+    ####### still need to merge practices, and include FP2 by default, or FP1 if FP2 doesn't exist
+
     fullResults = pd.merge(fullResults, pitStops, left_on=['raceId_results', 'resultsDriverId'], right_on=['raceId', 'driverId'], how='left', suffixes=['_results', '_pitStops'])
     fullResults = pd.merge(fullResults, constructor_standings, left_on='constructorId_results', right_on='id', how='left', suffixes=['_results', '_constructor_standings'])
     fullResults = pd.merge(fullResults, driver_standings, left_on='resultsDriverId', right_on='driverId', how='left', suffixes=['_results', '_driver_standings'])
-    
+
+    # fullResults['raceId_results'] = pd.to_numeric(fullResults['raceId_results'], errors='coerce')
+    # qualifying['raceId'] = pd.to_numeric(qualifying['raceId'], errors='coerce')
+
+    # fullResults['resultsDriverId'] = pd.to_numeric(fullResults['resultsDriverId'], errors='coerce')
+    # qualifying['driverId'] = pd.to_numeric(qualifying['driverId'], errors='coerce')
+
+    fullResults = pd.merge(fullResults, qualifying, left_on=['raceId_results', 'resultsDriverId'], right_on=['raceId', 'driverId'], how='left', suffixes=['_results_with_qualifying', '_qualifying'])
+    fullResults.drop_duplicates(subset=['grandPrixYear', 'grandPrixName', 'resultsDriverName'], inplace=True)
+    ####### need to merge practices and qualifying data so that I can use it in the historical model
+
+    #### merge qualifying on raceID as well
+    # fullResults.rename(columns={'Points_results_with_qualifying': 'Points',})
     return fullResults
 
 data = load_data(10000)
+
+
 ## Most recent date with weather
 #print(data['short_date'].max())
 
@@ -526,26 +828,30 @@ data['totalStopTime'] = data['totalStopTime'].astype('Float64')
 data['driverBestStartingGridPosition'] = data['driverBestStartingGridPosition'].astype('Int64')
 data['driverBestRaceResult'] = data['driverBestRaceResult'].astype('Int64')
 data['constructorRank'] = data['constructorRank'].astype('Int64')
-data['Points'] = data['Points'].astype('Int64')
+data['Points'] = data['Points_results_with_qualifying'].astype('Int64')
 data['driverRank'] = data['driverRank'].astype('Int64')
-data['bestQualifyingTime_sec'] = data['bestQualifyingTime_sec'].astype('Float64')
+if 'bestQualifyingTime_sec' in data.columns:
+    data['bestQualifyingTime_sec'] = data['bestQualifyingTime_sec'].astype('Float64')
+else:
+    st.warning("'bestQualifyingTime_sec' column not found in data.")
+#data['bestQualifyingTime_sec'] = data['bestQualifyingTime_sec'].astype('Float64')
 data['driverTotalChampionshipWins'] = data['driverTotalChampionshipWins'].astype('Int64')
 data['driverTotalRaceEntries'] = data['driverTotalRaceEntries'].astype('Int64')
-data['bestChampionshipPosition'] = data['bestChampionshipPosition'].astype('Int64')
-data['bestStartingGridPosition'] = data['bestStartingGridPosition'].astype('Int64')
-data['bestRaceResult'] = data['bestRaceResult'].astype('Int64')
-data['totalChampionshipWins'] = data['totalChampionshipWins'].astype('Int64')
-data['totalRaceStarts'] = data['totalRaceStarts'].astype('Int64')
-data['totalRaceWins'] = data['totalRaceWins'].astype('Int64')
+data['bestChampionshipPosition'] = data['bestChampionshipPosition_results_with_qualifying'].astype('Int64')
+data['bestStartingGridPosition'] = data['bestStartingGridPosition_results_with_qualifying'].astype('Int64')
+data['bestRaceResult'] = data['bestRaceResult_results_with_qualifying'].astype('Int64')
+data['totalChampionshipWins'] = data['totalChampionshipWins_results_with_qualifying'].astype('Int64')
+data['totalRaceStarts'] = data['totalRaceStarts_results_with_qualifying'].astype('Int64')
+data['totalRaceWins'] = data['totalRaceWins_results_with_qualifying'].astype('Int64')
 data['total1And2Finishes'] = data['total1And2Finishes'].astype('Int64')
-data['totalRaceLaps'] = data['totalRaceLaps'].astype('Int64')
-data['totalPodiums'] = data['totalPodiums'].astype('Int64')
+data['totalRaceLaps'] = data['totalRaceLaps_results_with_qualifying'].astype('Int64')
+data['totalPodiums'] = data['totalPodiums_results_with_qualifying'].astype('Int64')
 data['totalPodiumRaces'] = data['totalPodiumRaces'].astype('Int64')
-data['totalPoints'] = data['totalPoints'].astype('Float64')
-data['totalChampionshipPoints'] = data['totalChampionshipPoints'].astype('Float64')
-data['totalPolePositions'] = data['totalPolePositions'].astype('Int64')
-data['totalFastestLaps'] = data['totalFastestLaps'].astype('Int64')
-data['totalRaceEntries'] = data['totalRaceEntries'].astype('Int64')
+data['totalPoints'] = data['totalPoints_results_with_qualifying'].astype('Float64')
+data['totalChampionshipPoints'] = data['totalChampionshipPoints_results_with_qualifying'].astype('Float64')
+data['totalPolePositions'] = data['totalPolePositions_results_with_qualifying'].astype('Int64')
+data['totalFastestLaps'] = data['totalFastestLaps_results_with_qualifying'].astype('Int64')
+data['totalRaceEntries'] = data['totalRaceEntries_results_with_qualifying'].astype('Int64')
 
 
 column_names = data.columns.tolist()
@@ -557,20 +863,21 @@ def get_features_and_target(data):
         'resultsStartingGridPositionNumber', 'averagePracticePosition', 'totalFastestLaps', 'total1And2Finishes',
         'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'constructorTotalRaceStarts', 
         'constructorTotalRaceWins', 'constructorTotalPolePositions', 'driverTotalRaceEntries', 
-        'totalPolePositions', 'Points', 'driverTotalRaceStarts', 'driverTotalRaceWins', 
-        'driverTotalPodiums', 'driverRank', 'constructorRank', 'driverTotalPolePositions', 
-        'yearsActive', 'bestQualifyingTime_sec' ]
+        'totalPolePositions', 'Points', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalPodiums', 'driverRank', 'constructorRank', 'driverTotalPolePositions', 
+        'yearsActive', 'bestQualifyingTime_sec', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec', 'best_theory_lap_sec', 'LapTime_sec', 
+        'SpeedI1_mph', 'SpeedI2_mph', 'SpeedFL_mph', 'SpeedST_mph', 'avgLapPace']
     target = 'resultsFinalPositionNumber'
     return data[features], data[target]
 
 def get_preprocessor():
     categorical_features = ['grandPrixName', 'constructorName', 'resultsDriverName']
-    numerical_features = ['resultsStartingGridPositionNumber', 'averagePracticePosition', 'totalFastestLaps', 'totalChampionshipPoints',
+    numerical_features = ['totalChampionshipPoints', 'driverTotalChampionshipWins',
+        'resultsStartingGridPositionNumber', 'averagePracticePosition', 'totalFastestLaps', 'total1And2Finishes',
         'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'constructorTotalRaceStarts', 
-        'constructorTotalRaceWins', 'constructorTotalPolePositions', 'driverTotalRaceEntries', 'driverTotalChampionshipWins',
-        'totalPolePositions', 'Points', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'total1And2Finishes',
-        'driverTotalPodiums', 'driverRank', 'constructorRank', 'driverTotalPolePositions', 
-        'yearsActive', 'bestQualifyingTime_sec']
+        'constructorTotalRaceWins', 'constructorTotalPolePositions', 'driverTotalRaceEntries', 
+        'totalPolePositions', 'Points', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalPodiums', 'driverRank', 'constructorRank', 'driverTotalPolePositions', 
+        'yearsActive', 'bestQualifyingTime_sec', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec', 'best_theory_lap_sec', 'LapTime_sec', 
+        'SpeedI1_mph', 'SpeedI2_mph', 'SpeedFL_mph', 'SpeedST_mph', 'avgLapPace']
 
     numerical_imputer = SimpleImputer(strategy='mean')
     categorical_imputer = SimpleImputer(strategy='most_frequent')
@@ -1050,9 +1357,7 @@ if st.checkbox('Filter Results'):
     
     # Count the number of entries (constructors) for each race
     constructor_entry_counts = (
-        filtered_data
-        #.groupby(['grandPrixName', 'grandPrixYear'])
-        .groupby(['constructorName'])
+        filtered_data.groupby(['constructorName'])
         .size()
         .reset_index(name='constructor_entry_count')
 )
@@ -1127,6 +1432,7 @@ if st.checkbox('Filter Results'):
     model, mse, r2, mae = train_and_evaluate_model(filtered_data)
 
     st.write(f"Mean Squared Error: {mse:.3f}")
+
     st.write(f"R^2 Score: {r2:.3f}")
     st.write(f"Mean Absolute Error: {mae:.2f}")
 
@@ -1198,27 +1504,23 @@ if st.checkbox(f"Show {current_year} Schedule"):
 if st.checkbox("Show Next Race"):
 #### fix to show current day's race
     st.subheader("Next Race:")
-
+    
     # include the current date in the raceSchedule
     raceSchedule['date_only'] = pd.to_datetime(raceSchedule['date']).dt.date
     nextRace = raceSchedule[raceSchedule['date_only'] >= datetime.datetime.today().date()]
 
-    # Create a copy of the slice to avoid the warning
+    # Create a copy of the slice to avoid the warning 
+    nextRace = nextRace.sort_values(by=['date'], ascending = True).head(1).copy()
     
-    nextRace = nextRace.sort_values(by=['date'], ascending=[True]).head(1).copy()
-
-
     st.dataframe(nextRace, width=800, column_config=next_race_columns_to_display, hide_index=True, 
         column_order=['date', 'time', 'fullName', 'courseLength', 'turns', 'laps'])
-
+    
     # Limit detailsOfNextRace by the grandPrixId of the next race
     next_race_id = nextRace['grandPrixId'].head(1).values[0]
     upcoming_race = pd.merge(nextRace, raceSchedule, left_on='grandPrixId', right_on='grandPrixId', how='inner', suffixes=('_nextrace', '_races'))
     #st.write(upcoming_race_id.columns)
     upcoming_race = upcoming_race.sort_values(by='date_nextrace', ascending = False).head(1).copy()
     upcoming_race_id = upcoming_race['id_grandPrix_nextrace'].unique().copy()
-    
-    
 
     st.subheader("Past Results:")
     detailsOfNextRace = data[data['grandPrixRaceId'] == next_race_id]
@@ -1234,28 +1536,71 @@ if st.checkbox("Show Next Race"):
     #dups = detailsOfNextRace[detailsOfNextRace.duplicated(subset=['resultsDriverName', 'grandPrixYear'], keep=False)]
     #st.caption("Dups")
     #st.write(dups)
-
+    
     last_race = detailsOfNextRace.iloc[1]
+    #st.write(last_race.columns)
+    
+    #st.write("current race ID")
+    #st.write(upcoming_race_id)
+    #st.write("Last race ID")
+    #st.dataframe(last_race)
 
     active_drivers = data[data['activeDriver'] == True]
     active_drivers = active_drivers['resultsDriverId'].unique()
+    # st.write(f"Total number of active drivers: {len(active_drivers)}")
+    # st.write(active_drivers.tolist())
     input_data = detailsOfNextRace.copy()
-    input_data = input_data[input_data['raceId'] == last_race['raceId']]
+    
+    input_data = input_data[input_data['raceId_results'] == last_race['raceId_results']]
 
     features, _ = get_features_and_target(data)
     feature_names = features.columns.tolist()
 
-    practices = pd.read_csv(path.join(DATA_DIR, 'all_practice_laps.csv'), sep='\t') 
+    
     #st.write(last_race['raceId'])
     #st.write(next_race_id)
     #st.write(upcoming_race_id)
    # st.write(type(upcoming_race_id))
-    practices = practices[practices['id_races'] == upcoming_race_id[0]]
-    practices = practices[practices['Session'] =='FP2']
+    if next_race_id not in practices['raceId'].values:
+        # The upcoming race is NOT in the practices dataset
+        practices = practices[practices['raceId'] == last_race['raceId_results']]
+        qualifying = qualifying[qualifying['raceId'] == last_race['raceId_results']]
+    else:    
+        # The upcoming race IS in the practices dataset
+        practices = practices[practices['raceId'] == upcoming_race_id[0]]
+        qualifying = qualifying[qualifying['raceId'] == upcoming_race_id[0]]
 
-    #st.write(len(practices))
+    if nextRace['freePractice2Date'].isnull().all():
+        practices = practices[practices['Session'] =='FP1']
+    else:
+        practices = practices[practices['Session'] =='FP2']    
+
+    # st.write(practices.columns)
+    # st.write("practices")
+    # st.dataframe(practices)
+
+    # st.write(qualifying.columns)
+    # st.write("Qualifying Data")
+    # st.dataframe(qualifying)
+    # st.dataframe(active_drivers)
+    ######## still need to add/merge qualifying data to the driver inputs
+
+    ### The following will need to be updated per race:
+    # resultsStartingGridPositionNumber
+    # averagePracticePosition
+    # resultsQualifyingPositionNumber
+    # bestQualifyingTime_sec
+    # best_s1_sec
+    # best_s2_sec
+    # best_s3_sec
+    # best_theory_lap_sec
+    # LapTime_sec
+
+    ### to do: integrate the remainder of the qualifying and practice data into the model
 
     driver_inputs = []
+
+    ###### This only includes drivers who had results in the most recent race
 
     # When building driver_inputs, select features + resultsDriverId for reference
     for driver in active_drivers:
@@ -1263,21 +1608,275 @@ if st.checkbox("Show Next Race"):
         if len(driver_data) > 0:
             # Keep resultsDriverId for reference, but do not use it for prediction
             driver_inputs.append(driver_data[feature_names + ['resultsDriverId']])
+        #     st.write(f"Driver {driver} data added with {len(driver_data)} rows.")
+        # else:
+        #     st.write(f"Driver {driver} has no data for the race.")    
 
     all_active_driver_inputs = pd.concat(driver_inputs, ignore_index=True)
 
-    all_active_driver_inputs = pd.merge(all_active_driver_inputs, practices, left_on='resultsDriverId', right_on='id_mapping', how='left')
+    all_active_driver_inputs = pd.merge(all_active_driver_inputs, practices, left_on='resultsDriverId', right_on='driverId', how='left')
     #st.write(all_active_driver_inputs.columns)
-    #st.dataframe(all_active_driver_inputs)
+    # st.write("Active driver inputs")
+    # st.dataframe(all_active_driver_inputs)
+
+    # List of columns you want to clean up
+    columns_to_clean = [
+        'LapTime_sec', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec',
+        'SpeedI1_mph', 'SpeedI2_mph', 'SpeedFL_mph', 'SpeedST_mph',
+        'best_theory_lap_sec', 'Session'
+    ]
+
+    # Build a rename dict for _x and _y suffixes
+    rename_dict = {}
+    for col in columns_to_clean:
+        for suffix in ['_x', '_y']:
+            if f"{col}{suffix}" in all_active_driver_inputs.columns:
+                rename_dict[f"{col}{suffix}"] = col
+
+    all_active_driver_inputs = all_active_driver_inputs.rename(columns=rename_dict)            
+    
+
+    # all_active_driver_inputs = pd.merge(
+    # all_active_driver_inputs,
+    # drivers[['id', 'abbreviation']],
+    # left_on='resultsDriverId',
+    # right_on='id',
+    # how='left'
+    # )
+    # st.dataframe(all_active_driver_inputs)
+
+    all_active_driver_inputs = pd.merge(
+        all_active_driver_inputs, 
+        qualifying, 
+        left_on='abbreviation', 
+        right_on='Abbreviation', 
+        how='inner',
+        suffixes=('_datamodel', '_qualifying')
+    )
+    
+    # st.dataframe(all_active_driver_inputs)
+    all_active_driver_inputs = all_active_driver_inputs.rename(columns={'Points_datamodel': 'Points', 'totalChampionshipPoints_datamodel': 'totalChampionshipPoints',
+        'totalPolePositions_datamodel': 'totalPolePositions','totalFastestLaps_datamodel': 'totalFastestLaps'} )    
+
+    # st.write(qualifying.columns)
+    # st.dataframe(qualifying)
+    # st.write("With qualifying data")
+    # st.dataframe(all_active_driver_inputs)
+    # st.write(all_active_driver_inputs.columns)
+    # all_active_driver_inputs = pd.merge(all_active_driver_inputs, qualifying, left_on='resultsDriverId', right_on='driverId', how='left')
+
+    # st.dataframe(all_active_driver_inputs)
+
+    #st.dataframe(all_active_driver_inputs, hide_index=True, width=800, height=600)
+    ## Pull the most recent data for practices and qualifying
+
+    #st.write(all_active_driver_inputs.columns)
+    #all_active_driver_inputs['bestQualifyingTime_sec'] =  all_active_driver_inputs['bestQualifyingTime_sec'].fillna(all_active_driver_inputs['bestQualifyingTime_sec'].mean())
+
+    # get the most recent qualifying data for this race
+    
+    #qualifying = qualifying[qualifying['grandPrixId'] == next_race_id ]
+   #st.write(qualifying['date'])
+    # active_drivers
+
+    
+
+    ## use last year's data in the absence of current data
+    ## include the best sector and best theory sector as well as current practice and qualifying rank
+    ## set the null values to the previous year's data in the first instance, and to the average if no previous data exists
+    ## modify the dataframe for the learning model to point to new data if available
+
+
+    ## redo this to remove all of the ergast pulls, use the data from the csv files
+
+
+    # if pd.to_datetime(nextRace['date'].iloc[0]).date() >= datetime.datetime.today().date():
+    #     # means the qualifying data has already past and can be run through Ergast
+    #     st.write("Qualifying data for", nextRace['id_grandPrix'].iloc[0], "and", nextRace['year'].iloc[0])
+    #     # now pull the qualifying data through ergast
+    #     ## write a check to see if the .csv exists. If not, pull the data from Ergast
+    #     if not path.exists(path.join(DATA_DIR, f"qualifying_{nextRace['id_grandPrix'].iloc[0]}_{nextRace['year'].iloc[0]}.csv")):
+    #         st.write("Qualifying data for", nextRace['id_grandPrix'].iloc[0], "and", nextRace['year'].iloc[0], "not found. Pulling from Ergast.")
+
+    #         # First, try FastF1 to get the data. If it's throwing an error, use last year's data
+
+    #         try:
+    #             qualifying_results_list = []
+    #             qualifying = fastf1.get_session(nextRace['year'].iloc[0], nextRace['round'].iloc[0], 'Q')
+    #             qualifying.load()
+
+    #                 # Get qualifying results as a DataFrame
+    #             qualifying_results = qualifying.results
+
+    #         except Exception as e:
+    #             st.error(f"Error fetching qualifying data: {e}")
+    #             qualifying_results = qualifying[qualifying['raceId'] == last_race['raceId_results']]
+    #             #last_race['raceId_results']
+    #             #qualifying_results_df = pd.DataFrame(columns=['Driver', 'Q1', 'Q2', 'Q3', 'Q1_sec', 'Q2_sec', 'Q3_sec', 'Round', 'Year', 'Event'])
+
+    #         if isinstance(qualifying_results, pd.DataFrame):
+    #                 # Add metadata to the DataFrame
+    #             qualifying_results['Round'] = nextRace['round'].iloc[0]
+    #             qualifying_results['Year'] = nextRace['year'].iloc[0]
+    #             qualifying_results['Event'] = qualifying.event['EventName']
+    #             qualifying_results_list.append(qualifying_results)
+    #     #nextRace = nextRace.sort_values(by=['date'], ascending = True).head(1).copy()
+    #             qualifying_results_df = pd.concat(qualifying_results_list, ignore_index=True)
+    #             st.dataframe(qualifying_results_df)
+
+    #             for col in ['Q1', 'Q2', 'Q3']:
+    #                 if col in qualifying_results_df.columns:
+    #                     qualifying_results_df[f'{col}_sec'] = pd.to_timedelta(qualifying_results_df[col]).dt.total_seconds()
+
+    #             year = str(nextRace['year'].iloc[0])
+    #             filename = f"qualifying_{nextRace['id_grandPrix'].iloc[0]}_{year}.csv"
+    #             qualifying_results_df.to_csv(path.join(DATA_DIR, filename), sep='\t', index=False)
+
+            
+
+    #     all_practice_laps = []
+
+    #     if not path.exists(path.join(DATA_DIR, f"practices_{nextRace['id_grandPrix'].iloc[0]}_{nextRace['year'].iloc[0]}.csv")):
+    #         for session_type in ['FP1', 'FP2', 'FP3']:
+    #             #session_key = (year, round_number, session_type)
+    #             #session_date = pd.to_datetime(season_schedule.iloc[round_number - 1]['raceDate'])
+                
+    #             session = fastf1.get_session(nextRace['year'].iloc[0], nextRace['round'].iloc[0], session_type)
+    #             session.load()
+    #             session_drivers = session.drivers
+
+    #             for driver in session_drivers:
+    #                 laps = session.laps.pick_drivers(driver)
+    #                 fastest_lap = laps.pick_fastest()
+    #                 if fastest_lap is not None and not fastest_lap.empty:
+    #                     fastest_lap = fastest_lap.copy()
+    #                     fastest_lap['Year'] = session.date.year  
+    #                     fastest_lap['FP_Name'] = session.event['EventName']
+    #                     fastest_lap['Round'] = session.event['RoundNumber']
+    #                     fastest_lap['Session'] = session_type
+
+    #                     # Safely get best sector times
+    #                     if 'Sector1Time' in laps.columns and not laps['Sector1Time'].isnull().all():
+    #                         best_s1 = laps.loc[laps['Sector1Time'].idxmin()]
+    #                         fastest_lap['best_s1'] = best_s1['Sector1Time']
+    #                     else:
+    #                         fastest_lap['best_s1'] = pd.NaT
+    #                     if 'Sector2Time' in laps.columns and not laps['Sector2Time'].isnull().all():
+    #                         best_s2 = laps.loc[laps['Sector2Time'].idxmin()]
+    #                         fastest_lap['best_s2'] = best_s2['Sector2Time']
+    #                     else:
+    #                         fastest_lap['best_s2'] = pd.NaT
+    #                     if 'Sector3Time' in laps.columns and not laps['Sector3Time'].isnull().all():
+    #                         best_s3 = laps.loc[laps['Sector3Time'].idxmin()]
+    #                         fastest_lap['best_s3'] = best_s3['Sector3Time']
+    #                     else:
+    #                         fastest_lap['best_s3'] = pd.NaT
+
+    #                     # Only calculate theoretical lap if all sectors are present
+    #                     if pd.notnull(fastest_lap['best_s1']) and pd.notnull(fastest_lap['best_s2']) and pd.notnull(fastest_lap['best_s3']):
+    #                         fastest_lap['best_theory_lap'] = fastest_lap['best_s1'] + fastest_lap['best_s2'] + fastest_lap['best_s3']
+    #                         fastest_lap['best_theory_lap_diff'] = fastest_lap['LapTime'] - (fastest_lap['best_s1'] + fastest_lap['best_s2'] + fastest_lap['best_s3'])
+    #                     else:
+    #                         fastest_lap['best_theory_lap'] = pd.NaT
+    #                         fastest_lap['best_theory_lap_diff'] = pd.NaT
+
+    #                     all_practice_laps.append(fastest_lap)
+
+    #         # Convert all_laps to DataFrame after all loops
+    #         if all_practice_laps:
+    #             all_practice_laps_df = pd.DataFrame(all_practice_laps)
+    #         else:
+    #     # Create an empty DataFrame with the expected columns
+    #             all_practice_laps_df = pd.DataFrame(columns=[
+    #             'Time', 'Driver', 'DriverNumber', 'LapTime', 'LapNumber', 'Stint', 'PitOutTime', 'PitInTime',
+    #             'Sector1Time', 'Sector2Time', 'Sector3Time', 'Sector1SessionTime', 'Sector2SessionTime',
+    #             'Sector3SessionTime', 'SpeedI1', 'SpeedI2', 'SpeedFL', 'SpeedST', 'IsPersonalBest', 'Compound',
+    #             'TyreLife', 'FreshTyre', 'Team', 'LapStartTime', 'LapStartDate', 'TrackStatus', 'Position',
+    #             'Deleted', 'DeletedReason', 'FastF1Generated', 'IsAccurate', 'Year', 'FP_Name', 'Round', 'Session',
+    #             'best_s1', 'best_s2', 'best_s3', 'best_theory_lap', 'best_theory_lap_diff', 'SpeedI1_mph',
+    #             'SpeedI2_mph', 'SpeedFL_mph', 'SpeedST_mph', 'LapTime_sec', 'Sector1Time_sec', 'Sector2Time_sec',
+    #             'Sector3Time_sec', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec', 'best_theory_lap_sec', 'best_theory_lap_diff_sec'])
+
+    #         # Modify speed to MPH from KM/h
+    #         for col in ['SpeedI1', 'SpeedI2', 'SpeedFL', 'SpeedST']:
+    #             if col in all_practice_laps_df.columns:
+    #                 all_practice_laps_df[f'{col}_mph'] = all_practice_laps_df[col].apply(km_to_miles)
+
+    #         # Convert time columns to seconds from timedelta
+    #         for col in ['LapTime', 'Sector1Time', 'Sector2Time', 'Sector3Time', 'best_s1', 'best_s2', 'best_s3', 'best_theory_lap', 'best_theory_lap_diff']:
+    #             if col in all_practice_laps_df.columns:
+    #                 all_practice_laps_df[f'{col}_sec'] = pd.to_timedelta(all_practice_laps_df[col]).dt.total_seconds()
+
+    #         # Merge with driver info
+    #         active_drivers = pd.merge(data, drivers, left_on='resultsDriverId', right_on='id', how='inner')
+    #         active_drivers = active_drivers[active_drivers['activeDriver'] == True]
+    #         active_drivers = active_drivers[['resultsDriverId', 'driverName', 'abbreviation']].drop_duplicates()
+
+
+    #         # Merge practice laps with driver names
+    #         all_practice_laps_with_driver_names = pd.merge(
+    #             active_drivers, 
+    #             all_practice_laps_df, 
+    #             left_on='abbreviation', 
+    #             right_on='Driver', 
+    #             how='inner'
+    #         )
+
+    #         # Merge with races info
+    #         races_with_mapping = pd.merge(
+    #             raceSchedule, 
+    #             all_practice_laps_with_driver_names, 
+    #             left_on=['year', 'round'], 
+    #             right_on=['Year', 'Round'], 
+    #             how='inner', 
+    #             suffixes=('_races', '_mapping')
+    #         ).drop_duplicates()
+
+            
+    #         year = str(nextRace['year'].iloc[0])
+    #         filename = f"practices_{nextRace['id_grandPrix'].iloc[0]}_{year}.csv"
+    #         races_with_mapping.to_csv(path.join(DATA_DIR, filename), sep='\t', index=False)
+
+
+
+
+            # Save to CSV
+            # races_with_mapping.to_csv(
+            #     path.join(DATA_DIR, f'all_practice_laps.csv'),
+            #     sep='\t',
+            #     index=False
+            # )
+        
+
     # For prediction, drop resultsDriverId
+
+    # missing = [col for col in feature_names if col not in all_active_driver_inputs.columns]
+    # if missing:
+    #     st.error(f"Missing columns in all_active_driver_inputs: {missing}")
+    # else:
+    #     st.success("All required feature columns are present.")
+
+    # missing = [col for col in feature_names if col not in all_active_driver_inputs.columns]
+    # extra = [col for col in all_active_driver_inputs.columns if col not in feature_names]
+    # st.write("Missing columns:", missing)
+    # st.write("Extra columns:", extra)
+
+    # Remove duplicate columns (if any)
+    all_active_driver_inputs = all_active_driver_inputs.loc[:, ~all_active_driver_inputs.columns.duplicated()]
+
+# # Select columns in the exact order
+# X_predict = all_active_driver_inputs[feature_names]
+
     X_predict = all_active_driver_inputs[feature_names]
     predicted_position = model.predict(X_predict)
     all_active_driver_inputs['PredictedFinalPosition'] = predicted_position
     all_active_driver_inputs.sort_values(by='PredictedFinalPosition', ascending=True, inplace=True)
+    all_active_driver_inputs['Rank'] = range(1, len(all_active_driver_inputs) + 1)
+    all_active_driver_inputs = all_active_driver_inputs.set_index('Rank')
 
     st.subheader("Predictive Results for Active Drivers")
 
-    st.dataframe(all_active_driver_inputs, hide_index=True, column_config=predicted_position_columns_to_display, width=800, height=600, 
+    st.dataframe(all_active_driver_inputs, hide_index=False, column_config=predicted_position_columns_to_display, width=800, height=600, 
     column_order=['constructorName', 'resultsDriverName', 'PredictedFinalPosition'])    
 
     
@@ -1359,6 +1958,10 @@ if st.checkbox("Show Next Race"):
     weather_with_grandprix = weather_with_grandprix.sort_values(by='short_date', ascending = False)
     st.dataframe(weather_with_grandprix, width=800, column_config=weather_columns_to_display, hide_index=True)
 
+
+
+
+
 if st.checkbox('Show Raw Data'):
 
     st.write(f"Total number of results: {len(data):,d}")
@@ -1409,11 +2012,11 @@ if st.checkbox('Show Predictive Data Model'):
     # Create a DataFrame for feature importances
     feature_importances_df = pd.DataFrame({
         'Feature': feature_names,
-        'Importance': feature_importances
-    }).sort_values(by='Importance', ascending=False)
+        'Importance (%)': feature_importances * 100
+    }).sort_values(by='Importance (%)', ascending=False)
 
-    # Display the top 15 features
-    st.dataframe(feature_importances_df.head(15), hide_index=True)
+    # Display all features
+    st.dataframe(feature_importances_df, hide_index=True, width=800)
 
 if st.checkbox('Show Correlations for all races'):
     st.subheader("Correlation Matrix")
@@ -1450,7 +2053,7 @@ if st.checkbox('Show Correlations for all races'):
     # Display the correlation matrix
     st.dataframe(correlation_matrix, column_config=correlation_columns_to_display, hide_index=True, width=800 , height=600)
 
-    dnf_counts = filtered_data[filtered_data['DNF']].groupby('resultsDriverName').size().reset_index(name='dnf_count')
+    dnf_counts = data[data['DNF']].groupby('resultsDriverName').size().reset_index(name='dnf_count')
     st.dataframe(dnf_counts, hide_index=True)
 
 
