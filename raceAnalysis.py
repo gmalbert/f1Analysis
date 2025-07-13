@@ -32,7 +32,7 @@ import seaborn as sns
 from xgboost import XGBRegressor, XGBClassifier
 
 DATA_DIR = 'data_files/'
-fastf1.Cache.enable_cache(path.join(DATA_DIR, 'f1_cache'))
+
 
 st.set_page_config(
    page_title="Formula 1 Analysis",
