@@ -37,9 +37,7 @@ from sklearn.feature_selection import RFE
 from boruta import BorutaPy
 
 DATA_DIR = 'data_files/'
-## Commented out below for upload to Streamlit.
-## Uncomment this if you are using this locally.
-##fastf1.Cache.enable_cache(path.join(DATA_DIR, 'f1_cache'))
+fastf1.Cache.enable_cache(path.join(DATA_DIR, 'f1_cache'))
 
 st.set_page_config(
    page_title="Formula 1 Analysis",
@@ -686,7 +684,9 @@ exclusionList = ['grandPrixRaceId', 'raceId_results',  'constructorId', 'driverI
         'firstName_drivers.6', 'lastName_drivers.6', 'driverNumber_drivers.5', 'driverId_drivers.7', 'abbreviation_drivers.7', 'name_drivers.7', 'firstName_drivers.7', 'lastName_drivers.7', 
         'driverNumber_drivers.6',  'delta_lap_2', 'delta_lap_5', 'delta_lap_10', 'delta_lap_15', 'delta_lap_20', 'delta_lap_2_historical', 'delta_lap_5_historical', 'delta_lap_10_historical', 'delta_lap_15_historical', 
         'delta_lap_20_historical', 'driver_positionsGained_5_races', 'driver_dnf_rate_5_races', 'practice_position_improvement_2P_3P',  'finishing_position_std_constructor', 'avgLapPace', 'Laps',
-        'driver_starting_position_3_races', 'driver_starting_position_5_races',
+        'driver_starting_position_3_races', 'driver_starting_position_5_races', 'q1_pos', 'q2_pos', 'q3_pos', 
+         'delta_from_race_avg', 'driverAge', 'driver_positionsGained_3_races', 'teammate_practice_delta', 'teammate_qual_delta', 'best_qual_time', 'qualifying_consistency_std', 'qual_vs_track_avg', 
+         'constructor_avg_practice_position', 'practice_position_std', 'recent_vs_season', 'practice_improvement', 'qual_x_constructor_wins', 'practice_improvement_x_qual', 'grid_penalty', 'grid_penalty_x_constructor', 'recent_form_x_qual', 'practice_std_x_qual', 
                                        'qualPos_x_last_practicePos', 'qualPos_x_avg_practicePos', 'recent_form_median_3_races','recent_form_median_5_races', 'recent_form_best_3_races', 'recent_form_worst_3_races', 'recent_dnf_rate_3_races', 'recent_positions_gained_3_races'
         ]
 
@@ -696,10 +696,10 @@ exclusionList = exclusionList + auto_exclusions
 
 # If errant/extra columns appear on the left in filters, the below analysis will point them out.
 
-# st.write(f"Exclusion List: {exclusionList}")
+st.write(f"Exclusion List: {exclusionList}")
 
-# remaining_columns = [col for col in column_names if col not in exclusionList]
-# st.write(f"Remaining Columns: {remaining_columns}")
+remaining_columns = [col for col in column_names if col not in exclusionList]
+st.write(f"Remaining Columns: {remaining_columns}")
 
 #column_names.sort()
 
@@ -2459,5 +2459,4 @@ if show_advanced:
         # ('regressor', XGBRegressor(learning_rate=0.1, max_depth=5, n_estimators=100))
         # ])
         
-
         
