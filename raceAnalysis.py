@@ -37,7 +37,7 @@ from sklearn.feature_selection import RFE
 from boruta import BorutaPy
 
 DATA_DIR = 'data_files/'
-fastf1.Cache.enable_cache(path.join(DATA_DIR, 'f1_cache'))
+#fastf1.Cache.enable_cache(path.join(DATA_DIR, 'f1_cache'))
 
 st.set_page_config(
    page_title="Formula 1 Analysis",
@@ -2575,4 +2575,5 @@ if show_advanced:
         # ('regressor', XGBRegressor(learning_rate=0.1, max_depth=5, n_estimators=100))
         # ])
         
+
         
