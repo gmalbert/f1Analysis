@@ -33,7 +33,7 @@ The weather is pulled from [Open-Meteo's free API](https://open-meteo.com/) whic
 
 ## Features used in data model
 
-After going through a 1,000 test Monte Carlo simulation, these are the fields and a description of all of the features I used to achieve an MAE of 1.50 or below:
+After going through a 1,000 test Monte Carlo simulation, these are the fields and descriptions of all of the features I used to achieve an MAE of 1.50 or below:
 
 | Field Name                           | Description                                                                                   |
 |-------------------------------------- |----------------------------------------------------------------------------------------------|
