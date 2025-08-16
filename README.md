@@ -25,11 +25,6 @@ I used [sckit-learn](https://scikit-learn.org/stable/) to perform machine learni
 
 I have added [Monte Carlo](https://www.ibm.com/think/topics/monte-carlo-simulation), [Recursive Feature Elimination (RFE)](https://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.RFE.html), and [Boruta](https://www.jstatsoft.org/v36/i11/) feature selection to pair down the data fields. After significant refinement, I have a MAE down to 1.7 or less.
 
-## Other options
-Besides filtering, you can also look at the upcoming race which shows historical and upcoming weather, the past winners, and data about the constructors. You can view the entire current season with details about each file. You can look at the raw, unfiltered data. Finally, you can view a correlation for the entire dataset.
-
-## Weather
-The weather is pulled from [Open-Meteo's free API](https://open-meteo.com/) which allows you to search historical weather data by hour going back to the 1940s. The hourly reports are pulled per race and then averaged to show a daily weather report on race day.
 
 ## Features used in data model
 
@@ -136,6 +131,13 @@ After going through a 1,000 test Monte Carlo simulation, these are the fields an
 | constructor_podium_ratio             | Constructor's podium rate (podiums per entry).                                                |
 | driver_age_squared                   | Driver's age squared, capturing nonlinear age effects.                                        |
 | constructor_recent_win_streak        | Number of wins by the constructor in the last 3 races.                                        |
+
+
+## Other options
+Besides filtering, you can also look at the upcoming race which shows historical and upcoming weather, the past winners, and data about the constructors. You can view the entire current season with details about each file. You can look at the raw, unfiltered data. Finally, you can view a correlation for the entire dataset.
+
+## Weather
+The weather is pulled from [Open-Meteo's free API](https://open-meteo.com/) which allows you to search historical weather data by hour going back to the 1940s. The hourly reports are pulled per race and then averaged to show a daily weather report on race day.
 
 ### To do
 - Figure out a way to reset the filters.
