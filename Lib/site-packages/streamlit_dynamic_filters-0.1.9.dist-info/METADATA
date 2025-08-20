@@ -1,0 +1,141 @@
+Metadata-Version: 2.1
+Name: streamlit_dynamic_filters
+Version: 0.1.9
+Summary: Dynamic multiselect filters for Streamlit
+Home-page: https://github.com/arsentievalex/streamlit-dynamic-filters
+Author: Oleksandr Arsentiev
+Author-email: arsentiev9393@gmail.com
+License: MIT
+Keywords: streamlit,custom,component
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: streamlit
+
+# Dynamic Multi Select Filters for Streamlit
+[![Open Demo App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://dynamic-filters-demo.streamlit.app/)
+
+Custom component to create dynamic multiselect filters in Streamlit. 
+The filters apply to a dataframe and adjust their values based on the user selection (similar to Google Sheets slicers or Only Relevant Values in Tableau). 
+
+Basic documentation is available at [https://arsentievalex.github.io/streamlit-dynamic-filters/](https://arsentievalex.github.io/streamlit-dynamic-filters/)
+
+How to install and use the package:
+1. Install the package using [pip](https://pypi.org/project/streamlit-dynamic-filters/):
+    ```pip install streamlit-dynamic-filters```
+2. Import the `DynamicFilters` class:
+    ```from streamlit_dynamic_filters import DynamicFilters```
+3. Create an instance of the `DynamicFilters` class and pass the dataframe and the list of fields that will serve as filters:
+
+    ```dynamic_filters = DynamicFilters(df, filters=['col1', 'col2', 'col3', 'col4'])```
+4. Display the filters in your app:
+    ```dynamic_filters.display_filters()```
+5. Display the filtered dataframe:
+    ```dynamic_filters.display_df()```
+
+
+#### Sample usage with sidebar filters:
+
+```
+import streamlit as st
+import pandas as pd
+from streamlit_dynamic_filters import DynamicFilters
+
+data = {
+    'region': ['North America', 'North America', 'Europe', 'Oceania',
+               'North America', 'North America', 'Europe', 'Oceania',
+               'North America', 'North America', 'Europe', 'Oceania'],
+    'country': ['USA', 'Canada', 'UK', 'Australia',
+                'USA', 'Canada', 'UK', 'Australia',
+                'USA', 'Canada', 'UK', 'Australia'],
+    'city': ['New York', 'Toronto', 'London', 'Sydney',
+             'New York', 'Toronto', 'London', 'Sydney',
+             'New York', 'Toronto', 'London', 'Sydney'],
+    'district': ['Manhattan', 'Downtown', 'Westminster', 'CBD',
+                 'Brooklyn', 'Midtown', 'Kensington', 'Circular Quay',
+                 'Queens', 'Uptown', 'Camden', 'Bondi']
+}
+
+df = pd.DataFrame(data)
+
+dynamic_filters = DynamicFilters(df, filters=['region', 'country', 'city', 'district'])
+
+with st.sidebar:
+    st.write("Apply filters in any order 👇")
+
+dynamic_filters.display_filters(location='sidebar')
+
+dynamic_filters.display_df()
+```
+
+Demo GIF:
+<img src="https://i.postimg.cc/x1zDwgwh/dynamic-filters-demo-1.gif"/>   
+
+#### Sample usage with columns:
+
+```
+import streamlit as st
+import pandas as pd
+from streamlit_dynamic_filters import DynamicFilters
+
+data = {
+    'region': ['North America', 'North America', 'Europe', 'Oceania',
+               'North America', 'North America', 'Europe', 'Oceania',
+               'North America', 'North America', 'Europe', 'Oceania'],
+    'country': ['USA', 'Canada', 'UK', 'Australia',
+                'USA', 'Canada', 'UK', 'Australia',
+                'USA', 'Canada', 'UK', 'Australia'],
+    'city': ['New York', 'Toronto', 'London', 'Sydney',
+             'New York', 'Toronto', 'London', 'Sydney',
+             'New York', 'Toronto', 'London', 'Sydney'],
+    'district': ['Manhattan', 'Downtown', 'Westminster', 'CBD',
+                 'Brooklyn', 'Midtown', 'Kensington', 'Circular Quay',
+                 'Queens', 'Uptown', 'Camden', 'Bondi']
+}
+
+df = pd.DataFrame(data)
+
+dynamic_filters = DynamicFilters(df, filters=['region', 'country', 'city', 'district'])
+
+st.write("Apply filters in any order 👇")
+
+dynamic_filters.display_filters(location='columns', num_columns=2, gap='large')
+
+dynamic_filters.display_df()
+```
+
+Demo GIF:
+<img src="https://i.postimg.cc/gkLTjjg6/dynamic-filters-demo-2.gif"/>   
+
+
+
+## 0.1.9 - 2nd August 2024
+### Added
+- Key for each elements in filters, so that multiple DynamicFilters can be used in one app (contribution by @vikashgraja)
+- reset_filters function (contribution by @ragchuck)
+
+
+## 0.1.6 - 27th March 2024
+### Added
+- Sorted alphabetically filter labels
+
+
+## 0.1.5 - 28th December 2023
+### Added by kzielins <Krzysztof Zielinski> kzislinsk@gmail.com
+- Hierarchical filter selectors
+- Independent filters with diffrent sessions name
+
+
+## 0.1.3 - 28th September 2023
+### Added
+- Ability to specify filter location in display_filters(). The filters can be either displayed in sidebar, main area or columns.
+- Error handling of invalid arguments in display_filters().
+
+### Changed
+- Renamed filter_except() to filter_df(). The function returns a filtered df.
+
+### Fixed
+- The StreamlitApiException that occured when selected values did not exist in the dataset.
+- Possibility to have more than one filter 
