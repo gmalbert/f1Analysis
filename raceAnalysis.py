@@ -2710,6 +2710,18 @@ if show_advanced:
         # Display all features
         st.dataframe(feature_importances_df, hide_index=True, width=800)
 
+    if st.checkbox("Show Safety Car Data Importances"):
+        st.subheader("Safety Car Feature Importance")
+        # Get feature names and importances from the trained safetycar_model
+        preprocessor = safetycar_model.named_steps['preprocessor']
+        feature_names = preprocessor.get_feature_names_out()
+        feature_names = [name.replace('num__', '').replace('cat__', '') for name in feature_names]
+        importances = safetycar_model.named_steps['classifier'].feature_importances_
+        if len(feature_names) == len(importances):
+            st.write(pd.DataFrame({'Feature': feature_names, 'Importance (%)': importances * 100 }).sort_values('Importance (%)', ascending=False, ignore_index=True))
+        else:
+            st.warning(f"Feature names and importances are not the same length! ({len(feature_names)} vs {len(importances)})")
+
     # --- Monte Carlo Feature Subset Search UI ---
     if st.checkbox("Run Monte Carlo Feature Subset Search"):
         st.subheader("Monte Carlo Feature Subset Search (Feature Selection)")
