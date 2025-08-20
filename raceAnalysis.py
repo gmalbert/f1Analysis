@@ -230,6 +230,16 @@ def load_correlation(nrows):
     return correlation_matrix
 correlation_matrix = load_correlation(10000)
 
+# @st.cache_data
+# def load_safetycars(nrows):
+#     safety_cars = pd.read_csv(path.join(DATA_DIR, 'f1SafetyCarFeatures.csv'), sep='\t', nrows=nrows)
+#     safety_cars = safety_cars.drop_duplicates()
+#     # Drop duplicate rows based on all feature columns
+#     features, _ = get_features_and_target_safety_car(safety_cars)
+#     safety_cars = safety_cars.drop_duplicates(subset=features.columns.tolist())
+#     return safety_cars
+# safety_cars = load_safetycars(10000)
+
 @st.cache_data
 def load_data_schedule(nrows):
     raceSchedule = pd.read_json(path.join(DATA_DIR, 'f1db-races.json'))
@@ -576,7 +586,14 @@ def load_data(nrows):
                                          'constructor_podium_ratio','practice_to_qualifying_delta', 'track_familiarity', 
                                         'qualifying_position_percentile',   
                                          'recent_podium_streak', 'grid_position_percentile', 'driver_age_squared', 'constructor_recent_win_streak', 'practice_improvement_rate', 'driver_constructor_synergy',
-                                        'qual_to_final_delta_5yr', 'qual_to_final_delta_3yr', 'overtake_potential_3yr', 'overtake_potential_5yr'
+                                        'qual_to_final_delta_5yr', 'qual_to_final_delta_3yr', 'overtake_potential_3yr', 'overtake_potential_5yr',
+                                        'driver_avg_qual_pos_at_track','constructor_avg_qual_pos_at_track','driver_avg_grid_pos_at_track','constructor_avg_grid_pos_at_track','driver_avg_practice_pos_at_track',
+                                         'constructor_avg_practice_pos_at_track','driver_qual_improvement_3r','constructor_qual_improvement_3r','driver_practice_improvement_3r','constructor_practice_improvement_3r',
+                                         'driver_teammate_qual_gap_3r','driver_teammate_practice_gap_3r','driver_street_qual_avg','driver_track_qual_avg','driver_street_practice_avg','driver_track_practice_avg',
+                                         'driver_high_wind_qual_avg','driver_high_wind_practice_avg','driver_high_humidity_qual_avg','driver_high_humidity_practice_avg','driver_wet_qual_avg','driver_wet_practice_avg',
+                                         'driver_safetycar_qual_avg','driver_safetycar_practice_avg',
+                                         'driver_constructor_id','races_with_constructor','is_first_season_with_constructor','driver_constructor_avg_final_position','driver_constructor_avg_qual_position','driver_constructor_podium_rate',
+                                         'constructor_dnf_rate_3_races', 'constructor_dnf_rate_5_races', 'recent_dnf_rate_5_races',
            ], dtype={'resultsStartingGridPositionNumber': 'Float64', 'resultsFinalPositionNumber': 'Float64', 'positionsGained': 'Int64', 'averagePracticePosition': 'Float64', 'lastFPPositionNumber': 'Float64', 'resultsQualificationPositionNumber': 'Int64'})
     
     pitStops = pd.read_csv(path.join(DATA_DIR, 'f1PitStopsData_Grouped.csv'), sep='\t', nrows=nrows, usecols=['raceId', 'driverId', 'constructorId', 'numberOfStops', 'averageStopTime', 'totalStopTime'])
@@ -711,7 +728,14 @@ exclusionList = ['grandPrixRaceId', 'raceId_results',  'constructorId', 'driverI
          'street_experience', 'track_experience', 'historical_avgLapPace', 'practice_x_safetycar', 'pit_delta_x_driver_age', 'constructor_points_x_grid', 'dnf_rate_x_practice_std', 'constructor_recent_x_track_exp', 
          'driver_rank_x_years_active', 'top_speed_x_turns', 'grid_penalty_x_constructor_rank', 'average_practice_x_driver_podiums', 'practice_improvement_vs_field', 'constructor_win_rate_3y', 'driver_podium_rate_3y', 
          'practice_consistency_std', 'constructor_podium_ratio', 'practice_to_qualifying_delta', 'track_familiarity', 'qualifying_position_percentile', 'recent_podium_streak', 'grid_position_percentile', 'driver_age_squared', 
-         'constructor_recent_win_streak', 'practice_improvement_rate', 'driver_constructor_synergy', 'qual_to_final_delta_5yr', 'qual_to_final_delta_3yr', 'overtake_potential_3yr', 'overtake_potential_5yr',                                        
+         'constructor_recent_win_streak', 'practice_improvement_rate', 'driver_constructor_synergy', 'qual_to_final_delta_5yr', 'qual_to_final_delta_3yr', 'overtake_potential_3yr', 'overtake_potential_5yr', 
+         'driver_avg_qual_pos_at_track','constructor_avg_qual_pos_at_track','driver_avg_grid_pos_at_track','constructor_avg_grid_pos_at_track','driver_avg_practice_pos_at_track',
+                                         'constructor_avg_practice_pos_at_track','driver_qual_improvement_3r','constructor_qual_improvement_3r','driver_practice_improvement_3r','constructor_practice_improvement_3r',
+                                         'driver_teammate_qual_gap_3r','driver_teammate_practice_gap_3r','driver_street_qual_avg','driver_track_qual_avg','driver_street_practice_avg','driver_track_practice_avg',
+                                         'driver_high_wind_qual_avg','driver_high_wind_practice_avg','driver_high_humidity_qual_avg','driver_high_humidity_practice_avg','driver_wet_qual_avg','driver_wet_practice_avg',
+                                         'driver_safetycar_qual_avg','driver_safetycar_practice_avg',
+                                         'driver_constructor_id','races_with_constructor','is_first_season_with_constructor','driver_constructor_avg_final_position','driver_constructor_avg_qual_position','driver_constructor_podium_rate',
+                                         'constructor_dnf_rate_3_races', 'constructor_dnf_rate_5_races', 'recent_dnf_rate_5_races',                                       
         ]
 
 suffixes_to_exclude = ('_x', '_y', '_qualifying', '_results_with_qualifying', '_drivers', '_mph', '_sec', '.1', '.2', '.3')
@@ -765,7 +789,14 @@ def get_features_and_target(data):
         'practice_improvement_vs_field', 'constructor_win_rate_3y', 'driver_podium_rate_3y', 'practice_consistency_std', 
         'constructor_podium_ratio','practice_to_qualifying_delta', 'track_familiarity', 
         'qualifying_position_percentile', 'recent_podium_streak', 'grid_position_percentile', 'driver_age_squared', 'constructor_recent_win_streak', 
-        'practice_improvement_rate', 'driver_constructor_synergy', 'qual_to_final_delta_5yr', 'qual_to_final_delta_3yr', 'overtake_potential_3yr', 'overtake_potential_5yr'
+        'practice_improvement_rate', 'driver_constructor_synergy', 'qual_to_final_delta_5yr', 'qual_to_final_delta_3yr', 'overtake_potential_3yr', 'overtake_potential_5yr',
+        'driver_avg_qual_pos_at_track','constructor_avg_qual_pos_at_track','driver_avg_grid_pos_at_track','constructor_avg_grid_pos_at_track','driver_avg_practice_pos_at_track',
+                                         'constructor_avg_practice_pos_at_track','driver_qual_improvement_3r','constructor_qual_improvement_3r','driver_practice_improvement_3r','constructor_practice_improvement_3r',
+                                         'driver_teammate_qual_gap_3r','driver_teammate_practice_gap_3r','driver_street_qual_avg','driver_track_qual_avg','driver_street_practice_avg','driver_track_practice_avg',
+                                         'driver_high_wind_qual_avg','driver_high_wind_practice_avg','driver_high_humidity_qual_avg','driver_high_humidity_practice_avg','driver_wet_qual_avg','driver_wet_practice_avg',
+                                         'driver_safetycar_qual_avg','driver_safetycar_practice_avg',
+                                        'races_with_constructor','is_first_season_with_constructor','driver_constructor_avg_final_position','driver_constructor_avg_qual_position','driver_constructor_podium_rate',
+                                         'constructor_dnf_rate_3_races', 'constructor_dnf_rate_5_races', 'recent_dnf_rate_5_races',
             ]
     target = 'resultsFinalPositionNumber'
     return data[features], data[target]
@@ -826,6 +857,39 @@ def get_preprocessor_position():
                         # 'top_speed_x_turns', 
                         # 'grid_penalty_x_constructor_rank', 
                         # 'average_practice_x_driver_podiums'
+
+                        'driver_avg_qual_pos_at_track',
+                        # 'constructor_avg_qual_pos_at_track',
+                        'driver_avg_grid_pos_at_track',
+                        # 'constructor_avg_grid_pos_at_track',
+                        # 'driver_avg_practice_pos_at_track',
+                        'constructor_avg_practice_pos_at_track',
+                        # 'driver_qual_improvement_3r',
+                        # 'constructor_qual_improvement_3r',
+                        # 'driver_practice_improvement_3r',
+                        # 'constructor_practice_improvement_3r',
+                        # 'driver_teammate_qual_gap_3r',
+                        'driver_teammate_practice_gap_3r',
+                        'driver_street_qual_avg',
+                        # 'driver_track_qual_avg',
+                        # 'driver_street_practice_avg',
+                        # 'driver_track_practice_avg',
+                        'driver_high_wind_qual_avg',
+                        'driver_high_wind_practice_avg',
+                        # 'driver_high_humidity_qual_avg',
+                        # 'driver_high_humidity_practice_avg',
+                        # 'driver_wet_qual_avg',
+                        # 'driver_wet_practice_avg',
+                        # 'driver_safetycar_qual_avg',
+                        # 'driver_safetycar_practice_avg',
+                        # 'races_with_constructor',
+                        'is_first_season_with_constructor',
+                        # 'driver_constructor_avg_final_position',
+                        # 'driver_constructor_avg_qual_position',
+                        # 'driver_constructor_podium_rate',
+                        # 'constructor_dnf_rate_3_races',
+                        # 'constructor_dnf_rate_5_races',
+                        # 'recent_dnf_rate_5_races',
          
           ]
 
@@ -966,22 +1030,83 @@ def get_preprocessor_dnf():
     return preprocessor
 
 # 1. Prepare features and target for safety car prediction
-def get_features_and_target_safety_car(data):
+def get_features_and_target_safety_car(safety_cars):
     # Example features (customize as needed)
     features = [
-        'grandPrixName', 'grandPrixYear', 'grandPrixLaps', 'turns', 'average_temp',
-        'average_humidity', 'average_wind_speed', 'total_precipitation',
-        'streetRace', 'trackRace', 'DNF', 'numberOfStops'
+        # Track & Weather
+    'grandPrixYear', 'grandPrixName',  'circuitId', 
+    'grandPrixLaps', 'turns', 'streetRace', 'trackRace',
+    'average_temp', 'average_humidity', 'average_wind_speed', 'total_precipitation',
+
+    # Practice
+    'fp1PositionNumber', 'fp2PositionNumber', 'fp3PositionNumber', 'fp4PositionNumber',
+    'averagePracticePosition', 'lastFPPositionNumber', 'practice_position_std',
+    'practice_improvement', 'practice_improvement_x_qual', 'practice_gap_to_teammate',
+    'practice_position_improvement_1P_2P', 'practice_position_improvement_2P_3P', 'practice_position_improvement_1P_3P',
+
+    # Qualifying
+    'resultsQualificationPositionNumber', 'best_qual_time', 'pole_time_sec',
+    'qualifying_gap_to_pole', 'qualifying_position_percentile', 'qual_gap_to_teammate',
+    'qualPos_x_avg_practicePos', 'qualPos_x_last_practicePos',
+
+    # Pit Stops
+    # 'numberOfStops', 'averageStopTime', 'totalStopTime', 'pit_stop_rate', 'turns_x_pit_stop_rate', 'weather_x_pit_stop_rate',
+
+    # Career/Constructor
+    'driverTotalRaceStarts', 'constructorTotalRaceStarts', 'yearsActive', 'driverAge', 'driver_age_squared',
+    'street_experience', 'track_experience', 'driver_experience', 'constructor_experience',
+
+    # Track Familiarity
+    'track_familiarity',
+
+    # Weather Volatility
+    'weather_volatility',
+
+    # Combined/Engineered
+    'turns_x_weather', 'turns_x_precip', 'turns_x_wind', 'street_x_weather', 'track_x_weather',
+    'driver_experience_x_track_familiarity', 'constructor_experience_x_track_familiarity', #'turns_x_weather_x_pit_stop_rate',
     ]
     target = 'SafetyCarStatus'  # 1 if safety car, 0 if not
-    return data[features], data[target]
+    return safety_cars[features], safety_cars[target]
 
 def get_preprocessor_safety_car():
-    categorical_features = ['grandPrixName', ]
+    categorical_features = ['grandPrixYear', 'grandPrixName', 'circuitId',  ]
     numerical_features = [
-        'grandPrixYear', 'grandPrixLaps', 'turns', 'average_temp',
-        'average_humidity', 'average_wind_speed', 'total_precipitation',
-         'streetRace', 'trackRace', 'DNF', 'numberOfStops',
+        # Track & Weather
+    
+    'grandPrixLaps', 'turns', 'streetRace', 'trackRace',
+    'average_temp', 'average_humidity', 'average_wind_speed', 'total_precipitation',
+
+    # Practice
+    'fp1PositionNumber', 'fp2PositionNumber', 'fp3PositionNumber', 'fp4PositionNumber',
+    'averagePracticePosition', 'lastFPPositionNumber', 'practice_position_std',
+    'practice_improvement', 'practice_improvement_x_qual', 'practice_gap_to_teammate',
+    'practice_position_improvement_1P_2P', 'practice_position_improvement_2P_3P', 'practice_position_improvement_1P_3P',
+
+    # Qualifying
+    'resultsQualificationPositionNumber', 'best_qual_time', 'pole_time_sec',
+    'qualifying_gap_to_pole', 'qualifying_position_percentile', 'qual_gap_to_teammate',
+    'qualPos_x_avg_practicePos', 'qualPos_x_last_practicePos',
+
+    # Pit Stops
+    # 'numberOfStops', 'averageStopTime', 'totalStopTime', 'pit_stop_rate', 
+    
+    
+    # 'turns_x_pit_stop_rate', 'weather_x_pit_stop_rate',
+
+    # Career/Constructor
+    'driverTotalRaceStarts', 'constructorTotalRaceStarts', 'yearsActive', 'driverAge', 'driver_age_squared',
+    'street_experience', 'track_experience', 'driver_experience', 'constructor_experience',
+
+    # Track Familiarity
+    'track_familiarity',
+
+    # Weather Volatility
+    'weather_volatility',
+
+    # Combined/Engineered
+    'turns_x_weather', 'turns_x_precip', 'turns_x_wind', 'street_x_weather', 'track_x_weather',
+    'driver_experience_x_track_familiarity', 'constructor_experience_x_track_familiarity', #'turns_x_weather_x_pit_stop_rate',
     ]
     numerical_imputer = SimpleImputer(strategy='mean')
     categorical_imputer = SimpleImputer(strategy='most_frequent')
@@ -999,6 +1124,27 @@ def get_preprocessor_safety_car():
     )
     return preprocessor
 
+@st.cache_data
+def load_safetycars(nrows):
+    safety_cars = pd.read_csv(path.join(DATA_DIR, 'f1SafetyCarFeatures.csv'), sep='\t', nrows=nrows)
+    safety_cars = safety_cars.drop_duplicates()
+    # Drop duplicate rows based on all feature columns
+    features, _ = get_features_and_target_safety_car(safety_cars)
+    safety_cars = safety_cars.drop_duplicates(subset=features.columns.tolist())
+    return safety_cars
+safety_cars = load_safetycars(10000)
+
+# st.write(safety_cars['SafetyCarStatus'].value_counts())
+
+# Quick correlation check for SafetyCarStatus
+# Extract features and target for safety car prediction
+# features, target = get_features_and_target_safety_car(safety_cars)
+
+# # Only use numeric columns for correlation
+# numeric_features = features.select_dtypes(include=[np.number])
+# corrs = numeric_features.corrwith(target)
+# st.subheader("Correlation with SafetyCarStatus")
+# st.write(corrs.sort_values(ascending=False))
 
 ###### Training model for final racing position prediction
 
@@ -1079,7 +1225,7 @@ def train_and_evaluate_dnf_model(data):
     return model
 
 def train_and_evaluate_safetycar_model(data):
-    X, y = get_features_and_target_safety_car(data)
+    X, y = get_features_and_target_safety_car(safety_cars)
     preprocessor = get_preprocessor_safety_car()
     model = Pipeline([
         ('preprocessor', preprocessor),
@@ -1102,7 +1248,7 @@ def get_trained_model():
 
 model = get_trained_model()
 dnf_model = train_and_evaluate_dnf_model(data)
-safetycar_model = train_and_evaluate_safetycar_model(data)
+safetycar_model = train_and_evaluate_safetycar_model(safety_cars)
 
 def monte_carlo_feature_selection(X, y, model_class, n_trials=50, min_features=8, max_features=15, random_state=42):
     import random
@@ -2083,27 +2229,154 @@ if st.checkbox("Show Next Race"):
     # st.write(f"Mean Absolute Error (MAE) for DNF Probability: {mae_dnf:.3f}")
 
 # For Safety Car
-    X_sc, y_sc = get_features_and_target_safety_car(data)
+    X_sc, y_sc = get_features_and_target_safety_car(safety_cars)
     mask_sc = y_sc.notnull() & np.isfinite(y_sc)
     X_sc, y_sc = X_sc[mask_sc], y_sc[mask_sc]
     scores_dnf = cross_val_score(dnf_model, X_dnf, y_dnf, cv=5, scoring='roc_auc')
     st.write(f"DNF Model - Cross-validated ROC AUC: {scores_dnf.mean():.3f} (± {scores_dnf.std():.3f})")
 
     # Safety Car Model (Classification)
-    X_sc, y_sc = get_features_and_target_safety_car(data)
-    scores_sc = cross_val_score(safetycar_model, X_sc, y_sc, cv=5, scoring='roc_auc')
-    st.write(f"Safety Car Model - Cross-validated ROC AUC: {scores_sc.mean():.3f} (± {scores_sc.std():.3f})")
+    # X_sc, y_sc = get_features_and_target_safety_car(safety_cars)
+    # scores_sc = cross_val_score(safetycar_model, X_sc, y_sc, cv=5, scoring='roc_auc')
+    # st.write(f"Safety Car Model - Cross-validated ROC AUC: {scores_sc.mean():.3f} (± {scores_sc.std():.3f})")
     
+    # Remove duplicates on all feature columns before cross-validation
+    features, _ = get_features_and_target_safety_car(safety_cars)
+    X_sc, y_sc = features, safety_cars['SafetyCarStatus']
+    unique_idx = X_sc.drop_duplicates().index
+    X_sc_unique = X_sc.loc[unique_idx]
+    y_sc_unique = y_sc.loc[unique_idx]
+
+    scores_sc = cross_val_score(safetycar_model, X_sc_unique, y_sc_unique, cv=5, scoring='roc_auc')
+    st.write(f"Safety Car Model - Cross-validated ROC AUC (unique rows): {scores_sc.mean():.3f} (± {scores_sc.std():.3f})")
+
+    # importances = safetycar_model.named_steps['classifier'].feature_importances_
+    # feature_names = X_sc_unique.columns.tolist()
+    # st.write(pd.DataFrame({'Feature': feature_names, 'Importance': importances}).sort_values('Importance', ascending=False))
+
+
+    # Holdout year evaluation for Safety Car Model
+    train = safety_cars[safety_cars['grandPrixYear'] < current_year]
+    test = safety_cars[safety_cars['grandPrixYear'] == current_year]
+    X_train, y_train = get_features_and_target_safety_car(train)
+    X_test, y_test = get_features_and_target_safety_car(test)
+    safetycar_model.fit(X_train, y_train)
+    y_pred = safetycar_model.predict_proba(X_test)[:, 1]
+
+    # Print feature importances for safety car model
+    preprocessor = safetycar_model.named_steps['preprocessor']
+    feature_names = preprocessor.get_feature_names_out()
+    importances = safetycar_model.named_steps['classifier'].feature_importances_
+
+    # Clean up feature names
+    feature_names = [name.replace('num__', '').replace('cat__', '') for name in feature_names]
+
+    if len(feature_names) == len(importances):
+        st.subheader("Safety Car Feature Importance")
+        st.write(pd.DataFrame({'Feature': feature_names, 'Importance (%)': importances * 100 }).sort_values('Importance (%)', ascending=False, ignore_index=True))
+    else:
+        st.warning(f"Feature names and importances are not the same length! ({len(feature_names)} vs {len(importances)})")
+
+    from sklearn.metrics import roc_auc_score
+    # if len(y_test) > 0:
+    #     st.write("Safety Car ROC AUC (holdout year):", roc_auc_score(y_test, y_pred))
+    # else:
+    #     st.write("No test data available for the current year.")
+
+    # Find the most recent year with both classes present in test set
+    holdout_year = None
+    for year in sorted(safety_cars['grandPrixYear'].unique(), reverse=True):
+        test = safety_cars[safety_cars['grandPrixYear'] == year]
+        if len(test['SafetyCarStatus'].unique()) > 1:
+            holdout_year = year
+            break
+
+    if holdout_year is not None:
+        train = safety_cars[safety_cars['grandPrixYear'] < holdout_year]
+        test = safety_cars[safety_cars['grandPrixYear'] == holdout_year]
+        X_train, y_train = get_features_and_target_safety_car(train)
+        X_test, y_test = get_features_and_target_safety_car(test)
+        safetycar_model.fit(X_train, y_train)
+        y_pred = safetycar_model.predict_proba(X_test)[:, 1]
+        from sklearn.metrics import roc_auc_score
+        # st.write(f"Safety Car ROC AUC (holdout year {holdout_year}):", roc_auc_score(y_test, y_pred))
+    else:
+        st.write("No valid holdout year with both classes present.")
+
+    # st.write("Test set size:", len(y_test))
+    # st.write("Test set class balance:", y_test.value_counts())
+
     # Get race-level features for the next race (should be one row)
 
     # Get race-level features for the next race (should be one row)
     race_level = detailsOfNextRace.drop_duplicates(subset=['grandPrixYear', 'grandPrixName'])
 
-    X_predict_safetycar, _ = get_features_and_target_safety_car(race_level)
-    race_level['PredictedSafetyCarProbability'] = safetycar_model.predict_proba(X_predict_safetycar)[:, 1]
+    # X_predict_safetycar, _ = get_features_and_target_safety_car(race_level)
+    # race_level['PredictedSafetyCarProbability'] = safetycar_model.predict_proba(X_predict_safetycar)[:, 1]
+    # Filter safety_cars for the next race
+    # next_race_name = nextRace['fullName'].values[0]
+    # next_race_year = nextRace['year'].values[0]
 
-    # Predict (should return a single value)
+    # next_race_features = safety_cars[
+    #     (safety_cars['grandPrixName'] == next_race_name) &
+    #     (safety_cars['grandPrixYear'] == next_race_year)
+    # ]
+
+    # if not next_race_features.empty:
+    #     X_predict_safetycar, _ = get_features_and_target_safety_car(next_race_features)
+    #     next_race_features['PredictedSafetyCarProbability'] = safetycar_model.predict_proba(X_predict_safetycar)[:, 1]
+    #     next_race_features['PredictedSafetyCarProbabilityPercentage'] = (next_race_features['PredictedSafetyCarProbability'] * 100).round(3)
+    #     st.dataframe(next_race_features[['grandPrixName', 'grandPrixYear', 'PredictedSafetyCarProbabilityPercentage']].sort_values(by='grandPrixYear', ascending=False),
+    #         hide_index=True, width=800, height=400, column_config={
+    #             'grandPrixName': st.column_config.TextColumn("Grand Prix"),
+    #             'grandPrixYear': st.column_config.NumberColumn("Year"),
+    #             'PredictedSafetyCarProbabilityPercentage': st.column_config.NumberColumn("Predicted Safety Car Probability (%)")
+    #         })
+    #     # Predict (should return a single value)
+    #     safety_car_proba = safetycar_model.predict_proba(X_predict_safetycar)[:, 1][0]
+    # else:
+    #     st.warning("No safety car features available for the next race.")
+    # Get the feature list from your function (avoiding duplication)
+    features, _ = get_features_and_target_safety_car(safety_cars)
+    safetycar_feature_columns = features.columns.tolist()
+
+
+    synthetic_row = {col: np.nan for col in safetycar_feature_columns}
+    synthetic_row['grandPrixYear'] = nextRace['year'].values[0]
+    synthetic_row['grandPrixName'] = nextRace['fullName'].values[0]
+
+    # Fill with available info from nextRace, schedule, weather, etc.
+    for col in ['circuitId', 'grandPrixLaps', 'turns', 'streetRace', 'trackRace']:
+        if col in nextRace.columns:
+            synthetic_row[col] = nextRace[col].values[0]
+
+    # Fill weather features if available
+    weather_row = weatherData[weatherData['grandPrixId'] == next_race_id]
+    if not weather_row.empty:
+        for col in ['average_temp', 'average_humidity', 'average_wind_speed', 'total_precipitation']:
+            if col in weather_row.columns:
+                synthetic_row[col] = weather_row[col].values[0]
+
+    # Fill other features with reasonable defaults or averages from historical safety car data
+    # for col in safetycar_feature_columns:
+    #     if pd.isna(synthetic_row[col]) and col in safety_cars.columns:
+    #         synthetic_row[col] = safety_cars[col].mean()
+    for col in safetycar_feature_columns:
+        if pd.isna(synthetic_row[col]) and col in safety_cars.columns:
+            gp_mean = safety_cars[safety_cars['grandPrixName'] == synthetic_row['grandPrixName']][col].mean()
+            synthetic_row[col] = gp_mean if not np.isnan(gp_mean) else safety_cars[col].mean()
+    synthetic_df = pd.DataFrame([synthetic_row])
+
+    # X_predict_safetycar, _ = get_features_and_target_safety_car(synthetic_df)
+    # safety_car_proba = safetycar_model.predict_proba(X_predict_safetycar)[:, 1][0]
+    features, _ = get_features_and_target_safety_car(safety_cars)
+    feature_list = features.columns.tolist()
+    X_predict_safetycar = synthetic_df[feature_list]
     safety_car_proba = safetycar_model.predict_proba(X_predict_safetycar)[:, 1][0]
+    st.subheader("Predicted Safety Car Probability for Next Race")
+    # st.write(f"Predicted Safety Car Probability for {synthetic_row['grandPrixName']} ({synthetic_row['grandPrixYear']}): **{safety_car_proba:.3f}**")
+    st.write(f"Predicted Safety Car Probability for {synthetic_row['grandPrixName']} ({synthetic_row['grandPrixYear']}): **{safety_car_proba * 100:.2f}%**")
+        
 
     # After fitting your model
     # explainer = shap.Explainer(model.named_steps['regressor'])
@@ -2152,15 +2425,104 @@ if st.checkbox("Show Next Race"):
     # st.dataframe(detailsOfNextRace[['grandPrixName', 'grandPrixYear', 'PredictedSafetyCarProbability']].sort_values(by='PredictedSafetyCarProbability', ascending=False), hide_index=True,  width=800, height=600,)
     # Display only the unique race-level prediction
     race_level = race_level.copy()  # Add this line before assignment if not already a copy
-    race_level['PredictedSafetyCarProbabilityPercentage'] = (race_level['PredictedSafetyCarProbability'] * 100).round(3)
-    st.dataframe(race_level[['grandPrixName', 'grandPrixYear',  'PredictedSafetyCarProbabilityPercentage']].sort_values(by='grandPrixYear', ascending=False),
-    hide_index=True, width=800, height=400, column_config={
-        'grandPrixName': st.column_config.TextColumn("Grand Prix"),
-        'grandPrixYear': st.column_config.NumberColumn("Year"),
+    # race_level['PredictedSafetyCarProbabilityPercentage'] = (race_level['PredictedSafetyCarProbability'] * 100).round(3)
+    # st.dataframe(race_level[['grandPrixName', 'grandPrixYear',  'PredictedSafetyCarProbabilityPercentage']].sort_values(by='grandPrixYear', ascending=False),
+    # hide_index=True, width=800, height=400, column_config={
+    #     'grandPrixName': st.column_config.TextColumn("Grand Prix"),
+    #     'grandPrixYear': st.column_config.NumberColumn("Year"),
         
-        'PredictedSafetyCarProbabilityPercentage': st.column_config.NumberColumn("Predicted Safety Car Probability (%)")
-    })
+    #     'PredictedSafetyCarProbabilityPercentage': st.column_config.NumberColumn("Predicted Safety Car Probability (%)")
+    # })
+    # synthetic_df['PredictedSafetyCarProbability'] = safety_car_proba
+    # synthetic_df['PredictedSafetyCarProbabilityPercentage'] = (synthetic_df['PredictedSafetyCarProbability'] * 100).round(3)
+    # st.dataframe(synthetic_df[['grandPrixName', 'grandPrixYear', 'PredictedSafetyCarProbabilityPercentage']],
+    #     hide_index=True, width=800, height=400, column_config={
+    #         'grandPrixName': st.column_config.TextColumn("Grand Prix"),
+    #         'grandPrixYear': st.column_config.NumberColumn("Year"),
+    #         'PredictedSafetyCarProbabilityPercentage': st.column_config.NumberColumn("Predicted Safety Car Probability (%)")
+    # })
+    # Predict for all prior races (historical)
+    X_sc, y_sc = get_features_and_target_safety_car(safety_cars)
+    safety_cars['PredictedSafetyCarProbability'] = safetycar_model.predict_proba(X_sc)[:, 1]
+    safety_cars['PredictedSafetyCarProbabilityPercentage'] = (safety_cars['PredictedSafetyCarProbability'] * 100).round(3)
 
+    historical_display = safety_cars[['grandPrixName', 'grandPrixYear', 'PredictedSafetyCarProbabilityPercentage']].copy()
+    historical_display['Type'] = 'Historical'
+
+    synthetic_df['PredictedSafetyCarProbability'] = safety_car_proba
+    synthetic_df['PredictedSafetyCarProbabilityPercentage'] = (synthetic_df['PredictedSafetyCarProbability'] * 100).round(3)
+    synthetic_df['Type'] = 'Next Race'
+
+    # Only show the synthetic prediction for the upcoming race
+    # Combine historical and synthetic predictions
+    # display_df = pd.concat([
+    #     historical_display,
+    #     synthetic_df[['grandPrixName', 'grandPrixYear', 'PredictedSafetyCarProbabilityPercentage', 'Type']]
+    # ], ignore_index=True)
+
+    # st.dataframe(
+    #     display_df.sort_values(by=['grandPrixYear', 'grandPrixName'], ascending=[False, True]),
+    #     hide_index=True,
+    #     width=800,
+    #     height=400,
+    #     column_config={
+    #         'grandPrixName': st.column_config.TextColumn("Grand Prix"),
+    #         'grandPrixYear': st.column_config.NumberColumn("Year"),
+    #         'PredictedSafetyCarProbabilityPercentage': st.column_config.NumberColumn("Predicted Safety Car Probability (%)"),
+    #         'Type': st.column_config.TextColumn("Type")
+    #     }
+    # )
+    # Only show historical and synthetic predictions for the current Grand Prix
+    current_gp_name = synthetic_df['grandPrixName'].values[0]
+    current_gp_year = synthetic_df['grandPrixYear'].values[0]
+
+    # Filter and deduplicate historical predictions for this Grand Prix
+    historical_this_gp = historical_display[historical_display['grandPrixName'] == current_gp_name].copy()
+    historical_this_gp = historical_this_gp[historical_this_gp['grandPrixYear'] != current_gp_year]
+    historical_this_gp = historical_this_gp.drop_duplicates(subset=['grandPrixYear'])
+
+    # Combine historical and synthetic predictions
+    display_df = pd.concat([
+        historical_this_gp,
+        synthetic_df[['grandPrixName', 'grandPrixYear', 'PredictedSafetyCarProbabilityPercentage', 'Type']]
+    ], ignore_index=True)
+
+    # st.write("Synthetic Safety Car Probability:", synthetic_df['PredictedSafetyCarProbability'])
+    # st.write("Synthetic Safety Car Probability Percentage:", synthetic_df['PredictedSafetyCarProbabilityPercentage'])
+    # st.write("Synthetic Safety Car Probability Percentage:", synthetic_df['PredictedSafetyCarProbabilityPercentage'])
+
+    st.write("Historical Safety Car Probabilities (mean):", safety_cars['PredictedSafetyCarProbabilityPercentage'].mean())
+    st.write("Historical Safety Car Probabilities (min/max):", safety_cars['PredictedSafetyCarProbabilityPercentage'].min(), safety_cars['PredictedSafetyCarProbabilityPercentage'].max())
+
+    st.dataframe(
+        display_df[['grandPrixName', 'grandPrixYear', 'PredictedSafetyCarProbabilityPercentage', 'Type']].sort_values(by=['grandPrixYear'], ascending=[False]),
+        hide_index=True,
+        width=800,
+        height=400,
+        column_config={
+            'grandPrixName': st.column_config.TextColumn("Grand Prix"),
+            'grandPrixYear': st.column_config.NumberColumn("Year"),
+            'PredictedSafetyCarProbabilityPercentage': st.column_config.NumberColumn("Predicted Safety Car Probability (%)"),
+            'Type': st.column_config.TextColumn("Type")
+    }
+)
+    # display_df = pd.concat([
+    #     historical_display,
+    #     synthetic_df[['grandPrixName', 'grandPrixYear', 'PredictedSafetyCarProbabilityPercentage', 'Type']]
+    # ], ignore_index=True)
+
+    # st.dataframe(
+    #     display_df.sort_values(by=['grandPrixYear', 'grandPrixName'], ascending=[False, True]),
+    #     hide_index=True,
+    #     width=800,
+    #     height=400,
+    #     column_config={
+    #         'grandPrixName': st.column_config.TextColumn("Grand Prix"),
+    #         'grandPrixYear': st.column_config.NumberColumn("Year"),
+    #         'PredictedSafetyCarProbabilityPercentage': st.column_config.NumberColumn("Predicted Safety Car Probability (%)"),
+    #         'Type': st.column_config.TextColumn("Type")
+    #     }
+    # )
     # After prediction and before displaying the predictive results
     predicted_results = all_active_driver_inputs.reset_index()[[
         'Rank', 'resultsDriverName', 'constructorName', 'PredictedFinalPosition', 'PredictedDNFProbability', 'PredictedDNFProbabilityPercentage'
@@ -2347,6 +2709,18 @@ if show_advanced:
 
         # Display all features
         st.dataframe(feature_importances_df, hide_index=True, width=800)
+
+    if st.checkbox("Show Safety Car Data Importances"):
+        st.subheader("Safety Car Feature Importance")
+        # Get feature names and importances from the trained safetycar_model
+        preprocessor = safetycar_model.named_steps['preprocessor']
+        feature_names = preprocessor.get_feature_names_out()
+        feature_names = [name.replace('num__', '').replace('cat__', '') for name in feature_names]
+        importances = safetycar_model.named_steps['classifier'].feature_importances_
+        if len(feature_names) == len(importances):
+            st.write(pd.DataFrame({'Feature': feature_names, 'Importance (%)': importances * 100 }).sort_values('Importance (%)', ascending=False, ignore_index=True))
+        else:
+            st.warning(f"Feature names and importances are not the same length! ({len(feature_names)} vs {len(importances)})")
 
     # --- Monte Carlo Feature Subset Search UI ---
     if st.checkbox("Run Monte Carlo Feature Subset Search"):

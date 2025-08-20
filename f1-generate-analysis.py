@@ -486,6 +486,29 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
     .transform(lambda x: x.rolling(window=3, min_periods=1).mean().shift(1))
 )
 
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['recent_dnf_rate_5_races'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .sort_values(['resultsDriverName', 'grandPrixYear', 'raceId_results'])
+    .groupby('resultsDriverName')['DNF']
+    .transform(lambda x: x.rolling(window=5, min_periods=1).mean().shift(1))
+)
+
+# Rolling average of DNFs for last 3 races
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['constructor_dnf_rate_3_races'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .sort_values(['constructorName', 'grandPrixYear', 'raceId_results'])
+    .groupby('constructorName')['DNF']
+    .transform(lambda x: x.rolling(window=3, min_periods=1).mean().shift(1))
+)
+
+# Rolling average of DNFs for last 5 races
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['constructor_dnf_rate_5_races'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .sort_values(['constructorName', 'grandPrixYear', 'raceId_results'])
+    .groupby('constructorName')['DNF']
+    .transform(lambda x: x.rolling(window=5, min_periods=1).mean().shift(1))
+)
+
 # Rolling average of positions gained for last 3 races
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['recent_positions_gained_3_races'] = (
     results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
@@ -1307,7 +1330,252 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.drop(columns=['qual_to_final_delta_raw'], inplace=True)
 
 
+# 1. Driver's average qualifying position at this circuit (historical, excluding current race)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_avg_qual_pos_at_track'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .groupby(['resultsDriverName', 'circuitId'])['resultsQualificationPositionNumber']
+    .transform(lambda x: x.shift(1).mean())
+)
 
+# 2. Constructor's average qualifying position at this circuit (historical)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['constructor_avg_qual_pos_at_track'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .groupby(['constructorName', 'circuitId'])['resultsQualificationPositionNumber']
+    .transform(lambda x: x.shift(1).mean())
+)
+
+# 3. Driver's average grid position at this circuit (historical)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_avg_grid_pos_at_track'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .groupby(['resultsDriverName', 'circuitId'])['resultsStartingGridPositionNumber']
+    .transform(lambda x: x.shift(1).mean())
+)
+
+# 4. Constructor's average grid position at this circuit (historical)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['constructor_avg_grid_pos_at_track'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .groupby(['constructorName', 'circuitId'])['resultsStartingGridPositionNumber']
+    .transform(lambda x: x.shift(1).mean())
+)
+
+# 5. Driver's average practice position at this circuit (historical)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_avg_practice_pos_at_track'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .groupby(['resultsDriverName', 'circuitId'])['averagePracticePosition']
+    .transform(lambda x: x.shift(1).mean())
+)
+
+# 6. Constructor's average practice position at this circuit (historical)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['constructor_avg_practice_pos_at_track'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .groupby(['constructorName', 'circuitId'])['averagePracticePosition']
+    .transform(lambda x: x.shift(1).mean())
+)
+
+# 7. Driver's qualifying improvement rate (last 3 races)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_qual_improvement_3r'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .groupby('resultsDriverName')['resultsQualificationPositionNumber']
+    .transform(lambda x: x.diff().rolling(window=3, min_periods=1).mean().shift(1))
+)
+
+# 8. Constructor's qualifying improvement rate (last 3 races)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['constructor_qual_improvement_3r'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .groupby('constructorName')['resultsQualificationPositionNumber']
+    .transform(lambda x: x.diff().rolling(window=3, min_periods=1).mean().shift(1))
+)
+
+# 9. Driver's practice improvement rate (last 3 races)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_practice_improvement_3r'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .groupby('resultsDriverName')['averagePracticePosition']
+    .transform(lambda x: x.diff().rolling(window=3, min_periods=1).mean().shift(1))
+)
+
+# 10. Constructor's practice improvement rate (last 3 races)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['constructor_practice_improvement_3r'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .groupby('constructorName')['averagePracticePosition']
+    .transform(lambda x: x.diff().rolling(window=3, min_periods=1).mean().shift(1))
+)
+
+# 11. Driver's average qualifying gap to teammate (last 3 races)
+def teammate_qual_gap(row, df):
+    mask = (
+        (df['resultsDriverName'] != row['resultsDriverName']) &
+        (df['constructorName'] == row['constructorName']) &
+        (df['grandPrixYear'] < row['grandPrixYear']) &
+        (df['grandPrixYear'] >= row['grandPrixYear'] - 2)
+    )
+    teammate_qual = df.loc[mask, 'resultsQualificationPositionNumber']
+    if len(teammate_qual) > 0:
+        return row['resultsQualificationPositionNumber'] - teammate_qual.mean()
+    else:
+        return np.nan
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_teammate_qual_gap_3r'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.apply(
+    lambda row: teammate_qual_gap(row, results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices),
+    axis=1
+    )
+    )
+
+# 12. Driver's average practice gap to teammate (last 3 races)
+def teammate_practice_gap(row, df):
+    mask = (
+        (df['resultsDriverName'] != row['resultsDriverName']) &
+        (df['constructorName'] == row['constructorName']) &
+        (df['grandPrixYear'] < row['grandPrixYear']) &
+        (df['grandPrixYear'] >= row['grandPrixYear'] - 2)
+    )
+    teammate_practice = df.loc[mask, 'averagePracticePosition']
+    if len(teammate_practice) > 0:
+        return row['averagePracticePosition'] - teammate_practice.mean()
+    else:
+        return np.nan
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_teammate_practice_gap_3r'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.apply(
+    lambda row: teammate_practice_gap(row, results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices),
+    axis=1
+    )
+)
+
+# 13. Driver's average qualifying position in street races (historical)
+street_mask = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['streetRace'] == True
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_street_qual_avg'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[street_mask]
+    .groupby('resultsDriverName')['resultsQualificationPositionNumber'].transform(lambda x: x.shift(1).mean())
+)
+
+# 14. Driver's average qualifying position in track races (historical)
+track_mask = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['trackRace'] == True
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_track_qual_avg'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[track_mask]
+    .groupby('resultsDriverName')['resultsQualificationPositionNumber'].transform(lambda x: x.shift(1).mean())
+)
+
+# 15. Driver's average practice position in street races (historical)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_street_practice_avg'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[street_mask]
+    .groupby('resultsDriverName')['averagePracticePosition'].transform(lambda x: x.shift(1).mean())
+)
+
+# 16. Driver's average practice position in track races (historical)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_track_practice_avg'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[track_mask]
+    .groupby('resultsDriverName')['averagePracticePosition'].transform(lambda x: x.shift(1).mean())
+)
+
+# Load grouped weather data
+weather_grouped = pd.read_csv(path.join(DATA_DIR, 'f1WeatherData_Grouped.csv'), sep='\t')
+
+# Merge weather data into your main DataFrame
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = pd.merge(
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices,
+    weather_grouped[['short_date', 'circuitId', 'average_temp', 'total_precipitation', 'average_humidity', 'average_wind_speed']],
+    left_on=['short_date', 'circuitId'],
+    right_on=['short_date', 'circuitId'],
+    how='left'
+)
+
+
+# 17. Driver's average qualifying position in high wind races (historical)
+wind_median = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['average_wind_speed'].median()
+high_wind_mask = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['average_wind_speed'] > wind_median
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_high_wind_qual_avg'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[high_wind_mask]
+    .groupby('resultsDriverName')['resultsQualificationPositionNumber'].transform(lambda x: x.shift(1).mean())
+)
+
+# 18. Driver's average practice position in high wind races (historical)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_high_wind_practice_avg'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[high_wind_mask]
+    .groupby('resultsDriverName')['averagePracticePosition'].transform(lambda x: x.shift(1).mean())
+)
+
+# 19. Driver's average qualifying position in high humidity races (historical)
+humidity_median = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['average_humidity'].median()
+high_humidity_mask = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['average_humidity'] > humidity_median
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_high_humidity_qual_avg'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[high_humidity_mask]
+    .groupby('resultsDriverName')['resultsQualificationPositionNumber'].transform(lambda x: x.shift(1).mean())
+)
+
+# 20. Driver's average practice position in high humidity races (historical)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_high_humidity_practice_avg'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[high_humidity_mask]
+    .groupby('resultsDriverName')['averagePracticePosition'].transform(lambda x: x.shift(1).mean())
+)
+
+# 21. Driver's average qualifying position in races with precipitation (historical)
+wet_mask = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['total_precipitation'] > 0
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_wet_qual_avg'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[wet_mask]
+    .groupby('resultsDriverName')['resultsQualificationPositionNumber'].transform(lambda x: x.shift(1).mean())
+)
+
+# 22. Driver's average practice position in races with precipitation (historical)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_wet_practice_avg'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[wet_mask]
+    .groupby('resultsDriverName')['averagePracticePosition'].transform(lambda x: x.shift(1).mean())
+)
+
+# 23. Driver's average qualifying position in races with safety car (historical)
+sc_mask = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['SafetyCarStatus'] == 1
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_safetycar_qual_avg'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[sc_mask]
+    .groupby('resultsDriverName')['resultsQualificationPositionNumber'].transform(lambda x: x.shift(1).mean())
+)
+
+# 24. Driver's average practice position in races with safety car (historical)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_safetycar_practice_avg'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[sc_mask]
+    .groupby('resultsDriverName')['averagePracticePosition'].transform(lambda x: x.shift(1).mean())
+)
+
+
+# --- Driver-Constructor Features ---
+
+# Create a unique identifier for driver-constructor pair
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_constructor_id'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsDriverId'].astype(str) + '_' +
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['constructorId_results'].astype(str)
+)
+
+# Number of races driver has done with current constructor
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['races_with_constructor'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .groupby(['resultsDriverId', 'constructorId_results'])
+    .cumcount() + 1
+)
+
+# Is this the first season with current constructor?
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['is_first_season_with_constructor'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .groupby(['resultsDriverId', 'constructorId_results'])['grandPrixYear']
+    .transform(lambda x: x == x.min()).astype(int)
+)
+
+# Average final position with current constructor (excluding current race)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_constructor_avg_final_position'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .groupby(['resultsDriverId', 'constructorId_results'])['resultsFinalPositionNumber']
+    .transform(lambda x: x.shift(1).mean())
+)
+
+# Average qualifying position with current constructor (excluding current race)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_constructor_avg_qual_position'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .groupby(['resultsDriverId', 'constructorId_results'])['resultsQualificationPositionNumber']
+    .transform(lambda x: x.shift(1).mean())
+)
+
+# Podium rate with current constructor (excluding current race)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_constructor_podium_rate'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .groupby(['resultsDriverId', 'constructorId_results'])['resultsPodium']
+    .transform(lambda x: x.shift(1).mean())
+)
 
 # print("Constructor columns after merge:")
 # print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns.to_list())
@@ -1347,7 +1615,7 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.
                                        'numberOfStops', 'averageStopTime', 'totalStopTime', 'pit_lane_time_constant', 'pit_stop_delta', 'engineManufacturerId', 'delta_from_race_avg', 'driverAge',
                                        'finishing_position_std_driver', 'finishing_position_std_constructor', 'delta_lap_2', 'delta_lap_5', 'delta_lap_10', 'delta_lap_15', 'delta_lap_20',
                                        'delta_lap_2_historical', 'delta_lap_5_historical', 'delta_lap_10_historical', 'delta_lap_15_historical', 'delta_lap_20_historical', 'abbreviation', 
-                                       'driver_positionsGained_5_races', 'driver_dnf_rate_5_races', 'avg_final_position_per_track', 'last_final_position_per_track', 
+                                       'driver_positionsGained_5_races',  'driver_dnf_rate_5_races', 'avg_final_position_per_track', 'last_final_position_per_track', 
                                        'driver_positionsGained_3_races', 'driverFastestPracticeLap_sec', 'BestConstructorPracticeLap_sec', 'teammate_practice_delta', 'teammate_qual_delta', 'best_qual_time',
                                        'avg_final_position_per_track_constructor', 'last_final_position_per_track_constructor', 'bestQualifyingTime_sec', 'qualifying_gap_to_pole',
                                        'practice_position_improvement_1P_2P', 'practice_position_improvement_2P_3P', 'practice_position_improvement_1P_3P', 'practice_time_improvement_1T_2T', 'practice_time_improvement_time_time', 
@@ -1365,7 +1633,14 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.
                                          'constructor_podium_ratio','practice_to_qualifying_delta', 'track_familiarity', 
                                         'qualifying_position_percentile',   'historical_avgLapPace', 'top_speed_rank', 'qualifying_consistency_std', 
                                          'recent_podium_streak', 'grid_position_percentile', 'driver_age_squared', 'constructor_recent_win_streak', 'practice_improvement_rate', 'driver_constructor_synergy',
-                                         'qual_to_final_delta_5yr', 'qual_to_final_delta_3yr', 'overtake_potential_3yr', 'overtake_potential_5yr'
+                                         'qual_to_final_delta_5yr', 'qual_to_final_delta_3yr', 'overtake_potential_3yr', 'overtake_potential_5yr',
+                                         'driver_avg_qual_pos_at_track','constructor_avg_qual_pos_at_track','driver_avg_grid_pos_at_track','constructor_avg_grid_pos_at_track','driver_avg_practice_pos_at_track',
+                                         'constructor_avg_practice_pos_at_track','driver_qual_improvement_3r','constructor_qual_improvement_3r','driver_practice_improvement_3r','constructor_practice_improvement_3r',
+                                         'driver_teammate_qual_gap_3r','driver_teammate_practice_gap_3r','driver_street_qual_avg','driver_track_qual_avg','driver_street_practice_avg','driver_track_practice_avg',
+                                         'driver_high_wind_qual_avg','driver_high_wind_practice_avg','driver_high_humidity_qual_avg','driver_high_humidity_practice_avg','driver_wet_qual_avg','driver_wet_practice_avg',
+                                         'driver_safetycar_qual_avg','driver_safetycar_practice_avg',
+                                         'driver_constructor_id','races_with_constructor','is_first_season_with_constructor','driver_constructor_avg_final_position','driver_constructor_avg_qual_position','driver_constructor_podium_rate',
+                                         'constructor_dnf_rate_3_races', 'constructor_dnf_rate_5_races', 'recent_dnf_rate_5_races',
                                           ], sep='\t', index=False)
 
 # positionCorrelation = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[[
@@ -1374,6 +1649,112 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.
 #     'averagePracticePosition', 'DNF', 'resultsTop10', 'resultsTop5', 'resultsPodium', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 'positionsGained', 'q1End', 'q2End', 'q3Top10', 'streetRace', 'trackRace',
 #      'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums', 'driverTotalPolePositions', 'yearsActive']].corr(method='pearson')
 
+# Copy your main DataFrame for safety car feature engineering
+# Copy your main DataFrame for safety car feature engineering
+safetycar_features = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.copy()
+
+# --- SAFE SAFETY CAR FEATURES FOR POST-PRACTICE/QUALIFYING PREDICTION ---
+
+# 1. Track and Weather Features
+safetycar_features['turns_x_weather'] = safetycar_features['turns'] * safetycar_features['average_temp']
+safetycar_features['turns_x_precip'] = safetycar_features['turns'] * safetycar_features['total_precipitation']
+safetycar_features['turns_x_wind'] = safetycar_features['turns'] * safetycar_features['average_wind_speed']
+safetycar_features['street_x_weather'] = safetycar_features['streetRace'].astype(int) * safetycar_features['average_temp']
+safetycar_features['track_x_weather'] = safetycar_features['trackRace'].astype(int) * safetycar_features['average_temp']
+
+# 2. Practice Features
+safetycar_features['practice_position_std'] = safetycar_features[['fp1PositionNumber', 'fp2PositionNumber', 'fp3PositionNumber', 'fp4PositionNumber']].std(axis=1)
+safetycar_features['practice_improvement'] = safetycar_features['fp1PositionNumber'] - safetycar_features['lastFPPositionNumber']
+safetycar_features['practice_improvement_x_qual'] = safetycar_features['practice_improvement'] * safetycar_features['resultsQualificationPositionNumber']
+safetycar_features['practice_gap_to_teammate'] = safetycar_features['averagePracticePosition'] - safetycar_features.groupby(['grandPrixName', 'constructorName'])['averagePracticePosition'].transform('mean')
+safetycar_features['practice_position_improvement_1P_2P'] = safetycar_features['fp1PositionNumber'] - safetycar_features['fp2PositionNumber']
+safetycar_features['practice_position_improvement_2P_3P'] = safetycar_features['fp2PositionNumber'] - safetycar_features['fp3PositionNumber']
+safetycar_features['practice_position_improvement_1P_3P'] = safetycar_features['fp1PositionNumber'] - safetycar_features['fp3PositionNumber']
+
+# 3. Qualifying Features
+safetycar_features['qualifying_gap_to_pole'] = safetycar_features['best_qual_time'] - safetycar_features['pole_time_sec']
+safetycar_features['qualifying_position_percentile'] = safetycar_features.groupby('grandPrixName')['resultsQualificationPositionNumber'].transform(lambda x: x.rank(pct=True))
+safetycar_features['qual_gap_to_teammate'] = safetycar_features['resultsQualificationPositionNumber'] - safetycar_features.groupby(['grandPrixName', 'constructorName'])['resultsQualificationPositionNumber'].transform('mean')
+safetycar_features['qualPos_x_avg_practicePos'] = safetycar_features['resultsQualificationPositionNumber'] * safetycar_features['averagePracticePosition']
+safetycar_features['qualPos_x_last_practicePos'] = safetycar_features['resultsQualificationPositionNumber'] * safetycar_features['lastFPPositionNumber']
+
+# 4. Career/Constructor Features
+safetycar_features['driver_experience'] = safetycar_features['driverTotalRaceStarts']
+safetycar_features['constructor_experience'] = safetycar_features['constructorTotalRaceStarts']
+safetycar_features['years_active'] = safetycar_features['yearsActive']
+safetycar_features['driver_age_squared'] = safetycar_features['driverAge'] ** 2
+safetycar_features['street_experience'] = safetycar_features['streetRace'].astype(int) * safetycar_features['driverTotalRaceStarts']
+safetycar_features['track_experience'] = safetycar_features['trackRace'].astype(int) * safetycar_features['driverTotalRaceStarts']
+
+# 5. Track Familiarity
+safetycar_features['track_familiarity'] = safetycar_features.groupby(['resultsDriverId', 'circuitId'])['raceId_results'].transform('count')
+
+# 6. Weather Volatility (std of temp/wind/humidity for race)
+if all(col in safetycar_features.columns for col in ['average_temp', 'average_humidity', 'average_wind_speed']):
+    safetycar_features['weather_volatility'] = (
+        safetycar_features.groupby('raceId_results')[['average_temp', 'average_humidity', 'average_wind_speed']]
+        .transform('std').mean(axis=1)
+    )
+
+# 7. Pit Stop Features (from practice/qualifying, not race)
+safetycar_features['pit_stop_rate'] = safetycar_features['numberOfStops'] / (safetycar_features['grandPrixLaps'] + 1e-6)
+safetycar_features['turns_x_pit_stop_rate'] = safetycar_features['turns'] * safetycar_features['pit_stop_rate']
+safetycar_features['weather_x_pit_stop_rate'] = safetycar_features['average_temp'] * safetycar_features['pit_stop_rate']
+
+# 8. Combined Features
+safetycar_features['driver_experience_x_track_familiarity'] = safetycar_features['driverTotalRaceStarts'] * safetycar_features['track_familiarity']
+safetycar_features['constructor_experience_x_track_familiarity'] = safetycar_features['constructorTotalRaceStarts'] * safetycar_features['track_familiarity']
+safetycar_features['turns_x_weather_x_pit_stop_rate'] = safetycar_features['turns'] * safetycar_features['average_temp'] * safetycar_features['pit_stop_rate']
+
+# --- END SAFE SAFETY CAR FEATURE BLOCK ---
+
+# You can now use safetycar_features for modeling or save to CSV if desired
+# Example:
+
+# Define the columns you want to keep for safety car prediction
+safetycar_feature_columns = [
+    # Track & Weather
+    'grandPrixYear', 'grandPrixName', 'raceId_results', 'resultsDriverId', 'circuitId', 'grandPrixRaceId',
+    'grandPrixLaps', 'turns', 'streetRace', 'trackRace',
+    'average_temp', 'average_humidity', 'average_wind_speed', 'total_precipitation',
+
+    # Practice
+    'fp1PositionNumber', 'fp2PositionNumber', 'fp3PositionNumber', 'fp4PositionNumber',
+    'averagePracticePosition', 'lastFPPositionNumber', 'practice_position_std',
+    'practice_improvement', 'practice_improvement_x_qual', 'practice_gap_to_teammate',
+    'practice_position_improvement_1P_2P', 'practice_position_improvement_2P_3P', 'practice_position_improvement_1P_3P',
+
+    # Qualifying
+    'resultsQualificationPositionNumber', 'best_qual_time', 'pole_time_sec',
+    'qualifying_gap_to_pole', 'qualifying_position_percentile', 'qual_gap_to_teammate',
+    'qualPos_x_avg_practicePos', 'qualPos_x_last_practicePos',
+
+    # Pit Stops
+    'numberOfStops', 'averageStopTime', 'totalStopTime', 'pit_stop_rate', 'turns_x_pit_stop_rate', 'weather_x_pit_stop_rate',
+
+    # Career/Constructor
+    'driverTotalRaceStarts', 'constructorTotalRaceStarts', 'yearsActive', 'driverAge', 'driver_age_squared',
+    'street_experience', 'track_experience', 'driver_experience', 'constructor_experience',
+
+    # Track Familiarity
+    'track_familiarity',
+
+    # Weather Volatility
+    'weather_volatility',
+
+    # Combined/Engineered
+    'turns_x_weather', 'turns_x_precip', 'turns_x_wind', 'street_x_weather', 'track_x_weather',
+    'driver_experience_x_track_familiarity', 'constructor_experience_x_track_familiarity', 'turns_x_weather_x_pit_stop_rate',
+
+    # Target
+    'SafetyCarStatus'
+]
+# Remove duplicates based on key columns (e.g., raceId_results, resultsDriverId)
+safetycar_features = safetycar_features.drop_duplicates(subset=['raceId_results', 'resultsDriverId'])
+# Export only these columns
+safetycar_features[safetycar_feature_columns].to_csv(path.join(DATA_DIR, 'f1SafetyCarFeatures.csv'), sep='\t', index=False)
+
+# --- SAFETY CAR TRENDING & ENGINEERED FEATURES ---
 
 
 positionCorrelation = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[['driverTotalChampionshipWins',
