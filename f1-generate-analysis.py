@@ -46,7 +46,7 @@ qualifying = pd.merge(
     suffixes=('_json', '_csv')
 )
 
-
+qualifying.to_csv(path.join(DATA_DIR, 'f1QualifyingTest.csv'), index=False, sep='\t')
 
 ##### Pit Stops
 
@@ -243,60 +243,65 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices 
 
 
 # Ensure the 'bestQualifyingTime' column is not null or invalid
-if results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['best_qual_time'].notnull().any():
+# if results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['best_qual_time'].notnull().any():
     # Convert 'bestQualifyingTime' to seconds
-    def time_to_seconds(time_str):
-        try:
-            # Check if the time_str is valid
-            if pd.isnull(time_str) or not isinstance(time_str, str):
-                return None
-            # Split the time string into minutes and seconds
-            minutes, seconds = time_str.split(':')
-            return int(minutes) * 60 + float(seconds)
-        except ValueError:
-            # Handle invalid or missing time formats
-            return None
+    # def time_to_seconds(time_str):
+    #     try:
+    #         # Check if the time_str is valid
+    #         if pd.isnull(time_str) or not isinstance(time_str, str):
+    #             return None
+    #         # Split the time string into minutes and seconds
+    #         minutes, seconds = time_str.split(':')
+    #         return int(minutes) * 60 + float(seconds)
+    #     except ValueError:
+    #         # Handle invalid or missing time formats
+    #         return None
 
     # Apply the conversion function to the column
-    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['best_qual_time'] = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['best_qual_time'].apply(time_to_seconds)
+    # results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['best_qual_time'] = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['best_qual_time'].apply(time_to_seconds)
     # print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns.tolist())
-    df_clean_dirty = pd.read_csv(path.join(DATA_DIR, 'clean_dirty_air_deltas.csv'), sep='\t')
-    df_clean_dirty.columns = df_clean_dirty.columns.str.strip()
-    # print("df_clean_dirty columns:", df_clean_dirty.columns.tolist())
-    # print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['abbreviation_results'].unique())
-    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['abbreviation_results'] = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['abbreviation_results'].str.strip()
-    
-    df_clean_dirty = pd.read_csv(path.join(DATA_DIR, 'clean_dirty_air_deltas.csv'), sep='\t')
-    df_clean_dirty_pivot = df_clean_dirty.pivot_table(
-        index=['Year', 'Round', 'Driver'],
-        columns='Session',
-        values=['CleanAirAvg', 'DirtyAirAvg', 'Delta', 'NumCleanLaps', 'NumDirtyLaps']
-    ).reset_index()
+df_clean_dirty = pd.read_csv(path.join(DATA_DIR, 'clean_dirty_air_deltas.csv'), sep='\t')
+df_clean_dirty.columns = df_clean_dirty.columns.str.strip()
+# print("df_clean_dirty columns:", df_clean_dirty.columns.tolist())
+# print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['abbreviation_results'].unique())
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['abbreviation_results'] = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['abbreviation_results'].str.strip()
 
-    # Flatten the MultiIndex columns
-    df_clean_dirty_pivot.columns = [
-        f"{col[0]}_{col[1]}" if col[1] else col[0]
-        for col in df_clean_dirty_pivot.columns.values
-    ]
+df_clean_dirty = pd.read_csv(path.join(DATA_DIR, 'clean_dirty_air_deltas.csv'), sep='\t')
+df_clean_dirty_pivot = df_clean_dirty.pivot_table(
+    index=['Year', 'Round', 'Driver'],
+    columns='Session',
+    values=['CleanAirAvg', 'DirtyAirAvg', 'Delta', 'NumCleanLaps', 'NumDirtyLaps']
+).reset_index()
 
-    # print(df_clean_dirty.head(50))
-    # Merge on Year, Round, Session, Driver
-    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = pd.merge(
-        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices,
-        df_clean_dirty_pivot,
-        # df_clean_dirty, #[['CleanAirAvg', 'DirtyAirAvg', 'Delta', 'Session']],
-        left_on=['resultsYear', 'round_results', 'abbreviation_results'],
-        right_on=['Year', 'Round', 'Driver'],
-        how='left'
-    )
+# Flatten the MultiIndex columns
+df_clean_dirty_pivot.columns = [
+    f"{col[0]}_{col[1]}" if col[1] else col[0]
+    for col in df_clean_dirty_pivot.columns.values
+]
+
+# print(df_clean_dirty.head(50))
+# Merge on Year, Round, Session, Driver
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = pd.merge(
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices,
+    df_clean_dirty_pivot,
+    # df_clean_dirty, #[['CleanAirAvg', 'DirtyAirAvg', 'Delta', 'Session']],
+    left_on=['resultsYear', 'round_results', 'abbreviation_results'],
+    right_on=['Year', 'Round', 'Driver'],
+    how='left'
+)
 
     # print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.head(50))
     # results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.to_csv(path.join(DATA_DIR, 'f1_with_clean.csv'), sep='\t', index=False)
 
     # Display the converted column
     # print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[['bestQualifyingTime', 'bestQualifyingTime_sec']].head())
-else:
-    print("No valid times found in 'bestQualifyingTime' column.")
+
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns.to_list()
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.to_csv(path.join(DATA_DIR, 'f1Test_300.csv'))
+# else:
+#     print("No valid times found in 'bestQualifyingTime' column.")
+
+# results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.to_csv(path.join(DATA_DIR, 'f1_results_test_line300.csv'), sep='\t', index=False)
 
 # print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns.tolist())
 
@@ -377,11 +382,14 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
 if current_practices['resultsDriverId'].isnull().all():
     current_practices['resultsDriverId'] = current_practices['resultsDriverId_1']
 
-results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = pd.merge(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices, current_practices, left_on=['raceId_results', 'resultsDriverId'], right_on=['raceId', 'resultsDriverId'], how='left', suffixes=['', '_practices'])
+##### It appears the issue with blank best_s1, etc, is that when the best_s1_sec field has data, there is no driverId or raceId, so we are not bringing the data over correct
+##### from the practices page.
 
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = pd.merge(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices, current_practices, left_on=['raceId_results', 'resultsDriverId'], right_on=['raceId', 'resultsDriverId'], how='left', suffixes=['', '_practices'])
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[['resultsDriverId', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec', 'best_theory_lap_sec']].head(50)
 # print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns.tolist())
 
-# results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[['resultsDriverId', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec', 'best_theory_lap_sec']]
+
 
 # print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns)
 # results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[['grandPrixName', 'best_s1_sec_practices', 'best_s2_sec_practices', 'best_s2_sec_practices', 'best_theory_lap_sec_practices', 'SpeedI1_mph_practices', 'SpeedI2_mph_practices', 'SpeedFL_mph_practices', 'SpeedST_mph_practices']]
@@ -389,12 +397,17 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices 
 #results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.to_csv(path.join(DATA_DIR, 'f1Test1.csv'))
 
 print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns.tolist())
+
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[['resultsDriverId', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec', 'best_theory_lap_sec']]
+
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.rename(columns={'round_results': 'round', 'turns_results': 'turns', 'circuitId_results': 'circuitId',
                                                                                                  'best_s1_sec_results': 'best_s1_sec', 'best_s2_sec_results': 'best_s2_sec', 'best_s3_sec_results': 'best_s3_sec', 'best_theory_lap_sec_results': 'best_theory_lap_sec',
                                                                                                  'SpeedI1_mph_results': 'SpeedI1_mph', 'SpeedI2_mph_results': 'SpeedI2_mph', 'SpeedFL_mph_results': 'SpeedFL_mph', 'SpeedST_mph_results': 'SpeedST_mph'
                                                                                                 }, inplace=True)
 
-#results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.to_csv(path.join(DATA_DIR, 'f1Test2.csv'))
+
+
+# results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.to_csv(path.join(DATA_DIR, 'f1Test2.csv'))
 
 # Read your main DataFrame (assuming it's already loaded as results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices)
 
@@ -721,7 +734,7 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
 #     results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['track_overtake_score']
 # )
 
-print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns.tolist())
+# print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns.tolist())
 
 
 # Pit Count (already present as 'numberOfStops')
@@ -778,7 +791,7 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices 
 # driver = "Max Verstappen"
 # df = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
 # print(df[df['resultsDriverName'] == driver][['grandPrixYear', 'raceId_results', 'resultsFinalPositionNumber', 'recent_form']])
-
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.to_csv(path.join(DATA_DIR, 'f1_features_before_practice_update.csv'), index=False, sep='\t')
 # List of columns to update from the reference table
 columns_to_update = [
     'LapTime_sec', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec',
@@ -786,10 +799,12 @@ columns_to_update = [
     'best_theory_lap_sec', 'Session', 
 ]
 
-# Drop these columns from the main DataFrame if they exist
-for col in columns_to_update:
-    if col in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
-        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.drop(columns=[col])
+# # Drop these columns from the main DataFrame if they exist
+# for col in columns_to_update:
+#     if col in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+#         results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.drop(columns=[col])
+
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.to_csv(path.join(DATA_DIR, 'f1_features_before_after_update.csv'), index=False, sep='\t')
 
 # print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['best_s2_sec'])
 
@@ -818,6 +833,8 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices 
     right_on=['raceId', 'driverId'],
     how='left'
 ).drop_duplicates(['raceId_results', 'resultsDriverId'])
+
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns.tolist()
 
 # (Optional) Drop the merge keys from the reference if you don't want them in your final DataFrame
 # results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.drop(columns=['raceId', 'driverId'])
@@ -1615,7 +1632,7 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.
                                        'numberOfStops', 'averageStopTime', 'totalStopTime', 'pit_lane_time_constant', 'pit_stop_delta', 'engineManufacturerId', 'delta_from_race_avg', 'driverAge',
                                        'finishing_position_std_driver', 'finishing_position_std_constructor', 'delta_lap_2', 'delta_lap_5', 'delta_lap_10', 'delta_lap_15', 'delta_lap_20',
                                        'delta_lap_2_historical', 'delta_lap_5_historical', 'delta_lap_10_historical', 'delta_lap_15_historical', 'delta_lap_20_historical', 'abbreviation', 
-                                       'driver_positionsGained_5_races',  'driver_dnf_rate_5_races', 'avg_final_position_per_track', 'last_final_position_per_track', 
+                                       'driver_positionsGained_5_races',  'driver_dnf_rate_5_races', 'avg_final_position_per_track', 'last_final_position_per_track', 'q1_sec', 'q2_sec', 'q3_sec', 'q1_pos', 'q2_pos', 'q3_pos',
                                        'driver_positionsGained_3_races', 'driverFastestPracticeLap_sec', 'BestConstructorPracticeLap_sec', 'teammate_practice_delta', 'teammate_qual_delta', 'best_qual_time',
                                        'avg_final_position_per_track_constructor', 'last_final_position_per_track_constructor', 'bestQualifyingTime_sec', 'qualifying_gap_to_pole',
                                        'practice_position_improvement_1P_2P', 'practice_position_improvement_2P_3P', 'practice_position_improvement_1P_3P', 'practice_time_improvement_1T_2T', 'practice_time_improvement_time_time', 
