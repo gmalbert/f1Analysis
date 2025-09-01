@@ -23,7 +23,7 @@ In addition to correlation coefficients, I have added several linear regressions
 ## Predictive Data Modeling
 I used [sckit-learn](https://scikit-learn.org/stable/) to perform machine learning by using data points to predict the race winner. ~~The model is in its infancy, and I am still trying to figure out the right data points to feed it.~~ I'm also currently trying to predict a driver's final place rather than their final time. That means that the [Mean Absolute Error](https://www.sciencedirect.com/topics/engineering/mean-absolute-error) relates to finisher placement which feels less exact than what I need. I'm using the XGBoost model. The predictive modeling is now under Advanced Options.
 
-I have added [Monte Carlo](https://www.ibm.com/think/topics/monte-carlo-simulation), [Recursive Feature Elimination (RFE)](https://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.RFE.html), and [Boruta](https://www.jstatsoft.org/v36/i11/) feature selection to pair down the data fields. After significant refinement, I have a MAE down to 1.5 or less.
+I have added [Monte Carlo](https://www.ibm.com/think/topics/monte-carlo-simulation), [Recursive Feature Elimination (RFE)](https://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.RFE.html), and [Boruta](https://www.jstatsoft.org/v36/i11/) feature selection to pair down the data fields. After significant refinement, I have the MAE down to 1.5 or less.
 
 
 ## Features used in data model
