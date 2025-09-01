@@ -2293,6 +2293,10 @@ if st.checkbox("Show Next Race"):
     if 'teammate_practice_delta_x' in all_active_driver_inputs.columns:
         all_active_driver_inputs.rename(columns={'teammate_practice_delta_x': 'teammate_practice_delta'}, inplace=True)
 
+    if 'BestConstructorPracticeLap_sec' not in all_active_driver_inputs.columns:
+        if 'BestConstructorPracticeLap_sec_x' in all_active_driver_inputs.columns:
+            all_active_driver_inputs.rename(columns={'BestConstructorPracticeLap_sec_x': 'BestConstructorPracticeLap_sec'}, inplace=True)
+
     # st.write("After merging with qualifying:")
     # st.write(all_active_driver_inputs.columns.tolist())
     # st.dataframe(all_active_driver_inputs)
@@ -2309,7 +2313,7 @@ if st.checkbox("Show Next Race"):
     # X_predict = all_active_driver_inputs[existing_feature_names]
 
 
-
+    # st.write(all_active_driver_inputs.columns.tolist())
     # X_predict = all_active_driver_inputs[feature_names]
     X_predict = all_active_driver_inputs[existing_feature_names]
     predicted_position = model.predict(X_predict)

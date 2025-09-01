@@ -15,6 +15,8 @@ results = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t')
 races = pd.read_json(path.join(DATA_DIR, 'f1db-races.json')) 
 active_drivers = pd.read_csv(path.join(DATA_DIR, 'active_drivers.csv'), sep='\t')
 
+# print(active_drivers.columns.tolist())
+
 # Enable FastF1 caching
 fastf1.Cache.enable_cache(path.join(DATA_DIR, 'f1_cache'))
 
@@ -30,16 +32,42 @@ def add_teammate_delta(df, group_cols, value_col, new_col):
     Adds a column with the difference between each driver's value_col and their teammate's for each group.
     Only works for teams with exactly 2 drivers per group.
     """
+    # def teammate_diff(x):
+    #     if len(x) != 2:
+    #         return [None] * len(x)
+    #     return [x.iloc[0] - x.iloc[1], x.iloc[1] - x.iloc[0]]
+    # df[new_col] = (
+    #     df.groupby(group_cols)[value_col]
+    #     .transform(lambda x: teammate_diff(x) if len(x) == 2 else [None]*len(x))
+    # )
+    # return df
     def teammate_diff(x):
         if len(x) != 2:
-            return [None] * len(x)
-        return [x.iloc[0] - x.iloc[1], x.iloc[1] - x.iloc[0]]
-    df[new_col] = (
-        df.groupby(group_cols)[value_col]
-        .transform(lambda x: teammate_diff(x) if len(x) == 2 else [None]*len(x))
-    )
-    return df
+            # Return a Series of None with the same length as x
+            return pd.Series([None] * len(x), index=x.index)
+        val1 = x.iloc[0]
+        val2 = x.iloc[1]
+        if pd.isna(val1) or pd.isna(val2):
+            return pd.Series([None, None], index=x.index)
+        return pd.Series([val1 - val2, val2 - val1], index=x.index)
+        
+        # Calculate the delta and return as a Series with the original index
+        # return pd.Series([val1 - val2, val2 - val1], index=x.index)
 
+    # Use 'apply' instead of 'transform' for more complex logic that returns a Series
+    deltas = df.groupby(group_cols)[value_col].apply(teammate_diff)
+    
+    # The result from apply can have a MultiIndex, so we need to reset it 
+    # and merge it back into the original dataframe.
+    deltas = deltas.reset_index(level=group_cols, drop=True).rename(new_col)
+
+    # If the column already exists from a previous run, drop it before joining.
+    if new_col in df.columns:
+        df = df.drop(columns=[new_col])
+    
+    # Join the calculated deltas back to the original DataFrame
+    df = df.join(deltas)
+    return df
 
 # Check if the processed file exists and read it to avoid reprocessing
 csv_path = os.path.join(DATA_DIR, 'all_practice_laps.csv')
@@ -57,14 +85,14 @@ else:
     processed_sessions = set()
 
 # --- MAIN DATA COLLECTION LOOP ---
-# for year in range(2025, current_year + 1):
 for year in range(2018, current_year + 1):
+# for year in range(2018, current_year + 1):
     season_schedule = ergast.get_race_schedule(season=year)
     total_rounds = len(season_schedule)
-    # for round_number in range(11, 12):
+    #for round_number in range(2,10):
     for round_number in range(1, total_rounds + 1):    
-        # for session_type in ['FP1']:
         for session_type in ['FP1', 'FP2', 'FP3']:
+        # for session_type in ['FP1', 'FP2', 'FP3']:
             session_key = (year, round_number, session_type)
             session_date = pd.to_datetime(season_schedule.iloc[round_number - 1]['raceDate']).date()
             today = datetime.date.today()
@@ -89,15 +117,27 @@ for year in range(2018, current_year + 1):
                 for drv in session.drivers:
                     abbreviation = session.get_driver(drv).get('Abbreviation', drv)
                     laps_drv = session_laps.pick_drivers(drv)
-                    if not laps_drv.empty:
+                    # if not laps_drv.empty:
+                    # if len(tel) > 0:
+                    if len(laps_drv) > 0:
+                        try:
+                            # Use all laps' telemetry, not just the fastest lap
+                            tel = laps_drv.get_telemetry()
+                            if tel is not None and len(tel) > 0:
+                                telemetry_all[abbreviation] = tel
+                        except Exception as e:
+                            print(f"Error getting telemetry for {abbreviation}: {e}")
+                            continue
                         # Use all laps' telemetry, not just the fastest lap
-                        tel = laps_drv.get_telemetry()
-                        if not tel.empty:
-                            telemetry_all[abbreviation] = tel
+                        # tel = laps_drv.get_telemetry()
+                        # # if not tel.empty:
+                        # if len(tel) > 0:
+                        #     telemetry_all[abbreviation] = tel
 
                 def get_air_gap(lap, telemetry_all):
                     drv_tel = lap.get_telemetry()
-                    if drv_tel.empty:
+                    # if drv_tel.empty:
+                    if len(drv_tel) == 0: 
                         return None
                     midpoint = drv_tel['Distance'].max() / 2
                     own_point = drv_tel.iloc[(drv_tel['Distance'] - midpoint).abs().argmin()]
@@ -119,25 +159,47 @@ for year in range(2018, current_year + 1):
                     return min_gap
 
                 def get_sampled_min_air_gap(lap, telemetry_all, n_points=3):
-                    drv_tel = lap.get_telemetry()
-                    if drv_tel.empty:
+                    try:
+                        drv_tel = lap.get_telemetry()
+                        # Exit if telemetry is empty or has no Distance data
+                        if drv_tel.empty or 'Distance' not in drv_tel.columns or drv_tel['Distance'].isna().all():
+                            return None
+
+                        distances = drv_tel['Distance'].dropna()
+                        
+                        # Exit if there are not enough data points to create a range
+                        if len(distances) < 2 or distances.min() == distances.max():
+                            return None
+
+                        # Now safe to calculate sample distances
+                        sample_distances = np.linspace(distances.min(), distances.max(), n_points)
+                        
+                        min_gap = float('inf')
+                        own_abbr = lap['Driver']
+
+                        for d in sample_distances:
+                            own_point = drv_tel.iloc[(drv_tel['Distance'] - d).abs().argmin()]
+                            for drv, tel in telemetry_all.items():
+                                if drv == own_abbr:
+                                    continue
+                                
+                                if tel.empty or 'Date' not in tel.columns or 'X' not in tel.columns or 'Y' not in tel.columns:
+                                    continue
+
+                                # Find the closest point in time in the other car's telemetry
+                                idx = (tel['Date'] - own_point['Date']).abs().idxmin()
+                                tel_point = tel.loc[idx]
+                                
+                                other_pos = tel_point[['X', 'Y']]
+                                own_pos = own_point[['X', 'Y']]
+                                
+                                dist = ((own_pos - other_pos) ** 2).sum() ** 0.5
+                                min_gap = min(min_gap, dist)
+                        
+                        return min_gap if min_gap != float('inf') else None
+                    except Exception:
+                        # Broad exception to catch any other unexpected telemetry errors
                         return None
-                    distances = drv_tel['Distance']
-                    sample_distances = [distances.min() + i*(distances.max()-distances.min())/(n_points-1) for i in range(n_points)]
-                    min_gap = float('inf')
-                    own_abbr = lap['Driver']  # This should now match the keys in telemetry_all
-                    for d in sample_distances:
-                        own_point = drv_tel.iloc[(drv_tel['Distance'] - d).abs().argmin()]
-                        for drv, tel in telemetry_all.items():
-                            if drv == own_abbr:
-                                continue
-                            idx = (tel['Date'] - own_point['Date']).abs().idxmin()
-                            tel_point = tel.loc[idx]
-                            other_pos = tel_point[['X', 'Y']]
-                            own_pos = own_point[['X', 'Y']]
-                            dist = ((own_pos - other_pos) ** 2).sum() ** 0.5
-                            min_gap = min(min_gap, dist)
-                    return min_gap
 
                 # Store deltas for all drivers in this session
                 clean_dirty_deltas = []
@@ -147,11 +209,6 @@ for year in range(2018, current_year + 1):
                     abbreviation = driver_info.get('Abbreviation', driver)
                     # laps = session.laps.pick_drivers(driver).pick_accurate()
                     laps = session.laps.pick_drivers(driver).pick_quicklaps()
-                    # Filter out slow laps (e.g., keep only laps within 105% of the best lap)
-                    # if not laps.empty and 'LapTime' in laps.columns:
-                    #     best_lap_time = laps['LapTime'].min()
-                    #     threshold = best_lap_time * 1.05  # 105%
-                    #     laps = laps[laps['LapTime'] <= threshold]
                     air_gaps = []
                     for _, lap in laps.iterlaps():
                         air_gap = get_sampled_min_air_gap(lap, telemetry_all, n_points=3)
@@ -167,8 +224,6 @@ for year in range(2018, current_year + 1):
                     neutral_count = 0
 
                     for _, lap in laps.iterlaps():
-                        # air_gap = get_air_gap(lap, telemetry_all)
-                        # air_gap = get_min_air_gap(lap, telemetry_all)
                         air_gap = get_sampled_min_air_gap(lap, telemetry_all, n_points=3)
                         print(f"Driver: {abbreviation}, Lap: {lap['LapNumber']}, Air gap: {air_gap}")
 
@@ -214,15 +269,9 @@ for year in range(2018, current_year + 1):
                 for driver in session_drivers:
                     laps = session.laps.pick_drivers(driver)
                     fastest_lap = laps.pick_fastest()
-                    
-                    # print all information available from per driver for the session.drivers
-                    # Uncomment the following lines to see all available information
-                    #print(f"Driver: {driver}, DriverId: {session_drivers[driver]['driverId']}, FirstName: {session_drivers[driver]['FirstName']}, LastName: {session_drivers[driver]['LastName']}")
+                    # print(f"Session: {session_type}, Driver: {driver}, Fastest lap found: {fastest_lap is not None and len(fastest_lap) > 0}")
 
-                    # fastest_lap['DriverId'] = session_drivers['driverId']
-                    # fastest_lap['FirstName'] = session_drivers['FirstName']
-                    # fastest_lap['LastName'] = session_drivers['LastName']
-                    if fastest_lap is not None and not fastest_lap.empty:
+                    if fastest_lap is not None and len(fastest_lap) > 0:
                         fastest_lap = fastest_lap.copy()
                         driver_info = session.get_driver(driver)
                         abbreviation = driver_info.get('Abbreviation', driver)
@@ -231,30 +280,59 @@ for year in range(2018, current_year + 1):
                         fastest_lap['FP_Name'] = session.event['EventName']
                         fastest_lap['Round'] = session.event['RoundNumber']
                         fastest_lap['Session'] = session_type
-                        #fastest_lap['Position'] = fastest_lap['Position']
-                        print(fastest_lap['Position'])
 
-
-                        # Safely get best sector times
                         if 'Sector1Time' in laps.columns and not laps['Sector1Time'].isnull().all():
-                            # laps['Sector1Time'] = pd.to_timedelta(laps['Sector1Time'], errors='coerce')
                             laps.loc[:, 'Sector1Time'] = pd.to_timedelta(laps['Sector1Time'], errors='coerce')
                             best_s1 = laps.loc[laps['Sector1Time'].idxmin()]
                             fastest_lap['best_s1'] = best_s1['Sector1Time']
+                            # Also assign driver/race info if missing
+                            if 'driverId' in best_s1:
+                                fastest_lap['driverId'] = best_s1['driverId']
+                            if 'raceId' in best_s1:
+                                fastest_lap['raceId'] = best_s1['raceId']
                         else:
                             fastest_lap['best_s1'] = pd.NaT
+
+                        if pd.notnull(fastest_lap['best_s1']):
+                            fastest_lap['best_s1_sec'] = pd.to_timedelta(fastest_lap['best_s1']).total_seconds()
+                        else:
+                            fastest_lap['best_s1_sec'] = pd.NA  
+
                         if 'Sector2Time' in laps.columns and not laps['Sector2Time'].isnull().all():
                             laps.loc[:, 'Sector2Time'] = pd.to_timedelta(laps['Sector2Time'], errors='coerce')
                             best_s2 = laps.loc[laps['Sector2Time'].idxmin()]
                             fastest_lap['best_s2'] = best_s2['Sector2Time']
+                            # Also assign driver/race info if missing
+                            if 'driverId' in best_s2:
+                                fastest_lap['driverId'] = best_s2['driverId']
+                            if 'raceId' in best_s2:
+                                fastest_lap['raceId'] = best_s2['raceId']
                         else:
                             fastest_lap['best_s2'] = pd.NaT
+
+                        # After assigning fastest_lap['best_s2']
+                        if pd.notnull(fastest_lap['best_s2']):
+                            fastest_lap['best_s2_sec'] = pd.to_timedelta(fastest_lap['best_s2']).total_seconds()
+                        else:
+                            fastest_lap['best_s2_sec'] = pd.NA    
+
                         if 'Sector3Time' in laps.columns and not laps['Sector3Time'].isnull().all():
                             laps.loc[:, 'Sector3Time'] = pd.to_timedelta(laps['Sector3Time'], errors='coerce')
                             best_s3 = laps.loc[laps['Sector3Time'].idxmin()]
                             fastest_lap['best_s3'] = best_s3['Sector3Time']
+                            # Also assign driver/race info if missing
+                            if 'driverId' in best_s3:
+                                fastest_lap['driverId'] = best_s3['driverId']
+                            if 'raceId' in best_s3:
+                                fastest_lap['raceId'] = best_s3['raceId']
                         else:
                             fastest_lap['best_s3'] = pd.NaT
+
+                        # After assigning fastest_lap['best_s3']
+                        if pd.notnull(fastest_lap['best_s3']):
+                            fastest_lap['best_s3_sec'] = pd.to_timedelta(fastest_lap['best_s3']).total_seconds()
+                        else:
+                            fastest_lap['best_s3_sec'] = pd.NA
 
                         # Only calculate theoretical lap if all sectors are present
                         if pd.notnull(fastest_lap['best_s1']) and pd.notnull(fastest_lap['best_s2']) and pd.notnull(fastest_lap['best_s3']):
@@ -270,37 +348,105 @@ for year in range(2018, current_year + 1):
                 print(f"Skipping {session_type} for {year} round {round_number}: {e}")
                 continue  # Skip to the next session
 
-# --- PROCESS AND SAVE AFTER ALL YEARS ---
-
-# After collecting all_laps, but before creating new_laps_df:
-# for lap in all_laps:
-#     driver_info = session.get_driver(lap['Driver'])
-#     lap['Driver'] = driver_info.get('Abbreviation', lap['Driver'])
 
 if all_laps:
     new_laps_df = pd.DataFrame(all_laps)
-    # Concatenate with existing processed_df (if any)
+    # Combine new laps with previous processed laps, keeping all records
+    # Debugging: Compare existing, new, and combined records
+    if not processed_df.empty:
+        processed_df['source'] = 'existing'
+    else:
+        processed_df = pd.DataFrame()
+
+    if not new_laps_df.empty:
+        new_laps_df['source'] = 'new'
+    else:
+        new_laps_df = pd.DataFrame()
+
+    combined_df = pd.concat([processed_df, new_laps_df], ignore_index=True)
+
+    print("Processed (existing) shape:", processed_df.shape)
+    print("New records shape:", new_laps_df.shape)
+    print("Combined shape:", combined_df.shape)
+
+    print("processed_df columns:", processed_df.columns.tolist())
+    missing_cols = [col for col in ['Year', 'Round', 'Session', 'Driver'] if col not in processed_df.columns]
+    if missing_cols:
+        print("Missing columns in processed_df:", missing_cols)
+        for col in missing_cols:
+            processed_df[col] = pd.NA
+
+    # print("Existing rounds/sessions/drivers:")
+    # print(processed_df[['Year', 'Round', 'Session', 'Driver']].drop_duplicates())
+    # print("New rounds/sessions/drivers:")
+    # print(new_laps_df[['Year', 'Round', 'Session', 'Driver']].drop_duplicates())
+
+    print("Existing sector times:")
+    for col in ['best_s1_sec', 'best_s2_sec', 'best_s3_sec']:
+        if col not in processed_df.columns:
+            processed_df[col] = pd.NA
+    print(processed_df[['Year', 'Round', 'Session', 'Driver', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec']].head())
+    print("New sector times:")
+    print(new_laps_df[['Year', 'Round', 'Session', 'Driver', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec']].head())
+    
+    # with open(path.join(DATA_DIR, 'debug_output.txt'), 'w') as f:
+    #     f.write("Processed (existing) shape: {}\n".format(processed_df.shape))
+    #     f.write("New records shape: {}\n".format(new_laps_df.shape))
+    #     f.write("Combined shape: {}\n".format(combined_df.shape))
+    #     f.write("Existing rounds/sessions/drivers:\n")
+    #     f.write(processed_df[['Year', 'Round', 'Session', 'Driver']].drop_duplicates().to_string())
+    #     f.write("\nNew rounds/sessions/drivers:\n")
+    #     f.write(new_laps_df[['Year', 'Round', 'Session', 'Driver']].drop_duplicates().to_string())
+    #     f.write("\nExisting sector times:\n")
+    #     f.write(processed_df[['Year', 'Round', 'Session', 'Driver', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec']].head().to_string())
+    #     f.write("\nNew sector times:\n")
+    #     f.write(new_laps_df[['Year', 'Round', 'Session', 'Driver', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec']].head().to_string())
+    
+    # combined_df.to_csv(path.join(DATA_DIR, 'debug_combined.csv'), sep='\t', index=False)
+
     if not processed_df.empty:
         all_practice_laps_df = pd.concat([processed_df, new_laps_df], ignore_index=True)
+
+    # Fill missing sector times from any matching row BEFORE dropping duplicates
+        for idx, row in all_practice_laps_df.iterrows():
+            for sector in ['best_s1_sec', 'best_s2_sec', 'best_s3_sec']:
+                if pd.isna(row[sector]):
+                    mask = (
+                        (all_practice_laps_df['Year'] == row['Year']) &
+                        (all_practice_laps_df['Round'] == row['Round']) &
+                        (all_practice_laps_df['Session'] == row['Session']) &
+                        (all_practice_laps_df['Driver'] == row['Driver']) &
+                        (~all_practice_laps_df[sector].isna())
+                    )
+                    candidates = all_practice_laps_df[mask]
+                    if not candidates.empty:
+                        all_practice_laps_df.at[idx, sector] = candidates.iloc[0][sector]
+
+        # Now drop duplicates, keeping the row with most sector data
+        sector_cols = ['best_s1_sec', 'best_s2_sec', 'best_s3_sec']
+        all_practice_laps_df['sector_non_null'] = all_practice_laps_df[sector_cols].notnull().sum(axis=1)
+        all_practice_laps_df = all_practice_laps_df.sort_values('sector_non_null', ascending=False)
+
+        all_practice_laps_df = all_practice_laps_df.drop(columns=['sector_non_null'])
+        # print(new_laps_df[['Round', 'Session', 'Driver', 'LapTime', 'best_s1', 'best_s2', 'best_s3']].head(20))
     else:
         all_practice_laps_df = new_laps_df
+
+#    Save the combined DataFrame back to CSV
 else:
-    all_practice_laps_df = processed_df.copy()  # No new laps, just use existing
+    all_practice_laps_df = processed_df.copy()
+
+# Check which abbreviations are missing from active_drivers
+missing_drivers = set(all_practice_laps_df['Driver']) - set(active_drivers['abbreviation'])
+print("Drivers missing from active_drivers:", missing_drivers)
 
 # Modify speed to MPH from KM/h
 for col in ['SpeedI1', 'SpeedI2', 'SpeedFL', 'SpeedST']:
     if col in all_practice_laps_df.columns:
         all_practice_laps_df[f'{col}_mph'] = all_practice_laps_df[col].apply(km_to_miles)
 
-# Convert time columns to seconds from timedelta
-for col in ['LapTime', 'Sector1Time', 'Sector2Time', 'Sector3Time', 'best_s1', 'best_s2', 'best_s3', 'best_theory_lap', 'best_theory_lap_diff']:
-    if col in all_practice_laps_df.columns:
-        all_practice_laps_df[f'{col}_sec'] = pd.to_timedelta(all_practice_laps_df[col]).dt.total_seconds()
-
-# # Merge with driver info
-# active_drivers = pd.merge(results, drivers, left_on='resultsDriverId', right_on='id', how='inner')
-# active_drivers = active_drivers[active_drivers['activeDriver'] == True]
-# active_drivers = active_drivers[['id', 'name', 'abbreviation']].drop_duplicates()
+active_drivers['abbreviation'] = active_drivers['abbreviation'].astype(str).str.strip().str.upper()
+all_practice_laps_df['Driver'] = all_practice_laps_df['Driver'].astype(str).str.strip().str.upper()
 
 # Merge practice laps with driver names
 all_practice_laps_with_driver_names = pd.merge(
@@ -311,12 +457,27 @@ all_practice_laps_with_driver_names = pd.merge(
     how='left'
 )
 
-all_practice_laps_with_driver_names.rename(columns={'driverId_y': 'resultsDriverId'}, inplace=True)
+all_practice_laps_with_driver_names.rename(columns={'driverId_y': 'resultsDriverId', 'driverId_x': 'driverId'}, inplace=True)
 
-# Drop columns with _x or _y suffixes that could cause merge conflicts BEFORE the next merge
-for col in list(all_practice_laps_with_driver_names.columns):
-    if col.endswith('_x') or col.endswith('_y'):
-        all_practice_laps_with_driver_names = all_practice_laps_with_driver_names.drop(columns=[col])
+lap_cols = ['LapTime', 'Sector1Time', 'Sector2Time', 'Sector3Time', 'LapTime_sec', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec']
+for col in lap_cols:
+    x_col = f"{col}_x"
+    y_col = f"{col}_y"
+    if x_col in all_practice_laps_with_driver_names.columns and y_col in all_practice_laps_with_driver_names.columns:
+        # Prefer _x, but fill missing with _y
+        all_practice_laps_with_driver_names[col] = all_practice_laps_with_driver_names[x_col].combine_first(all_practice_laps_with_driver_names[y_col])
+        all_practice_laps_with_driver_names = all_practice_laps_with_driver_names.drop(columns=[x_col, y_col])
+    elif x_col in all_practice_laps_with_driver_names.columns:
+        all_practice_laps_with_driver_names[col] = all_practice_laps_with_driver_names[x_col]
+        all_practice_laps_with_driver_names = all_practice_laps_with_driver_names.drop(columns=[x_col])
+    elif y_col in all_practice_laps_with_driver_names.columns:
+        all_practice_laps_with_driver_names[col] = all_practice_laps_with_driver_names[y_col]
+        all_practice_laps_with_driver_names = all_practice_laps_with_driver_names.drop(columns=[y_col])
+
+
+cols_to_drop = [col for col in all_practice_laps_with_driver_names.columns if col.endswith('_x') or col.endswith('_y')]
+if cols_to_drop:
+    all_practice_laps_with_driver_names = all_practice_laps_with_driver_names.drop(columns=cols_to_drop)
 
 # Now merge with races
 all_practice_laps_with_driver_names = pd.merge(
@@ -326,18 +487,6 @@ all_practice_laps_with_driver_names = pd.merge(
     right_on=['round', 'year'],
     how='left'
 ).rename(columns={'id': 'raceId'})
-
-
-
-# # Create a column for each driver's best qualifying time (lowest non-null Q1/Q2/Q3)
-# qualifying_with_driverId['best_qual_time'] = qualifying_with_driverId[['Q1_sec', 'Q2_sec', 'Q3_sec']].min(axis=1)
-
-# qualifying_with_driverId = add_teammate_delta(
-#     qualifying_with_driverId,
-#     ['Year', 'Round', 'constructorName'],
-#     'best_qual_time',
-#     'teammate_qual_delta'
-# )
 
 all_practice_laps_with_driver_names['Round'] = all_practice_laps_with_driver_names['Round'].astype(int)
 all_practice_laps_with_driver_names['Year'] = all_practice_laps_with_driver_names['Year'].astype(int)
@@ -349,65 +498,42 @@ for col in ['round', 'year']:
     if col in all_practice_laps_with_driver_names.columns:
         all_practice_laps_with_driver_names = all_practice_laps_with_driver_names.drop(columns=[col])
 
-# Drop columns with _x or _y suffixes that could cause merge conflicts
-for col in list(all_practice_laps_with_driver_names.columns):
-    if col.endswith('_x') or col.endswith('_y'):
-        all_practice_laps_with_driver_names = all_practice_laps_with_driver_names.drop(columns=[col])
-
-# print(all_practice_laps_df.columns)
-
-# print(all_practice_laps_df.head(50))
-
-# all_practice_laps_with_driver_names = pd.merge(
-#     all_practice_laps_df,
-#     drivers,
-#     left_on=['abbreviation', 'LastName'],
-#     right_on=['abbreviation', 'lastName'],
-#     how='left'
-# ).drop_duplicates(subset=['Year', 'Round', 'DriverNumber'])
-
-# print(qualifying_with_driverId.columns)
-
-# print(qualifying_with_driverId.head(50))
-# qualifying_with_driverId['id']
+cols_to_drop = [col for col in all_practice_laps_with_driver_names.columns if col.endswith('_x') or col.endswith('_y')]
+if cols_to_drop:
+    all_practice_laps_with_driver_names = all_practice_laps_with_driver_names.drop(columns=cols_to_drop)
 
 
-# print(qualifying_with_driverId[qualifying_with_driverId['id'].isnull()])
+if 'resultsDriverId' not in all_practice_laps_with_driver_names.columns:
+    all_practice_laps_with_driver_names['resultsDriverId'] = all_practice_laps_with_driver_names['driverId']
 
-# manual_id_map = {
-#     ('Sergio', 'Perez'): 'sergio-perez',      
-#     ('Nico', 'Hulkenberg'): 'nico-hulkenberg',
-#     ('Carlos', 'Sainz'): 'carlos-sainz-jr',
-##     ('Max', 'Verstappen'): 'max-verstappen',
+# Remove duplicate columns (keep only the first occurrence of each column)
+all_practice_laps_with_driver_names = all_practice_laps_with_driver_names.loc[:, ~all_practice_laps_with_driver_names.columns.duplicated()]
 
-# }
+# Replace resultsDriverId with driverId where resultsDriverId is missing or invalid
+mask = (all_practice_laps_with_driver_names['resultsDriverId'].isna()) | (all_practice_laps_with_driver_names['resultsDriverId'] == '-1')
+all_practice_laps_with_driver_names.loc[mask, 'resultsDriverId'] = all_practice_laps_with_driver_names.loc[mask, 'driverId']
+all_practice_laps_with_driver_names['resultsDriverId'] = all_practice_laps_with_driver_names['resultsDriverId'].astype(str)
 
-# def fill_manual_id(row):
-#     if pd.isnull(row['id']):
-#         key = (row['FirstName'], row['LastName'])
-#         return manual_id_map.get(key, None)
-#     return row['id']
+# Remove duplicate columns if any
+all_practice_laps_with_driver_names = all_practice_laps_with_driver_names.loc[:, ~all_practice_laps_with_driver_names.columns.duplicated()]
 
-# all_practice_laps_with_driver_names['id'] = all_practice_laps_with_driver_names.apply(fill_manual_id, axis=1)
+# Reset index to avoid alignment issues
+all_practice_laps_with_driver_names = all_practice_laps_with_driver_names.reset_index(drop=True)
+mask = all_practice_laps_with_driver_names['resultsDriverId'] == '-1'
+all_practice_laps_with_driver_names.loc[mask, 'resultsDriverId'] = all_practice_laps_with_driver_names.loc[mask, 'driverId'].astype(str)
 
+# Ensure 'resultsDriverId' is the same type in both DataFrames before merging
+all_practice_laps_with_driver_names['resultsDriverId'] = all_practice_laps_with_driver_names['resultsDriverId'].astype(str)
+results['resultsDriverId'] = results['resultsDriverId'].astype(str)
 
-# print(all_practice_laps_with_driver_names.columns)
-# print(all_practice_laps_with_driver_names.head())
-
-# combined_practices_with_deltas = pd.merge(
-#     all_practice_laps_with_driver_names,
-#     df_clean_dirty[['CleanAirAvg', 'DirtyAirAvg', 'Delta', 'NumCleanLaps', 'NumDirtyLaps']],
-#     on=['Year', 'Round', 'Session', 'Driver'],
-#     how='left'
-# )
-
-# # Drop duplicates before saving the main file
-# combined_practices_with_deltas = combined_practices_with_deltas.drop_duplicates(
-#     subset=['Year', 'Round', 'Session', 'Driver']
-# )
+all_practice_laps_with_driver_names['Year'] = all_practice_laps_with_driver_names['Year'].astype(int)
+results['grandPrixYear'] = results['grandPrixYear'].astype(int)
+all_practice_laps_with_driver_names['Round'] = all_practice_laps_with_driver_names['Round'].astype(int)
+results['round'] = results['round'].astype(int)
 
 
-
+results = results.drop_duplicates(subset=['grandPrixYear', 'round', 'resultsDriverId'])
+# ...now do your merge...
 all_practice_laps_with_driver_names = pd.merge(
     all_practice_laps_with_driver_names,
     results[['constructorName', 'grandPrixYear', 'round', 'resultsDriverId']],
@@ -417,48 +543,171 @@ all_practice_laps_with_driver_names = pd.merge(
 )
 
 
-
 # Rename columns to match the expected format
 if 'constructorName' not in all_practice_laps_with_driver_names.columns:
-    if 'constructorName_x' in all_practice_laps_with_driver_names.columns:
-        all_practice_laps_with_driver_names.rename(columns={'constructorName_x': 'constructorName'}, inplace=True)
-    elif 'constructor' in all_practice_laps_with_driver_names.columns:
-        all_practice_laps_with_driver_names['constructorName'] = all_practice_laps_with_driver_names['constructor']
-    elif 'constructorId' in all_practice_laps_with_driver_names.columns:
-        all_practice_laps_with_driver_names['constructorName'] = all_practice_laps_with_driver_names['constructorId']
-    else:
-        raise KeyError("No constructorName or fallback column found!")
+    if 'constructorName_y' in all_practice_laps_with_driver_names.columns:
+        all_practice_laps_with_driver_names.rename(columns={'constructorName_y': 'constructorName'}, inplace=True)
+
+# Fill blank or missing constructorName with the value from Team
+mask = (all_practice_laps_with_driver_names['constructorName'].isna()) | (all_practice_laps_with_driver_names['constructorName'] == '')
+all_practice_laps_with_driver_names.loc[mask, 'constructorName'] = all_practice_laps_with_driver_names.loc[mask, 'Team']
+
+# Manually fix team names
+team_name_map = {
+    "Red Bull Racing": "Red Bull",
+    "Haas F1 Team": "Haas",
+    # "Scuderia Ferrari": "Ferrari",
+    # Add more mappings as needed
+}
+all_practice_laps_with_driver_names['constructorName'] = all_practice_laps_with_driver_names['constructorName'].replace(team_name_map)
+
+# Drop unnecessary columns if they exist
+cols_to_drop = [
+    'raceId.1', 'raceId.2', 'raceId.3', 'raceId_1', 'PitOutTime', 'PitInTime', 'best_s1', 'best_s2', 'best_s3',
+    'Time', 'Laptime', 'constructorName_y', 'grandPrixYear_y', 'round.1', 'resultsDriverId_y', 
+]
+
+existing_cols = [col for col in cols_to_drop if col in all_practice_laps_with_driver_names.columns]
+
+if existing_cols:
+    all_practice_laps_with_driver_names = all_practice_laps_with_driver_names.drop(columns=existing_cols)
+
+
+for key in ['raceId', 'resultsDriverId']:
+    if key in all_practice_laps_with_driver_names.columns:
+        all_practice_laps_with_driver_names[key] = all_practice_laps_with_driver_names[key].fillna(-1)
+
+# Ensure 'FastestPracticeLap_sec' column exists and is correctly named
+if 'FastestPracticeLap_sec' not in all_practice_laps_with_driver_names.columns:
+    if 'FastestPracticeLap_sec_x' in all_practice_laps_with_driver_names.columns:
+        all_practice_laps_with_driver_names.rename(columns={'FastestPracticeLap_sec_x': 'FastestPracticeLap_sec'}, inplace=True)
+    elif 'FastestPracticeLap_sec_y' in all_practice_laps_with_driver_names.columns:
+        all_practice_laps_with_driver_names.rename(columns={'FastestPracticeLap_sec_y': 'FastestPracticeLap_sec'}, inplace=True)
+
+
+if 'grandPrixYear_x' in all_practice_laps_with_driver_names.columns:
+    all_practice_laps_with_driver_names.rename(columns={'grandPrixYear_x': 'grandPrixYear'}, inplace=True)
+
+mask = all_practice_laps_with_driver_names['grandPrixYear'].isna() | (all_practice_laps_with_driver_names['grandPrixYear'] == '')
+all_practice_laps_with_driver_names.loc[mask, 'grandPrixYear'] = all_practice_laps_with_driver_names.loc[mask, 'Year']
+
+# Drop all _x and _y columns at once, only if they exist
+
+cols_to_drop = [col for col in all_practice_laps_with_driver_names.columns if col.endswith('_x') or col.endswith('_y')]
+if cols_to_drop:
+    all_practice_laps_with_driver_names = all_practice_laps_with_driver_names.drop(columns=cols_to_drop)
+
+# --- FIX for duplicate columns before iteration ---
+# Consolidate duplicate columns that cause the 'ambiguous truth value' error.
+# This happens from multiple merges. We keep the first instance of each column.
+all_practice_laps_with_driver_names = all_practice_laps_with_driver_names.loc[:,~all_practice_laps_with_driver_names.columns.duplicated()]
 
 # print(all_practice_laps_with_driver_names.columns.tolist())
-# print(all_practice_laps_with_driver_names.head(50))
 
+for idx, row in all_practice_laps_with_driver_names.iterrows():
+    if pd.notna(row['raceId']) and pd.notna(row['resultsDriverId']):
+        for sector in ['best_s1_sec', 'best_s2_sec', 'best_s3_sec']:
+            if pd.isna(row[sector]):
+                mask = (
+                    (all_practice_laps_with_driver_names['Year'] == row['Year']) &
+                    (all_practice_laps_with_driver_names['Round'] == row['Round']) &
+                    (all_practice_laps_with_driver_names['Session'] == row['Session']) &
+                    (all_practice_laps_with_driver_names['Driver'] == row['Driver']) &
+                    (all_practice_laps_with_driver_names['raceId'] == row['raceId']) &
+                    (all_practice_laps_with_driver_names['resultsDriverId'] == row['resultsDriverId']) &
+                    (~all_practice_laps_with_driver_names[sector].isna())
+                )
+                
+                # Defensive: only proceed if mask is boolean Series
+                if not isinstance(mask, pd.Series) or mask.dtype != bool:
+                    print("Mask is not boolean:", type(mask), mask.dtype)
+                    continue
+                candidates = all_practice_laps_with_driver_names[mask]
+                # print("Type of candidates:", type(candidates))
+                # FIX: Check type before using .empty
+                if isinstance(candidates, pd.DataFrame) and len(candidates) > 0:
+                    all_practice_laps_with_driver_names.at[idx, sector] = candidates.iloc[0][sector]
+                elif isinstance(candidates, pd.Series) and len(candidates) > 0:
+                    all_practice_laps_with_driver_names.at[idx, sector] = candidates.iloc[0]
+
+
+active_drivers['abbreviation'] = active_drivers['abbreviation'].str.strip().str.upper()
+all_practice_laps_with_driver_names['Driver'] = all_practice_laps_with_driver_names['Driver'].str.strip().str.upper()
+
+
+# Fill missing raceId using Round and Year
+race_lookup = races.set_index(['round', 'year'])['id']
+mask_raceid = (all_practice_laps_with_driver_names['raceId'].isna()) | (all_practice_laps_with_driver_names['raceId'] == -1)
+all_practice_laps_with_driver_names.loc[mask_raceid, 'raceId'] = all_practice_laps_with_driver_names.loc[mask_raceid].apply(
+    lambda row: race_lookup.get((row['Round'], row['Year']), -1), axis=1
+)
+
+# Ensure all abbreviations and Driver values are uppercase and stripped
+active_drivers['abbreviation'] = active_drivers['abbreviation'].str.strip().str.upper()
+all_practice_laps_with_driver_names['Driver'] = all_practice_laps_with_driver_names['Driver'].str.strip().str.upper()
+
+# Drop duplicates, keeping the first occurrence
+active_drivers = active_drivers.drop_duplicates(subset=['abbreviation'])
+
+# Build lookup
+driver_lookup = active_drivers.set_index('abbreviation')['driverId']
+
+# Fill missing resultsDriverId using lookup
+mask_driverid = (
+    all_practice_laps_with_driver_names['resultsDriverId'].isna()
+    | all_practice_laps_with_driver_names['resultsDriverId'].isin(['-1', 'nan', ''])
+)
+all_practice_laps_with_driver_names.loc[mask_driverid, 'resultsDriverId'] = all_practice_laps_with_driver_names.loc[mask_driverid, 'Driver'].map(driver_lookup)
+
+# If any are still missing, fill with driverId as fallback
+mask_still_missing = all_practice_laps_with_driver_names['resultsDriverId'].isna()
+all_practice_laps_with_driver_names.loc[mask_still_missing, 'resultsDriverId'] = all_practice_laps_with_driver_names.loc[mask_still_missing, 'driverId']
+all_practice_laps_with_driver_names['resultsDriverId'] = all_practice_laps_with_driver_names['resultsDriverId'].astype(str)
+
+# Replace any remaining '-1' with driverId
+mask_minus_one = all_practice_laps_with_driver_names['resultsDriverId'] == '-1'
+all_practice_laps_with_driver_names.loc[mask_minus_one, 'resultsDriverId'] = all_practice_laps_with_driver_names.loc[mask_minus_one, 'driverId']
+
+# Final bulletproof fill for resultsDriverId
+mask_missing = all_practice_laps_with_driver_names['resultsDriverId'].isna() | (all_practice_laps_with_driver_names['resultsDriverId'] == '') | (all_practice_laps_with_driver_names['resultsDriverId'] == '-1')
+all_practice_laps_with_driver_names.loc[mask_missing, 'resultsDriverId'] = all_practice_laps_with_driver_names.loc[mask_missing, 'driverId']
+
+# If still missing, fill with Driver abbreviation as last resort
+mask_still_missing = all_practice_laps_with_driver_names['resultsDriverId'].isna() | (all_practice_laps_with_driver_names['resultsDriverId'] == '')
+all_practice_laps_with_driver_names.loc[mask_still_missing, 'resultsDriverId'] = all_practice_laps_with_driver_names.loc[mask_still_missing, 'Driver']
+
+# Make sure it's a string
+all_practice_laps_with_driver_names['resultsDriverId'] = all_practice_laps_with_driver_names['resultsDriverId'].astype(str)
+
+# --- FINAL CALCULATIONS FOR ALL ROWS (old + new) ---
+# Ensure LapTime_sec exists for all rows
+all_practice_laps_with_driver_names['LapTime_sec'] = pd.to_timedelta(
+    all_practice_laps_with_driver_names['LapTime'], errors='coerce'
+).dt.total_seconds()
+
+# Calculate FastestPracticeLap_sec for all rows (across FP1, FP2, FP3)
+practice_sessions = ['FP1', 'FP2', 'FP3']
+all_practice_laps_with_driver_names['FastestPracticeLap_sec'] = (
+    all_practice_laps_with_driver_names
+    .groupby(['Year', 'Round', 'Driver'])['LapTime_sec']
+    .transform('min')
+)
+
+all_practice_laps_with_driver_names = (
+    all_practice_laps_with_driver_names
+    .sort_values(['Year', 'Round', 'Session', 'constructorName', 'LapTime_sec'])
+    .drop_duplicates(subset=['Year', 'Round', 'Session', 'Driver', 'constructorName'], keep='first')
+)
+
+# Calculate teammate_practice_delta for all valid groups
 all_practice_laps_with_driver_names = add_teammate_delta(
     all_practice_laps_with_driver_names,
     ['Year', 'Round', 'Session', 'constructorName'],
     'LapTime_sec',
     'teammate_practice_delta'
-).drop_duplicates(subset=['raceId', 'resultsDriverId', 'Session'])
-
-# drop columns if they exist
-for col in ['raceId.1', 'raceId.2', 'raceId.3', 'raceId_1', 'PitOutTime', 'PitInTime', 'best_s1', 'best_s2', 'best_s3', 'Time', 'Laptime', 'constructorName_y', 'grandPrixYear_y', 'round.1', 'resultsDriverId_y']:
-    if col in all_practice_laps_with_driver_names.columns:
-        all_practice_laps_with_driver_names = all_practice_laps_with_driver_names.drop(columns=[col])
-
-# Find the fastest practice lap for each driver across FP1, FP2, FP3
-practice_sessions = ['FP1', 'FP2', 'FP3']
-fastest_practice_laps = (
-    all_practice_laps_with_driver_names[
-        all_practice_laps_with_driver_names['Session'].isin(practice_sessions)
-    ]
-    .sort_values(['Year', 'Round', 'Driver', 'LapTime_sec'])
-    .drop_duplicates(subset=['Year', 'Round', 'Driver'], keep='first')
-    .copy()
 )
-fastest_practice_laps.rename(columns={'LapTime_sec': 'FastestPracticeLap_sec'}, inplace=True)
 
-print(all_practice_laps_with_driver_names.columns.tolist())
-
-# Find the best practice lap for each constructor in each event
+practice_sessions = ['FP1', 'FP2', 'FP3']
 best_constructor_practice = (
     all_practice_laps_with_driver_names[
         all_practice_laps_with_driver_names['Session'].isin(practice_sessions)
@@ -469,74 +718,76 @@ best_constructor_practice = (
 )
 best_constructor_practice.rename(columns={'LapTime_sec': 'BestConstructorPracticeLap_sec'}, inplace=True)
 
-# Merge fastest driver practice lap (across all practice sessions)
-all_practice_laps_with_driver_names = pd.merge(
-    all_practice_laps_with_driver_names,
-    fastest_practice_laps[['Year', 'Round', 'Driver', 'FastestPracticeLap_sec']],
-    on=['Year', 'Round', 'Driver'],
-    how='left'
-)
-
 # Merge best constructor practice lap (across all practice sessions)
 all_practice_laps_with_driver_names = pd.merge(
     all_practice_laps_with_driver_names,
     best_constructor_practice[['Year', 'Round', 'constructorName', 'BestConstructorPracticeLap_sec']],
     on=['Year', 'Round', 'constructorName'],
     how='left'
-).drop_duplicates(subset=['raceId', 'resultsDriverId', 'Session'])
+)
+if 'BestConstructorPracticeLap_sec' not in all_practice_laps_with_driver_names.columns:
+    if 'BestConstructorPracticeLap_sec_y' in all_practice_laps_with_driver_names.columns:
+        all_practice_laps_with_driver_names.rename(columns={'BestConstructorPracticeLap_sec_y': 'BestConstructorPracticeLap_sec'}, inplace=True)
+    else:
+        all_practice_laps_with_driver_names['BestConstructorPracticeLap_sec'] = pd.NA
 
-# Save all practice laps (with driver names) to a separate CSV
+# Drop all columns ending with _x, _y, or .1
+cols_to_drop = [col for col in all_practice_laps_with_driver_names.columns if col.endswith('_x') or col.endswith('_y') or col.endswith('.1')]
+if cols_to_drop:
+    all_practice_laps_with_driver_names = all_practice_laps_with_driver_names.drop(columns=cols_to_drop)
+
+# Convert best_theory_lap and best_theory_lap_diff to seconds for all_practice_laps_with_driver_names
+all_practice_laps_with_driver_names['best_theory_lap_sec'] = pd.to_timedelta(
+    all_practice_laps_with_driver_names['best_theory_lap'], errors='coerce'
+).dt.total_seconds()
+
+all_practice_laps_with_driver_names['best_theory_lap_diff_sec'] = pd.to_timedelta(
+    all_practice_laps_with_driver_names['best_theory_lap_diff'], errors='coerce'
+).dt.total_seconds()
+
+
+# Save to CSV
 all_practice_laps_with_driver_names.to_csv(path.join(DATA_DIR, 'all_practice_laps.csv'), sep='\t', index=False)
 print("Saved all practice laps to all_practice_laps.csv")
 
 
-# Only keep FP1 and FP2
-fp_laps = all_practice_laps_with_driver_names[all_practice_laps_with_driver_names['Session'].isin(['FP1', 'FP2'])].copy()
+# --- Create slimmed-down best lap file for FP1/FP2 ---
+practice_sessions = ['FP1', 'FP2']
+fp_laps = all_practice_laps_with_driver_names[
+    all_practice_laps_with_driver_names['Session'].isin(practice_sessions)
+].copy()
 
 # Sort so FP2 comes first, then FP1, then by best lap time (ascending)
 fp_laps['Session_priority'] = fp_laps['Session'].map({'FP2': 1, 'FP1': 2})
-fp_laps = fp_laps.sort_values(['Year', 'Round', 'Driver', 'Session_priority', 'LapTime_sec'])
+fp_laps = fp_laps.sort_values(
+    ['Year', 'Round', 'Driver', 'FastestPracticeLap_sec', 'Session_priority']
+)
 
 # Drop duplicates so you keep only the best FP2 lap if available, otherwise best FP1
-fp_laps_deduped = fp_laps.drop_duplicates(subset=['Year', 'Round', 'Driver'], keep='first')
-fp_laps_deduped.rename(columns={'resultsDriverId': 'driverId'}, inplace=True)
-# print(fp_laps_deduped.columns.tolist())
+fp_laps_deduped = fp_laps.drop_duplicates(
+    subset=['Year', 'Round', 'Driver'], keep='first'
+).copy()
 
+for sector in ['best_s1_sec', 'best_s2_sec', 'best_s3_sec']:
+    # Fill missing sector times with the first non-null value for each group
+    fp_laps_deduped[sector] = fp_laps_deduped[sector].combine_first(
+        fp_laps.groupby(['Year', 'Round', 'Driver'])[sector].transform('first')
+    )
+    
 # Select only the columns you want to keep
 columns_to_keep = [
-    'Year', 'Round', 'raceId', 'Driver', 'driverId', 'LapTime_sec', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec',
-    'SpeedI1_mph', 'SpeedI2_mph', 'SpeedFL_mph', 'SpeedST_mph', 'best_theory_lap_sec', 'Session'
+    'Year', 'Round', 'raceId', 'Driver', 'driverId', 'LapTime_sec',
+    'best_s1_sec', 'best_s2_sec', 'best_s3_sec', 'FastestPracticeLap_sec',
+    'SpeedI1_mph', 'SpeedI2_mph', 'SpeedFL_mph', 'SpeedST_mph',
+    'best_theory_lap_sec', 'Session'
 ]
-
-# print(fp_laps_deduped.columns.tolist())
-
-# Rename driverId.1 to driverId if it exists
-# if 'driverId.1' in fp_laps_deduped.columns:
-#     fp_laps_deduped = fp_laps_deduped.rename(columns={'driverId.1': 'driverId'})
-
-# Now select columns
+for col in columns_to_keep:
+    if col not in fp_laps_deduped.columns:
+        # fp_laps_deduped[col] = pd.NA
+        fp_laps_deduped.loc[:, col] = pd.NA
 fp_laps_final = fp_laps_deduped[columns_to_keep]
 
-# # After all_practice_laps_with_driver_names is created and before saving:
-# delta_csv = path.join(DATA_DIR, 'clean_dirty_air_deltas.csv')
-# if os.path.exists(delta_csv):
-#     df_clean_dirty = pd.read_csv(delta_csv, sep='\t')
-#     # Merge on Year, Round, Session, Driver
-#     all_practice_laps_with_driver_names = pd.merge(
-#         all_practice_laps_with_driver_names,
-#         df_clean_dirty,
-#         on=['Year', 'Round', 'Session', 'Driver'],
-#         how='left'
-#     )
-
-# Save to a new slimmed-down CSV
-if not fp_laps_deduped.empty:
-    # Optionally, ensure all columns exist (fill missing with NaN)
-    for col in columns_to_keep:
-        if col not in fp_laps_deduped.columns:
-            fp_laps_deduped[col] = pd.NA
-    fp_laps_final = fp_laps_deduped[columns_to_keep]
-    fp_laps_final.to_csv(path.join(DATA_DIR, 'practice_best_fp1_fp2.csv'), sep='\t', index=False)
-    print("Saved slimmed practice file to practice_best_fp1_fp2.csv")
-else:
-    print("No new FP1/FP2 laps found. Nothing to save.")
+fp_laps_final.to_csv(
+    path.join(DATA_DIR, 'practice_best_fp1_fp2.csv'), sep='\t', index=False
+)
+print("Saved slimmed practice file to practice_best_fp1_fp2.csv")

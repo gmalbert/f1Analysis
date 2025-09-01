@@ -35,7 +35,28 @@ all_laps = pd.read_csv(path.join(DATA_DIR, 'all_laps.csv'), sep='\t')
 constructor_standings = pd.read_csv(path.join(DATA_DIR, 'constructor_standings.csv'), sep='\t')
 driver_standings = pd.read_csv(path.join(DATA_DIR, 'driver_standings.csv'), sep='\t')
 
-# print(current_practices.columns.tolist())
+
+# Standardize Andrea Kimi Antonelli to Kimi Antonelli everywhere based on [f1db/f1db] Release v2025.15.0
+# After loading drivers
+drivers['id'] = drivers['id'].str.replace('^andrea-', '', regex=True)
+drivers['name'] = drivers['name'].replace({'Andrea Kimi Antonelli': 'Kimi Antonelli'})
+
+qualifying_csv['driverId'] = qualifying_csv['driverId'].str.replace('^andrea-', '', regex=True)
+qualifying_csv['FullName'] = qualifying_csv['FullName'].replace({'Andrea Kimi Antonelli': 'Kimi Antonelli'})
+
+# After loading race_results
+# race_results['driverId'] = race_results['resultsDriverId'].str.replace('^andrea-', '', regex=True)
+
+# After loading practice files (if they have driverId or name)
+current_practices['resultsDriverId'] = current_practices['resultsDriverId'].str.replace('^andrea-', '', regex=True)
+current_practices['name'] = current_practices['name'].replace({'Andrea Kimi Antonelli': 'Kimi Antonelli'})
+current_practices['firstName'] = current_practices['firstName'].replace({'Andrea': 'Kimi'})
+
+# practice_best['driverId'] = practice_best['driverId'].str.replace('^andrea-', '', regex=True)
+# practice_best['resultsDriverName'] = practice_best['resultsDriverName'].replace({'Andrea Kimi Antonelli': 'Kimi Antonelli'})
+
+driver_standings['driverId'] = driver_standings['driverId'].str.replace('^andrea-', '', regex=True)
+driver_standings['driverName'] = driver_standings['driverName'].replace({'Andrea Kimi Antonelli': 'Kimi Antonelli'})
 
 qualifying = pd.merge(
     qualifying_json,
@@ -46,7 +67,7 @@ qualifying = pd.merge(
     suffixes=('_json', '_csv')
 )
 
-qualifying.to_csv(path.join(DATA_DIR, 'f1QualifyingTest.csv'), index=False, sep='\t')
+# qualifying.to_csv(path.join(DATA_DIR, 'f1QualifyingTest.csv'), index=False, sep='\t')
 
 ##### Pit Stops
 
@@ -199,6 +220,8 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['bestQualifyingTime'] = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
     ['q3_sec', 'q2_sec', 'q1_sec']].bfill(axis=1).iloc[:, 0]
 
+# print(results_and_drivers_and_constructors_and_grandprix_and_qualifying.columns.tolist())
+
 # results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[['bestQualifyingTime']]
 
 # print(results_and_drivers_and_constructors_and_grandprix_and_qualifying.columns.tolist())
@@ -296,8 +319,8 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices 
     # Display the converted column
     # print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[['bestQualifyingTime', 'bestQualifyingTime_sec']].head())
 
-results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns.to_list()
-results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.to_csv(path.join(DATA_DIR, 'f1Test_300.csv'))
+# results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns.to_list()
+# results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.to_csv(path.join(DATA_DIR, 'f1Test_300.csv'))
 # else:
 #     print("No valid times found in 'bestQualifyingTime' column.")
 
@@ -385,8 +408,9 @@ if current_practices['resultsDriverId'].isnull().all():
 ##### It appears the issue with blank best_s1, etc, is that when the best_s1_sec field has data, there is no driverId or raceId, so we are not bringing the data over correct
 ##### from the practices page.
 
-results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = pd.merge(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices, current_practices, left_on=['raceId_results', 'resultsDriverId'], right_on=['raceId', 'resultsDriverId'], how='left', suffixes=['', '_practices'])
-results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[['resultsDriverId', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec', 'best_theory_lap_sec']].head(50)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = pd.merge(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices, current_practices, 
+        left_on=['raceId_results', 'resultsDriverId'], right_on=['raceId', 'resultsDriverId'], how='left', suffixes=['', '_practices'])
+# results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[['resultsDriverId', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec', 'best_theory_lap_sec']].head(50)
 # print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns.tolist())
 
 
@@ -394,18 +418,18 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
 # print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns)
 # results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[['grandPrixName', 'best_s1_sec_practices', 'best_s2_sec_practices', 'best_s2_sec_practices', 'best_theory_lap_sec_practices', 'SpeedI1_mph_practices', 'SpeedI2_mph_practices', 'SpeedFL_mph_practices', 'SpeedST_mph_practices']]
 
-#results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.to_csv(path.join(DATA_DIR, 'f1Test1.csv'))
+# results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.to_csv(path.join(DATA_DIR, 'f1Test1.csv'))
 
-print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns.tolist())
+# print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns.tolist())
 
-results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[['resultsDriverId', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec', 'best_theory_lap_sec']]
+print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[['resultsDriverId', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec', 'best_theory_lap_sec']].tail(50))
 
-results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.rename(columns={'round_results': 'round', 'turns_results': 'turns', 'circuitId_results': 'circuitId',
-                                                                                                 'best_s1_sec_results': 'best_s1_sec', 'best_s2_sec_results': 'best_s2_sec', 'best_s3_sec_results': 'best_s3_sec', 'best_theory_lap_sec_results': 'best_theory_lap_sec',
-                                                                                                 'SpeedI1_mph_results': 'SpeedI1_mph', 'SpeedI2_mph_results': 'SpeedI2_mph', 'SpeedFL_mph_results': 'SpeedFL_mph', 'SpeedST_mph_results': 'SpeedST_mph'
-                                                                                                }, inplace=True)
+# results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.rename(columns={'round_results': 'round', 'turns_results': 'turns', 'circuitId_results': 'circuitId',
+#                                                                                                  'best_s1_sec_results': 'best_s1_sec', 'best_s2_sec_results': 'best_s2_sec', 'best_s3_sec_results': 'best_s3_sec', #'best_theory_lap_sec_results': 'best_theory_lap_sec',
+#                                                                                                  'SpeedI1_mph_results': 'SpeedI1_mph', 'SpeedI2_mph_results': 'SpeedI2_mph', 'SpeedFL_mph_results': 'SpeedFL_mph', 'SpeedST_mph_results': 'SpeedST_mph'
+#                                                                                                 }, inplace=True)
 
-
+# print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns.tolist())
 
 # results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.to_csv(path.join(DATA_DIR, 'f1Test2.csv'))
 
@@ -834,7 +858,7 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices 
     how='left'
 ).drop_duplicates(['raceId_results', 'resultsDriverId'])
 
-results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns.tolist()
+# results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns.tolist()
 
 # (Optional) Drop the merge keys from the reference if you don't want them in your final DataFrame
 # results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.drop(columns=['raceId', 'driverId'])
@@ -962,6 +986,19 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices 
     how='left'
 )#.drop(columns=['constructorId'])
 
+# Standardize Andrea Kimi Antonelli to Kimi Antonelli everywhere based on [f1db/f1db] Release v2025.15.0
+# Secondary check in case initial changes don't take as part of merges
+
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsDriverId'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsDriverId']
+    .str.replace('^andrea-', '', regex=True)
+)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsDriverName'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsDriverName']
+    .replace({'Andrea Kimi Antonelli': 'Kimi Antonelli'})
+)
+
+
 # Positions Gained in First Lap %
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['positions_gained_first_lap_pct'] = (
     (results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['delta_lap_2']) /
@@ -1059,6 +1096,36 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
 #     results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['practice_improvement'] *
 #     results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['constructorTotalPodiumRaces']
 # )
+
+# print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns.to_list())
+
+if 'SpeedFL_mph' not in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+    if 'SpeedI1_mph_x' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.rename(columns={'SpeedI1_mph_x': 'SpeedFL_mph'}, inplace=True)
+
+if 'SpeedST_mph' not in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+    if 'SpeedST_mph_x' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.rename(columns={'SpeedST_mph_x': 'SpeedST_mph'}, inplace=True)
+
+if 'SpeedI1_mph' not in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+    if 'SpeedI1_mph_x' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.rename(columns={'SpeedI1_mph_x': 'SpeedI1_mph'}, inplace=True)
+
+if 'SpeedI2_mph' not in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+    if 'SpeedI2_mph_x' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.rename(columns={'SpeedI2_mph_x': 'SpeedI2_mph'}, inplace=True)
+
+if 'best_s1_sec' not in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+    if 'best_s1_sec_x' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.rename(columns={'best_s1_sec_x': 'best_s1_sec'}, inplace=True)
+
+if 'best_s2_sec' not in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+    if 'best_s2_sec_x' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.rename(columns={'best_s2_sec_x': 'best_s2_sec'}, inplace=True)
+
+if 'best_s3_sec' not in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+    if 'best_s3_sec_x' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.rename(columns={'best_s3_sec_x': 'best_s3_sec'}, inplace=True)
 
 # 8. Top Speed × Turns
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['top_speed_x_turns'] = (
@@ -1612,7 +1679,36 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
 #                             'totalRaceWins': 'driverTotalRaceWins',
 #                             'totalPolePositions': 'driverTotalPolePositions'}, inplace=True)
 
-results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[['constructorName','resultsDriverId', 'resultsDriverName', 'grandPrixName', 'best_s1_sec', 'best_s2_sec', 'best_s2_sec', 'best_theory_lap_sec', 'SpeedI1_mph', 'SpeedI2_mph', 'SpeedFL_mph', 'SpeedST_mph', 'avgLapPace', 'q1', 'q2', 'q3', 'bestQualifyingTime', 'timeMillis_results', 'streetRace', 'trackRace', 'resultsDriverId', 'yearsActive', 'lastFPPositionNumber', 'resultsQualificationPositionNumber', 
+# print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns.to_list())
+
+if 'SpeedI1_mph' not in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+    if 'SpeedI1_mph_y' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.rename(columns={'SpeedI1_mph_y': 'SpeedI1_mph'}, inplace=True)
+
+if 'SpeedI2_mph' not in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+    if 'SpeedI2_mph_y' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.rename(columns={'SpeedI2_mph_y': 'SpeedI2_mph'}, inplace=True)
+
+if 'LapTime_sec' not in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+    if 'LapTime_sec_x' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.rename(columns={'LapTime_sec_x': 'LapTime_sec'}, inplace=True)
+
+if 'Session' not in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+    if 'Session_x' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.rename(columns={'Session_x': 'Session'}, inplace=True)
+
+if 'best_theory_lap_sec' not in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+    if 'best_theory_lap_sec_x' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.rename(columns={'best_theory_lap_sec_x': 'best_theory_lap_sec'}, inplace=True)
+
+# print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns.to_list())
+
+print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsDriverName'].str.contains('Antonelli', case=False, na=False)
+][['resultsDriverId', 'resultsDriverName']])
+
+
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[['constructorName','resultsDriverId', 'resultsDriverName', 'grandPrixName', 'best_s1_sec', 'best_s2_sec', 'best_s2_sec', 'SpeedI1_mph', 'SpeedI2_mph', 'SpeedFL_mph', 'SpeedST_mph', 'avgLapPace', 'q1', 'q2', 'q3', 'bestQualifyingTime', 'timeMillis_results', 'streetRace', 'trackRace', 'resultsDriverId', 'yearsActive', 'lastFPPositionNumber', 'resultsQualificationPositionNumber', 
                                         'q1End', 'q2End', 'q3Top10', 'resultsDriverId', 'resultsReasonRetired','averagePracticePosition', 'raceId_results', 'resultsFinalPositionNumber', 'resultsPodium', 'resultsTop5', 'resultsTop10', 'fp1PositionNumber', 'fp1Time', 'fp1Gap', 
                                         'fp1Interval', 'positionsGained', 'fp1PositionNumber', 'fp2PositionNumber','fp3PositionNumber','fp4PositionNumber', 'resultsYear',  'resultsStartingGridPositionNumber', 
                                        'constructorTotalRaceEntries', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotal1And2Finishes', 'constructorTotalPodiumRaces', 'round', 
@@ -1805,6 +1901,132 @@ circuits_and_races_lat_long = circuits_and_races[['id_races', 'latitude', 'longi
 print(len(circuits_and_races_lat_long))
 newRecords = True
 
+weather_csv_path = os.path.join(DATA_DIR, 'f1WeatherData_AllData.csv')
+if os.path.exists(weather_csv_path):
+    processed_weather = pd.read_csv(weather_csv_path, sep='\t', usecols=['short_date'])
+    # Convert to datetime and then to standard format for comparison
+    processed_weather['short_date_compare'] = pd.to_datetime(processed_weather['short_date'], format='mixed').dt.strftime('%Y-%m-%d')
+    processed_weather_set = set(processed_weather['short_date_compare'])
+    
+else:
+    processed_weather_set = set()
+
+# Only build params for races not already processed
+full_params = []
+for race in circuits_and_races_lat_long.itertuples():
+     # Standardize date for comparison
+    short_date_compare = pd.to_datetime(race.date).strftime('%Y-%m-%d')
+    # Keep original format for API and CSV
+    short_date_original = pd.to_datetime(race.date).strftime('%m/%d/%Y')
+    lat = race.latitude
+    lon = race.longitude
+    print("Checking:", (short_date_compare))
+    if short_date_compare in processed_weather_set:
+        print(f"Skipping weather for {short_date_compare} - already processed.")
+        continue
+
+    params = {
+        "latitude": lat,
+        "longitude": lon,
+        "start_date": short_date_original,
+        "end_date": short_date_original,
+        "hourly": ["temperature_2m", "precipitation", "relative_humidity_2m", "wind_speed_10m", "precipitation_probability"],
+        "temperature_unit": "fahrenheit",
+        "wind_speed_unit": "mph",
+        "precipitation_unit": "inch"
+    }
+    full_params.append((params, short_date_original, race.latitude, race.longitude))
+
+all_hourly_data = []
+
+if not full_params:
+    print("All weather data is already up to date. No new API calls needed.")
+else:
+    # Setup the Open-Meteo API client with cache and retry on error
+    cache_session = requests_cache.CachedSession('.cache', expire_after = -1)
+    retry_session = retry(cache_session, retries = 5, backoff_factor = 0.2)
+    openmeteo = openmeteo_requests.Client(session = retry_session)
+
+    # Loop through the list of params
+    for params, short_date, lat, lon in full_params:
+        # use different URLs depending on whether we are seeking current or past weather
+        # if datetime.datetime.strptime(params['start_date'], '%Y-%m-%d') < datetime.datetime.now():
+        if datetime.datetime.strptime(params['start_date'], '%m/%d/%Y') < datetime.datetime.now():
+            url = "https://archive-api.open-meteo.com/v1/archive"
+        elif datetime.datetime.strptime(params['start_date'], '%m/%d/%Y') >= datetime.datetime.now() and datetime.datetime.strptime(params['start_date'], '%m/%d/%Y') <= (datetime.datetime.now() + timedelta(days=16)):
+            url = "https://api.open-meteo.com/v1/forecast"
+        else:
+            print("Break!")
+            print(datetime.datetime.strptime(params['start_date'], '%m/%d/%Y'))
+            break
+
+        responses = openmeteo.weather_api(url, params=params)
+        response = responses[0]
+
+        # Process hourly data. The order of variables needs to be the same as requested.
+        hourly = response.Hourly()
+        hourly_temperature_2m = hourly.Variables(0).ValuesAsNumpy()
+        hourly_precipitation = hourly.Variables(1).ValuesAsNumpy()
+        hourly_relative_humidity_2m = hourly.Variables(2).ValuesAsNumpy()
+        hourly_wind_speed_10m = hourly.Variables(3).ValuesAsNumpy()
+        hourly_precipitation_probability = hourly.Variables(4).ValuesAsNumpy()
+
+        hourly_data = {"date": pd.date_range(
+            start = pd.to_datetime(hourly.Time(), unit = "s", utc = True),
+            end = pd.to_datetime(hourly.TimeEnd(), unit = "s", utc = True),
+            freq = pd.Timedelta(seconds = hourly.Interval()),
+            inclusive = "left"
+        )}
+
+        hourly_data["latitude"] = response.Latitude()
+        hourly_data["longitude"] = response.Longitude()
+        hourly_data["temperature_2m"] = hourly_temperature_2m
+        hourly_data["hourly_precipitation"] = hourly_precipitation
+        hourly_data["relative_humidity_2m"] = hourly_relative_humidity_2m
+        hourly_data["wind_speed_10m"] = hourly_wind_speed_10m
+        hourly_data["hourly_precipitation_probability"] = hourly_precipitation_probability
+        hourly_data["short_date"] = pd.to_datetime(hourly_data["date"]).strftime('%Y-%m-%d')
+        hourly_dataframe = pd.DataFrame(data = hourly_data)
+
+        all_hourly_data = pd.DataFrame(data = all_hourly_data)
+        all_hourly_data = pd.concat([all_hourly_data, hourly_dataframe], ignore_index=True)
+
+circuits_and_races_lat_long = circuits_and_races_lat_long.copy()
+
+# Merge new hourly data with circuits_and_races_lat_long
+if len(all_hourly_data) > 0:
+    circuits_and_races_lat_long['date'] = pd.to_datetime(circuits_and_races_lat_long['date']).dt.strftime('%Y-%m-%d')
+    races_and_weather_for_concat = pd.merge(all_hourly_data, circuits_and_races_lat_long, left_on='short_date', right_on='date', how='inner', suffixes=['_hourly', '_lat_long'])
+
+    # Load existing weather data if present
+    if os.path.exists(weather_csv_path):
+        races_and_weather = pd.read_csv(weather_csv_path, sep='\t', usecols=['date_hourly', 'latitude_hourly', 'longitude_hourly', 'temperature_2m', 'hourly_precipitation', 
+            'relative_humidity_2m', 'short_date', 'wind_speed_10m',  'id_races', 'grandPrixId', 'circuitId', 'hourly_precipitation_probability'])
+        # Exclude rows in races_and_weather where short_date matches any value in races_and_weather_for_concat['short_date']
+        races_and_weather = races_and_weather[~races_and_weather['short_date'].isin(races_and_weather_for_concat['short_date'])]
+        print(f"Prior weather records were current: {len(races_and_weather_for_concat)} added.")
+        # Merge the new data with the existing weatherData DataFrame
+        races_and_weather = pd.concat([races_and_weather, races_and_weather_for_concat], ignore_index=True)
+    else:
+        races_and_weather = races_and_weather_for_concat
+else:
+    # If no new data, just load existing
+    races_and_weather = pd.read_csv(weather_csv_path, sep='\t', usecols=['date_hourly', 'latitude_hourly', 'longitude_hourly', 'temperature_2m', 'hourly_precipitation', 
+        'relative_humidity_2m', 'short_date', 'wind_speed_10m',  'id_races', 'grandPrixId', 'circuitId', 'hourly_precipitation_probability'])
+
+races_and_weather.to_csv(path.join(DATA_DIR, 'f1WeatherData_AllData.csv'), columns=['date_hourly', 'latitude_hourly', 'longitude_hourly', 'temperature_2m', 'hourly_precipitation', 'relative_humidity_2m', 'short_date',
+    'wind_speed_10m', 'id_races', 'hourly_precipitation_probability', 'grandPrixId', 'circuitId'], sep='\t', index=False)
+
+races_and_weather_grouped = races_and_weather.groupby(['short_date', 'latitude_hourly', 'longitude_hourly', 'id_races', 'grandPrixId', 'circuitId']).agg(
+    average_temp = ('temperature_2m', 'mean'), 
+    total_precipitation = ('hourly_precipitation', 'sum'), 
+    average_humidity = ('relative_humidity_2m', 'mean'), 
+    average_wind_speed = ('wind_speed_10m', 'mean'),
+    average_precipitation_probability = ('hourly_precipitation_probability', 'mean')
+).reset_index()
+
+races_and_weather_grouped.to_csv(path.join(DATA_DIR, 'f1WeatherData_Grouped.csv'), columns=['short_date', 'id_races', 'grandPrixId', 'circuitId', 'latitude_hourly', 'longitude_hourly', 'average_temp', 'total_precipitation', 'average_humidity', 'average_wind_speed', 'average_precipitation_probability'], sep='\t', index=False)
+
 # if the most recent date in the dataset is greater than today, that means that all of the other data in the weather dataset is current
 # therefore, do no re-run the entire weather set, but instead re-run the weather for the upcoming race
 
@@ -1812,153 +2034,152 @@ newRecords = True
 # print(last_weather_date >= datetime.datetime.now())
 # print(last_weather_date <= (datetime.datetime.now() + timedelta(days=16)))
 
-weather_csv_path = os.path.join(DATA_DIR, 'f1WeatherData_AllData.csv')
-if os.path.exists(weather_csv_path):
-    processed_weather = pd.read_csv(weather_csv_path, sep='\t', usecols=['short_date', 'latitude_hourly', 'longitude_hourly'])
-    processed_weather_set = set(
-        zip(
-            processed_weather['short_date'],
-            processed_weather['latitude_hourly'],
-            processed_weather['longitude_hourly']
-        )
-    )
-else:
-    processed_weather_set = set()
+# weather_csv_path = os.path.join(DATA_DIR, 'f1WeatherData_AllData.csv')
+# if os.path.exists(weather_csv_path):
+#     processed_weather = pd.read_csv(weather_csv_path, sep='\t', usecols=['short_date', 'latitude_hourly', 'longitude_hourly'])
+#     processed_weather_set = set(
+#         zip(
+#             processed_weather['short_date'],
+#             processed_weather['latitude_hourly'],
+#             processed_weather['longitude_hourly']
+#         )
+#     )
+# else:
+#     processed_weather_set = set()
 
-if last_weather_date >= datetime.datetime.now() and last_weather_date <= (datetime.datetime.now() + timedelta(days=16)):
-    print(f"Last weather date: {last_weather_date}")
-    newRecords = False
+# if last_weather_date >= datetime.datetime.now() and last_weather_date <= (datetime.datetime.now() + timedelta(days=16)):
+#     print(f"Last weather date: {last_weather_date}")
+#     newRecords = False
 
-    # Filter circuits_and_races_lat_long to only include records matching last_weather_date
-    circuits_and_races_lat_long = circuits_and_races_lat_long[
-    circuits_and_races_lat_long['date'] == last_weather_date.strftime('%Y-%m-%d')]
-    #print(len(circuits_and_races_lat_long))
+#     # Filter circuits_and_races_lat_long to only include records matching last_weather_date
+#     circuits_and_races_lat_long = circuits_and_races_lat_long[
+#     circuits_and_races_lat_long['date'] == last_weather_date.strftime('%Y-%m-%d')]
+#     #print(len(circuits_and_races_lat_long))
 
-# Setup the Open-Meteo API client with cache and retry on error
-cache_session = requests_cache.CachedSession('.cache', expire_after = -1)
-retry_session = retry(cache_session, retries = 5, backoff_factor = 0.2)
-openmeteo = openmeteo_requests.Client(session = retry_session)
+# # Setup the Open-Meteo API client with cache and retry on error
+# cache_session = requests_cache.CachedSession('.cache', expire_after = -1)
+# retry_session = retry(cache_session, retries = 5, backoff_factor = 0.2)
+# openmeteo = openmeteo_requests.Client(session = retry_session)
 
-# Make sure all required weather variables are listed here
-# The order of variables in hourly or daily is important to assign them correctly below
+# # Make sure all required weather variables are listed here
+# # The order of variables in hourly or daily is important to assign them correctly below
 
-all_hourly_data = []
+# all_hourly_data = []
 
-full_params = []
+# full_params = []
 
-for race in circuits_and_races_lat_long.itertuples():
+# for race in circuits_and_races_lat_long.itertuples():
 
-    short_date = pd.to_datetime(race.date).strftime('%Y-%m-%d')
-    lat = race.latitude
-    lon = race.longitude
-    if (short_date, lat, lon) in processed_weather_set:
-        print(f"Skipping weather for {short_date} ({lat}, {lon}) - already processed.")
-        continue  # Skip this race, already have weather data
+#     short_date = pd.to_datetime(race.date).strftime('%Y-%m-%d')
+#     lat = race.latitude
+#     lon = race.longitude
+#     if (short_date, lat, lon) in processed_weather_set:
+#         print(f"Skipping weather for {short_date} ({lat}, {lon}) - already processed.")
+#         continue  # Skip this race, already have weather data
 
-    params = {
-    "latitude": race.latitude,
-	"longitude": race.longitude,
-	"start_date": race.date.strftime('%Y-%m-%d'),
-	"end_date": race.date.strftime('%Y-%m-%d'),
-	"hourly": ["temperature_2m", "precipitation", "relative_humidity_2m", "wind_speed_10m", "precipitation_probability"],
-    "temperature_unit": "fahrenheit",
-    "wind_speed_unit": "mph",
-    "precipitation_unit": "inch"
-	}
+#     params = {
+#     "latitude": race.latitude,
+# 	"longitude": race.longitude,
+# 	"start_date": race.date.strftime('%Y-%m-%d'),
+# 	"end_date": race.date.strftime('%Y-%m-%d'),
+# 	"hourly": ["temperature_2m", "precipitation", "relative_humidity_2m", "wind_speed_10m", "precipitation_probability"],
+#     "temperature_unit": "fahrenheit",
+#     "wind_speed_unit": "mph",
+#     "precipitation_unit": "inch"
+# 	}
 
-    full_params.append((params, short_date, lat, lon))
+#     full_params.append((params, short_date, lat, lon))
 
 # Loop through the list of params
-for params, short_date, lat, lon in full_params:
+# for params, short_date, lat, lon in full_params:
 
-
-
-    # use different URLs depending on whether we are seeking current or past weather
-    if datetime.datetime.strptime(params['start_date'], '%Y-%m-%d') < datetime.datetime.now():
-        url = "https://archive-api.open-meteo.com/v1/archive"
-    elif datetime.datetime.strptime(params['start_date'], '%Y-%m-%d') >= datetime.datetime.now() and datetime.datetime.strptime(params['start_date'], '%Y-%m-%d') <= (datetime.datetime.now() + timedelta(days=16)):
-        url = "https://api.open-meteo.com/v1/forecast"   
-    else:
-        print("Break!")
-        print(datetime.datetime.strptime(params['start_date'], '%Y-%m-%d'))
-        break  
+#     # use different URLs depending on whether we are seeking current or past weather
+#     if datetime.datetime.strptime(params['start_date'], '%Y-%m-%d') < datetime.datetime.now():
+#         url = "https://archive-api.open-meteo.com/v1/archive"
+#     elif datetime.datetime.strptime(params['start_date'], '%Y-%m-%d') >= datetime.datetime.now() and datetime.datetime.strptime(params['start_date'], '%Y-%m-%d') <= (datetime.datetime.now() + timedelta(days=16)):
+#         url = "https://api.open-meteo.com/v1/forecast"   
+#     else:
+#         print("Break!")
+#         print(datetime.datetime.strptime(params['start_date'], '%Y-%m-%d'))
+#         break  
     
-    ### these next three lines can be removed if there are issues once new weather records are available
-    ### done to limit the number of calls to the API
+#     ### these next three lines can be removed if there are issues once new weather records are available
+#     ### done to limit the number of calls to the API
 
-    #new_records = False
+#     #new_records = False
 
-    #if datetime.datetime.strptime(params['start_date'], '%Y-%m-%d') > last_weather_date:
-    #    responses = openmeteo.weather_api(url, params=params)
-    responses = openmeteo.weather_api(url, params=params)
-    ## removed to allow rerun of weather for any missed data (4/16/2025)
+#     #if datetime.datetime.strptime(params['start_date'], '%Y-%m-%d') > last_weather_date:
+#     #    responses = openmeteo.weather_api(url, params=params)
+#     responses = openmeteo.weather_api(url, params=params)
+#     ## removed to allow rerun of weather for any missed data (4/16/2025)
 
-# Process first location. Add a for-loop for multiple locations or weather models
-    response = responses[0]
+# # Process first location. Add a for-loop for multiple locations or weather models
+#     response = responses[0]
 
-# Process hourly data. The order of variables needs to be the same as requested.
-    hourly = response.Hourly()
-    hourly_temperature_2m = hourly.Variables(0).ValuesAsNumpy()
-    hourly_precipitation = hourly.Variables(1).ValuesAsNumpy()
-    hourly_relative_humidity_2m = hourly.Variables(2).ValuesAsNumpy()
-    hourly_wind_speed_10m = hourly.Variables(3).ValuesAsNumpy()
-    hourly_precipitation_probability = hourly.Variables(4).ValuesAsNumpy()
+# # Process hourly data. The order of variables needs to be the same as requested.
+#     hourly = response.Hourly()
+#     hourly_temperature_2m = hourly.Variables(0).ValuesAsNumpy()
+#     hourly_precipitation = hourly.Variables(1).ValuesAsNumpy()
+#     hourly_relative_humidity_2m = hourly.Variables(2).ValuesAsNumpy()
+#     hourly_wind_speed_10m = hourly.Variables(3).ValuesAsNumpy()
+#     hourly_precipitation_probability = hourly.Variables(4).ValuesAsNumpy()
 
-    hourly_data = {"date": pd.date_range(
-	    start = pd.to_datetime(hourly.Time(), unit = "s", utc = True),
-	    end = pd.to_datetime(hourly.TimeEnd(), unit = "s", utc = True),
-	    freq = pd.Timedelta(seconds = hourly.Interval()),
-	    inclusive = "left"
-)}
+#     hourly_data = {"date": pd.date_range(
+# 	    start = pd.to_datetime(hourly.Time(), unit = "s", utc = True),
+# 	    end = pd.to_datetime(hourly.TimeEnd(), unit = "s", utc = True),
+# 	    freq = pd.Timedelta(seconds = hourly.Interval()),
+# 	    inclusive = "left"
+# )}
 
-    hourly_data["latitude"] = response.Latitude()
-    hourly_data["longitude"] = response.Longitude()
-    hourly_data["temperature_2m"] = hourly_temperature_2m
-    hourly_data["hourly_precipitation"] = hourly_precipitation
-    hourly_data["relative_humidity_2m"] = hourly_relative_humidity_2m
-    hourly_data["wind_speed_10m"] = hourly_wind_speed_10m
-    hourly_data["hourly_precipitation_probability"] = hourly_precipitation_probability
-    hourly_data["short_date"] = pd.to_datetime(hourly_data["date"]).strftime('%Y-%m-%d')
-    hourly_dataframe = pd.DataFrame(data = hourly_data)
+#     hourly_data["latitude"] = response.Latitude()
+#     hourly_data["longitude"] = response.Longitude()
+#     hourly_data["temperature_2m"] = hourly_temperature_2m
+#     hourly_data["hourly_precipitation"] = hourly_precipitation
+#     hourly_data["relative_humidity_2m"] = hourly_relative_humidity_2m
+#     hourly_data["wind_speed_10m"] = hourly_wind_speed_10m
+#     hourly_data["hourly_precipitation_probability"] = hourly_precipitation_probability
+#     hourly_data["short_date"] = pd.to_datetime(hourly_data["date"]).strftime('%Y-%m-%d')
+#     hourly_dataframe = pd.DataFrame(data = hourly_data)
     
-    all_hourly_data = pd.DataFrame(data = all_hourly_data)
+#     all_hourly_data = pd.DataFrame(data = all_hourly_data)
 
-    all_hourly_data = pd.concat([all_hourly_data, hourly_dataframe], ignore_index=True)
+#     all_hourly_data = pd.concat([all_hourly_data, hourly_dataframe], ignore_index=True)
 
-    #    new_records = True
+#     #    new_records = True
 
-circuits_and_races_lat_long['date'] = pd.to_datetime(circuits_and_races_lat_long['date']).dt.strftime('%Y-%m-%d')
+# circuits_and_races_lat_long.copy()
+# circuits_and_races_lat_long['date'] = pd.to_datetime(circuits_and_races_lat_long['date']).dt.strftime('%Y-%m-%d')
 
-#races_and_weather = pd.merge(all_hourly_data, circuits_and_races_lat_long, left_on='short_date', right_on='date', how='inner', suffixes=['_hourly', '_lat_long'])
+# #races_and_weather = pd.merge(all_hourly_data, circuits_and_races_lat_long, left_on='short_date', right_on='date', how='inner', suffixes=['_hourly', '_lat_long'])
 
-if newRecords:
-    ## Meaning that we need to re-run all data
-    races_and_weather = pd.merge(all_hourly_data, circuits_and_races_lat_long, left_on='short_date', right_on='date', how='inner', suffixes=['_hourly', '_lat_long'])
-    print(f"New records added: {len(races_and_weather)}.")
-else:
-    ## meaning that we have all current data and don't need to rerun everything
-    ## in this case, we just want to add the new data to the end of the existing dataset
+# if newRecords:
+#     ## Meaning that we need to re-run all data
+#     races_and_weather = pd.merge(all_hourly_data, circuits_and_races_lat_long, left_on='short_date', right_on='date', how='inner', suffixes=['_hourly', '_lat_long'])
+#     print(f"New records added: {len(races_and_weather)}.")
+# else:
+#     ## meaning that we have all current data and don't need to rerun everything
+#     ## in this case, we just want to add the new data to the end of the existing dataset
     
-    races_and_weather = pd.read_csv(path.join(DATA_DIR, 'f1WeatherData_AllData.csv'), sep='\t', usecols=['date_hourly', 'latitude_hourly', 'longitude_hourly', 'temperature_2m', 'hourly_precipitation', 
-    'relative_humidity_2m', 'short_date', 'wind_speed_10m',  'id_races', 'grandPrixId', 'circuitId'])
-    races_and_weather_for_concat = pd.merge(all_hourly_data, circuits_and_races_lat_long, left_on='short_date', right_on='date', how='inner', suffixes=['_hourly', '_lat_long'])
-    #new_hourly_data = pd.concat(all_hourly_data, ignore_index=True)
+#     races_and_weather = pd.read_csv(path.join(DATA_DIR, 'f1WeatherData_AllData.csv'), sep='\t', usecols=['date_hourly', 'latitude_hourly', 'longitude_hourly', 'temperature_2m', 'hourly_precipitation', 
+#     'relative_humidity_2m', 'short_date', 'wind_speed_10m',  'id_races', 'grandPrixId', 'circuitId'])
+#     races_and_weather_for_concat = pd.merge(all_hourly_data, circuits_and_races_lat_long, left_on='short_date', right_on='date', how='inner', suffixes=['_hourly', '_lat_long'])
+#     #new_hourly_data = pd.concat(all_hourly_data, ignore_index=True)
 
-    # Exclude rows in races_and_weather where short_date matches any value in races_and_weather_for_concat['short_date']
-    races_and_weather = races_and_weather[~races_and_weather['short_date'].isin(races_and_weather_for_concat['short_date'])]
-    print(f"Prior weather records were current: {len(races_and_weather_for_concat)} added.")
-    # Merge the new data with the existing weatherData DataFrame
+#     # Exclude rows in races_and_weather where short_date matches any value in races_and_weather_for_concat['short_date']
+#     races_and_weather = races_and_weather[~races_and_weather['short_date'].isin(races_and_weather_for_concat['short_date'])]
+#     print(f"Prior weather records were current: {len(races_and_weather_for_concat)} added.")
+#     # Merge the new data with the existing weatherData DataFrame
 
-    races_and_weather = pd.concat([races_and_weather, races_and_weather_for_concat], ignore_index=True)
+#     races_and_weather = pd.concat([races_and_weather, races_and_weather_for_concat], ignore_index=True)
 
-races_and_weather.to_csv(path.join(DATA_DIR, 'f1WeatherData_AllData.csv'), columns=['date_hourly', 'latitude_hourly', 'longitude_hourly', 'temperature_2m', 'hourly_precipitation', 'relative_humidity_2m', 'short_date',
-'wind_speed_10m', 'id_races', 'hourly_precipitation_probability', 'grandPrixId', 'circuitId'], sep='\t')#)
+# races_and_weather.to_csv(path.join(DATA_DIR, 'f1WeatherData_AllData.csv'), columns=['date_hourly', 'latitude_hourly', 'longitude_hourly', 'temperature_2m', 'hourly_precipitation', 'relative_humidity_2m', 'short_date',
+# 'wind_speed_10m', 'id_races', 'hourly_precipitation_probability', 'grandPrixId', 'circuitId'], sep='\t')#)
 
-races_and_weather_grouped = races_and_weather.groupby(['short_date', 'latitude_hourly', 'longitude_hourly', 'id_races', 'grandPrixId', 'circuitId']).agg(average_temp = ('temperature_2m', 'mean'), 
-        total_precipitation = ('hourly_precipitation', 'sum'), average_humidity = ('relative_humidity_2m', 'mean'), average_wind_speed = ('wind_speed_10m', 'mean'),
-        average_precipitation_probability = ('hourly_precipitation_probability', 'mean')).reset_index()
+# races_and_weather_grouped = races_and_weather.groupby(['short_date', 'latitude_hourly', 'longitude_hourly', 'id_races', 'grandPrixId', 'circuitId']).agg(average_temp = ('temperature_2m', 'mean'), 
+#         total_precipitation = ('hourly_precipitation', 'sum'), average_humidity = ('relative_humidity_2m', 'mean'), average_wind_speed = ('wind_speed_10m', 'mean'),
+#         average_precipitation_probability = ('hourly_precipitation_probability', 'mean')).reset_index()
 
-races_and_weather_grouped.to_csv(path.join(DATA_DIR, 'f1WeatherData_Grouped.csv'), columns=['short_date', 'id_races', 'grandPrixId', 'circuitId', 'latitude_hourly', 'longitude_hourly', 'average_temp', 'total_precipitation', 'average_humidity', 'average_wind_speed', 'average_precipitation_probability'], sep='\t')#, mode='a', header=False)
+# races_and_weather_grouped.to_csv(path.join(DATA_DIR, 'f1WeatherData_Grouped.csv'), columns=['short_date', 'id_races', 'grandPrixId', 'circuitId', 'latitude_hourly', 'longitude_hourly', 'average_temp', 'total_precipitation', 'average_humidity', 'average_wind_speed', 'average_precipitation_probability'], sep='\t')#, mode='a', header=False)
 
 raceNoEarlierThan = current_year - 10
 
