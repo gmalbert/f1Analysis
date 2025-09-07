@@ -18,6 +18,7 @@ grandPrix = pd.read_json(path.join(DATA_DIR, 'f1db-grands-prix.json'))
 races = pd.read_json(path.join(DATA_DIR, 'f1db-races.json')) 
 
 
+fastf1.Cache.enable_cache(path.join(DATA_DIR, 'f1_cache'))
 
 # Initialize Ergast API
 ergast = Ergast(result_type='pandas', auto_cast=True)
@@ -46,10 +47,6 @@ for round_number in range(1, total_rounds + 1):
     driver_standings = session.results.groupby('Abbreviation')['Points'].sum()
     driver_standings = pd.Series(driver_standings)
     all_driver_standings.append(driver_standings)
-
-#######  Add round and year to dataframe for connecting in raceAnalysis.py
-#######
-
 
 # Combine all constructor standings into a single DataFrame
 ##all_constructor_standings_df = pd.DataFrame(all_constructor_standings)
@@ -90,9 +87,21 @@ constructor_standings_with_mapping = pd.merge(constructors, all_constructor_stan
 active_drivers = pd.merge(results, drivers, left_on='resultsDriverId', right_on='id', how='inner')
 active_drivers = active_drivers[active_drivers['activeDriver'] == True]
 
+
+active_drivers = pd.merge(active_drivers, drivers[['id', 'abbreviation']], left_on='resultsDriverId', right_on='id', how='left')
+
+if 'abbreviation' not in active_drivers.columns:
+    if 'abbreviation_x' in active_drivers.columns:
+        active_drivers.rename(columns={'abbreviation_x': 'abbreviation'}, inplace=True)
+    elif 'abbreviation_y' in active_drivers.columns:
+        active_drivers.rename(columns={'abbreviation_y': 'abbreviation'}, inplace=True)
+
 driver_standings_with_mapping = pd.merge(active_drivers, all_driver_standings_df_sorted, left_on='abbreviation', right_on='Abbreviation', how='inner')
-driver_standings_with_mapping = driver_standings_with_mapping[['id', 'name', 'Points', 'driverRank']].drop_duplicates()
-driver_standings_with_mapping = driver_standings_with_mapping.rename(columns={'id': 'driverId', 'name': 'driverName', 'Points': 'points', 'driverRank': 'driverRank'})
+
+driver_standings_with_mapping = driver_standings_with_mapping[['resultsDriverId', 'name', 'Points', 'driverRank']].drop_duplicates()
+driver_standings_with_mapping = driver_standings_with_mapping.rename(columns={'resultsDriverId': 'driverId', 'name': 'driverName', 'Points': 'points', 'driverRank': 'driverRank'})
 
 constructor_standings_with_mapping = constructor_standings_with_mapping.to_csv(path.join(DATA_DIR, 'constructor_standings.csv'), sep='\t', index=False)
+print("Saved constructor standings to constructor_standings.csv.")
 driver_standings_with_mapping = driver_standings_with_mapping.to_csv(path.join(DATA_DIR, 'driver_standings.csv'), sep='\t', index=False)
+print("Saved driver standings to driver_standings.csv.")

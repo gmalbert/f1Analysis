@@ -74,12 +74,16 @@ csv_path = os.path.join(DATA_DIR, 'all_practice_laps.csv')
 if os.path.exists(csv_path):
     processed_df = pd.read_csv(csv_path, sep='\t')
     processed_sessions = set(
-        zip(
-            processed_df['Year'],
-            processed_df['Round'],
-            processed_df['Session']
+        (int(y), int(r), str(s).upper())
+        for y, r, s in zip(processed_df['Year'], processed_df['Round'], processed_df['Session'])
         )
-    )
+    # processed_sessions = set(
+    #     zip(
+    #         processed_df['Year'],
+    #         processed_df['Round'],
+    #         processed_df['Session']
+    #     )
+    # )
 else:
     processed_df = pd.DataFrame()
     processed_sessions = set()
@@ -93,9 +97,11 @@ for year in range(2018, current_year + 1):
     for round_number in range(1, total_rounds + 1):    
         for session_type in ['FP1', 'FP2', 'FP3']:
         # for session_type in ['FP1', 'FP2', 'FP3']:
-            session_key = (year, round_number, session_type)
+            # session_key = (year, round_number, session_type)
+            session_key = (int(year), int(round_number), session_type.upper())
             session_date = pd.to_datetime(season_schedule.iloc[round_number - 1]['raceDate']).date()
             today = datetime.date.today()
+            laps_written = False # Flag to track if any laps were written for this session
             if session_key in processed_sessions:
                 print(f"Skipping session: {session_key} (already processed)")
                 continue
@@ -127,7 +133,26 @@ for year in range(2018, current_year + 1):
                                 telemetry_all[abbreviation] = tel
                         except Exception as e:
                             print(f"Error getting telemetry for {abbreviation}: {e}")
+                            print(f"Skipping {session_type} for {year} round {round_number}: {e}")
+                            # Save a marker row so we don't retry this session
+                            marker_row = {
+                                'Year': year,
+                                'Round': round_number,
+                                'Session': session_type,
+                                'Driver': 'ERROR',
+                                'LapTime': pd.NA,
+                                'Sector1Time': pd.NA,
+                                'Sector2Time': pd.NA,
+                                'Sector3Time': pd.NA,
+                                'LapTime_sec': pd.NA,
+                                'best_s1_sec': pd.NA,
+                                'best_s2_sec': pd.NA,
+                                'best_s3_sec': pd.NA,
+                                # Add any other columns you expect
+                            }
+                            all_laps.append(marker_row)
                             continue
+
                         # Use all laps' telemetry, not just the fastest lap
                         # tel = laps_drv.get_telemetry()
                         # # if not tel.empty:
@@ -343,11 +368,51 @@ for year in range(2018, current_year + 1):
                             fastest_lap['best_theory_lap_diff'] = pd.NaT
 
                         all_laps.append(fastest_lap)
+                        laps_written = True
 
+                # --- At the end of try, before except ---
+                if not laps_written:
+                    print(f"No laps found for {session_type} {year} round {round_number}, writing marker row.")
+                    marker_row = {
+                        'Year': year,
+                        'Round': round_number,
+                        'Session': session_type,
+                        'Driver': 'ERROR',
+                        'LapTime': pd.NA,
+                        'Sector1Time': pd.NA,
+                        'Sector2Time': pd.NA,
+                        'Sector3Time': pd.NA,
+                        'LapTime_sec': pd.NA,
+                        'best_s1_sec': pd.NA,
+                        'best_s2_sec': pd.NA,
+                        'best_s3_sec': pd.NA,
+                        # Add any other columns you expect
+                    }
+                    all_laps.append(marker_row)
+
+
+            # except Exception as e:
+            #     print(f"Skipping {session_type} for {year} round {round_number}: {e}")
+            #     continue  # Skip to the next session
             except Exception as e:
                 print(f"Skipping {session_type} for {year} round {round_number}: {e}")
+                marker_row = {
+                    'Year': year,
+                    'Round': round_number,
+                    'Session': session_type,
+                    'Driver': 'ERROR',
+                    'LapTime': pd.NA,
+                    'Sector1Time': pd.NA,
+                    'Sector2Time': pd.NA,
+                    'Sector3Time': pd.NA,
+                    'LapTime_sec': pd.NA,
+                    'best_s1_sec': pd.NA,
+                    'best_s2_sec': pd.NA,
+                    'best_s3_sec': pd.NA,
+                    # Add any other columns you expect
+                }
+                all_laps.append(marker_row)
                 continue  # Skip to the next session
-
 
 if all_laps:
     new_laps_df = pd.DataFrame(all_laps)
@@ -405,7 +470,12 @@ if all_laps:
     # combined_df.to_csv(path.join(DATA_DIR, 'debug_combined.csv'), sep='\t', index=False)
 
     if not processed_df.empty:
-        all_practice_laps_df = pd.concat([processed_df, new_laps_df], ignore_index=True)
+        dfs_to_concat = [df for df in [processed_df, new_laps_df] if not df.empty]
+        if dfs_to_concat:
+            all_practice_laps_df = pd.concat(dfs_to_concat, ignore_index=True)
+        else:
+            all_practice_laps_df = pd.DataFrame()
+        # all_practice_laps_df = pd.concat([processed_df, new_laps_df], ignore_index=True)
 
     # Fill missing sector times from any matching row BEFORE dropping duplicates
         for idx, row in all_practice_laps_df.iterrows():
