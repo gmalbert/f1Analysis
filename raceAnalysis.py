@@ -36,6 +36,8 @@ from xgboost import XGBRegressor, XGBClassifier
 import shap
 from sklearn.feature_selection import RFE
 from boruta import BorutaPy
+from sklearn.calibration import CalibratedClassifierCV
+from sklearn.metrics import roc_auc_score
 
 DATA_DIR = 'data_files/'
 
@@ -96,8 +98,24 @@ def simulate_rookie_predictions(data, all_active_driver_inputs, current_year, n_
         predicted = np.median(simulated_positions)
 
         # Assign to output DataFrame
-        all_active_driver_inputs.at[idx, 'PredictedFinalPosition'] = predicted
-        all_active_driver_inputs.at[idx, 'PredictedFinalPositionStd'] = np.std(simulated_positions)
+        # all_active_driver_inputs.at[idx, 'PredictedFinalPosition'] = predicted
+        # ...inside the for idx, rookie in rookies.iterrows(): loop...
+        col = 'PredictedFinalPosition'
+        if col in all_active_driver_inputs.columns:
+            dtype = all_active_driver_inputs[col].dtype
+            all_active_driver_inputs.at[idx, col] = dtype.type(predicted)
+        else:
+            all_active_driver_inputs.at[idx, col] = float(predicted)
+
+        col = 'PredictedFinalPositionStd'
+        std_value = float(np.std(simulated_positions))
+        if col in all_active_driver_inputs.columns:
+            dtype = all_active_driver_inputs[col].dtype
+            all_active_driver_inputs.at[idx, col] = dtype.type(std_value)
+        else:
+            all_active_driver_inputs.at[idx, col] = float(std_value)
+
+        # all_active_driver_inputs.at[idx, 'PredictedFinalPositionStd'] = np.std(simulated_positions)
 
     return all_active_driver_inputs
 
@@ -1837,48 +1855,245 @@ def train_and_evaluate_model(data):
 
     return model, mse, r2, mae, mean_err
 
+# def train_and_evaluate_dnf_model(data):
+#     X, y = get_features_and_target_dnf(data)
+#     preprocessor = get_preprocessor_dnf()
+#     # Calculate scale_pos_weight for class imbalance
+#     num_neg = (y == 0).sum()
+#     num_pos = (y == 1).sum()
+#     scale_pos_weight = 1.0
+#     # scale_pos_weight = num_neg / num_pos if num_pos > 0 else 1.0
+#     st.write(f"Scale pos weight: {scale_pos_weight}")
+#     base_model = Pipeline(steps=[
+#         ('preprocessor', preprocessor),
+#         ('classifier', XGBClassifier(
+#             n_estimators=200,
+#             learning_rate=0.1,
+#             max_depth=2,
+#             random_state=42,
+#             n_jobs=-1,
+#             tree_method='hist',
+#             scale_pos_weight=scale_pos_weight # Adjust for class imbalance
+#         ))
+#     ])
+#     base_model.fit(X, y)
+#     # Calibrate probabilities
+#     calibrated_model = CalibratedClassifierCV(base_model, method='sigmoid', cv=5)
+#     calibrated_model.fit(X, y)
+#     return calibrated_model
+#     # return model
+
 def train_and_evaluate_dnf_model(data):
+    from sklearn.linear_model import LogisticRegression
     X, y = get_features_and_target_dnf(data)
     preprocessor = get_preprocessor_dnf()
-    model = Pipeline(steps=[
-        ('preprocessor', preprocessor),
-        ('classifier', XGBClassifier(
-            n_estimators=200,
-            learning_rate=0.1,
-            max_depth=4,
-            random_state=42,
-            n_jobs=-1,
-            tree_method='hist'
-        ))
-    ])
-    model.fit(X, y)
-    return model
-
-def train_and_evaluate_safetycar_model(data):
-    X, y = get_features_and_target_safety_car(safety_cars)
-    preprocessor = get_preprocessor_safety_car()
     model = Pipeline([
         ('preprocessor', preprocessor),
-        ('classifier', XGBClassifier(
-            n_estimators=200,
-            learning_rate=0.1,
-            max_depth=4,
-            random_state=42,
-            n_jobs=-1,
-            tree_method='hist'
-        ))
+        ('classifier', LogisticRegression(max_iter=1000))
     ])
     model.fit(X, y)
     return model
 
-@st.cache_resource
+# def train_and_evaluate_safetycar_model(data):
+#     X, y = get_features_and_target_safety_car(safety_cars)
+#     preprocessor = get_preprocessor_safety_car()
+#     model = Pipeline([
+#         ('preprocessor', preprocessor),
+#         ('classifier', XGBClassifier(
+#             n_estimators=200,
+#             learning_rate=0.1,
+#             max_depth=4,
+#             random_state=42,
+#             n_jobs=-1,
+#             tree_method='hist'
+#         ))
+#     ])
+#     model.fit(X, y)
+#     return model
+
+# def train_and_evaluate_safetycar_model(data):
+#     X, y = get_features_and_target_safety_car(data)
+#     preprocessor = get_preprocessor_safety_car()
+#     model = Pipeline([
+#         ('preprocessor', preprocessor),
+#         ('classifier', LogisticRegression(max_iter=1000))
+#     ])
+#     model.fit(X, y)
+#     return model
+
+# def train_and_evaluate_safetycar_model(data):
+#     X, y = get_features_and_target_safety_car(data)
+#     base_model = Pipeline([
+#         ('preprocessor', get_preprocessor_safety_car()),
+#         ('classifier', LogisticRegression(max_iter=1000))
+#     ])
+#     calibrated_model = CalibratedClassifierCV(base_model, method='sigmoid', cv=5)
+#     calibrated_model.fit(X, y)
+#     return calibrated_model
+
+# def train_and_evaluate_safetycar_model(data):
+#     from sklearn.calibration import CalibratedClassifierCV
+#     from sklearn.linear_model import LogisticRegression
+#     X, y = get_features_and_target_safety_car(data)
+#     base_model = Pipeline([
+#         ('preprocessor', get_preprocessor_safety_car()),
+#         ('classifier', LogisticRegression(max_iter=1000))
+#     ])
+#     calibrated_model = CalibratedClassifierCV(base_model, method='sigmoid', cv=5)
+#     calibrated_model.fit(X, y)
+#     return calibrated_model
+
+def train_and_evaluate_safetycar_model(data):
+    from sklearn.linear_model import LogisticRegression
+    X, y = get_features_and_target_safety_car(data)
+    if X.isnull().any().any():
+        X = X.fillna(X.mean(numeric_only=True))
+    y = (y > 0).astype(int)
+    # st.write("Safety car target value counts (before fit):", y.value_counts())
+    # st.write("Unique values in y:", y.unique())
+    # st.write("X shape:", X.shape)
+    # st.write("y shape:", y.shape)
+
+    model = Pipeline([
+        ('preprocessor', get_preprocessor_safety_car()),
+        ('classifier', LogisticRegression(max_iter=1000))
+    ])
+    model.fit(X, y)
+    # st.write("Returning model. Has named_steps:", hasattr(model, "named_steps"))
+    return model
+
+# def train_and_evaluate_safetycar_model(data):
+#     from sklearn.calibration import CalibratedClassifierCV
+#     from sklearn.linear_model import LogisticRegression
+#     X, y = get_features_and_target_safety_car(data)
+#     # Impute missing values
+#     if X.isnull().any().any():
+#         X = X.fillna(X.mean(numeric_only=True))
+    
+#     # --- DIAGNOSTICS: Add here ---
+#     y = (y > 0).astype(int)
+#     st.write("Safety car target value counts (before fit):", y.value_counts())
+#     st.write("Unique values in y:", y.unique())
+#     st.write("X shape:", X.shape)
+#     st.write("y shape:", y.shape)
+    
+#     base_model = Pipeline([
+#         ('preprocessor', get_preprocessor_safety_car()),
+#         ('classifier', LogisticRegression(max_iter=1000))
+#     ])
+#     calibrated_model = CalibratedClassifierCV(base_model, method='sigmoid', cv=5)
+#     # calibrated_model.fit(X, y)
+#     # return calibrated_model
+#     try:
+#         calibrated_model.fit(X, y)
+#         st.write("Model fit succeeded.")
+        
+#     except Exception as e:
+#         st.error(f"Error fitting safety car model: {e}")
+#         st.stop()
+#     st.write("Returning calibrated_model. Has estimator_:", hasattr(calibrated_model, "estimator_"))
+#     return calibrated_model
+    
+
+# @st.cache_resource
 def get_trained_model():
     model, mse, r2, mae, mean_err = train_and_evaluate_model(data)
     return model
 
 model = get_trained_model()
+data['DNF'] = data['DNF'].astype(int)
+
+# Diagnostic: Try Logistic Regression for DNF prediction
+from sklearn.linear_model import LogisticRegression
+
+X_dnf, y_dnf = get_features_and_target_dnf(data)
+mask = y_dnf.notnull() & np.isfinite(y_dnf)
+X_dnf, y_dnf = X_dnf[mask], y_dnf[mask]
+preprocessor = get_preprocessor_dnf()
+X_dnf_prep = preprocessor.fit_transform(X_dnf)
+clf = LogisticRegression(max_iter=1000)
+clf.fit(X_dnf_prep, y_dnf)
+probs = clf.predict_proba(X_dnf_prep)[:, 1]
+
+
 dnf_model = train_and_evaluate_dnf_model(data)
+
 safetycar_model = train_and_evaluate_safetycar_model(safety_cars)
+
+# preprocessor = safetycar_model.named_steps['preprocessor']
+# feature_names = preprocessor.get_feature_names_out()
+# importances = safetycar_model.named_steps['classifier'].coef_[0]
+# feature_names = [name.replace('num__', '').replace('cat__', '') for name in feature_names]
+# st.subheader("Safety Car Model Feature Coefficients")
+# st.dataframe(
+#     pd.DataFrame({'Feature': feature_names, 'Coefficient': importances})
+#     .sort_values('Coefficient', key=np.abs, ascending=False, ignore_index=True),
+#     width=800,
+#     hide_index=True
+# )
+
+# Diagnostic prints
+# st.write("Safety car model type:", type(safetycar_model))
+# st.write("Has estimator_:", hasattr(safetycar_model, "estimator_"))
+X_sc, y_sc = get_features_and_target_safety_car(safety_cars)
+if X_sc.isnull().any().any():
+    # st.warning("Imputing missing values in X_sc for diagnostics.")
+    X_sc = X_sc.fillna(X_sc.mean(numeric_only=True))
+# st.write("Safety car target value counts:", y_sc.value_counts())
+# st.write("Safety car features shape:", X_sc.shape)
+# st.write("First 5 rows of X_sc:")
+# st.write(X_sc.head())
+# st.write("Any missing values in X_sc?", X_sc.isnull().any().any())
+# st.write("Any missing values in y_sc?", y_sc.isnull().any())
+
+# After fitting the original safety car model
+# Defensive: Only access estimator_ if it exists (i.e., model is fitted)
+# if hasattr(safetycar_model, "estimator_"):
+#     fitted_preprocessor = safetycar_model.estimator_.named_steps['preprocessor']
+#     feature_names = fitted_preprocessor.get_feature_names_out()
+#     importances = safetycar_model.estimator_.named_steps['classifier'].coef_[0]
+#     feature_names = [name.replace('num__', '').replace('cat__', '') for name in feature_names]
+#     st.write("Feature names:", feature_names)
+#     st.write("Importances:", importances)
+#     st.write("Length feature_names:", len(feature_names), "Length importances:", len(importances))
+#     if len(feature_names) == len(importances):
+#         st.dataframe(
+#             pd.DataFrame({'Feature': feature_names, 'Importance': importances})
+#                 .sort_values('Importance', ascending=False, ignore_index=True),
+#             width=800,
+#             hide_index=True
+#         )
+#     else:
+#         st.warning(f"Feature names and importances are not the same length! ({len(feature_names)} vs {len(importances)})")
+# else:
+#     st.warning("Safety car model is not fitted yet or was refit on an invalid set.")
+
+# Immediately after fitting the model
+# if hasattr(safetycar_model, "estimator_"):
+#     fitted_preprocessor = safetycar_model.estimator_.named_steps['preprocessor']
+#     feature_names = fitted_preprocessor.get_feature_names_out()
+#     importances = safetycar_model.estimator_.named_steps['classifier'].coef_[0]
+#     feature_names = [name.replace('num__', '').replace('cat__', '') for name in feature_names]
+#     st.subheader("Safety Car Model Feature Coefficients")
+#     st.dataframe(
+#         pd.DataFrame({'Feature': feature_names, 'Coefficient': importances})
+#         .sort_values('Coefficient', key=np.abs, ascending=False, ignore_index=True),
+#         width=800,
+#         hide_index=True
+#     )
+# else:
+#     st.warning("Safety car model is not fitted yet or was refit on an invalid set.")
+
+# Clean up feature names
+# feature_names = [name.replace('num__', '').replace('cat__', '') for name in feature_names]
+
+# Display as a DataFrame (optional)
+# st.dataframe(
+#     pd.DataFrame({'Feature': feature_names, 'Importance': importances})
+#         .sort_values('Importance', ascending=False, ignore_index=True),
+#     width=800,
+#     hide_index=True
+# )
 
 def monte_carlo_feature_selection(X, y, model_class, n_trials=50, min_features=8, max_features=15, random_state=42):
     import random
@@ -2761,6 +2976,11 @@ if st.checkbox("Show Next Race"):
     )
 
     # Overwrite with latest stats if present
+    # for col in ['yearsActive', 'driverTotalRaceStarts']:
+    #     if f"{col}_latest" in all_active_driver_inputs.columns:
+    #         all_active_driver_inputs[col] = all_active_driver_inputs[f"{col}_latest"].combine_first(all_active_driver_inputs[col])
+    #         all_active_driver_inputs = all_active_driver_inputs.drop(columns=[f"{col}_latest"], errors='ignore')
+    
     for col in ['yearsActive', 'driverTotalRaceStarts']:
         if f"{col}_latest" in all_active_driver_inputs.columns:
             all_active_driver_inputs[col] = all_active_driver_inputs[f"{col}_latest"].combine_first(all_active_driver_inputs[col])
@@ -2855,8 +3075,6 @@ if st.checkbox("Show Next Race"):
     X_predict = all_active_driver_inputs[existing_feature_names]
     predicted_position = model.predict(X_predict)
 
-    
-
     # Get DNF feature names
     dnf_features, _ = get_features_and_target_dnf(data)
     dnf_feature_names = dnf_features.columns.tolist()
@@ -2890,7 +3108,17 @@ if st.checkbox("Show Next Race"):
     # For DNF probability
     # predicted_dnf_proba = dnf_model.predict_proba(X_predict)[:, 1]  # Probability of DNF=True
     # safety_car_proba = safetycar_model.predict_proba(X)[:, 1]  # Probability of Safety Car
+    if X_predict_dnf.isnull().any().any():
+        # st.warning("Imputing missing values in X_predict_dnf before prediction.")
+        X_predict_dnf = X_predict_dnf.fillna(X_predict_dnf.mean(numeric_only=True))
     predicted_dnf_proba = dnf_model.predict_proba(X_predict_dnf)[:, 1]  # Probability of DNF=True
+
+    # st.subheader("Histogram of Predicted DNF Probabilities")
+    # fig, ax = plt.subplots()
+    # ax.hist(predicted_dnf_proba, bins=20)
+    # ax.set_xlabel("Predicted DNF Probability")
+    # ax.set_ylabel("Count")
+    # st.pyplot(fig)
 
     # Build X_predict for safety car using only those columns
     # X_predict_safetycar, _ = get_features_and_target_safety_car(data)  # or use detailsOfNextRace if you want per-race
@@ -2953,14 +3181,35 @@ if st.checkbox("Show Next Race"):
     test = safety_cars[safety_cars['grandPrixYear'] == current_year]
     X_train, y_train = get_features_and_target_safety_car(train)
     X_test, y_test = get_features_and_target_safety_car(test)
-    safetycar_model.fit(X_train, y_train)
-    y_pred = safetycar_model.predict_proba(X_test)[:, 1]
-
+    # safetycar_model.fit(X_train, y_train)
+    # y_pred = safetycar_model.predict_proba(X_test)[:, 1]
+    # Instead of re-fitting the original model, create a new instance for holdout/test
+    holdout_model = train_and_evaluate_safetycar_model(train)
+    # Now use holdout_model for predictions:
+    # y_pred = holdout_model.predict_proba(X_test)[:, 1]
+    if X_test.isnull().any().any():
+        # st.warning("Imputing missing values in X_test before prediction.")
+        X_test = X_test.fillna(X_test.mean(numeric_only=True))
+    y_pred = holdout_model.predict_proba(X_test)[:, 1]
     # Print feature importances for safety car model
-    preprocessor = safetycar_model.named_steps['preprocessor']
-    feature_names = preprocessor.get_feature_names_out()
-    importances = safetycar_model.named_steps['classifier'].feature_importances_
+    # preprocessor = safetycar_model.named_steps['preprocessor']
+    # feature_names = preprocessor.get_feature_names_out()
+    # # importances = safetycar_model.named_steps['classifier'].feature_importances_
+    # importances = safetycar_model.named_steps['classifier'].coef_[0]
 
+    # preprocessor = safetycar_model.base_estimator.named_steps['preprocessor']
+    # feature_names = preprocessor.get_feature_names_out()
+    # importances = safetycar_model.base_estimator.named_steps['classifier'].coef_[0]
+
+    # preprocessor = safetycar_model.estimator.named_steps['preprocessor']
+    # feature_names = preprocessor.get_feature_names_out()
+    # importances = safetycar_model.estimator.named_steps['classifier'].coef_[0]
+
+
+    # Get the fitted preprocessor from the pipeline inside the calibrated model
+    # fitted_preprocessor = safetycar_model.estimator_.named_steps['preprocessor']
+    # feature_names = fitted_preprocessor.get_feature_names_out()
+    # importances = safetycar_model.estimator_.named_steps['classifier'].coef_[0]
     # Clean up feature names
     # feature_names = [name.replace('num__', '').replace('cat__', '') for name in feature_names]
 
@@ -2970,7 +3219,7 @@ if st.checkbox("Show Next Race"):
     # else:
     #     st.warning(f"Feature names and importances are not the same length! ({len(feature_names)} vs {len(importances)})")
 
-    from sklearn.metrics import roc_auc_score
+    
     # if len(y_test) > 0:
     #     st.write("Safety Car ROC AUC (holdout year):", roc_auc_score(y_test, y_pred))
     # else:
@@ -2989,8 +3238,11 @@ if st.checkbox("Show Next Race"):
         test = safety_cars[safety_cars['grandPrixYear'] == holdout_year]
         X_train, y_train = get_features_and_target_safety_car(train)
         X_test, y_test = get_features_and_target_safety_car(test)
-        safetycar_model.fit(X_train, y_train)
-        y_pred = safetycar_model.predict_proba(X_test)[:, 1]
+        # safetycar_model.fit(X_train, y_train)
+        # y_pred = safetycar_model.predict_proba(X_test)[:, 1]
+        # Do NOT re-fit safetycar_model! Instead, create a new model for holdout/test:
+        holdout_model = train_and_evaluate_safetycar_model(train)
+        y_pred = holdout_model.predict_proba(X_test)[:, 1]
         from sklearn.metrics import roc_auc_score
         # st.write(f"Safety Car ROC AUC (holdout year {holdout_year}):", roc_auc_score(y_test, y_pred))
     else:
@@ -3035,9 +3287,10 @@ if st.checkbox("Show Next Race"):
 
 
     synthetic_row = {col: np.nan for col in safetycar_feature_columns}
+
     synthetic_row['grandPrixYear'] = nextRace['year'].values[0]
     synthetic_row['grandPrixName'] = nextRace['fullName'].values[0]
-
+    
     # Fill with available info from nextRace, schedule, weather, etc.
     for col in ['circuitId', 'grandPrixLaps', 'turns', 'streetRace', 'trackRace']:
         if col in nextRace.columns:
@@ -3054,18 +3307,90 @@ if st.checkbox("Show Next Race"):
     # for col in safetycar_feature_columns:
     #     if pd.isna(synthetic_row[col]) and col in safety_cars.columns:
     #         synthetic_row[col] = safety_cars[col].mean()
+    
+    # col = "driver_experience_x_track_familiarity"
+    # gp_vals = safety_cars[safety_cars['grandPrixName'] == synthetic_row['grandPrixName']][col]
+    # st.write(f"Raw values for {col}:", gp_vals.tolist())
+    # st.write(f"Mean: {gp_vals.mean()}, Median: {gp_vals.median()}, Min: {gp_vals.min()}, Max: {gp_vals.max()}")
+        
+    # for col in safetycar_feature_columns:
+    #     if pd.isna(synthetic_row[col]) and col in safety_cars.columns:
+    #         # gp_mean = safety_cars[safety_cars['grandPrixName'] == synthetic_row['grandPrixName']][col].mean()
+    #         # synthetic_row[col] = gp_mean if not np.isnan(gp_mean) else safety_cars[col].mean()
+    #         # gp_median = safety_cars[safety_cars['grandPrixName'] == synthetic_row['grandPrixName']][col].median()
+    #         # synthetic_row[col] = gp_median if not np.isnan(gp_median) else safety_cars[col].median()
+
+    #         # gp_vals = safety_cars[safety_cars['grandPrixName'] == synthetic_row['grandPrixName']][col].dropna()
+    #         # if not gp_vals.empty:
+    #         #     synthetic_row[col] = gp_vals.median()
+    #         # else:
+    #         #     synthetic_row[col] = safety_cars[col].dropna().median()
+    #         if pd.api.types.is_numeric_dtype(safety_cars[col]):
+    #             gp_vals = safety_cars[safety_cars['grandPrixName'] == synthetic_row['grandPrixName']][col].dropna()
+    #             if not gp_vals.empty:
+    #                 synthetic_row[col] = gp_vals.median()
+    #             else:
+    #                 synthetic_row[col] = safety_cars[col].dropna().median()
+    #         else:
+    #             synthetic_row[col] = np.nan
+
+    # Improved logic: Use median of last 3 years for this GP if available, else overall median
+    # for col in safetycar_feature_columns:
+    #     if pd.isna(synthetic_row[col]) and col in safety_cars.columns:
+    #         if pd.api.types.is_numeric_dtype(safety_cars[col]):
+    #             gp_vals = safety_cars[safety_cars['grandPrixName'] == synthetic_row['grandPrixName']]
+    #             # Get the last 3 years for this GP
+    #             last_3_years = sorted(gp_vals['grandPrixYear'].unique())[-3:]
+    #             gp_vals_recent = gp_vals[gp_vals['grandPrixYear'].isin(last_3_years)][col].dropna()
+    #             if not gp_vals_recent.empty:
+    #                 synthetic_row[col] = gp_vals_recent.mean()
+    #             else:
+    #                 synthetic_row[col] = safety_cars[col].dropna().mean()
+    #         else:
+    #             synthetic_row[col] = np.nan
+    safety_cars['SafetyCarStatus'] = (safety_cars['SafetyCarStatus'] > 0).astype(int)
+
+    # Improved logic: Use median of last 2 years for this GP if available, else overall median
     for col in safetycar_feature_columns:
         if pd.isna(synthetic_row[col]) and col in safety_cars.columns:
-            gp_mean = safety_cars[safety_cars['grandPrixName'] == synthetic_row['grandPrixName']][col].mean()
-            synthetic_row[col] = gp_mean if not np.isnan(gp_mean) else safety_cars[col].mean()
+            if pd.api.types.is_numeric_dtype(safety_cars[col]):
+                gp_vals = safety_cars[safety_cars['grandPrixName'] == synthetic_row['grandPrixName']]
+                # Aggregate by year (mean across drivers for each year)
+                per_race_means = gp_vals.groupby('grandPrixYear')[col].mean()
+                # Get the last 2 years
+                last_2_years = sorted(per_race_means.index)[-2:]
+                per_race_means_recent = per_race_means.loc[last_2_years]
+                if not per_race_means_recent.empty:
+                    synthetic_row[col] = per_race_means_recent.median()
+                else:
+                    synthetic_row[col] = safety_cars[col].dropna().median()
+            else:
+                synthetic_row[col] = np.nan
+
+    # missing_cols = [col for col in synthetic_row if pd.isna(synthetic_row[col])]
+    # st.write("Missing columns in synthetic row:", missing_cols)
+    # st.write("Synthetic row values for next race:")
+    # st.write(synthetic_row)
+
+    # st.write("Historical rows for this GP:")
+    # st.write(safety_cars[safety_cars['grandPrixName'] == synthetic_row['grandPrixName']].head())
+
     synthetic_df = pd.DataFrame([synthetic_row])
+
+    
 
     # X_predict_safetycar, _ = get_features_and_target_safety_car(synthetic_df)
     # safety_car_proba = safetycar_model.predict_proba(X_predict_safetycar)[:, 1][0]
     features, _ = get_features_and_target_safety_car(safety_cars)
     feature_list = features.columns.tolist()
+
     X_predict_safetycar = synthetic_df[feature_list]
+    if X_predict_safetycar.isnull().any().any():
+        # st.warning("Imputing missing values in X_predict_safetycar before prediction.")
+        X_predict_safetycar = X_predict_safetycar.fillna(X_predict_safetycar.mean(numeric_only=True))
     safety_car_proba = safetycar_model.predict_proba(X_predict_safetycar)[:, 1][0]
+    # X_predict_safetycar = synthetic_df[feature_list]
+    # safety_car_proba = safetycar_model.predict_proba(X_predict_safetycar)[:, 1][0]
     # st.subheader("Predicted Safety Car Probability for Next Race")
     # # st.write(f"Predicted Safety Car Probability for {synthetic_row['grandPrixName']} ({synthetic_row['grandPrixYear']}): **{safety_car_proba:.3f}**")
     # st.write(f"Predicted Safety Car Probability for {synthetic_row['grandPrixName']} ({synthetic_row['grandPrixYear']}): **{safety_car_proba * 100:.2f}%**")
@@ -3119,11 +3444,31 @@ if st.checkbox("Show Next Race"):
 
     st.subheader("Predictive DNF")
 
-    all_active_driver_inputs.sort_values(by='PredictedDNFProbability', ascending=False, inplace=True)
+    st.write("Logistic Regression DNF Probabilities:")
+    st.write("Min:", probs.min(), "Max:", probs.max(), "Mean:", probs.mean())
+
+    all_active_driver_inputs.sort_values(by='PredictedDNFProbabilityPercentage', ascending=False, inplace=True)
     st.dataframe(all_active_driver_inputs, hide_index=False, column_config=predicted_dnf_position_columns_to_display, width=800, height=800, 
     column_order=['constructorName', 'resultsDriverName', 'driverDNFCount',  'driverDNFPercentage', 'PredictedDNFProbabilityPercentage', 'PredictedDNFProbabilityStd'], )  
 
+    # st.write("Raw predicted DNF probabilities:", predicted_dnf_proba)
+    # st.write("Min:", np.min(predicted_dnf_proba), "Max:", np.max(predicted_dnf_proba), "Mean:", np.mean(predicted_dnf_proba))
+
     st.subheader("Predicted Safety Car")
+
+    # st.write(safety_cars['SafetyCarStatus'].value_counts())
+
+    # from sklearn.linear_model import LogisticRegression
+
+    # def train_and_evaluate_safetycar_model(data):
+    #     X, y = get_features_and_target_safety_car(data)
+    #     preprocessor = get_preprocessor_safety_car()
+    #     model = Pipeline([
+    #         ('preprocessor', preprocessor),
+    #         ('classifier', LogisticRegression(max_iter=1000))
+    #     ])
+    #     model.fit(X, y)
+    #     return model
     # st.dataframe(data[['grandPrixName', 'grandPrixYear', 'PredictedSafetyCarProbability']].sort_values(by='PredictedSafetyCarProbability', ascending=False))
     # st.dataframe(detailsOfNextRace[['grandPrixName', 'grandPrixYear', 'PredictedSafetyCarProbability']].sort_values(by='PredictedSafetyCarProbability', ascending=False), hide_index=True,  width=800, height=600,)
     # Display only the unique race-level prediction
@@ -3145,7 +3490,13 @@ if st.checkbox("Show Next Race"):
     #         'PredictedSafetyCarProbabilityPercentage': st.column_config.NumberColumn("Predicted Safety Car Probability (%)")
     # })
     # Predict for all prior races (historical)
+    # X_sc, y_sc = get_features_and_target_safety_car(safety_cars)
+    # safety_cars['PredictedSafetyCarProbability'] = safetycar_model.predict_proba(X_sc)[:, 1]
+    
     X_sc, y_sc = get_features_and_target_safety_car(safety_cars)
+    if X_sc.isnull().any().any():
+        # st.warning("Imputing missing values in X_sc before prediction.")
+        X_sc = X_sc.fillna(X_sc.mean(numeric_only=True))
     safety_cars['PredictedSafetyCarProbability'] = safetycar_model.predict_proba(X_sc)[:, 1]
     safety_cars['PredictedSafetyCarProbabilityPercentage'] = (safety_cars['PredictedSafetyCarProbability'] * 100).round(3)
 
@@ -3442,17 +3793,29 @@ if show_advanced:
         X_sc, y_sc = X_sc[mask_sc], y_sc[mask_sc]
         scores_sc = cross_val_score(safetycar_model, X_sc, y_sc, cv=5, scoring='roc_auc')
         st.write(f"Safety Car Model - Cross-validated ROC AUC (unique rows): {scores_sc.mean():.3f} (± {scores_sc.std():.3f})")
+
     if st.checkbox("Show Safety Car Data Importances"):
         st.subheader("Safety Car Feature Importance")
         # Get feature names and importances from the trained safetycar_model
         preprocessor = safetycar_model.named_steps['preprocessor']
         feature_names = preprocessor.get_feature_names_out()
         feature_names = [name.replace('num__', '').replace('cat__', '') for name in feature_names]
-        importances = safetycar_model.named_steps['classifier'].feature_importances_
-        if len(feature_names) == len(importances):
-            st.dataframe(pd.DataFrame({'Feature': feature_names, 'Importance (%)': importances * 100 }).sort_values('Importance (%)', ascending=False, ignore_index=True), width=800, hide_index=True)
-        else:
-            st.warning(f"Feature names and importances are not the same length! ({len(feature_names)} vs {len(importances)})")
+        importances = safetycar_model.named_steps['classifier'].coef_[0]
+
+        # Odds ratio: exp(coef)
+        odds_ratios = np.exp(importances)
+
+        # Probability change (approximate, for small coefficients): sigmoid(coef) - 0.5
+        prob_change = (1 / (1 + np.exp(-importances))) - 0.5
+
+        df = pd.DataFrame({
+            'Feature': feature_names,
+            'Coefficient': importances,
+            'Odds Ratio': odds_ratios,
+            'Prob Change (per unit)': prob_change
+        }).sort_values('Coefficient', key=np.abs, ascending=False, ignore_index=True)
+
+        st.dataframe(df, width=1000, hide_index=True)
 
     # --- Monte Carlo Feature Subset Search UI ---
     if st.checkbox("Run Monte Carlo Feature Subset Search"):
