@@ -686,7 +686,9 @@ season_summary_columns_to_display = {
 
 @st.cache_data
 def load_data(nrows):
-    fullResults = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t', nrows=nrows, usecols=['grandPrixYear', 'grandPrixName', 'resultsDriverName', 'resultsPodium', 'resultsTop5', 'resultsTop10', 'constructorName',  'resultsStartingGridPositionNumber', 'resultsFinalPositionNumber', 
+    # Read the header only to get all column names
+    all_columns = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t', nrows=0).columns.tolist()
+    selected_columns = ['grandPrixYear', 'grandPrixName', 'resultsDriverName', 'resultsPodium', 'resultsTop5', 'resultsTop10', 'constructorName',  'resultsStartingGridPositionNumber', 'resultsFinalPositionNumber', 
     'positionsGained', 'short_date', 'raceId_results', 'grandPrixRaceId', 'DNF', 'averagePracticePosition', 'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'q1End', 'q2End', 'q3Top10', 'resultsDriverId', 
     'grandPrixLaps', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 'resultsReasonRetired', 'constructorId_results', 
     'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'activeDriver', 'streetRace', 'trackRace', 'recent_form_3_races', 'recent_form_5_races', #'Points',
@@ -741,9 +743,13 @@ def load_data(nrows):
                                         'practice_position_vs_constructor_median_at_track','qualifying_position_vs_constructor_median_at_track',
                                         'practice_lap_time_consistency_vs_field','qualifying_lap_time_consistency_vs_field',
                                         'practice_position_vs_constructor_recent_form','qualifying_position_vs_constructor_recent_form','practice_position_vs_field_recent_form',
-                                        'qualifying_position_vs_field_recent_form', 'currentRookie', 'driver_constructor_id'
-           ], dtype={'resultsStartingGridPositionNumber': 'Float64', 'resultsFinalPositionNumber': 'Float64', 'positionsGained': 'Int64', 'averagePracticePosition': 'Float64', 'lastFPPositionNumber': 'Float64', 'resultsQualificationPositionNumber': 'Int64'})
+                                        'qualifying_position_vs_field_recent_form', 'currentRookie', 'driver_constructor_id']
+    bin_columns = [col for col in all_columns if col.endswith('_bin')]
+    usecols = selected_columns + bin_columns
+        #    ], dtype={'resultsStartingGridPositionNumber': 'Float64', 'resultsFinalPositionNumber': 'Float64', 'positionsGained': 'Int64', 'averagePracticePosition': 'Float64', 'lastFPPositionNumber': 'Float64', 'resultsQualificationPositionNumber': 'Int64'})
     
+    fullResults = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t', nrows=nrows, usecols=usecols)
+
     pitStops = pd.read_csv(path.join(DATA_DIR, 'f1PitStopsData_Grouped.csv'), sep='\t', nrows=nrows, usecols=['raceId', 'driverId', 'constructorId', 'numberOfStops', 'averageStopTime', 'totalStopTime'])
     constructor_standings = pd.read_csv(path.join(DATA_DIR, 'constructor_standings.csv'), sep='\t')
     driver_standings = pd.read_csv(path.join(DATA_DIR, 'driver_standings.csv'), sep='\t')
@@ -751,17 +757,18 @@ def load_data(nrows):
     fullResults = pd.merge(fullResults, pitStops, left_on=['raceId_results', 'resultsDriverId'], right_on=['raceId', 'driverId'], how='left', suffixes=['_results', '_pitStops'])
     fullResults = pd.merge(fullResults, constructor_standings, left_on='constructorId_results', right_on='id', how='left', suffixes=['_results', '_constructor_standings'])
     fullResults = pd.merge(fullResults, driver_standings, left_on='resultsDriverId', right_on='driverId', how='left', suffixes=['_results', '_driver_standings'])
+    
     # Select only the columns you want from weatherData
     weather_fields = ['id_races', 'average_temp', 'average_humidity', 'average_wind_speed', 'total_precipitation']  # add more as needed
     weatherData_subset = weatherData[weather_fields]
     fullResults = pd.merge(fullResults, weatherData_subset, left_on='raceId_results', right_on='id_races', how='left', suffixes=['_results', '_weather'])
-
     fullResults = pd.merge(fullResults, qualifying, left_on=['raceId_results', 'resultsDriverId'], right_on=['raceId', 'driverId'], how='left', suffixes=['_results_with_qualifying', '_qualifying'])
     fullResults.drop_duplicates(subset=['grandPrixYear', 'grandPrixName', 'resultsDriverName'], inplace=True)
 
     return fullResults
 
 data = load_data(10000)
+
 # Check for duplicate columns and remove them
 dupes = [col for col in data.columns if data.columns.tolist().count(col) > 1]
 if dupes:
@@ -950,14 +957,14 @@ exclusionList = exclusionList + auto_exclusions
 
 # all of the non-leaky fields from the fullResults dataset (9/19/2025)
 def get_features_and_target(data):
-    features = [ 'constructorName', 'grandPrixName', 'resultsDriverName', 'driver_constructor_id', 'resultsStartingGridPositionNumber',  
+    features = [ 'constructorName', 'grandPrixName', 'resultsDriverName',  'resultsStartingGridPositionNumber',  
     'averagePracticePosition', 'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'q1End', 'q2End', 'q3Top10',  
     'grandPrixLaps', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 
     'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'activeDriver', 'streetRace', 'trackRace', 'recent_form_3_races', 'recent_form_5_races', #'Points',
            'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums', 'bestQualifyingTime_sec', 'yearsActive', 'driverDNFCount', 'driverDNFAvg',
-           'best_s1_sec', 'best_s2_sec', 'best_s3_sec', 'best_theory_lap_sec', 'LapTime_sec', 'SpeedI1_mph', 'SpeedI2_mph', 'SpeedFL_mph', 'SpeedST_mph', 'avgLapPace',  'constructor_recent_form_3_races', 'constructor_recent_form_5_races',
-           'CleanAirAvg_FP1', 'DirtyAirAvg_FP1', 'Delta_FP1', 'CleanAirAvg_FP2', 'DirtyAirAvg_FP2', 'Delta_FP2', 'CleanAirAvg_FP3', 'DirtyAirAvg_FP3','Delta_FP3', 'delta_lap_2', 'delta_lap_5', 'delta_lap_10', 'delta_lap_15', 'delta_lap_20',
-            'pit_lane_time_constant', 'pit_stop_delta', 'engineManufacturerId', 'delta_from_race_avg', 'driverAge', 'finishing_position_std_driver', 'finishing_position_std_constructor',
+           'best_s1_sec', 'best_s2_sec', 'best_s3_sec', 'best_theory_lap_sec', 'LapTime_sec', 'SpeedI1_mph', 'SpeedI2_mph', 'SpeedFL_mph', 'SpeedST_mph',   'constructor_recent_form_3_races', 'constructor_recent_form_5_races',
+           'CleanAirAvg_FP1', 'DirtyAirAvg_FP1', 'Delta_FP1', 'CleanAirAvg_FP2', 'DirtyAirAvg_FP2', 'Delta_FP2', 'CleanAirAvg_FP3', 'DirtyAirAvg_FP3','Delta_FP3', #'delta_lap_2', 'delta_lap_5', 'delta_lap_10', 'delta_lap_15', 'delta_lap_20',
+             'engineManufacturerId', 'delta_from_race_avg', 'driverAge', 'finishing_position_std_driver', 'finishing_position_std_constructor',
             'delta_lap_2_historical', 'delta_lap_5_historical', 'delta_lap_10_historical', 'delta_lap_15_historical', 'delta_lap_20_historical', 'driver_positionsGained_5_races', 'driver_dnf_rate_5_races',
             'avg_final_position_per_track', 'last_final_position_per_track','avg_final_position_per_track_constructor', 
             'practice_position_improvement_1P_2P', 'practice_position_improvement_2P_3P', 'practice_position_improvement_1P_3P', 'practice_time_improvement_1T_2T', 'practice_time_improvement_time_time', 'practice_time_improvement_2T_3T', 'practice_time_improvement_1T_3T',
@@ -970,8 +977,8 @@ def get_features_and_target(data):
             'practice_improvement', 'qual_x_constructor_wins', 'practice_improvement_x_qual',  'grid_penalty', 'grid_penalty_x_constructor', 'recent_form_x_qual', 'practice_std_x_qual',
             'grid_x_constructor_rank','driver_rank_x_constructor_rank', 'qual_gap_to_teammate', 'practice_gap_to_teammate',
          'recent_form_ratio', 'constructor_form_ratio','total_experience','podium_potential','street_experience','track_experience',
-         'fp1_lap_delta_vs_best', 'grid_x_avg_pit_time', 'pit_count_x_pit_delta', 'pit_stop_rate', 'last_race_vs_track_avg',
-         'race_pace_vs_median', 'top_speed_rank', 'positions_gained_first_lap_pct',  'power_to_corner_ratio', 'historical_avgLapPace',
+         'fp1_lap_delta_vs_best', 'grid_x_avg_pit_time',  'last_race_vs_track_avg',
+          'top_speed_rank', 'positions_gained_first_lap_pct',  'power_to_corner_ratio', 'historical_avgLapPace',
          'practice_x_safetycar', 'pit_delta_x_driver_age', 'constructor_points_x_grid', 'dnf_rate_x_practice_std', 'constructor_recent_x_track_exp', 'driver_rank_x_years_active', 
                                          'top_speed_x_turns', 'grid_penalty_x_constructor_rank', 'average_practice_x_driver_podiums',
             'practice_improvement_vs_field', 'constructor_win_rate_3y', 'driver_podium_rate_3y', 'practice_consistency_std', 
@@ -1027,16 +1034,17 @@ def get_preprocessor_position():
         'engineManufacturerId', 
         'constructorName', 
         # 'resultsDriverName', 
-        'driver_constructor_id']
+        # 'driver_constructor_id'
+        ]
     numerical_features = [ 
 
                  'resultsStartingGridPositionNumber',  'averagePracticePosition', 'lastFPPositionNumber', 'resultsQualificationPositionNumber',  'q1End', 'q2End', 'q3Top10',
     'grandPrixLaps', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 
     'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'activeDriver', 'streetRace', 'trackRace', 'recent_form_3_races', 'recent_form_5_races', #'Points',
            'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums', 'bestQualifyingTime_sec', 'yearsActive', 'driverDNFCount', 'driverDNFAvg',
-           'best_s1_sec', 'best_s2_sec', 'best_s3_sec', 'best_theory_lap_sec', 'LapTime_sec', 'SpeedI1_mph', 'SpeedI2_mph', 'SpeedFL_mph', 'SpeedST_mph', 'avgLapPace', 'constructor_recent_form_3_races', 'constructor_recent_form_5_races',
-           'CleanAirAvg_FP1', 'DirtyAirAvg_FP1', 'Delta_FP1', 'CleanAirAvg_FP2', 'DirtyAirAvg_FP2', 'Delta_FP2', 'CleanAirAvg_FP3', 'DirtyAirAvg_FP3','Delta_FP3', 'delta_lap_2', 'delta_lap_5', 'delta_lap_10', 'delta_lap_15', 'delta_lap_20',
-            'pit_lane_time_constant', 'pit_stop_delta', 'delta_from_race_avg', 'driverAge', 'finishing_position_std_driver', 'finishing_position_std_constructor',
+           'best_s1_sec', 'best_s2_sec', 'best_s3_sec', 'best_theory_lap_sec', 'LapTime_sec', 'SpeedI1_mph', 'SpeedI2_mph', 'SpeedFL_mph', 'SpeedST_mph', 'constructor_recent_form_3_races', 'constructor_recent_form_5_races',
+           'CleanAirAvg_FP1', 'DirtyAirAvg_FP1', 'Delta_FP1', 'CleanAirAvg_FP2', 'DirtyAirAvg_FP2', 'Delta_FP2', 'CleanAirAvg_FP3', 'DirtyAirAvg_FP3','Delta_FP3', #'delta_lap_2', 'delta_lap_5', 'delta_lap_10', 'delta_lap_15', 'delta_lap_20',
+             'delta_from_race_avg', 'driverAge', 'finishing_position_std_driver', 'finishing_position_std_constructor',
             'delta_lap_2_historical', 'delta_lap_5_historical', 'delta_lap_10_historical', 'delta_lap_15_historical', 'delta_lap_20_historical', 'driver_positionsGained_5_races', 'driver_dnf_rate_5_races',
             'avg_final_position_per_track', 'last_final_position_per_track','avg_final_position_per_track_constructor', 'last_final_position_per_track_constructor',  'qualifying_gap_to_pole',
             'practice_position_improvement_1P_2P', 'practice_position_improvement_2P_3P', 'practice_position_improvement_1P_3P', 'practice_time_improvement_1T_2T', 'practice_time_improvement_time_time', 'practice_time_improvement_2T_3T', 'practice_time_improvement_1T_3T',
@@ -1049,8 +1057,8 @@ def get_preprocessor_position():
             'practice_improvement', 'qual_x_constructor_wins', 'practice_improvement_x_qual',  'grid_penalty', 'grid_penalty_x_constructor', 'recent_form_x_qual', 'practice_std_x_qual',
             'driver_rank_x_constructor_rank', 'grid_x_constructor_rank','practice_improvement_x_qual', 'qual_gap_to_teammate', 'practice_gap_to_teammate',
          'recent_form_ratio', 'constructor_form_ratio','total_experience','podium_potential','street_experience','track_experience',
-         'fp1_lap_delta_vs_best', 'grid_x_avg_pit_time', 'pit_count_x_pit_delta', 'pit_stop_rate', 'last_race_vs_track_avg',
-         'race_pace_vs_median', 'top_speed_rank', 'positions_gained_first_lap_pct',  'power_to_corner_ratio', 'historical_avgLapPace',
+         'fp1_lap_delta_vs_best', 'grid_x_avg_pit_time', 'last_race_vs_track_avg',
+          'top_speed_rank', 'positions_gained_first_lap_pct',  'power_to_corner_ratio', 'historical_avgLapPace',
          'practice_x_safetycar', 'pit_delta_x_driver_age', 'constructor_points_x_grid', 'dnf_rate_x_practice_std', 'constructor_recent_x_track_exp', 'driver_rank_x_years_active', 
                                          'top_speed_x_turns', 'grid_penalty_x_constructor_rank', 'average_practice_x_driver_podiums',
             'practice_improvement_vs_field', 'constructor_win_rate_3y', 'driver_podium_rate_3y', 'practice_consistency_std', 
@@ -2816,21 +2824,85 @@ if show_advanced:
 
         st.dataframe(feature_importances_df, hide_index=True, width=800)
 
+    if st.checkbox("Show Permutation Importance (Least Helpful Features)"):
+        st.subheader("Permutation Importance (Feature Impact on Model Error)")
+        from sklearn.inspection import permutation_importance
+
+        # Get features and target
+        X, y = get_features_and_target(data)
+        mask = y.notnull() & np.isfinite(y)
+        X, y = X[mask], y[mask]
+        preprocessor = get_preprocessor_position()
+        X_prep = preprocessor.fit_transform(X)
+
+        # Fit model
+        model = XGBRegressor(n_estimators=100, max_depth=4, n_jobs=-1, tree_method='hist', random_state=42)
+        model.fit(X_prep, y)
+
+        # Run permutation importance
+        result = permutation_importance(model, X_prep, y, n_repeats=10, random_state=42)
+        importances = result.importances_mean
+        feature_names = preprocessor.get_feature_names_out()
+        feature_names = [name.replace('num__', '').replace('cat__', '') for name in feature_names]
+
+        perm_df = pd.DataFrame({
+            'Feature': feature_names,
+            'Permutation Importance': importances
+        }).sort_values(by='Permutation Importance', ascending=True)
+
+        st.write("Features with lowest permutation importance (least helpful):")
+        st.dataframe(perm_df.head(50), hide_index=True, width=800)
+        st.write("Features with highest permutation importance (most helpful):")
+        st.dataframe(perm_df.tail(50).sort_values(by='Permutation Importance', ascending=False), hide_index=True, width=800)
+
+    if st.checkbox("Show High-Cardinality Features (Overfitting Risk)"):
+        st.subheader("High-Cardinality Features (Potential Overfitting Risk)")
+        X, _ = get_features_and_target(data)
+        cardinality = X.nunique().sort_values(ascending=False)
+        cardinality_df = pd.DataFrame({
+            'Feature': cardinality.index,
+            'Unique Values': cardinality.values
+        })
+        # Highlight features with >50 unique values (you can adjust this threshold)
+        cardinality_df['Risk'] = np.where(cardinality_df['Unique Values'] > 50, 'High', 'Low')
+        st.write("Features with high cardinality (many unique values) are more likely to cause overfitting, especially if they are IDs or post-event info.")
+        st.dataframe(cardinality_df, hide_index=True, width=800)
+
     if st.checkbox("Early Stopping Details"):
         st.subheader("Early Stopping & Most Important Feature")
 
         # 1. Where early stopping occurred
+        # mae_per_round = evals_result['eval']['absolute_error'] if 'absolute_error' in evals_result['eval'] else evals_result['eval']['mae']
+        # # best_round = model.best_iteration
+        
+        
+        # if hasattr(model, "best_iteration"):
+        #     best_round = model.best_iteration
+        #     lowest_mae = mae_per_round[best_round]
+        #     st.write(f"Early stopping occurred at round {best_round + 1} (lowest MAE: {lowest_mae:.4f})")
+        # else:
+        #     # For Booster object, use num_boosted_rounds if available
+        #     if hasattr(model, "num_boosted_rounds"):
+        #         best_round = model.num_boosted_rounds()
+        #         lowest_mae = mae_per_round[best_round]
+        #         st.write(f"Early stopping was not used. Model ran for {best_round} boosting rounds.")
+        #     else:
+        #         st.write("Early stopping was not used or best_iteration is not available.")
+        # # st.write(f"Early stopping occurred at round {best_round + 1} (lowest MAE: {lowest_mae:.4f})")
+        # st.line_chart(mae_per_round)
         mae_per_round = evals_result['eval']['absolute_error'] if 'absolute_error' in evals_result['eval'] else evals_result['eval']['mae']
-        best_round = model.best_iteration
+        best_round = int(np.argmin(mae_per_round))  # Index of lowest MAE
         lowest_mae = mae_per_round[best_round]
         st.write(f"Early stopping occurred at round {best_round + 1} (lowest MAE: {lowest_mae:.4f})")
         st.line_chart(mae_per_round)
+
 
         feature_names = preprocessor.get_feature_names_out()
         feature_names = [name.replace('num__', '').replace('cat__', '') for name in feature_names]
 
         # --- FIX: Define importances here ---
-        importances_dict = model.get_score(importance_type='weight')
+        # importances_dict = model.get_score(importance_type='weight')
+        importances_dict = model.get_booster().get_score(importance_type='weight')
         importances = []
         for i, name in enumerate(feature_names):
             importances.append(importances_dict.get(f'f{i}', 0))
@@ -2844,7 +2916,7 @@ if show_advanced:
 
         top_feature = feature_importances_df.iloc[0]
         st.write(f"Most important feature after training: **{top_feature['Feature']}** (Importance: {top_feature['Importance']})")
-        st.dataframe(feature_importances_df.head(20), hide_index=True, width=800)
+        st.dataframe(feature_importances_df.head(50), hide_index=True, width=800)
 
     if st.checkbox("Show Model Evaluation Metrics (slow)"):
         st.subheader("Model Evaluation Metrics")

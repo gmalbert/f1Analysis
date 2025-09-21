@@ -22,6 +22,39 @@ if os.environ.get('LOCAL_RUN') == '1':
 
     fastf1.Cache.enable_cache(path.join(DATA_DIR, 'f1_cache'))
 
+def quantile_bin_feature(df, feature, q=10, suffix='_bin', dropna=True):
+    """
+    Automatically bin a high-cardinality numeric feature into quantiles.
+
+    Parameters:
+    - df: pandas DataFrame containing the feature.
+    - feature: str, name of the column to bin.
+    - q: int, number of quantiles (default 10 for deciles).
+    - suffix: str, suffix for the new binned column (default '_bin').
+    - dropna: bool, if True, drop rows with NaN in the feature before binning.
+
+    Returns:
+    - df: DataFrame with a new column '<feature><suffix>' containing bin labels (0 to q-1).
+    """
+
+    # Optionally drop NaN values for binning
+    if dropna:
+        valid = df[feature].dropna()
+    else:
+        valid = df[feature]
+
+    # Use pd.qcut to bin into quantiles
+    try:
+        bins = pd.qcut(valid, q=q, labels=False, duplicates='drop')
+        # Reindex to original DataFrame
+        df[feature + suffix] = bins.reindex(df.index)
+    except ValueError as e:
+        print(f"Could not bin feature '{feature}': {e}")
+        df[feature + suffix] = np.nan
+
+    return df
+
+
 ## Results and Qualifying
 drivers = pd.read_json(path.join(DATA_DIR, 'f1db-drivers.json')) 
 race_results = pd.read_json(path.join(DATA_DIR, 'f1db-races-race-results.json')) 
@@ -55,8 +88,8 @@ qualifying_csv['FullName'] = qualifying_csv['FullName'].replace({'Andrea Kimi An
 
 # After loading practice files (if they have driverId or name)
 current_practices['resultsDriverId'] = current_practices['resultsDriverId'].str.replace('^andrea-', '', regex=True)
-current_practices['name'] = current_practices['name'].replace({'Andrea Kimi Antonelli': 'Kimi Antonelli'})
-current_practices['firstName'] = current_practices['firstName'].replace({'Andrea': 'Kimi'})
+# current_practices['name'] = current_practices['name'].replace({'Andrea Kimi Antonelli': 'Kimi Antonelli'})
+# current_practices['firstName'] = current_practices['firstName'].replace({'Andrea': 'Kimi'})
 
 # practice_best['driverId'] = practice_best['driverId'].str.replace('^andrea-', '', regex=True)
 # practice_best['resultsDriverName'] = practice_best['resultsDriverName'].replace({'Andrea Kimi Antonelli': 'Kimi Antonelli'})
@@ -185,7 +218,7 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying.rename(columns
 fp1_fp2 = pd.merge(fp1, fp2, on=['raceId', 'driverId'], how='left', suffixes=['_fp1', '_fp2'])
 fp1_fp2_fp3 = pd.merge(fp1_fp2, fp3, on=['raceId', 'driverId'], how='left', suffixes=['_fp1_2', '_fp3'])
 # fp1_fp2_fp3_fp4 = pd.merge(fp1_fp2_fp3, fp4, on=['raceId', 'driverId'], how='left', suffixes=['_fp1_fp2_fp3', '_fp4'])
-print(fp1_fp2_fp3.columns.tolist())
+# print(fp1_fp2_fp3.columns.tolist())
 
 fp1_fp2_fp3.rename(columns={'driverId': 'fpDriverId', 'raceId': 'fpRaceId', 'positionNumber_fp1': 'fp1PositionNumber', 'time_fp1': 'fp1Time', 'gap_fp1': 'fp1Gap', 'interval_fp1': 'fp1Interval', 
 'positionNumber_fp2': 'fp2PositionNumber', 'time_fp2': 'fp2Time', 'gap_fp2': 'fp2Gap', 'interval_fp2': 'fp2Interval', 
@@ -345,10 +378,15 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices 
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['pole_time_sec'] = pd.to_numeric(
     results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['pole_time_sec'], errors='coerce'
 )
-print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['pole_time_sec'].head())
+# print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['pole_time_sec'].head())
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['qualifying_gap_to_pole'] = (
     results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['best_qual_time'] -
     results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['pole_time_sec']
+)
+
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = quantile_bin_feature(
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices,
+    'qualifying_gap_to_pole', q=5
 )
 
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['q3Top10'] = (results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsQualificationPositionNumber'] <=10)
@@ -641,6 +679,8 @@ if 'points' in results_and_drivers_and_constructors_and_grandprix_and_qualifying
 elif 'points_y' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
     results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.rename(columns={'points_y': 'driverPoints'}, inplace=True)
 
+print(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns.tolist())
+
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['qual_x_constructor_wins'] = (
     results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsQualificationPositionNumber'] *
     results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['constructorTotalRaceWins']
@@ -756,7 +796,7 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
 if 'best_s2_sec' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
     results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['downforce_demand_score'] = (
         results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['best_s2_sec'] /
-        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['track_length']
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['courseLength']
     )
 
 # Calculate average and last final position per constructor per track
@@ -1982,6 +2022,108 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
     results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.groupby(['circuitId'])['resultsQualificationPositionNumber'].transform(lambda x: x.rolling(window=3, min_periods=1).mean().shift(1))
 )
 
+# Quantile binning for high-cardinality numerical features
+high_cardinality_features = [
+    "LapTime_sec",
+    "driverFastestPracticeLap_sec",
+    "bestQualifyingTime_sec",
+    "best_qual_time",
+    "best_theory_lap_sec",
+    "best_s3_sec",
+    "delta_from_race_avg",
+    "best_s2_sec",
+    "best_s1_sec",
+    "practice_qual_consistency_5r",
+    "fp1_lap_delta_vs_best",
+    "practice_lap_time_consistency_vs_field",
+    "practice_lap_time_consistency",
+    "grid_x_avg_pit_time",
+    "pit_delta_x_driver_age",
+    "practice_consistency_vs_teammate",
+    "Delta_FP2",
+    "CleanAirAvg_FP2",
+    "DirtyAirAvg_FP2",
+    "Delta_FP1",
+    "DirtyAirAvg_FP1",
+    "CleanAirAvg_FP1",
+    "practice_consistency_vs_constructor_historical",
+    "qualifying_lap_time_consistency_vs_field",
+    "teammate_qual_delta",
+    "fp1_lap_time_delta_to_best",
+    "teammate_practice_delta",
+    "practice_position_percentile_vs_constructor",
+    "practice_time_improvement_1T_2T",
+    "qualifying_lap_time_delta_to_constructor_best",
+    "qual_lap_time_consistency",
+    "practice_lap_time_delta_to_constructor_best",
+    "practice_time_improvement_2T_3T",
+    "practice_time_improvement_time_time",
+    "practice_lap_time_improvement_rate",
+    "practice_time_improvement_1T_3T",
+    "last_race_vs_track_avg",
+    "DirtyAirAvg_FP3",
+    "CleanAirAvg_FP3",
+    "Delta_FP3",
+    "practice_gap_to_teammate",
+    "qualifying_position_percentile_vs_constructor",
+    "practice_position_vs_teammate_historical",
+    "BestConstructorPracticeLap_sec",
+    "teammate_practice_delta_at_track",
+    "constructor_qual_consistency_5r",
+    "historical_avgLapPace",
+    "historical_race_pace_vs_median",
+    "practice_position_vs_field_recent_form",
+    "driver_teammate_practice_gap_3r",
+    "qual_gap_to_teammate",
+    "practice_improvement_vs_field",
+    "practice_improvement_vs_constructor_historical",
+    "dnf_rate_x_practice_std",
+    "qual_vs_track_avg",
+    "practice_improvement_vs_teammate",
+    "qualifying_position_vs_teammate_historical",
+    "qual_vs_constructor_avg_at_track",
+    "practice_position_vs_constructor_recent_form",
+    "driver_teammate_qual_gap_3r",
+    "practice_to_qual_improvement_rate",
+    "constructor_form_ratio",
+    "practice_std_x_qual",
+    "recent_form_ratio",
+    "recent_vs_season",
+    "qualifying_improvement_vs_constructor_historical",
+    "qual_vs_constructor_avg",
+    "qualifying_consistency_vs_constructor_historical",
+    "qual_improvement_vs_teammate",
+    "practice_improvement_vs_field_avg",
+    "fp3_vs_constructor_avg",
+    "constructor_recent_x_track_exp",
+    "constructor_practice_improvement_3r",
+    "average_practice_x_driver_podiums",
+    "grid_position_percentile",
+    "driver_practice_improvement_3r",
+    "power_to_corner_ratio",
+    "top_speed_x_turns",
+    "qualifying_position_percentile",
+    "qualPos_x_avg_practicePos",
+    "fp3_position_percentile",
+    "qual_improvement_vs_field_avg",
+    "practice_position_vs_constructor_median_at_track",
+    "practice_position_vs_field_median_at_track",
+    "practice_improvement_rate",
+    "practice_to_qualifying_delta_vs_constructor_historical",
+    "recent_form_x_qual",
+    "driver_avg_practice_pos_at_track",
+    "practice_vs_track_median",
+    "constructor_avg_practice_pos_at_track",
+    "practice_vs_best_at_track",
+    ]
+
+for field in high_cardinality_features:
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = quantile_bin_feature(
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices,
+        field, q=5
+    )
+
+
 # Check missing data before export
 missing_summary = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.isnull().sum()
 print("Missing values per column (only columns with missing data):")
@@ -1994,7 +2136,11 @@ print(missing_summary[missing_summary > 0].sort_values(ascending=False))
 #                                        'driverTotalRaceStarts', 'driverTotalPodiums', 'driverBestRaceResult',  'driverBestStartingGridPosition', 'driverTotalRaceLaps', 'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps',
 #                                        'driverTotalPodiums', 'constructorTotalPolePositions', 'constructorTotalFastestLaps', 'grandPrixLaps', 'turns', 'grandPrixYear', 'raceIdFromGrandPrix', 'grandPrixRaceId', 'short_date', 'DNF', 'driverTotalPolePositions', 'activeDriver']]
 
-results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.to_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), columns=['grandPrixYear', 'grandPrixName', 'raceId_results', 'circuitId', 'grandPrixRaceId', 'resultsDriverName', 'q1', 'q2', 'q3', 
+bin_fields = [col for col in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns if col.endswith('_bin')]
+
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.copy()
+
+static_columns=['grandPrixYear', 'grandPrixName', 'raceId_results', 'circuitId', 'grandPrixRaceId', 'resultsDriverName', 'q1', 'q2', 'q3', 
                                         'fp1Time', 'fp1Gap', 'fp1Interval', 'fp1PositionNumber', 'fp2Time', 'fp2Gap', 'fp2Interval', 'fp2PositionNumber', 'fp3Time', 'fp3Gap', 'fp3Interval', 'fp3PositionNumber',#'fp4Time', 'fp4Gap', 'fp4Interval', 
                                          'resultsPodium', 'resultsTop5', 'resultsTop10', 'resultsYear', 'constructorName',  'resultsStartingGridPositionNumber',   'constructorId_results',
                                       'positionsGained', 'resultsReasonRetired', 'constructorTotalRaceEntries', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotal1And2Finishes', 'constructorTotalPodiumRaces', 'round',
@@ -2002,7 +2148,7 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.
                                       'constructorTotalPolePositions', 'constructorTotalFastestLaps', 'grandPrixLaps', 'turns', 'short_date', 'DNF', 'fp1PositionNumber', 'fp2PositionNumber', 'streetRace', 'trackRace', 'avgLapPace', 'finishingTime', 'timeMillis_results', 'bestQualifyingTime',
                                      'fp3PositionNumber' ,'averagePracticePosition', 'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'q1End', 'q2End', 'q3Top10','resultsDriverId', 'driverTotalPolePositions', 'activeDriver', 'yearsActive',
                                       'LapTime_sec', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec', 'best_theory_lap_sec', 'SpeedI1_mph', 'SpeedI2_mph', 'SpeedFL_mph', 'SpeedST_mph', 'time', 'Session', 'driverDNFCount', 'driverDNFAvg', 'SafetyCarStatus', 
-                                      'resultsFinalPositionNumber','recent_form_3_races', 'recent_form_5_races', 'constructor_recent_form_3_races', 'constructor_recent_form_5_races', 
+                                      'resultsFinalPositionNumber','recent_form_3_races', 'recent_form_5_races', 'constructor_recent_form_3_races', 'constructor_recent_form_5_races', 'courseLength',
                                       'CleanAirAvg_FP1', 'DirtyAirAvg_FP1', 'Delta_FP1', 'CleanAirAvg_FP2', 'DirtyAirAvg_FP2', 'Delta_FP2', 'CleanAirAvg_FP3', 'DirtyAirAvg_FP3','Delta_FP3',  
                                        'numberOfStops', 'averageStopTime', 'totalStopTime', 'pit_lane_time_constant', 'pit_stop_delta', 'engineManufacturerId', 'delta_from_race_avg', 'driverAge',
                                        'finishing_position_std_driver', 'finishing_position_std_constructor', 'delta_lap_2', 'delta_lap_5', 'delta_lap_10', 'delta_lap_15', 'delta_lap_20',
@@ -2053,7 +2199,17 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.
                                         'practice_lap_time_consistency_vs_field','qualifying_lap_time_consistency_vs_field',
                                         'practice_position_vs_constructor_recent_form','qualifying_position_vs_constructor_recent_form','practice_position_vs_field_recent_form',
                                         'qualifying_position_vs_field_recent_form', 'currentRookie'
-                                          ], sep='\t', index=False)
+                                                                              ]
+
+# Concatenate static columns and bin_fields
+all_columns = static_columns + bin_fields
+
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.to_csv(
+    path.join(DATA_DIR, 'f1ForAnalysis.csv'),
+    columns=all_columns,
+    sep='\t',
+    index=False
+)
 
 # Copy your main DataFrame for safety car feature engineering
 safetycar_features = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.copy()
