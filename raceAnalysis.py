@@ -686,7 +686,9 @@ season_summary_columns_to_display = {
 
 @st.cache_data
 def load_data(nrows):
-    fullResults = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t', nrows=nrows, usecols=['grandPrixYear', 'grandPrixName', 'resultsDriverName', 'resultsPodium', 'resultsTop5', 'resultsTop10', 'constructorName',  'resultsStartingGridPositionNumber', 'resultsFinalPositionNumber', 
+    # Read the header only to get all column names
+    all_columns = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t', nrows=0).columns.tolist()
+    selected_columns = ['grandPrixYear', 'grandPrixName', 'resultsDriverName', 'resultsPodium', 'resultsTop5', 'resultsTop10', 'constructorName',  'resultsStartingGridPositionNumber', 'resultsFinalPositionNumber', 
     'positionsGained', 'short_date', 'raceId_results', 'grandPrixRaceId', 'DNF', 'averagePracticePosition', 'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'q1End', 'q2End', 'q3Top10', 'resultsDriverId', 
     'grandPrixLaps', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 'resultsReasonRetired', 'constructorId_results', 
     'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'activeDriver', 'streetRace', 'trackRace', 'recent_form_3_races', 'recent_form_5_races', #'Points',
@@ -741,9 +743,13 @@ def load_data(nrows):
                                         'practice_position_vs_constructor_median_at_track','qualifying_position_vs_constructor_median_at_track',
                                         'practice_lap_time_consistency_vs_field','qualifying_lap_time_consistency_vs_field',
                                         'practice_position_vs_constructor_recent_form','qualifying_position_vs_constructor_recent_form','practice_position_vs_field_recent_form',
-                                        'qualifying_position_vs_field_recent_form', 'currentRookie', 'driver_constructor_id'
-           ], dtype={'resultsStartingGridPositionNumber': 'Float64', 'resultsFinalPositionNumber': 'Float64', 'positionsGained': 'Int64', 'averagePracticePosition': 'Float64', 'lastFPPositionNumber': 'Float64', 'resultsQualificationPositionNumber': 'Int64'})
+                                        'qualifying_position_vs_field_recent_form', 'currentRookie', 'driver_constructor_id']
+    bin_columns = [col for col in all_columns if col.endswith('_bin')]
+    usecols = selected_columns + bin_columns
+        #    ], dtype={'resultsStartingGridPositionNumber': 'Float64', 'resultsFinalPositionNumber': 'Float64', 'positionsGained': 'Int64', 'averagePracticePosition': 'Float64', 'lastFPPositionNumber': 'Float64', 'resultsQualificationPositionNumber': 'Int64'})
     
+    fullResults = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t', nrows=nrows, usecols=usecols)
+
     pitStops = pd.read_csv(path.join(DATA_DIR, 'f1PitStopsData_Grouped.csv'), sep='\t', nrows=nrows, usecols=['raceId', 'driverId', 'constructorId', 'numberOfStops', 'averageStopTime', 'totalStopTime'])
     constructor_standings = pd.read_csv(path.join(DATA_DIR, 'constructor_standings.csv'), sep='\t')
     driver_standings = pd.read_csv(path.join(DATA_DIR, 'driver_standings.csv'), sep='\t')
@@ -751,17 +757,18 @@ def load_data(nrows):
     fullResults = pd.merge(fullResults, pitStops, left_on=['raceId_results', 'resultsDriverId'], right_on=['raceId', 'driverId'], how='left', suffixes=['_results', '_pitStops'])
     fullResults = pd.merge(fullResults, constructor_standings, left_on='constructorId_results', right_on='id', how='left', suffixes=['_results', '_constructor_standings'])
     fullResults = pd.merge(fullResults, driver_standings, left_on='resultsDriverId', right_on='driverId', how='left', suffixes=['_results', '_driver_standings'])
+    
     # Select only the columns you want from weatherData
     weather_fields = ['id_races', 'average_temp', 'average_humidity', 'average_wind_speed', 'total_precipitation']  # add more as needed
     weatherData_subset = weatherData[weather_fields]
     fullResults = pd.merge(fullResults, weatherData_subset, left_on='raceId_results', right_on='id_races', how='left', suffixes=['_results', '_weather'])
-
     fullResults = pd.merge(fullResults, qualifying, left_on=['raceId_results', 'resultsDriverId'], right_on=['raceId', 'driverId'], how='left', suffixes=['_results_with_qualifying', '_qualifying'])
     fullResults.drop_duplicates(subset=['grandPrixYear', 'grandPrixName', 'resultsDriverName'], inplace=True)
 
-    return fullResults
+    return fullResults, pitStops
 
-data = load_data(10000)
+data, pitStops = load_data(10000)
+
 # Check for duplicate columns and remove them
 dupes = [col for col in data.columns if data.columns.tolist().count(col) > 1]
 if dupes:
@@ -877,7 +884,7 @@ exclusionList = ['grandPrixRaceId', 'raceId_results',  'constructorId', 'driverI
                                          'practice_vs_best_at_track','qual_vs_best_at_track','practice_vs_worst_at_track','qual_vs_worst_at_track',
 
                                          'practice_position_percentile_vs_constructor','qualifying_position_percentile_vs_constructor','practice_lap_time_delta_to_constructor_best','qualifying_lap_time_delta_to_constructor_best',
-                                         'practice_position_vs_teammate_historical','qualifying_position_vs_teammate_historical','practice_improvement_vs_constructor_historical','qualifying_improvement_vs_constructor_historical',
+                                         'practice_position_vs_teammate_historical','qualifying_position_vs_teammate_historical_bin','practice_improvement_vs_constructor_historical','qualifying_improvement_vs_constructor_historical',
                                         'practice_consistency_vs_constructor_historical','qualifying_consistency_vs_constructor_historical',
                                         'practice_position_vs_field_best_at_track','qualifying_position_vs_field_best_at_track','practice_position_vs_field_worst_at_track',
                                         'qualifying_position_vs_field_worst_at_track', 'practice_position_vs_field_median_at_track','qualifying_position_vs_field_median_at_track',
@@ -890,7 +897,7 @@ exclusionList = ['grandPrixRaceId', 'raceId_results',  'constructorId', 'driverI
                                         'qualifying_position_vs_field_recent_form'                                     
         ]
 
-suffixes_to_exclude = ('_x', '_y', '_qualifying', '_results_with_qualifying', '_drivers', '_mph', '_sec', '.1', '.2', '.3')
+suffixes_to_exclude = ('_x', '_y', '_qualifying', '_results_with_qualifying', '_drivers', '_mph', '_sec', '.1', '.2', '.3', '_bin')
 auto_exclusions = [col for col in column_names if col.endswith(suffixes_to_exclude)]
 exclusionList = exclusionList + auto_exclusions
 
@@ -950,62 +957,62 @@ exclusionList = exclusionList + auto_exclusions
 
 # all of the non-leaky fields from the fullResults dataset (9/19/2025)
 def get_features_and_target(data):
-    features = [ 'constructorName', 'grandPrixName', 'resultsDriverName', 'driver_constructor_id', 'resultsStartingGridPositionNumber',  
-    'averagePracticePosition', 'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'q1End', 'q2End', 'q3Top10',  
+    features = [ 'constructorName', 'grandPrixName', 'resultsDriverName',  'resultsStartingGridPositionNumber',  
+    'averagePracticePosition_bin', 'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'q1End', 'q2End', 'q3Top10',  
     'grandPrixLaps', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 
-    'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'activeDriver', 'streetRace', 'trackRace', 'recent_form_3_races', 'recent_form_5_races', #'Points',
-           'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums', 'bestQualifyingTime_sec', 'yearsActive', 'driverDNFCount', 'driverDNFAvg',
-           'best_s1_sec', 'best_s2_sec', 'best_s3_sec', 'best_theory_lap_sec', 'LapTime_sec', 'SpeedI1_mph', 'SpeedI2_mph', 'SpeedFL_mph', 'SpeedST_mph', 'avgLapPace',  'constructor_recent_form_3_races', 'constructor_recent_form_5_races',
-           'CleanAirAvg_FP1', 'DirtyAirAvg_FP1', 'Delta_FP1', 'CleanAirAvg_FP2', 'DirtyAirAvg_FP2', 'Delta_FP2', 'CleanAirAvg_FP3', 'DirtyAirAvg_FP3','Delta_FP3', 'delta_lap_2', 'delta_lap_5', 'delta_lap_10', 'delta_lap_15', 'delta_lap_20',
-            'pit_lane_time_constant', 'pit_stop_delta', 'engineManufacturerId', 'delta_from_race_avg', 'driverAge', 'finishing_position_std_driver', 'finishing_position_std_constructor',
-            'delta_lap_2_historical', 'delta_lap_5_historical', 'delta_lap_10_historical', 'delta_lap_15_historical', 'delta_lap_20_historical', 'driver_positionsGained_5_races', 'driver_dnf_rate_5_races',
-            'avg_final_position_per_track', 'last_final_position_per_track','avg_final_position_per_track_constructor', 
-            'practice_position_improvement_1P_2P', 'practice_position_improvement_2P_3P', 'practice_position_improvement_1P_3P', 'practice_time_improvement_1T_2T', 'practice_time_improvement_time_time', 'practice_time_improvement_2T_3T', 'practice_time_improvement_1T_3T',
-            'driverFastestPracticeLap_sec', 'BestConstructorPracticeLap_sec', 'teammate_practice_delta', 'teammate_qual_delta', 'best_qual_time', 
+    'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'activeDriver', 'streetRace', 'trackRace', 'recent_form_3_races_bin', 'recent_form_5_races_bin', #'Points',
+           'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums', 'bestQualifyingTime_sec_bin', 'yearsActive', 'driverDNFCount', 'driverDNFAvg',
+           'best_s1_sec_bin', 'best_s2_sec_bin', 'best_s3_sec_bin', 'best_theory_lap_sec_bin', 'LapTime_sec_bin', 'SpeedI1_mph_bin', 'SpeedI2_mph_bin', 'SpeedFL_mph_bin', 'SpeedST_mph_bin',   'constructor_recent_form_3_races_bin', 'constructor_recent_form_5_races_bin',
+           'CleanAirAvg_FP1_bin', 'DirtyAirAvg_FP1_bin', 'Delta_FP1_bin', 'CleanAirAvg_FP2_bin', 'DirtyAirAvg_FP2_bin', 'Delta_FP2_bin', 'CleanAirAvg_FP3_bin', 'DirtyAirAvg_FP3_bin','Delta_FP3_bin', #'delta_lap_2', 'delta_lap_5', 'delta_lap_10', 'delta_lap_15', 'delta_lap_20',
+             'engineManufacturerId', 'delta_from_race_avg_bin', 'driverAge', 'finishing_position_std_driver', 'finishing_position_std_constructor',
+            'delta_lap_2_historical', 'delta_lap_5_historical', 'delta_lap_10_historical', 'delta_lap_15_historical', 'delta_lap_20_historical', 'driver_positionsGained_5_races_bin', 'driver_dnf_rate_5_races',
+            'avg_final_position_per_track_bin', 'last_final_position_per_track','avg_final_position_per_track_constructor_bin', 
+            'practice_position_improvement_1P_2P', 'practice_position_improvement_2P_3P', 'practice_position_improvement_1P_3P', 'practice_time_improvement_1T_2T_bin', 'practice_time_improvement_time_time_bin', 'practice_time_improvement_2T_3T_bin', 'practice_time_improvement_1T_3T_bin',
+            'driverFastestPracticeLap_sec_bin', 'BestConstructorPracticeLap_sec_bin', 'teammate_practice_delta_bin', 'teammate_qual_delta_bin', 'best_qual_time_bin', 
             'last_final_position_per_track_constructor',  'qualifying_gap_to_pole', 'qualifying_consistency_std',
-            'driver_starting_position_3_races', 'driver_starting_position_5_races', 
-                                       'qualPos_x_last_practicePos', 'qualPos_x_avg_practicePos', 'recent_form_median_3_races','recent_form_median_5_races', 
-                                       'recent_form_best_3_races', 'recent_form_worst_3_races', 'recent_dnf_rate_3_races', 'recent_positions_gained_3_races',
-           'driver_positionsGained_3_races', 'qual_vs_track_avg', 'constructor_avg_practice_position', 'practice_position_std', 'recent_vs_season',
-            'practice_improvement', 'qual_x_constructor_wins', 'practice_improvement_x_qual',  'grid_penalty', 'grid_penalty_x_constructor', 'recent_form_x_qual', 'practice_std_x_qual',
-            'grid_x_constructor_rank','driver_rank_x_constructor_rank', 'qual_gap_to_teammate', 'practice_gap_to_teammate',
-         'recent_form_ratio', 'constructor_form_ratio','total_experience','podium_potential','street_experience','track_experience',
-         'fp1_lap_delta_vs_best', 'grid_x_avg_pit_time', 'pit_count_x_pit_delta', 'pit_stop_rate', 'last_race_vs_track_avg',
-         'race_pace_vs_median', 'top_speed_rank', 'positions_gained_first_lap_pct',  'power_to_corner_ratio', 'historical_avgLapPace',
-         'practice_x_safetycar', 'pit_delta_x_driver_age', 'constructor_points_x_grid', 'dnf_rate_x_practice_std', 'constructor_recent_x_track_exp', 'driver_rank_x_years_active', 
-                                         'top_speed_x_turns', 'grid_penalty_x_constructor_rank', 'average_practice_x_driver_podiums',
-            'practice_improvement_vs_field', 'constructor_win_rate_3y', 'driver_podium_rate_3y', 'practice_consistency_std', 
-                                         'constructor_podium_ratio','practice_to_qualifying_delta', 'track_familiarity', 
-                                        'qualifying_position_percentile',   
-                                         'recent_podium_streak', 'grid_position_percentile', 'driver_age_squared', 'constructor_recent_win_streak', 'practice_improvement_rate', 'driver_constructor_synergy',
-                                        'qual_to_final_delta_5yr', 'qual_to_final_delta_3yr', 'overtake_potential_3yr', 'overtake_potential_5yr',
-                                        'driver_avg_qual_pos_at_track','constructor_avg_qual_pos_at_track','driver_avg_grid_pos_at_track','constructor_avg_grid_pos_at_track','driver_avg_practice_pos_at_track',
-                                         'constructor_avg_practice_pos_at_track','driver_qual_improvement_3r','constructor_qual_improvement_3r','driver_practice_improvement_3r','constructor_practice_improvement_3r',
-                                         'driver_teammate_qual_gap_3r','driver_teammate_practice_gap_3r','driver_street_qual_avg','driver_track_qual_avg','driver_street_practice_avg','driver_track_practice_avg',
+            'driver_starting_position_3_races_bin', 'driver_starting_position_5_races_bin', 
+                                       'qualPos_x_last_practicePos_bin', 'qualPos_x_avg_practicePos_bin', 'recent_form_median_3_races','recent_form_median_5_races', 
+                                       'recent_form_best_3_races', 'recent_form_worst_3_races', 'recent_dnf_rate_3_races', 'recent_positions_gained_3_races_bin',
+           'driver_positionsGained_3_races_bin', 'qual_vs_track_avg_bin', 'constructor_avg_practice_position_bin', 'practice_position_std_bin', 'recent_vs_season_bin',
+            'practice_improvement', 'qual_x_constructor_wins_bin', 'practice_improvement_x_qual_bin',  'grid_penalty', 'grid_penalty_x_constructor_bin', 'recent_form_x_qual_bin', 'practice_std_x_qual_bin',
+            'grid_x_constructor_rank_bin','driver_rank_x_constructor_rank', 'qual_gap_to_teammate_bin', 'practice_gap_to_teammate_bin',
+         'recent_form_ratio_bin', 'constructor_form_ratio_bin','total_experience_bin','podium_potential','street_experience','track_experience',
+         'fp1_lap_delta_vs_best_bin', 'grid_x_avg_pit_time_bin',  'last_race_vs_track_avg_bin',
+          'top_speed_rank_bin', 'positions_gained_first_lap_pct_bin',  'power_to_corner_ratio_bin', 'historical_avgLapPace_bin',
+         'practice_x_safetycar_bin', 'pit_delta_x_driver_age_bin', 'constructor_points_x_grid_bin', 'dnf_rate_x_practice_std_bin', 'constructor_recent_x_track_exp_bin', 'driver_rank_x_years_active', 
+                                         'top_speed_x_turns_bin', 'grid_penalty_x_constructor_rank', 'average_practice_x_driver_podiums_bin',
+            'practice_improvement_vs_field_bin', 'constructor_win_rate_3y', 'driver_podium_rate_3y', 'practice_consistency_std_bin', 
+                                         'constructor_podium_ratio','practice_to_qualifying_delta_bin', 'track_familiarity', 
+                                        'qualifying_position_percentile_bin',   
+                                         'recent_podium_streak', 'grid_position_percentile_bin', 'driver_age_squared', 'constructor_recent_win_streak', 'practice_improvement_rate_bin', 'driver_constructor_synergy',
+                                        'qual_to_final_delta_5yr_bin', 'qual_to_final_delta_3yr_bin', 'overtake_potential_3yr_bin', 'overtake_potential_5yr_bin',
+                                        'driver_avg_qual_pos_at_track_bin','constructor_avg_qual_pos_at_track_bin','driver_avg_grid_pos_at_track_bin','constructor_avg_grid_pos_at_track_bin','driver_avg_practice_pos_at_track_bin',
+                                         'constructor_avg_practice_pos_at_track_bin','driver_qual_improvement_3r_bin','constructor_qual_improvement_3r_bin','driver_practice_improvement_3r_bin','constructor_practice_improvement_3r_bin',
+                                         'driver_teammate_qual_gap_3r_bin','driver_teammate_practice_gap_3r_bin','driver_street_qual_avg','driver_track_qual_avg','driver_street_practice_avg','driver_track_practice_avg',
                                          'driver_high_wind_qual_avg','driver_high_wind_practice_avg','driver_high_humidity_qual_avg','driver_high_humidity_practice_avg','driver_wet_qual_avg','driver_wet_practice_avg',
                                          'driver_safetycar_qual_avg','driver_safetycar_practice_avg',
-                                         'races_with_constructor','is_first_season_with_constructor','driver_constructor_avg_final_position','driver_constructor_avg_qual_position','driver_constructor_podium_rate',
-                                         'constructor_dnf_rate_3_races', 'constructor_dnf_rate_5_races', 'recent_dnf_rate_5_races', 'historical_race_pace_vs_median',
+                                         'races_with_constructor_bin','is_first_season_with_constructor','driver_constructor_avg_final_position_bin','driver_constructor_avg_qual_position_bin','driver_constructor_podium_rate',
+                                         'constructor_dnf_rate_3_races', 'constructor_dnf_rate_5_races', 'recent_dnf_rate_5_races', 'historical_race_pace_vs_median_bin',
 
-                                         'practice_to_qual_improvement_rate','practice_consistency_vs_teammate','qual_vs_constructor_avg_at_track','fp1_lap_time_delta_to_best','q3_lap_time_delta_to_pole',
-                                         'fp3_position_percentile','constructor_practice_improvement_rate','practice_qual_consistency_5r','track_fp1_fp3_improvement',
-                                         'teammate_practice_delta_at_track','constructor_qual_consistency_5r','practice_vs_track_median','qual_vs_track_median','practice_lap_time_improvement_rate',
-                                         'practice_improvement_vs_field_avg','qual_improvement_vs_field_avg','practice_to_qual_position_delta','constructor_podium_rate_at_track','driver_podium_rate_at_track',
-                                         'fp3_vs_constructor_avg','qual_vs_constructor_avg','practice_lap_time_consistency','qual_lap_time_consistency','practice_improvement_vs_teammate','qual_improvement_vs_teammate',
-                                         'practice_vs_best_at_track','qual_vs_best_at_track','practice_vs_worst_at_track','qual_vs_worst_at_track',
+                                         'practice_to_qual_improvement_rate_bin','practice_consistency_vs_teammate_bin','qual_vs_constructor_avg_at_track_bin','fp1_lap_time_delta_to_best_bin','q3_lap_time_delta_to_pole',
+                                         'fp3_position_percentile_bin','constructor_practice_improvement_rate_bin','practice_qual_consistency_5r_bin','track_fp1_fp3_improvement_bin',
+                                         'teammate_practice_delta_at_track_bin','constructor_qual_consistency_5r_bin','practice_vs_track_median_bin','qual_vs_track_median','practice_lap_time_improvement_rate_bin',
+                                         'practice_improvement_vs_field_avg_bin','qual_improvement_vs_field_avg_bin','practice_to_qual_position_delta_bin','constructor_podium_rate_at_track','driver_podium_rate_at_track',
+                                         'fp3_vs_constructor_avg_bin','qual_vs_constructor_avg_bin','practice_lap_time_consistency_bin','qual_lap_time_consistency_bin','practice_improvement_vs_teammate_bin','qual_improvement_vs_teammate_bin',
+                                         'practice_vs_best_at_track_bin','qual_vs_best_at_track','practice_vs_worst_at_track_bin','qual_vs_worst_at_track',
 
-                                         'practice_position_percentile_vs_constructor','qualifying_position_percentile_vs_constructor','practice_lap_time_delta_to_constructor_best','qualifying_lap_time_delta_to_constructor_best',
-                                         'practice_position_vs_teammate_historical','qualifying_position_vs_teammate_historical','practice_improvement_vs_constructor_historical','qualifying_improvement_vs_constructor_historical',
-                                        'practice_consistency_vs_constructor_historical','qualifying_consistency_vs_constructor_historical',
-                                        'practice_position_vs_field_best_at_track','qualifying_position_vs_field_best_at_track','practice_position_vs_field_worst_at_track',
-                                        'qualifying_position_vs_field_worst_at_track', 'practice_position_vs_field_median_at_track','qualifying_position_vs_field_median_at_track',
-                                        'practice_to_qualifying_delta_vs_constructor_historical',
-                                        'practice_position_vs_constructor_best_at_track','qualifying_position_vs_constructor_best_at_track',
-                                        'practice_position_vs_constructor_worst_at_track','qualifying_position_vs_constructor_worst_at_track',
-                                        'practice_position_vs_constructor_median_at_track','qualifying_position_vs_constructor_median_at_track',
-                                        'practice_lap_time_consistency_vs_field','qualifying_lap_time_consistency_vs_field',
-                                        'practice_position_vs_constructor_recent_form','qualifying_position_vs_constructor_recent_form','practice_position_vs_field_recent_form',
-                                        'qualifying_position_vs_field_recent_form', 'currentRookie'
+                                         'practice_position_percentile_vs_constructor_bin','qualifying_position_percentile_vs_constructor_bin','practice_lap_time_delta_to_constructor_best_bin','qualifying_lap_time_delta_to_constructor_best_bin',
+                                         'practice_position_vs_teammate_historical_bin','qualifying_position_vs_teammate_historical_bin','practice_improvement_vs_constructor_historical_bin','qualifying_improvement_vs_constructor_historical_bin',
+                                        'practice_consistency_vs_constructor_historical_bin','qualifying_consistency_vs_constructor_historical_bin',
+                                        'practice_position_vs_field_best_at_track_bin','qualifying_position_vs_field_best_at_track','practice_position_vs_field_worst_at_track_bin',
+                                        'qualifying_position_vs_field_worst_at_track', 'practice_position_vs_field_median_at_track_bin','qualifying_position_vs_field_median_at_track',
+                                        'practice_to_qualifying_delta_vs_constructor_historical_bin',
+                                        'practice_position_vs_constructor_best_at_track_bin','qualifying_position_vs_constructor_best_at_track',
+                                        'practice_position_vs_constructor_worst_at_track_bin','qualifying_position_vs_constructor_worst_at_track',
+                                        'practice_position_vs_constructor_median_at_track_bin','qualifying_position_vs_constructor_median_at_track_bin',
+                                        'practice_lap_time_consistency_vs_field_bin','qualifying_lap_time_consistency_vs_field_bin',
+                                        'practice_position_vs_constructor_recent_form_bin','qualifying_position_vs_constructor_recent_form_bin','practice_position_vs_field_recent_form_bin',
+                                        'qualifying_position_vs_field_recent_form_bin', 'currentRookie'
 
             ]
     dupes = [col for col in features if features.count(col) > 1]
@@ -1027,66 +1034,308 @@ def get_preprocessor_position():
         'engineManufacturerId', 
         'constructorName', 
         # 'resultsDriverName', 
-        'driver_constructor_id']
-    numerical_features = [ 
+        # 'driver_constructor_id'
+        ]
+    
+    numerical_features = [
+    'resultsStartingGridPositionNumber',
+    'averagePracticePosition_bin',
+    'lastFPPositionNumber',
+    'resultsQualificationPositionNumber',
+    'q1End',
+    'q2End',
+    'q3Top10',
+    # 'grandPrixLaps',
+    'constructorTotalRaceStarts',
+    'constructorTotalRaceWins',
+    'constructorTotalPolePositions',
+    'turns',
+    'driverBestStartingGridPosition',
+    'driverBestRaceResult',
+    'driverTotalChampionshipWins',
+    'driverTotalPolePositions',
+    # 'activeDriver',
+    # 'streetRace',
+    'trackRace',
+    'recent_form_3_races_bin',
+    'recent_form_5_races_bin',
+    'driverTotalRaceEntries',
+    # 'driverTotalRaceStarts',
+    'driverTotalRaceWins',
+    'driverTotalRaceLaps',
+    'driverTotalPodiums',
+    'bestQualifyingTime_sec_bin',
+    'yearsActive',
+    'driverDNFCount',
+    'driverDNFAvg',
+    'best_s1_sec_bin',
+    'best_s2_sec_bin',
+    'best_s3_sec_bin',
+    'best_theory_lap_sec_bin',
+    'LapTime_sec_bin',
+    'SpeedI1_mph_bin',
+    'SpeedI2_mph_bin',
+    'SpeedFL_mph_bin',
+    'SpeedST_mph_bin',
+    'constructor_recent_form_3_races_bin',
+    'constructor_recent_form_5_races_bin',
+    'CleanAirAvg_FP1_bin',
+    'DirtyAirAvg_FP1_bin',
+    'Delta_FP1_bin',
+    'CleanAirAvg_FP2_bin',
+    'DirtyAirAvg_FP2_bin',
+    'Delta_FP2_bin',
+    'CleanAirAvg_FP3_bin',
+    'DirtyAirAvg_FP3_bin',
+    'Delta_FP3_bin',
+    'delta_from_race_avg_bin',
+    'driverAge',
+    'finishing_position_std_driver',
+    'finishing_position_std_constructor',
+    'delta_lap_2_historical',
+    'delta_lap_5_historical',
+    'delta_lap_10_historical',
+    'delta_lap_15_historical',
+    'delta_lap_20_historical',
+    'driver_positionsGained_5_races_bin',
+    'driver_dnf_rate_5_races',
+    'avg_final_position_per_track_bin',
+    'last_final_position_per_track',
+    'avg_final_position_per_track_constructor_bin',
+    'last_final_position_per_track_constructor',
+    'qualifying_gap_to_pole',
+    'practice_position_improvement_1P_2P',
+    'practice_position_improvement_2P_3P',
+    'practice_position_improvement_1P_3P',
+    'practice_time_improvement_1T_2T_bin',
+    'practice_time_improvement_time_time_bin',
+    'practice_time_improvement_2T_3T_bin',
+    'practice_time_improvement_1T_3T_bin',
+    'driverFastestPracticeLap_sec_bin',
+    'BestConstructorPracticeLap_sec_bin',
+    'teammate_practice_delta_bin',
+    'teammate_qual_delta_bin',
+    'best_qual_time_bin',
+    'qualifying_consistency_std',
+    'driver_starting_position_3_races_bin',
+    'driver_starting_position_5_races_bin',
+    'qualPos_x_last_practicePos_bin',
+    'qualPos_x_avg_practicePos_bin',
+    'recent_form_median_3_races',
+    'recent_form_median_5_races',
+    'recent_form_best_3_races',
+    'recent_form_worst_3_races',
+    'recent_dnf_rate_3_races',
+    'recent_positions_gained_3_races_bin',
+    'driver_positionsGained_3_races_bin',
+    'qual_vs_track_avg_bin',
+    'constructor_avg_practice_position_bin',
+    'practice_position_std_bin',
+    'recent_vs_season_bin',
+    'practice_improvement',
+    'qual_x_constructor_wins_bin',
+    'practice_improvement_x_qual_bin',
+    'grid_penalty',
+    'grid_penalty_x_constructor_bin',
+    'recent_form_x_qual_bin',
+    'practice_std_x_qual_bin',
+    'driver_rank_x_constructor_rank',
+    'grid_x_constructor_rank_bin',
+    'qual_gap_to_teammate_bin',
+    'practice_gap_to_teammate_bin',
+    'recent_form_ratio_bin',
+    'constructor_form_ratio_bin',
+    'total_experience_bin',
+    'podium_potential',
+    'street_experience',
+    'track_experience',
+    'fp1_lap_delta_vs_best_bin',
+    'grid_x_avg_pit_time_bin',
+    'last_race_vs_track_avg_bin',
+    'top_speed_rank_bin',
+    'positions_gained_first_lap_pct_bin',
+    'power_to_corner_ratio_bin',
+    'historical_avgLapPace_bin',
+    'practice_x_safetycar_bin',
+    'pit_delta_x_driver_age_bin',
+    'constructor_points_x_grid_bin',
+    'dnf_rate_x_practice_std_bin',
+    'constructor_recent_x_track_exp_bin',
+    'driver_rank_x_years_active',
+    'top_speed_x_turns_bin',
+    'grid_penalty_x_constructor_rank',
+    'average_practice_x_driver_podiums_bin',
+    'practice_improvement_vs_field_bin',
+    'constructor_win_rate_3y',
+    'driver_podium_rate_3y',
+    'practice_consistency_std_bin',
+    'constructor_podium_ratio',
+    'practice_to_qualifying_delta_bin',
+    'track_familiarity',
+    'recent_podium_streak',
+    'grid_position_percentile_bin',
+    # 'driver_age_squared',
+    'constructor_recent_win_streak',
+    'practice_improvement_rate_bin',
+    'driver_constructor_synergy',
+    'qual_to_final_delta_5yr_bin',
+    'qual_to_final_delta_3yr_bin',
+    'overtake_potential_3yr_bin',
+    'overtake_potential_5yr_bin',
+    'driver_avg_qual_pos_at_track_bin',
+    # 'constructor_avg_qual_pos_at_track_bin',
+    'driver_avg_grid_pos_at_track_bin',
+    'constructor_avg_grid_pos_at_track_bin',
+    'driver_avg_practice_pos_at_track_bin',
+    'constructor_avg_practice_pos_at_track_bin',
+    'driver_qual_improvement_3r_bin',
+    'constructor_qual_improvement_3r_bin',
+    'driver_practice_improvement_3r_bin',
+    'constructor_practice_improvement_3r_bin',
+    'driver_teammate_qual_gap_3r_bin',
+    'driver_teammate_practice_gap_3r_bin',
+    'driver_street_qual_avg',
+    'driver_track_qual_avg',
+    'driver_street_practice_avg',
+    # 'driver_track_practice_avg',
+    # 'driver_high_wind_qual_avg',
+    # 'driver_high_wind_practice_avg',
+    'driver_high_humidity_qual_avg',
+    'driver_high_humidity_practice_avg',
+    'driver_wet_qual_avg',
+    'driver_wet_practice_avg',
+    'driver_safetycar_qual_avg',
+    'driver_safetycar_practice_avg',
+    'races_with_constructor_bin',
+    'is_first_season_with_constructor',
+    'driver_constructor_avg_final_position_bin',
+    'driver_constructor_avg_qual_position_bin',
+    'driver_constructor_podium_rate',
+    'constructor_dnf_rate_3_races',
+    'constructor_dnf_rate_5_races',
+    'recent_dnf_rate_5_races',
+    'historical_race_pace_vs_median_bin',
+    'practice_to_qual_improvement_rate_bin',
+    'practice_consistency_vs_teammate_bin',
+    'qual_vs_constructor_avg_at_track_bin',
+    'fp1_lap_time_delta_to_best_bin',
+    'q3_lap_time_delta_to_pole',
+    'fp3_position_percentile_bin',
+    'qualifying_position_percentile_bin',
+    'constructor_practice_improvement_rate_bin',
+    'practice_qual_consistency_5r_bin',
+    'track_fp1_fp3_improvement_bin',
+    'teammate_practice_delta_at_track_bin',
+    'constructor_qual_consistency_5r_bin',
+    'practice_vs_track_median_bin',
+    'qual_vs_track_median',
+    'practice_lap_time_improvement_rate_bin',
+    'practice_improvement_vs_field_avg_bin',
+    'qual_improvement_vs_field_avg_bin',
+    'practice_to_qual_position_delta_bin',
+    'constructor_podium_rate_at_track',
+    'driver_podium_rate_at_track',
+    'fp3_vs_constructor_avg_bin',
+    'qual_vs_constructor_avg_bin',
+    'practice_lap_time_consistency_bin',
+    'qual_lap_time_consistency_bin',
+    'practice_improvement_vs_teammate_bin',
+    'qual_improvement_vs_teammate_bin',
+    'practice_vs_best_at_track_bin',
+    'qual_vs_best_at_track',
+    'practice_vs_worst_at_track_bin',
+    'qual_vs_worst_at_track',
+    'practice_position_percentile_vs_constructor_bin',
+    'qualifying_position_percentile_vs_constructor_bin',
+    'practice_lap_time_delta_to_constructor_best_bin',
+    # 'qualifying_lap_time_delta_to_constructor_best_bin',
+    # 'practice_position_vs_teammate_historical_bin',
+    # 'qualifying_position_vs_teammate_historical_bin',
+    'practice_improvement_vs_constructor_historical_bin',
+    'qualifying_improvement_vs_constructor_historical_bin',
+    'practice_consistency_vs_constructor_historical_bin', ### highly predictive
+    'qualifying_consistency_vs_constructor_historical_bin',
+    # 'practice_position_vs_field_best_at_track_bin',
+    'qualifying_position_vs_field_best_at_track', ### highly predictive
+    'practice_position_vs_field_worst_at_track_bin',
+    'qualifying_position_vs_field_worst_at_track',
+    'practice_position_vs_field_median_at_track_bin',
+    'qualifying_position_vs_field_median_at_track',
+    'practice_to_qualifying_delta_vs_constructor_historical_bin',
+    'practice_position_vs_constructor_best_at_track_bin',
+    'qualifying_position_vs_constructor_best_at_track',
+    # 'practice_position_vs_constructor_worst_at_track_bin',
+    'qualifying_position_vs_constructor_worst_at_track',
+    # 'practice_position_vs_constructor_median_at_track_bin',
+    # 'qualifying_position_vs_constructor_median_at_track',
+    'practice_lap_time_consistency_vs_field_bin',
+    'qualifying_lap_time_consistency_vs_field_bin',
+    # 'practice_position_vs_constructor_recent_form_bin',
+    'qualifying_position_vs_constructor_recent_form_bin',
+    'practice_position_vs_field_recent_form_bin',
+    'qualifying_position_vs_field_recent_form_bin',
+    # 'currentRookie'
+]
+    
+    # numerical_features = [ 
 
-                 'resultsStartingGridPositionNumber',  'averagePracticePosition', 'lastFPPositionNumber', 'resultsQualificationPositionNumber',  'q1End', 'q2End', 'q3Top10',
-    'grandPrixLaps', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 
-    'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'activeDriver', 'streetRace', 'trackRace', 'recent_form_3_races', 'recent_form_5_races', #'Points',
-           'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums', 'bestQualifyingTime_sec', 'yearsActive', 'driverDNFCount', 'driverDNFAvg',
-           'best_s1_sec', 'best_s2_sec', 'best_s3_sec', 'best_theory_lap_sec', 'LapTime_sec', 'SpeedI1_mph', 'SpeedI2_mph', 'SpeedFL_mph', 'SpeedST_mph', 'avgLapPace', 'constructor_recent_form_3_races', 'constructor_recent_form_5_races',
-           'CleanAirAvg_FP1', 'DirtyAirAvg_FP1', 'Delta_FP1', 'CleanAirAvg_FP2', 'DirtyAirAvg_FP2', 'Delta_FP2', 'CleanAirAvg_FP3', 'DirtyAirAvg_FP3','Delta_FP3', 'delta_lap_2', 'delta_lap_5', 'delta_lap_10', 'delta_lap_15', 'delta_lap_20',
-            'pit_lane_time_constant', 'pit_stop_delta', 'delta_from_race_avg', 'driverAge', 'finishing_position_std_driver', 'finishing_position_std_constructor',
-            'delta_lap_2_historical', 'delta_lap_5_historical', 'delta_lap_10_historical', 'delta_lap_15_historical', 'delta_lap_20_historical', 'driver_positionsGained_5_races', 'driver_dnf_rate_5_races',
-            'avg_final_position_per_track', 'last_final_position_per_track','avg_final_position_per_track_constructor', 'last_final_position_per_track_constructor',  'qualifying_gap_to_pole',
-            'practice_position_improvement_1P_2P', 'practice_position_improvement_2P_3P', 'practice_position_improvement_1P_3P', 'practice_time_improvement_1T_2T', 'practice_time_improvement_time_time', 'practice_time_improvement_2T_3T', 'practice_time_improvement_1T_3T',
-            'driverFastestPracticeLap_sec', 'BestConstructorPracticeLap_sec', 'teammate_practice_delta', 'teammate_qual_delta', 'best_qual_time',  
-             'qualifying_consistency_std',
-            'driver_starting_position_3_races', 'driver_starting_position_5_races', 
-                                       'qualPos_x_last_practicePos', 'qualPos_x_avg_practicePos', 'recent_form_median_3_races','recent_form_median_5_races', 
-                                       'recent_form_best_3_races', 'recent_form_worst_3_races', 'recent_dnf_rate_3_races', 'recent_positions_gained_3_races',
-             'driver_positionsGained_3_races', 'qual_vs_track_avg', 'constructor_avg_practice_position', 'practice_position_std', 'recent_vs_season',
-            'practice_improvement', 'qual_x_constructor_wins', 'practice_improvement_x_qual',  'grid_penalty', 'grid_penalty_x_constructor', 'recent_form_x_qual', 'practice_std_x_qual',
-            'driver_rank_x_constructor_rank', 'grid_x_constructor_rank','practice_improvement_x_qual', 'qual_gap_to_teammate', 'practice_gap_to_teammate',
-         'recent_form_ratio', 'constructor_form_ratio','total_experience','podium_potential','street_experience','track_experience',
-         'fp1_lap_delta_vs_best', 'grid_x_avg_pit_time', 'pit_count_x_pit_delta', 'pit_stop_rate', 'last_race_vs_track_avg',
-         'race_pace_vs_median', 'top_speed_rank', 'positions_gained_first_lap_pct',  'power_to_corner_ratio', 'historical_avgLapPace',
-         'practice_x_safetycar', 'pit_delta_x_driver_age', 'constructor_points_x_grid', 'dnf_rate_x_practice_std', 'constructor_recent_x_track_exp', 'driver_rank_x_years_active', 
-                                         'top_speed_x_turns', 'grid_penalty_x_constructor_rank', 'average_practice_x_driver_podiums',
-            'practice_improvement_vs_field', 'constructor_win_rate_3y', 'driver_podium_rate_3y', 'practice_consistency_std', 
-                                         'constructor_podium_ratio','practice_to_qualifying_delta', 'track_familiarity', 
+    #              'resultsStartingGridPositionNumber',  'averagePracticePosition_bin', 'lastFPPositionNumber', 'resultsQualificationPositionNumber',  'q1End', 'q2End', 'q3Top10',
+    # 'grandPrixLaps', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 
+    # 'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'activeDriver', 'streetRace', 'trackRace', 'recent_form_3_races_bin', 'recent_form_5_races_bin', #'Points',
+    #        'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums', 'bestQualifyingTime_sec_bin', 'yearsActive', 'driverDNFCount', 'driverDNFAvg',
+    #        'best_s1_sec_bin', 'best_s2_sec_bin', 'best_s3_sec_bin', 'best_theory_lap_sec_bin', 'LapTime_sec_bin', 'SpeedI1_mph_bin', 'SpeedI2_mph_bin', 'SpeedFL_mph_bin', 'SpeedST_mph_bin', 'constructor_recent_form_3_races_bin', 'constructor_recent_form_5_races_bin',
+    #        'CleanAirAvg_FP1_bin', 'DirtyAirAvg_FP1_bin', 'Delta_FP1_bin', 'CleanAirAvg_FP2_bin', 'DirtyAirAvg_FP2_bin', 'Delta_FP2_bin', 'CleanAirAvg_FP3_bin', 'DirtyAirAvg_FP3_bin','Delta_FP3_bin', #'delta_lap_2', 'delta_lap_5', 'delta_lap_10', 'delta_lap_15', 'delta_lap_20',
+    #          'delta_from_race_avg_bin', 'driverAge', 'finishing_position_std_driver', 'finishing_position_std_constructor',
+    #         'delta_lap_2_historical', 'delta_lap_5_historical', 'delta_lap_10_historical', 'delta_lap_15_historical', 'delta_lap_20_historical', 'driver_positionsGained_5_races_bin', 'driver_dnf_rate_5_races',
+    #         'avg_final_position_per_track_bin', 'last_final_position_per_track','avg_final_position_per_track_constructor_bin', 'last_final_position_per_track_constructor',  'qualifying_gap_to_pole',
+    #         'practice_position_improvement_1P_2P', 'practice_position_improvement_2P_3P', 'practice_position_improvement_1P_3P', 'practice_time_improvement_1T_2T_bin', 'practice_time_improvement_time_time_bin', 'practice_time_improvement_2T_3T_bin', 'practice_time_improvement_1T_3T_bin',
+    #         'driverFastestPracticeLap_sec_bin', 'BestConstructorPracticeLap_sec_bin', 'teammate_practice_delta_bin', 'teammate_qual_delta_bin', 'best_qual_time_bin',  
+    #          'qualifying_consistency_std',
+    #         'driver_starting_position_3_races_bin', 'driver_starting_position_5_races_bin', 
+    #                                    'qualPos_x_last_practicePos_bin', 'qualPos_x_avg_practicePos_bin', 'recent_form_median_3_races','recent_form_median_5_races', 
+    #                                    'recent_form_best_3_races', 'recent_form_worst_3_races', 'recent_dnf_rate_3_races', 'recent_positions_gained_3_races_bin',
+    #          'driver_positionsGained_3_races_bin', 'qual_vs_track_avg_bin', 'constructor_avg_practice_position_bin', 'practice_position_std_bin', 'recent_vs_season_bin',
+    #         'practice_improvement', 'qual_x_constructor_wins_bin', 'practice_improvement_x_qual_bin',  'grid_penalty', 'grid_penalty_x_constructor_bin', 'recent_form_x_qual_bin', 'practice_std_x_qual_bin',
+    #         'driver_rank_x_constructor_rank', 'grid_x_constructor_rank_bin', 'qual_gap_to_teammate_bin', 'practice_gap_to_teammate_bin',
+    #      'recent_form_ratio_bin', 'constructor_form_ratio_bin','total_experience_bin','podium_potential','street_experience','track_experience',
+    #      'fp1_lap_delta_vs_best_bin', 'grid_x_avg_pit_time_bin', 'last_race_vs_track_avg_bin',
+    #       'top_speed_rank_bin', 'positions_gained_first_lap_pct_bin',  'power_to_corner_ratio_bin', 'historical_avgLapPace_bin',
+    #      'practice_x_safetycar_bin', 'pit_delta_x_driver_age_bin', 'constructor_points_x_grid_bin', 'dnf_rate_x_practice_std_bin', 'constructor_recent_x_track_exp_bin', 'driver_rank_x_years_active', 
+    #                                      'top_speed_x_turns_bin', 'grid_penalty_x_constructor_rank', 'average_practice_x_driver_podiums_bin',
+    #         'practice_improvement_vs_field_bin', 'constructor_win_rate_3y', 'driver_podium_rate_3y', 'practice_consistency_std_bin', 
+    #                                      'constructor_podium_ratio','practice_to_qualifying_delta_bin', 'track_familiarity', 
                                          
-                                         'recent_podium_streak', 'grid_position_percentile', 'driver_age_squared', 'constructor_recent_win_streak', 'practice_improvement_rate', 'driver_constructor_synergy',
-                                        'qual_to_final_delta_5yr', 'qual_to_final_delta_3yr', 'overtake_potential_3yr', 'overtake_potential_5yr',
-                                        'driver_avg_qual_pos_at_track','constructor_avg_qual_pos_at_track','driver_avg_grid_pos_at_track','constructor_avg_grid_pos_at_track','driver_avg_practice_pos_at_track',
-                                         'constructor_avg_practice_pos_at_track','driver_qual_improvement_3r','constructor_qual_improvement_3r','driver_practice_improvement_3r','constructor_practice_improvement_3r',
-                                         'driver_teammate_qual_gap_3r','driver_teammate_practice_gap_3r','driver_street_qual_avg','driver_track_qual_avg','driver_street_practice_avg','driver_track_practice_avg',
-                                         'driver_high_wind_qual_avg','driver_high_wind_practice_avg','driver_high_humidity_qual_avg','driver_high_humidity_practice_avg','driver_wet_qual_avg','driver_wet_practice_avg',
-                                         'driver_safetycar_qual_avg','driver_safetycar_practice_avg',
-                                         'races_with_constructor','is_first_season_with_constructor','driver_constructor_avg_final_position','driver_constructor_avg_qual_position','driver_constructor_podium_rate',
-                                         'constructor_dnf_rate_3_races', 'constructor_dnf_rate_5_races', 'recent_dnf_rate_5_races', 'historical_race_pace_vs_median',
+    #                                      'recent_podium_streak', 'grid_position_percentile_bin', 'driver_age_squared', 'constructor_recent_win_streak', 'practice_improvement_rate_bin', 'driver_constructor_synergy',
+    #                                     'qual_to_final_delta_5yr_bin', 'qual_to_final_delta_3yr_bin', 'overtake_potential_3yr_bin', 'overtake_potential_5yr_bin',
+    #                                     'driver_avg_qual_pos_at_track_bin','constructor_avg_qual_pos_at_track_bin','driver_avg_grid_pos_at_track_bin','constructor_avg_grid_pos_at_track_bin','driver_avg_practice_pos_at_track_bin',
+    #                                      'constructor_avg_practice_pos_at_track_bin','driver_qual_improvement_3r_bin','constructor_qual_improvement_3r_bin','driver_practice_improvement_3r_bin','constructor_practice_improvement_3r_bin',
+    #                                      'driver_teammate_qual_gap_3r_bin','driver_teammate_practice_gap_3r_bin','driver_street_qual_avg','driver_track_qual_avg','driver_street_practice_avg','driver_track_practice_avg',
+    #                                      'driver_high_wind_qual_avg','driver_high_wind_practice_avg','driver_high_humidity_qual_avg','driver_high_humidity_practice_avg','driver_wet_qual_avg','driver_wet_practice_avg',
+    #                                      'driver_safetycar_qual_avg','driver_safetycar_practice_avg',
+    #                                      'races_with_constructor_bin','is_first_season_with_constructor','driver_constructor_avg_final_position_bin','driver_constructor_avg_qual_position_bin','driver_constructor_podium_rate',
+    #                                      'constructor_dnf_rate_3_races', 'constructor_dnf_rate_5_races', 'recent_dnf_rate_5_races', 'historical_race_pace_vs_median_bin',
 
-                                         'practice_to_qual_improvement_rate','practice_consistency_vs_teammate','qual_vs_constructor_avg_at_track','fp1_lap_time_delta_to_best','q3_lap_time_delta_to_pole',
-                                         'fp3_position_percentile','qualifying_position_percentile','constructor_practice_improvement_rate','practice_qual_consistency_5r','track_fp1_fp3_improvement',
-                                         'teammate_practice_delta_at_track','constructor_qual_consistency_5r','practice_vs_track_median','qual_vs_track_median','practice_lap_time_improvement_rate',
-                                         'practice_improvement_vs_field_avg','qual_improvement_vs_field_avg','practice_to_qual_position_delta','constructor_podium_rate_at_track','driver_podium_rate_at_track',
-                                         'fp3_vs_constructor_avg','qual_vs_constructor_avg','practice_lap_time_consistency','qual_lap_time_consistency','practice_improvement_vs_teammate','qual_improvement_vs_teammate',
-                                         'practice_vs_best_at_track','qual_vs_best_at_track','practice_vs_worst_at_track','qual_vs_worst_at_track',
+    #                                      'practice_to_qual_improvement_rate_bin','practice_consistency_vs_teammate_bin','qual_vs_constructor_avg_at_track_bin','fp1_lap_time_delta_to_best_bin','q3_lap_time_delta_to_pole',
+    #                                      'fp3_position_percentile_bin','qualifying_position_percentile_bin','constructor_practice_improvement_rate_bin','practice_qual_consistency_5r_bin','track_fp1_fp3_improvement_bin',
+    #                                      'teammate_practice_delta_at_track_bin','constructor_qual_consistency_5r_bin','practice_vs_track_median_bin','qual_vs_track_median','practice_lap_time_improvement_rate_bin',
+    #                                      'practice_improvement_vs_field_avg_bin','qual_improvement_vs_field_avg_bin','practice_to_qual_position_delta_bin','constructor_podium_rate_at_track','driver_podium_rate_at_track',
+    #                                      'fp3_vs_constructor_avg_bin','qual_vs_constructor_avg_bin','practice_lap_time_consistency_bin','qual_lap_time_consistency_bin','practice_improvement_vs_teammate_bin','qual_improvement_vs_teammate_bin',
+    #                                      'practice_vs_best_at_track_bin','qual_vs_best_at_track','practice_vs_worst_at_track_bin','qual_vs_worst_at_track',
 
-                                         'practice_position_percentile_vs_constructor','qualifying_position_percentile_vs_constructor','practice_lap_time_delta_to_constructor_best','qualifying_lap_time_delta_to_constructor_best',
-                                         'practice_position_vs_teammate_historical','qualifying_position_vs_teammate_historical','practice_improvement_vs_constructor_historical','qualifying_improvement_vs_constructor_historical',
-                                        'practice_consistency_vs_constructor_historical','qualifying_consistency_vs_constructor_historical',
-                                        'practice_position_vs_field_best_at_track','qualifying_position_vs_field_best_at_track','practice_position_vs_field_worst_at_track',
-                                        'qualifying_position_vs_field_worst_at_track', 'practice_position_vs_field_median_at_track','qualifying_position_vs_field_median_at_track',
-                                        'practice_to_qualifying_delta_vs_constructor_historical',
-                                        'practice_position_vs_constructor_best_at_track','qualifying_position_vs_constructor_best_at_track',
-                                        'practice_position_vs_constructor_worst_at_track','qualifying_position_vs_constructor_worst_at_track',
-                                        'practice_position_vs_constructor_median_at_track','qualifying_position_vs_constructor_median_at_track',
-                                        'practice_lap_time_consistency_vs_field','qualifying_lap_time_consistency_vs_field',
-                                        'practice_position_vs_constructor_recent_form','qualifying_position_vs_constructor_recent_form','practice_position_vs_field_recent_form',
-                                        'qualifying_position_vs_field_recent_form', 'currentRookie'
+    #                                      'practice_position_percentile_vs_constructor_bin','qualifying_position_percentile_vs_constructor_bin','practice_lap_time_delta_to_constructor_best_bin','qualifying_lap_time_delta_to_constructor_best_bin',
+    #                                      'practice_position_vs_teammate_historical_bin','qualifying_position_vs_teammate_historical_bin','practice_improvement_vs_constructor_historical_bin','qualifying_improvement_vs_constructor_historical_bin',
+    #                                     'practice_consistency_vs_constructor_historical_bin','qualifying_consistency_vs_constructor_historical_bin',
+    #                                     'practice_position_vs_field_best_at_track_bin','qualifying_position_vs_field_best_at_track','practice_position_vs_field_worst_at_track_bin',
+    #                                     'qualifying_position_vs_field_worst_at_track', 'practice_position_vs_field_median_at_track_bin','qualifying_position_vs_field_median_at_track',
+    #                                     'practice_to_qualifying_delta_vs_constructor_historical_bin',
+    #                                     'practice_position_vs_constructor_best_at_track_bin','qualifying_position_vs_constructor_best_at_track',
+    #                                     'practice_position_vs_constructor_worst_at_track_bin','qualifying_position_vs_constructor_worst_at_track',
+    #                                     'practice_position_vs_constructor_median_at_track_bin','qualifying_position_vs_constructor_median_at_track_bin',
+    #                                     'practice_lap_time_consistency_vs_field_bin','qualifying_lap_time_consistency_vs_field_bin',
+    #                                     'practice_position_vs_constructor_recent_form_bin','qualifying_position_vs_constructor_recent_form_bin','practice_position_vs_field_recent_form_bin',
+    #                                     'qualifying_position_vs_field_recent_form_bin', 'currentRookie'
          
-          ]
+    #       ]
 
 # 9/19/2025
 # def get_preprocessor_position():
@@ -1507,7 +1756,7 @@ def train_and_evaluate_model(data):
         dtrain,
         num_boost_round=200,
         evals=[(dtest, "eval")],
-        early_stopping_rounds=15,
+        early_stopping_rounds=20,
         evals_result=evals_result,
         verbose_eval=False,
     )
@@ -1608,12 +1857,41 @@ def monte_carlo_feature_selection(X, y, model_class, n_trials=50, min_features=8
         model = model_class()
         model.fit(X_train, y_train)
 
-        preprocessor = get_preprocessor_position()
-        preprocessor.fit(X_train)  # Fit on training data
+        # preprocessor = get_preprocessor_position()
+        # preprocessor.fit(X_train)  # Fit on training data
+        # X_test_prep = preprocessor.transform(X_test)
+
+        # Dynamically build preprocessor for the current subset
+        from sklearn.pipeline import Pipeline
+        from sklearn.compose import ColumnTransformer
+        from sklearn.preprocessing import StandardScaler, OneHotEncoder
+        from sklearn.impute import SimpleImputer
+
+        numerical_features = [col for col in X_train.columns if is_numeric_dtype(X_train[col])]
+        categorical_features = [col for col in X_train.columns if is_object_dtype(X_train[col])]
+
+        numerical_imputer = SimpleImputer(strategy='mean')
+        categorical_imputer = SimpleImputer(strategy='most_frequent')
+
+        preprocessor = ColumnTransformer(
+            transformers=[
+                ('num', Pipeline([
+                    ('imputer', numerical_imputer),
+                    ('scaler', StandardScaler())
+                ]), numerical_features),
+                ('cat', Pipeline([
+                    ('imputer', categorical_imputer),
+                    ('onehot', OneHotEncoder(handle_unknown='ignore'))
+                ]), categorical_features)
+            ]
+        )
+
+        preprocessor.fit(X_train)
         X_test_prep = preprocessor.transform(X_test)
 
-        y_pred = model.predict(xgb.DMatrix(X_test_prep))
-        
+        # y_pred = model.predict(xgb.DMatrix(X_test_prep))
+        y_pred = model.predict(X_test_prep)
+
         mae = mean_absolute_error(y_test, y_pred)
         results.append({'features': subset, 'mae': mae})
     return results
@@ -2698,6 +2976,85 @@ if st.checkbox("Show Next Race"):
     st.subheader(f"Constructor Performance in {nextRace['fullName'].head(1).values[0]}:")
     st.dataframe(individual_race_grouped_constructor, hide_index=True, width=800, height=600, column_config=individual_race_grouped_columns_to_display)
 
+     # Load raw pit stop data (individual stops)
+    pitstops = pd.read_json(path.join(DATA_DIR, 'f1db-races-pit-stops.json'))
+    pitstops = pitstops[pitstops['year'] >= 2018]  # Filter for recent years if needed
+    # Filter for all prior races at the same Grand Prix as the next race
+    # First, map raceId to grandPrixId using raceSchedule
+    
+    # st.write(raceSchedule.columns.to_list())
+    pitstops = pitstops.merge(
+        raceSchedule[['id_grandPrix', 'grandPrixId', 'year', 'round']],
+        left_on='raceId',
+        right_on='id_grandPrix',
+        how='left'
+    )
+    prior_gp_pitstops = pitstops[pitstops['grandPrixId'] == next_race_id].copy()
+
+    # st.write("Data columns:", data.columns.tolist())
+
+    if not prior_gp_pitstops.empty:
+        # Find the fastest individual pit stop per constructor per race
+        fastest_pitstops = (
+            prior_gp_pitstops.loc[
+                # prior_gp_pitstops.groupby(['raceId', 'constructorId_results'])['timeMillis'].idxmin()
+                prior_gp_pitstops.groupby(['raceId', 'constructorId'])['timeMillis'].idxmin()
+            ]
+            .sort_values(['raceId', 'constructorId', 'timeMillis'])
+        )
+        # st.write("Fastest pitstops columns:", fastest_pitstops.columns.tolist())
+        # Optionally, merge with constructor names if needed
+        if 'constructorName' in data.columns and 'constructorId' in fastest_pitstops.columns:
+            constructor_names = data[['constructorId_results', 'constructorName']].drop_duplicates()
+            fastest_pitstops = fastest_pitstops.merge(constructor_names, left_on='constructorId', right_on='constructorId_results', how='left')
+
+        # Convert milliseconds to seconds for display
+        fastest_pitstops['pitStopSeconds'] = (fastest_pitstops['timeMillis'] / 1000).round(3)
+
+        if 'year_x' in fastest_pitstops.columns and 'year' not in fastest_pitstops.columns:
+            fastest_pitstops = fastest_pitstops.rename(columns={'year_x': 'year'})
+        elif 'year_y' in fastest_pitstops.columns:
+            fastest_pitstops = fastest_pitstops.rename(columns={'year_y': 'year'})
+
+        if 'round_x' in fastest_pitstops.columns and 'round' not in fastest_pitstops.columns:
+            fastest_pitstops = fastest_pitstops.rename(columns={'round_x': 'round'})
+        elif 'round_y' in fastest_pitstops.columns:
+            fastest_pitstops = fastest_pitstops.rename(columns={'round_y': 'round'})
+
+        # fastest_pitstops['pit_lane_time_constant'] = fastest_pitstops['pitStopSeconds'] * 1.5
+
+        # Only assign if there is at least one value
+        pit_lane_vals = data[data['grandPrixRaceId'] == next_race_id]['pit_lane_time_constant']
+        if not pit_lane_vals.empty:
+            fastest_pitstops['pit_lane_time_constant'] = pit_lane_vals.iloc[0]
+        else:
+            fastest_pitstops['pit_lane_time_constant'] = np.nan
+
+        fastest_pitstops['pit_time_stationary'] = (fastest_pitstops['pitStopSeconds'] - fastest_pitstops['pit_lane_time_constant']).round(3)
+
+        st.subheader("Fastest Individual Pit Stop per Constructor")
+        st.write(f"Total number of fastest pit stops: {len(fastest_pitstops)}")
+        st.write(f"Pit Time Constant:" , fastest_pitstops['pit_lane_time_constant'].head(1).values[0] if not fastest_pitstops['pit_lane_time_constant'].isnull().all() else "N/A")
+        fastest_pitstops = fastest_pitstops.sort_values(by=['year', 'pitStopSeconds'], ascending=[False, True])
+        st.dataframe(
+            fastest_pitstops[['year', 'round', 'constructorName', 'lap', 'pitStopSeconds', 'pit_time_stationary']],
+            hide_index=True,
+            width=800,
+            column_config={
+                # 'raceId': st.column_config.NumberColumn("Race ID"),
+                'year': st.column_config.NumberColumn("Year"),
+                'round': st.column_config.NumberColumn("Round"),
+                'constructorName': st.column_config.TextColumn("Constructor"),
+                # 'driverId': st.column_config.TextColumn("Driver ID"),
+                'lap': st.column_config.NumberColumn("Lap"),
+                'pitStopSeconds': st.column_config.NumberColumn("Pit Stop (s)", format="%.3f"),
+                'pit_time_stationary': st.column_config.NumberColumn("Pit Time Stationary (s)", format="%.3f"),
+            }
+        )
+    else:
+        st.info("No individual pit stop data available for prior races at this Grand Prix.")
+
+
     weather_with_grandprix = weatherData[weatherData['grandPrixId'] == next_race_id]
     
     st.subheader(f"Weather Data for {weather_with_grandprix['fullName'].head(1).values[0]}:")
@@ -2705,6 +3062,7 @@ if st.checkbox("Show Next Race"):
 
     weather_with_grandprix = weather_with_grandprix.sort_values(by='short_date', ascending = False)
     st.dataframe(weather_with_grandprix, width=800, column_config=weather_columns_to_display, hide_index=True)
+    
 
 show_advanced = st.checkbox("Advanced Options:")
 
@@ -2816,20 +3174,85 @@ if show_advanced:
 
         st.dataframe(feature_importances_df, hide_index=True, width=800)
 
+    if st.checkbox("Show Permutation Importance (Least Helpful Features)"):
+        st.subheader("Permutation Importance (Feature Impact on Model Error)")
+        from sklearn.inspection import permutation_importance
+
+        # Get features and target
+        X, y = get_features_and_target(data)
+        mask = y.notnull() & np.isfinite(y)
+        X, y = X[mask], y[mask]
+        preprocessor = get_preprocessor_position()
+        X_prep = preprocessor.fit_transform(X)
+
+        # Fit model
+        model = XGBRegressor(n_estimators=100, max_depth=4, n_jobs=-1, tree_method='hist', random_state=42)
+        model.fit(X_prep, y)
+
+        # Run permutation importance
+        result = permutation_importance(model, X_prep, y, n_repeats=10, random_state=42)
+        importances = result.importances_mean
+        feature_names = preprocessor.get_feature_names_out()
+        feature_names = [name.replace('num__', '').replace('cat__', '') for name in feature_names]
+
+        perm_df = pd.DataFrame({
+            'Feature': feature_names,
+            'Permutation Importance': importances
+        }).sort_values(by='Permutation Importance', ascending=True)
+
+        st.write("Features with lowest permutation importance (least helpful):")
+        st.dataframe(perm_df.head(50), hide_index=True, width=800)
+        st.write("Features with highest permutation importance (most helpful):")
+        st.dataframe(perm_df.tail(50).sort_values(by='Permutation Importance', ascending=False), hide_index=True, width=800)
+
+    if st.checkbox("Show High-Cardinality Features (Overfitting Risk)"):
+        st.subheader("High-Cardinality Features (Potential Overfitting Risk)")
+        X, _ = get_features_and_target(data)
+        cardinality = X.nunique().sort_values(ascending=False)
+        cardinality_df = pd.DataFrame({
+            'Feature': cardinality.index,
+            'Unique Values': cardinality.values
+        })
+        # Highlight features with >50 unique values (you can adjust this threshold)
+        cardinality_df['Risk'] = np.where(cardinality_df['Unique Values'] > 50, 'High', 'Low')
+        st.write("Features with high cardinality (many unique values) are more likely to cause overfitting, especially if they are IDs or post-event info.")
+        st.dataframe(cardinality_df, hide_index=True, width=800)
+
     if st.checkbox("Early Stopping Details"):
         st.subheader("Early Stopping & Most Important Feature")
 
         # 1. Where early stopping occurred
+        # mae_per_round = evals_result['eval']['absolute_error'] if 'absolute_error' in evals_result['eval'] else evals_result['eval']['mae']
+        # # best_round = model.best_iteration
+        
+        
+        # if hasattr(model, "best_iteration"):
+        #     best_round = model.best_iteration
+        #     lowest_mae = mae_per_round[best_round]
+        #     st.write(f"Early stopping occurred at round {best_round + 1} (lowest MAE: {lowest_mae:.4f})")
+        # else:
+        #     # For Booster object, use num_boosted_rounds if available
+        #     if hasattr(model, "num_boosted_rounds"):
+        #         best_round = model.num_boosted_rounds()
+        #         lowest_mae = mae_per_round[best_round]
+        #         st.write(f"Early stopping was not used. Model ran for {best_round} boosting rounds.")
+        #     else:
+        #         st.write("Early stopping was not used or best_iteration is not available.")
+        # # st.write(f"Early stopping occurred at round {best_round + 1} (lowest MAE: {lowest_mae:.4f})")
+        # st.line_chart(mae_per_round)
         mae_per_round = evals_result['eval']['absolute_error'] if 'absolute_error' in evals_result['eval'] else evals_result['eval']['mae']
-        best_round = model.best_iteration
+        best_round = int(np.argmin(mae_per_round))  # Index of lowest MAE
         lowest_mae = mae_per_round[best_round]
         st.write(f"Early stopping occurred at round {best_round + 1} (lowest MAE: {lowest_mae:.4f})")
         st.line_chart(mae_per_round)
+
 
         feature_names = preprocessor.get_feature_names_out()
         feature_names = [name.replace('num__', '').replace('cat__', '') for name in feature_names]
 
         # --- FIX: Define importances here ---
+        # importances_dict = model.get_score(importance_type='weight')
+        # importances_dict = model.get_booster().get_score(importance_type='weight')
         importances_dict = model.get_score(importance_type='weight')
         importances = []
         for i, name in enumerate(feature_names):
@@ -2844,7 +3267,36 @@ if show_advanced:
 
         top_feature = feature_importances_df.iloc[0]
         st.write(f"Most important feature after training: **{top_feature['Feature']}** (Importance: {top_feature['Importance']})")
-        st.dataframe(feature_importances_df.head(20), hide_index=True, width=800)
+        st.dataframe(feature_importances_df.head(50), hide_index=True, width=800)
+
+    if st.checkbox("Compare Different Bin Counts (q)"):
+        from feature_lists import high_cardinality_features
+        st.subheader("Compare Quantile Bin Counts (q) for Binning Features")
+        q_values = st.multiselect("Select q values (number of bins)", [2, 3, 4, 5, 6, 7, 8, 9, 10], default=[2, 3, 4, 5, 6, 7, 8, 9, 10])
+        results = []
+        for q in q_values:
+            df = data.copy()
+            for col in high_cardinality_features:
+                try:
+                    df[f"{col}_bin"] = pd.qcut(df[col], q=q, labels=False, duplicates='drop')
+                except Exception as e:
+                    continue
+            X, y = get_features_and_target(df)
+            mask = y.notnull() & np.isfinite(y)
+            X, y = X[mask], y[mask]
+            # Convert object columns to category codes for XGBoost
+            for col in X.select_dtypes(include='object').columns:
+                X[col] = X[col].astype('category').cat.codes
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+            model = XGBRegressor(n_estimators=100, max_depth=4, n_jobs=-1, tree_method='hist', random_state=42)
+            model.fit(X_train, y_train)
+            y_pred = model.predict(X_test)
+            mae = mean_absolute_error(y_test, y_pred)
+            results.append({'q': q, 'MAE': mae})
+        results_df = pd.DataFrame(results).sort_values('q')
+        st.write("MAE for each bin count (q):")
+        st.dataframe(results_df, hide_index=True)
+        st.line_chart(results_df.set_index('q'))
 
     if st.checkbox("Show Model Evaluation Metrics (slow)"):
         st.subheader("Model Evaluation Metrics")
@@ -2908,7 +3360,7 @@ if show_advanced:
         feature_names = X.columns.tolist()
 
         # User controls
-        n_trials = st.number_input("Number of random trials", min_value=10, max_value=2000, value=50, step=10)
+        n_trials = st.number_input("Number of random trials", min_value=10, max_value=100000, value=50, step=10)
         min_features = st.number_input("Minimum features per trial", min_value=3, max_value=len(feature_names)-1, value=8, step=1)
         max_features = st.number_input(
         "Maximum features per trial",
