@@ -11,11 +11,13 @@ DATA_DIR = 'data_files/'
 current_year = datetime.datetime.now().year
 
 drivers = pd.read_json(path.join(DATA_DIR, 'f1db-drivers.json'))
+
+# Exclude 'jos-verstappen' as he is not Max Verstappen
+drivers = drivers[drivers['id'] != 'jos-verstappen']
+
 results = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t')
 races = pd.read_json(path.join(DATA_DIR, 'f1db-races.json')) 
 active_drivers = pd.read_csv(path.join(DATA_DIR, 'active_drivers.csv'), sep='\t')
-
-# print(active_drivers.columns.tolist())
 
 # Enable FastF1 caching
 fastf1.Cache.enable_cache(path.join(DATA_DIR, 'f1_cache'))
@@ -32,15 +34,7 @@ def add_teammate_delta(df, group_cols, value_col, new_col):
     Adds a column with the difference between each driver's value_col and their teammate's for each group.
     Only works for teams with exactly 2 drivers per group.
     """
-    # def teammate_diff(x):
-    #     if len(x) != 2:
-    #         return [None] * len(x)
-    #     return [x.iloc[0] - x.iloc[1], x.iloc[1] - x.iloc[0]]
-    # df[new_col] = (
-    #     df.groupby(group_cols)[value_col]
-    #     .transform(lambda x: teammate_diff(x) if len(x) == 2 else [None]*len(x))
-    # )
-    # return df
+
     def teammate_diff(x):
         if len(x) != 2:
             # Return a Series of None with the same length as x
@@ -77,13 +71,6 @@ if os.path.exists(csv_path):
         (int(y), int(r), str(s).upper())
         for y, r, s in zip(processed_df['Year'], processed_df['Round'], processed_df['Session'])
         )
-    # processed_sessions = set(
-    #     zip(
-    #         processed_df['Year'],
-    #         processed_df['Round'],
-    #         processed_df['Session']
-    #     )
-    # )
 else:
     processed_df = pd.DataFrame()
     processed_sessions = set()
@@ -153,11 +140,6 @@ for year in range(2018, current_year + 1):
                             all_laps.append(marker_row)
                             continue
 
-                        # Use all laps' telemetry, not just the fastest lap
-                        # tel = laps_drv.get_telemetry()
-                        # # if not tel.empty:
-                        # if len(tel) > 0:
-                        #     telemetry_all[abbreviation] = tel
 
                 def get_air_gap(lap, telemetry_all):
                     drv_tel = lap.get_telemetry()
@@ -170,11 +152,7 @@ for year in range(2018, current_year + 1):
                     for drv, tel in telemetry_all.items():
                         if drv == lap['Driver']:
                             continue
-                        # tel_point = tel[tel['Date'] == own_point['Date']]
-                        # if tel_point.empty:
-                        #     continue
-                        # other_pos = tel_point.iloc[0][['X', 'Y']]
-                        # Find the nearest timestamp in the other driver's telemetry
+
                         idx = (tel['Date'] - own_point['Date']).abs().idxmin()
                         tel_point = tel.loc[idx]
                         other_pos = tel_point[['X', 'Y']]
@@ -390,10 +368,6 @@ for year in range(2018, current_year + 1):
                     }
                     all_laps.append(marker_row)
 
-
-            # except Exception as e:
-            #     print(f"Skipping {session_type} for {year} round {round_number}: {e}")
-            #     continue  # Skip to the next session
             except Exception as e:
                 print(f"Skipping {session_type} for {year} round {round_number}: {e}")
                 marker_row = {
@@ -434,17 +408,11 @@ if all_laps:
     print("New records shape:", new_laps_df.shape)
     print("Combined shape:", combined_df.shape)
 
-    print("processed_df columns:", processed_df.columns.tolist())
     missing_cols = [col for col in ['Year', 'Round', 'Session', 'Driver'] if col not in processed_df.columns]
     if missing_cols:
         print("Missing columns in processed_df:", missing_cols)
         for col in missing_cols:
             processed_df[col] = pd.NA
-
-    # print("Existing rounds/sessions/drivers:")
-    # print(processed_df[['Year', 'Round', 'Session', 'Driver']].drop_duplicates())
-    # print("New rounds/sessions/drivers:")
-    # print(new_laps_df[['Year', 'Round', 'Session', 'Driver']].drop_duplicates())
 
     print("Existing sector times:")
     for col in ['best_s1_sec', 'best_s2_sec', 'best_s3_sec']:
@@ -454,20 +422,6 @@ if all_laps:
     print("New sector times:")
     print(new_laps_df[['Year', 'Round', 'Session', 'Driver', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec']].head())
     
-    # with open(path.join(DATA_DIR, 'debug_output.txt'), 'w') as f:
-    #     f.write("Processed (existing) shape: {}\n".format(processed_df.shape))
-    #     f.write("New records shape: {}\n".format(new_laps_df.shape))
-    #     f.write("Combined shape: {}\n".format(combined_df.shape))
-    #     f.write("Existing rounds/sessions/drivers:\n")
-    #     f.write(processed_df[['Year', 'Round', 'Session', 'Driver']].drop_duplicates().to_string())
-    #     f.write("\nNew rounds/sessions/drivers:\n")
-    #     f.write(new_laps_df[['Year', 'Round', 'Session', 'Driver']].drop_duplicates().to_string())
-    #     f.write("\nExisting sector times:\n")
-    #     f.write(processed_df[['Year', 'Round', 'Session', 'Driver', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec']].head().to_string())
-    #     f.write("\nNew sector times:\n")
-    #     f.write(new_laps_df[['Year', 'Round', 'Session', 'Driver', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec']].head().to_string())
-    
-    # combined_df.to_csv(path.join(DATA_DIR, 'debug_combined.csv'), sep='\t', index=False)
 
     if not processed_df.empty:
         dfs_to_concat = [df for df in [processed_df, new_laps_df] if not df.empty]
@@ -667,13 +621,11 @@ cols_to_drop = [col for col in all_practice_laps_with_driver_names.columns if co
 if cols_to_drop:
     all_practice_laps_with_driver_names = all_practice_laps_with_driver_names.drop(columns=cols_to_drop)
 
-# --- FIX for duplicate columns before iteration ---
 # Consolidate duplicate columns that cause the 'ambiguous truth value' error.
 # This happens from multiple merges. We keep the first instance of each column.
 all_practice_laps_with_driver_names = all_practice_laps_with_driver_names.loc[:,~all_practice_laps_with_driver_names.columns.duplicated()]
 
-# print(all_practice_laps_with_driver_names.columns.tolist())
-
+# Fill missing sector times from any matching row with same raceId and resultsDriverId
 for idx, row in all_practice_laps_with_driver_names.iterrows():
     if pd.notna(row['raceId']) and pd.notna(row['resultsDriverId']):
         for sector in ['best_s1_sec', 'best_s2_sec', 'best_s3_sec']:
@@ -693,7 +645,7 @@ for idx, row in all_practice_laps_with_driver_names.iterrows():
                     print("Mask is not boolean:", type(mask), mask.dtype)
                     continue
                 candidates = all_practice_laps_with_driver_names[mask]
-                # print("Type of candidates:", type(candidates))
+
                 # FIX: Check type before using .empty
                 if isinstance(candidates, pd.DataFrame) and len(candidates) > 0:
                     all_practice_laps_with_driver_names.at[idx, sector] = candidates.iloc[0][sector]
@@ -820,7 +772,6 @@ all_practice_laps_with_driver_names['best_theory_lap_diff_sec'] = pd.to_timedelt
 all_practice_laps_with_driver_names.to_csv(path.join(DATA_DIR, 'all_practice_laps.csv'), sep='\t', index=False)
 print("Saved all practice laps to all_practice_laps.csv")
 
-
 # --- Create slimmed-down best lap file for FP1/FP2 ---
 practice_sessions = ['FP1', 'FP2']
 fp_laps = all_practice_laps_with_driver_names[
@@ -843,7 +794,50 @@ for sector in ['best_s1_sec', 'best_s2_sec', 'best_s3_sec']:
     fp_laps_deduped[sector] = fp_laps_deduped[sector].combine_first(
         fp_laps.groupby(['Year', 'Round', 'Driver'])[sector].transform('first')
     )
-    
+
+# ...after you define fp_laps_final...
+
+# Ensure abbreviations are uppercase and stripped
+results['abbreviation'] = results['abbreviation'].astype(str).str.strip().str.upper()
+fp_laps_deduped['Driver'] = fp_laps_deduped['Driver'].astype(str).str.strip().str.upper()
+
+# Merge to fill driverId using raceId and Driver abbreviation
+fp_laps_deduped = pd.merge(
+    fp_laps_deduped,
+    results[['raceId_results', 'abbreviation', 'resultsDriverId']].drop_duplicates(),
+    left_on=['raceId', 'Driver'],
+    right_on=['raceId_results', 'abbreviation'],
+    how='left',
+    suffixes=('', '_from_results')
+)
+
+# Prefer the driverId from results if available
+fp_laps_deduped['driverId'] = fp_laps_deduped['resultsDriverId_from_results'].combine_first(fp_laps_deduped['driverId'])
+
+# print(fp_laps_deduped['driverId'].isnull().sum())
+# print(fp_laps_deduped['driverId'].unique())
+missing = fp_laps_deduped[fp_laps_deduped['driverId'].isnull()]
+
+# Ensure both are uppercase and stripped
+results['abbreviation'] = results['abbreviation'].astype(str).str.strip().str.upper()
+missing = missing.copy()
+missing['Driver'] = missing['Driver'].astype(str).str.strip().str.upper()
+
+# Try to find matches
+for idx, row in missing.iterrows():
+    match = results[
+        (results['raceId_results'] == row['raceId']) &
+        (results['abbreviation'] == row['Driver'])
+    ]
+
+active_drivers['abbreviation'] = active_drivers['abbreviation'].astype(str).str.strip().str.upper()
+driver_lookup = active_drivers.set_index('abbreviation')['driverId']
+
+mask_missing = fp_laps_deduped['driverId'].isnull()
+fp_laps_deduped.loc[mask_missing, 'driverId'] = fp_laps_deduped.loc[mask_missing, 'Driver'].map(driver_lookup)
+print("Still missing driverId count:", fp_laps_deduped['driverId'].isnull().sum())
+
+print(fp_laps_deduped[fp_laps_deduped['driverId'].isnull()]['Driver'].unique())
 # Select only the columns you want to keep
 columns_to_keep = [
     'Year', 'Round', 'raceId', 'Driver', 'driverId', 'LapTime_sec',

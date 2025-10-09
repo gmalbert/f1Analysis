@@ -56,6 +56,10 @@ def quantile_bin_feature(df, feature, q=10, suffix='_bin', dropna=True):
 
 ## Results and Qualifying
 drivers = pd.read_json(path.join(DATA_DIR, 'f1db-drivers.json')) 
+
+# Exclude 'jos-verstappen' as he is not Max Verstappen
+drivers = drivers[drivers['id'] != 'jos-verstappen']
+
 race_results = pd.read_json(path.join(DATA_DIR, 'f1db-races-race-results.json')) 
 races = pd.read_json(path.join(DATA_DIR, 'f1db-races.json')) 
 constructors = pd.read_json(path.join(DATA_DIR, 'f1db-constructors.json')) 
@@ -83,7 +87,6 @@ qualifying_csv['driverId'] = qualifying_csv['driverId'].str.replace('^andrea-', 
 qualifying_csv['FullName'] = qualifying_csv['FullName'].replace({'Andrea Kimi Antonelli': 'Kimi Antonelli'})
 
 # After loading race_results
-
 current_practices['resultsDriverId'] = current_practices['resultsDriverId'].str.replace('^andrea-', '', regex=True)
 
 driver_standings['driverId'] = driver_standings['driverId'].str.replace('^andrea-', '', regex=True)
@@ -485,8 +488,6 @@ team_avg_practice = results_and_drivers_and_constructors_and_grandprix_and_quali
 )['averagePracticePosition'].transform('mean')
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['constructor_avg_practice_position'] = team_avg_practice
 
-
-
 # Calculate practice session improvements for each driver
 for session_pair in [('fp1PositionNumber', 'fp2PositionNumber'), ('fp2PositionNumber', 'fp3PositionNumber'), ('fp1PositionNumber', 'fp3PositionNumber')]:
     col_name = f'practice_position_improvement_{session_pair[0][2:4]}_{session_pair[1][2:4]}'
@@ -721,7 +722,6 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices 
     right_on=['raceId', 'driverId'],
     how='left'
 ).drop_duplicates(['raceId_results', 'resultsDriverId'])
-
 
 # (Optional) Drop the merge keys from the reference if you don't want them in your final DataFrame
 # results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.drop(columns=['raceId', 'driverId'])
@@ -2041,13 +2041,29 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
 #     "constructor_qual_improvement_3r"
 #     ]
 
-from feature_lists import high_cardinality_features
+from feature_lists import (
+    high_cardinality_features_q2,
+    high_cardinality_features_q3,
+    high_cardinality_features_q5,
+    high_cardinality_features_q10plus
+)
 
-for field in high_cardinality_features:
-    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = quantile_bin_feature(
-        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices,
-        field, q=5
-    )
+# Map q_bin to the correct feature list
+high_cardinality_features_q = {
+    2: high_cardinality_features_q2,
+    3: high_cardinality_features_q3,
+    5: high_cardinality_features_q5,
+    10: high_cardinality_features_q10plus
+}
+
+q_lists = [2, 3, 5, 10]
+
+for q_bin in q_lists:
+    for field in high_cardinality_features_q[q_bin]:
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = quantile_bin_feature(
+            results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices,
+            field, q=q_bin
+        )
 
 
 # Check missing data before export
