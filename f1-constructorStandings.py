@@ -13,10 +13,13 @@ current_year = datetime.datetime.now().year
 
 constructors = pd.read_json(path.join(DATA_DIR, 'f1db-constructors.json')) 
 drivers = pd.read_json(path.join(DATA_DIR, 'f1db-drivers.json'))
+
+# Exclude 'jos-verstappen' as he is not Max Verstappen
+drivers = drivers[drivers['id'] != 'jos-verstappen']
+
 results = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t')
 grandPrix = pd.read_json(path.join(DATA_DIR, 'f1db-grands-prix.json')) 
 races = pd.read_json(path.join(DATA_DIR, 'f1db-races.json')) 
-
 
 fastf1.Cache.enable_cache(path.join(DATA_DIR, 'f1_cache'))
 
@@ -87,8 +90,11 @@ constructor_standings_with_mapping = pd.merge(constructors, all_constructor_stan
 active_drivers = pd.merge(results, drivers, left_on='resultsDriverId', right_on='id', how='inner')
 active_drivers = active_drivers[active_drivers['activeDriver'] == True]
 
-
+# print(active_drivers.head(20))
 active_drivers = pd.merge(active_drivers, drivers[['id', 'abbreviation']], left_on='resultsDriverId', right_on='id', how='left')
+active_drivers.to_csv(path.join(DATA_DIR, 'active_drivers_interim.csv'), sep='\t', index=False)
+# print(active_drivers.head(20))
+# print(active_drivers[active_drivers['resultsDriverId'].str.contains('Verstappen', case=False, na=False)]['resultsDriverId'].unique())
 
 if 'abbreviation' not in active_drivers.columns:
     if 'abbreviation_x' in active_drivers.columns:
@@ -98,8 +104,10 @@ if 'abbreviation' not in active_drivers.columns:
 
 driver_standings_with_mapping = pd.merge(active_drivers, all_driver_standings_df_sorted, left_on='abbreviation', right_on='Abbreviation', how='inner')
 
+# print(driver_standings_with_mapping[driver_standings_with_mapping['resultsDriverId'].str.contains('Verstappen', case=False, na=False)]['resultsDriverId'].unique())
+
 driver_standings_with_mapping = driver_standings_with_mapping[['resultsDriverId', 'name', 'Points', 'driverRank']].drop_duplicates()
-driver_standings_with_mapping = driver_standings_with_mapping.rename(columns={'resultsDriverId': 'driverId', 'name': 'driverName', 'Points': 'points', 'driverRank': 'driverRank'})
+driver_standings_with_mapping = driver_standings_with_mapping.rename(columns={'resultsDriverId': 'driverId', 'name': 'driverName', 'Points': 'points'})
 
 constructor_standings_with_mapping = constructor_standings_with_mapping.to_csv(path.join(DATA_DIR, 'constructor_standings.csv'), sep='\t', index=False)
 print("Saved constructor standings to constructor_standings.csv.")
