@@ -1,23 +1,23 @@
 # Typical total pit lane times (entry to exit, seconds) by grandPrixId (2015–present)
 # 2023 average was 24.62 (will be used when no other information is available)
 PIT_LANE_TIME_S = {
-    'australia': 22.0,
-    'bahrain': 21.0,
-    'saudi_arabia': 22.0,
+    'australia': 19.3,
+    'bahrain': 22.9,
+    'saudi_arabia': 19.2,
     'azerbaijan': 20.0,
-    'miami': 19.0,
-    'emilia-romagna': 25.0,  # Imola
-    'monaco': 20.0,
-    'spain': 21.0,
-    'canada': 19.0,
-    'austria': 18.0,
-    'britain': 21.0,
+    'miami': 19.9,
+    'emilia-romagna': 28.2,  # Imola
+    'monaco': 19.4,
+    'spain': 22.2,
+    'canada': 18.4,
+    'austria': 20.3,
+    'britain': 19.9,
     'hungary': 20.0,
-    'belgium': 21.0,
-    'netherlands': 20.0,
+    'belgium': 18.8,
+    'netherlands': 20.6,
     'italy': 18.0,  # Monza
     'singapore': 27.0,
-    'japan': 22.0,
+    'japan': 22.7,
     'usa': 20.0,  # Austin
     'mexico': 20.0,
     'brazil': 21.0,
@@ -34,7 +34,7 @@ PIT_LANE_TIME_S = {
     '70th_anniversary': 21.0,
     'europe': 20.0,
     'malaysia': 21.0,
-    'china': 21.0,
+    'china': 23.9,
     'india': 21.0,
     'korea': 21.0,
     'germany': 21.0,

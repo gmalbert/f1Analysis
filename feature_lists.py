@@ -191,6 +191,7 @@ high_cardinality_features_q10plus = [
     "historical_avgLapPace",
     "avg_final_position_per_track",
     "practice_position_percentile_vs_constructor",
+    
 ]
 
 # Combined list for use in raceAnalysis.py

@@ -23,8 +23,8 @@ ergast = Ergast(result_type='pandas', auto_cast=True)
 sprint_results_list = []
 
 # Loop through all seasons and rounds
-
-for i in range(2018, current_year + 1):
+# sprints were introduced in 2021
+for i in range(2021, current_year + 1):
     # Get the number of rounds in each season
     season_schedule = ergast.get_race_schedule(season=i)
 

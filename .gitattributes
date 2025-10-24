@@ -1,0 +1,20 @@
+# Enforce LF for cross-platform code
+*.py     text eol=lf
+*.sh     text eol=lf
+*.ipynb  text eol=lf
+*.ps1    text eol=lf
+
+# Enforce CRLF for Windows-native scripts
+*.bat    text eol=crlf
+*.cmd    text eol=crlf
+
+# Treat all other text files with automatic normalization
+*        text=auto
+
+# Binary files (no diffing or line-ending normalization)
+*.png    binary
+*.jpg    binary
+*.zip    binary
+*.pkl    binary
+*.h5     binary
+*.parquet binary

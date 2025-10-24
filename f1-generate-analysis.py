@@ -212,9 +212,27 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsPodium'] = (results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsFinalPositionNumber'] <=3)
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsTop5'] = (results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsFinalPositionNumber'] <=5)
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsTop10'] = (results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsFinalPositionNumber'] <=10)
+# results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['DNF'] = (results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsReasonRetired'].notnull())
+# results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driverDNFCount'] = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['DNFCount'].fillna(0).astype(int)
+# results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driverDNFAvg'] = (results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['DNFCount'].fillna(0).astype(int) / results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driverTotalRaceEntries'].fillna(1).astype(int))
+
+# ...existing code...
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['DNF'] = (results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsReasonRetired'].notnull())
-results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driverDNFCount'] = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['DNFCount'].fillna(0).astype(int)
-results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driverDNFAvg'] = (results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['DNFCount'].fillna(0).astype(int) / results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driverTotalRaceEntries'].fillna(1).astype(int))
+
+# Replace the previous direct use of DNFCount with a robust computation from the final DataFrame:
+driver_dnf_stats = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.groupby(
+    'resultsDriverId', dropna=False
+)['DNF'].agg(driverDNFCount='sum', driverDNFAvg='mean').reset_index()
+
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.merge(
+    driver_dnf_stats, on='resultsDriverId', how='left'
+)
+
+# ensure types and fill missing safely
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driverDNFCount'] = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driverDNFCount'].fillna(0).astype(int)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driverDNFAvg'] = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driverDNFAvg'].fillna(0.0).astype(float)
+
+
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['averagePracticePosition'] = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
     ['fp1PositionNumber', 'fp2PositionNumber', 'fp3PositionNumber']].mean(axis=1)
 
@@ -1892,6 +1910,61 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
     results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.groupby(['circuitId'])['resultsQualificationPositionNumber'].transform(lambda x: x.rolling(window=3, min_periods=1).mean().shift(1))
 )
 
+
+# Add to your feature engineering section:
+# Podium prediction features
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['podium_form_3_races'] = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.groupby('resultsDriverId')['resultsPodium'].rolling(3).mean().reset_index(level=0, drop=True)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['wins_last_5_races'] = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.groupby('resultsDriverId').apply(
+    lambda x: (x['resultsFinalPositionNumber'] == 1).rolling(5).sum()
+).reset_index(level=0, drop=True)
+
+# Championship position features
+# results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['championship_position'] = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.groupby(['grandPrixYear', 'resultsDriverId'])['Points'].rank(ascending=False)
+# results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['points_leader_gap'] = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.groupby('grandPrixYear')['Points'].transform('max') - results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['Points']
+# Championship position features (using driverPoints instead of Points)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['championship_position'] = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.groupby(['grandPrixYear', 'resultsDriverId'])['driverPoints'].rank(ascending=False)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['points_leader_gap'] = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.groupby('grandPrixYear')['driverPoints'].transform('max') - results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driverPoints']
+
+# Calculate pole to win rate per driver
+pole_to_win_rate = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.groupby('resultsDriverId').apply(
+    lambda x: ((x['resultsFinalPositionNumber'] == 1) & 
+               (x['resultsStartingGridPositionNumber'] == 1)).mean()
+).reset_index(name='pole_to_win_rate')
+
+# Calculate front row conversion rate per driver
+front_row_conversion = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.groupby('resultsDriverId').apply(
+    lambda x: ((x['resultsFinalPositionNumber'] <= 3) & 
+               (x['resultsStartingGridPositionNumber'] <= 2)).mean()
+).reset_index(name='front_row_conversion')
+
+# Merge these stats back into the main DataFrame
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = pd.merge(
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices,
+    pole_to_win_rate,
+    on='resultsDriverId',
+    how='left'
+)
+
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = pd.merge(
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices,
+    front_row_conversion,
+    on='resultsDriverId',
+    how='left'
+)
+
+# Calculate recent wins per driver (shifted to avoid leakage)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .sort_values(['resultsDriverId', 'grandPrixYear', 'raceId_results'])
+)
+
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['recent_wins_3_races'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .groupby('resultsDriverId')['resultsFinalPositionNumber']
+    .transform(lambda x: (x == 1).rolling(window=3, min_periods=1).sum().shift(1))
+)
+
+
 # Quantile binning for high-cardinality numerical features
 # high_cardinality_features = [
 #     "LapTime_sec",
@@ -2133,7 +2206,9 @@ static_columns=['grandPrixYear', 'grandPrixName', 'raceId_results', 'circuitId',
                                         'practice_position_vs_constructor_median_at_track','qualifying_position_vs_constructor_median_at_track',
                                         'practice_lap_time_consistency_vs_field','qualifying_lap_time_consistency_vs_field',
                                         'practice_position_vs_constructor_recent_form','qualifying_position_vs_constructor_recent_form','practice_position_vs_field_recent_form',
-                                        'qualifying_position_vs_field_recent_form', 'currentRookie'
+                                        'qualifying_position_vs_field_recent_form', 'currentRookie',
+                                        'podium_form_3_races', 'wins_last_5_races', 'championship_position', 'points_leader_gap',
+                                        'pole_to_win_rate', 'front_row_conversion', 'recent_wins_3_races'
                                                                               ]
 
 # Concatenate static columns and bin_fields

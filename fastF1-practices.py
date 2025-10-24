@@ -388,8 +388,89 @@ for year in range(2018, current_year + 1):
                 all_laps.append(marker_row)
                 continue  # Skip to the next session
 
-if all_laps:
-    new_laps_df = pd.DataFrame(all_laps)
+    if all_laps:
+        # new_laps_df = pd.DataFrame(all_laps)
+        # ...existing code...
+    # if all_laps:
+        from collections.abc import Iterable
+        print("DEBUG: type(all_laps) =", type(all_laps))
+
+        # Normalize each item into a plain dict/row before building the DataFrame
+        rows = []
+        for i, item in enumerate(all_laps):
+            try:
+                if isinstance(item, pd.Series):
+                    rows.append(item.to_dict())
+                    continue
+
+                if isinstance(item, dict):
+                    clean = {}
+                    for k, v in item.items():
+                        if isinstance(v, pd.Series):
+                            clean[k] = v.to_dict()
+                        elif hasattr(v, "to_dict") and not isinstance(v, (str, bytes)):
+                            try:
+                                clean[k] = v.to_dict()
+                            except Exception:
+                                clean[k] = v
+                        else:
+                            clean[k] = v
+                    rows.append(clean)
+                    continue
+
+                if isinstance(item, (list, tuple)):
+                    try:
+                        rows.append(dict(item))
+                        continue
+                    except Exception:
+                        rows.append({"_raw": item})
+                        continue
+
+                rows.append({"_raw": item})
+            except Exception as e:
+                rows.append({"_error_index": i, "_error": str(e), "_raw_repr": repr(item)})
+
+        try:
+            new_laps_df = pd.json_normalize(rows)
+        except Exception:
+            new_laps_df = pd.DataFrame(rows)
+
+        print("DEBUG: new_laps_df.shape =", getattr(new_laps_df, "shape", None))
+    else:
+        new_laps_df = pd.DataFrame()    
+    # if all_laps:
+    # # Defensive conversion for `all_laps` -> DataFrame to avoid dtype/dict shape errors
+    #     from collections.abc import Iterable
+    #     print("DEBUG: type(all_laps) =", type(all_laps))
+
+    #     if isinstance(all_laps, pd.DataFrame):
+    #         new_laps_df = all_laps.copy()
+    #     elif isinstance(all_laps, list):
+    #         new_laps_df = pd.DataFrame(all_laps)
+    #     elif isinstance(all_laps, dict):
+    #         try:
+    #             new_laps_df = pd.DataFrame.from_dict(all_laps, orient='index')
+    #             if new_laps_df.empty:
+    #                 raise ValueError("empty after orient='index'")
+    #         except Exception:
+    #             vals = list(all_laps.values())
+    #             if all(isinstance(v, dict) for v in vals):
+    #                 new_laps_df = pd.DataFrame(vals)
+    #             elif all(isinstance(v, (list, tuple, Iterable)) for v in vals):
+    #                 new_laps_df = pd.DataFrame(all_laps)
+    #             else:
+    #                 new_laps_df = pd.DataFrame([all_laps])
+    #     else:
+    #         try:
+    #             new_laps_df = pd.DataFrame(list(all_laps))
+    #         except Exception as e:
+    #             # Fallback: make a single-row DF containing the object representation
+    #             print(f"WARNING: cannot convert all_laps to table, wrapping as single row: {e}")
+    #             new_laps_df = pd.DataFrame([{'raw_all_laps': str(all_laps)}])
+
+    #     print("DEBUG: new_laps_df.shape =", getattr(new_laps_df, "shape", None))
+    # else:
+    #     new_laps_df = pd.DataFrame()
     # Combine new laps with previous processed laps, keeping all records
     # Debugging: Compare existing, new, and combined records
     if not processed_df.empty:
@@ -414,13 +495,32 @@ if all_laps:
         for col in missing_cols:
             processed_df[col] = pd.NA
 
+    # print("Existing sector times:")
+    # for col in ['best_s1_sec', 'best_s2_sec', 'best_s3_sec']:
+    #     if col not in processed_df.columns:
+    #         processed_df[col] = pd.NA
+    # print(processed_df[['Year', 'Round', 'Session', 'Driver', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec']].head())
+
     print("Existing sector times:")
     for col in ['best_s1_sec', 'best_s2_sec', 'best_s3_sec']:
         if col not in processed_df.columns:
             processed_df[col] = pd.NA
     print(processed_df[['Year', 'Round', 'Session', 'Driver', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec']].head())
+
+    # Diagnostic + defensive filler for new_laps_df
+    # print("DEBUG: new_laps_df.columns =", list(new_laps_df.columns))
+    cols_needed = ['Year', 'Round', 'Session', 'Driver', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec']
+    missing = [c for c in cols_needed if c not in new_laps_df.columns]
+    if missing:
+        # print("DEBUG: missing columns in new_laps_df:", missing)
+        for c in missing:
+            new_laps_df[c] = pd.NA
+
     print("New sector times:")
-    print(new_laps_df[['Year', 'Round', 'Session', 'Driver', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec']].head())
+    print(new_laps_df[cols_needed].head())
+
+    print("New sector times:")
+    # print(new_laps_df[['Year', 'Round', 'Session', 'Driver', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec']].head())
     
 
     if not processed_df.empty:
