@@ -3751,9 +3751,71 @@ if show_advanced:
             if len(winners_actual) > 0:
                 st.write(f"Race Winners (Position 1) - {len(winners_actual)} predictions")
                 st.write(f"MAE: {mean_absolute_error(winners_actual['Actual'], winners_actual['Predicted']):.3f}")
-                st.dataframe(winners_actual, hide_index=True, width=400)
+                
+                # Create a more informative display for winners
+                winners_display = winners_actual.copy()
+                winners_display['Prediction Error'] = winners_display['Predicted'] - 1.0
+                winners_display['Absolute Error'] = abs(winners_display['Prediction Error'])
+                
+                # Show only the relevant columns
+                st.dataframe(
+                    winners_display[['Predicted', 'Prediction Error', 'Absolute Error']].round(3), 
+                    hide_index=True, 
+                    width=600,
+                    column_config={
+                        'Predicted': st.column_config.NumberColumn("Predicted Position", format="%.3f"),
+                        'Prediction Error': st.column_config.NumberColumn("Error (Pred - 1)", format="%.3f"),
+                        'Absolute Error': st.column_config.NumberColumn("Absolute Error", format="%.3f")
+                    }
+                )
+                
+                # Add some summary stats
+                avg_prediction = winners_display['Predicted'].mean()
+                st.write(f"Average predicted position for winners: {avg_prediction:.3f}")
+                worst_prediction = winners_display['Predicted'].max()
+                st.write(f"Worst prediction for a winner: {worst_prediction:.3f}")
             else:
                 st.write("No race winners in test set")
+
+        with tab2:
+            if len(podium_actual) > 0:
+                st.write(f"Podium Finishers (Positions 1-3) - {len(podium_actual)} predictions")
+                st.write(f"MAE: {mean_absolute_error(podium_actual['Actual'], podium_actual['Predicted']):.3f}")
+                st.dataframe(podium_actual, hide_index=True, width=400)
+            else:
+                st.write("No podium finishers in test set")
+
+        with tab3:
+            if len(points_actual) > 0:
+                st.write(f"Points Positions (1-10) - {len(points_actual)} predictions")
+                st.write(f"MAE: {mean_absolute_error(points_actual['Actual'], points_actual['Predicted']):.3f}")
+                st.dataframe(points_actual, hide_index=True, width=400)
+            else:
+                st.write("No points positions in test set")
+
+        with tab4:
+            if len(mid_field_actual) > 0:
+                st.write(f"Mid-field (Positions 11-15) - {len(mid_field_actual)} predictions")
+                st.write(f"MAE: {mean_absolute_error(mid_field_actual['Actual'], mid_field_actual['Predicted']):.3f}")
+                st.dataframe(mid_field_actual, hide_index=True, width=400)
+            else:
+                st.write("No mid-field positions in test set")
+
+        with tab5:
+            if len(back_actual) > 0:
+                st.write(f"Back of Field (Positions 16-20) - {len(back_actual)} predictions")
+                st.write(f"MAE: {mean_absolute_error(back_actual['Actual'], back_actual['Predicted']):.3f}")
+                st.dataframe(back_actual, hide_index=True, width=400)
+            else:
+                st.write("No back of field positions in test set")
+
+        with tab6:
+            if len(bottom_10_actual) > 0:
+                st.write(f"Bottom 10 (Positions 11-20) - {len(bottom_10_actual)} predictions")
+                st.write(f"MAE: {mean_absolute_error(bottom_10_actual['Actual'], bottom_10_actual['Predicted']):.3f}")
+                st.dataframe(bottom_10_actual, hide_index=True, width=400)
+            else:
+                st.write("No bottom 10 positions in test set")
 
         # Display the data
         st.dataframe(mae_df, hide_index=True, width=600)
