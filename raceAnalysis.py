@@ -3781,7 +3781,29 @@ if show_advanced:
             if len(podium_actual) > 0:
                 st.write(f"Podium Finishers (Positions 1-3) - {len(podium_actual)} predictions")
                 st.write(f"MAE: {mean_absolute_error(podium_actual['Actual'], podium_actual['Predicted']):.3f}")
-                st.dataframe(podium_actual, hide_index=True, width=400)
+                
+                # Create enhanced display for podium finishers
+                podium_display = podium_actual.copy()
+                podium_display['Prediction Error'] = podium_display['Predicted'] - podium_display['Actual']
+                podium_display['Absolute Error'] = abs(podium_display['Prediction Error'])
+                
+                st.dataframe(
+                    podium_display[['Actual', 'Predicted', 'Prediction Error', 'Absolute Error']].round(3), 
+                    hide_index=True, 
+                    width=600,
+                    column_config={
+                        'Actual': st.column_config.NumberColumn("Actual Position", format="%.0f"),
+                        'Predicted': st.column_config.NumberColumn("Predicted Position", format="%.3f"),
+                        'Prediction Error': st.column_config.NumberColumn("Error (Pred - Actual)", format="%.3f"),
+                        'Absolute Error': st.column_config.NumberColumn("Absolute Error", format="%.3f")
+                    }
+                )
+                
+                # Summary stats
+                avg_prediction = podium_display['Predicted'].mean()
+                avg_error = podium_display['Prediction Error'].mean()
+                st.write(f"Average predicted position: {avg_prediction:.3f}")
+                st.write(f"Average prediction error: {avg_error:.3f} ({'over-predicting' if avg_error > 0 else 'under-predicting'})")
             else:
                 st.write("No podium finishers in test set")
 
@@ -3789,7 +3811,31 @@ if show_advanced:
             if len(points_actual) > 0:
                 st.write(f"Points Positions (1-10) - {len(points_actual)} predictions")
                 st.write(f"MAE: {mean_absolute_error(points_actual['Actual'], points_actual['Predicted']):.3f}")
-                st.dataframe(points_actual, hide_index=True, width=400)
+                
+                # Create enhanced display for points positions
+                points_display = points_actual.copy()
+                points_display['Prediction Error'] = points_display['Predicted'] - points_display['Actual']
+                points_display['Absolute Error'] = abs(points_display['Prediction Error'])
+                
+                st.dataframe(
+                    points_display[['Actual', 'Predicted', 'Prediction Error', 'Absolute Error']].round(3), 
+                    hide_index=True, 
+                    width=600,
+                    column_config={
+                        'Actual': st.column_config.NumberColumn("Actual Position", format="%.0f"),
+                        'Predicted': st.column_config.NumberColumn("Predicted Position", format="%.3f"),
+                        'Prediction Error': st.column_config.NumberColumn("Error (Pred - Actual)", format="%.3f"),
+                        'Absolute Error': st.column_config.NumberColumn("Absolute Error", format="%.3f")
+                    }
+                )
+                
+                # Summary stats
+                avg_prediction = points_display['Predicted'].mean()
+                avg_error = points_display['Prediction Error'].mean()
+                worst_error = points_display['Absolute Error'].max()
+                st.write(f"Average predicted position: {avg_prediction:.3f}")
+                st.write(f"Average prediction error: {avg_error:.3f} ({'over-predicting' if avg_error > 0 else 'under-predicting'})")
+                st.write(f"Worst absolute error: {worst_error:.3f}")
             else:
                 st.write("No points positions in test set")
 
@@ -3797,7 +3843,31 @@ if show_advanced:
             if len(mid_field_actual) > 0:
                 st.write(f"Mid-field (Positions 11-15) - {len(mid_field_actual)} predictions")
                 st.write(f"MAE: {mean_absolute_error(mid_field_actual['Actual'], mid_field_actual['Predicted']):.3f}")
-                st.dataframe(mid_field_actual, hide_index=True, width=400)
+                
+                # Create enhanced display for mid-field positions
+                mid_field_display = mid_field_actual.copy()
+                mid_field_display['Prediction Error'] = mid_field_display['Predicted'] - mid_field_display['Actual']
+                mid_field_display['Absolute Error'] = abs(mid_field_display['Prediction Error'])
+                
+                st.dataframe(
+                    mid_field_display[['Actual', 'Predicted', 'Prediction Error', 'Absolute Error']].round(3), 
+                    hide_index=True, 
+                    width=600,
+                    column_config={
+                        'Actual': st.column_config.NumberColumn("Actual Position", format="%.0f"),
+                        'Predicted': st.column_config.NumberColumn("Predicted Position", format="%.3f"),
+                        'Prediction Error': st.column_config.NumberColumn("Error (Pred - Actual)", format="%.3f"),
+                        'Absolute Error': st.column_config.NumberColumn("Absolute Error", format="%.3f")
+                    }
+                )
+                
+                # Summary stats
+                avg_prediction = mid_field_display['Predicted'].mean()
+                avg_error = mid_field_display['Prediction Error'].mean()
+                worst_error = mid_field_display['Absolute Error'].max()
+                st.write(f"Average predicted position: {avg_prediction:.3f}")
+                st.write(f"Average prediction error: {avg_error:.3f} ({'over-predicting' if avg_error > 0 else 'under-predicting'})")
+                st.write(f"Worst absolute error: {worst_error:.3f}")
             else:
                 st.write("No mid-field positions in test set")
 
@@ -3805,7 +3875,31 @@ if show_advanced:
             if len(back_actual) > 0:
                 st.write(f"Back of Field (Positions 16-20) - {len(back_actual)} predictions")
                 st.write(f"MAE: {mean_absolute_error(back_actual['Actual'], back_actual['Predicted']):.3f}")
-                st.dataframe(back_actual, hide_index=True, width=400)
+                
+                # Create enhanced display for back of field positions
+                back_display = back_actual.copy()
+                back_display['Prediction Error'] = back_display['Predicted'] - back_display['Actual']
+                back_display['Absolute Error'] = abs(back_display['Prediction Error'])
+                
+                st.dataframe(
+                    back_display[['Actual', 'Predicted', 'Prediction Error', 'Absolute Error']].round(3), 
+                    hide_index=True, 
+                    width=600,
+                    column_config={
+                        'Actual': st.column_config.NumberColumn("Actual Position", format="%.0f"),
+                        'Predicted': st.column_config.NumberColumn("Predicted Position", format="%.3f"),
+                        'Prediction Error': st.column_config.NumberColumn("Error (Pred - Actual)", format="%.3f"),
+                        'Absolute Error': st.column_config.NumberColumn("Absolute Error", format="%.3f")
+                    }
+                )
+                
+                # Summary stats
+                avg_prediction = back_display['Predicted'].mean()
+                avg_error = back_display['Prediction Error'].mean()
+                best_prediction = back_display['Absolute Error'].min()
+                st.write(f"Average predicted position: {avg_prediction:.3f}")
+                st.write(f"Average prediction error: {avg_error:.3f} ({'over-predicting' if avg_error > 0 else 'under-predicting'})")
+                st.write(f"Best absolute error: {best_prediction:.3f}")
             else:
                 st.write("No back of field positions in test set")
 
@@ -3813,7 +3907,31 @@ if show_advanced:
             if len(bottom_10_actual) > 0:
                 st.write(f"Bottom 10 (Positions 11-20) - {len(bottom_10_actual)} predictions")
                 st.write(f"MAE: {mean_absolute_error(bottom_10_actual['Actual'], bottom_10_actual['Predicted']):.3f}")
-                st.dataframe(bottom_10_actual, hide_index=True, width=400)
+                
+                # Create enhanced display for bottom 10 positions
+                bottom_10_display = bottom_10_actual.copy()
+                bottom_10_display['Prediction Error'] = bottom_10_display['Predicted'] - bottom_10_display['Actual']
+                bottom_10_display['Absolute Error'] = abs(bottom_10_display['Prediction Error'])
+                
+                st.dataframe(
+                    bottom_10_display[['Actual', 'Predicted', 'Prediction Error', 'Absolute Error']].round(3), 
+                    hide_index=True, 
+                    width=600,
+                    column_config={
+                        'Actual': st.column_config.NumberColumn("Actual Position", format="%.0f"),
+                        'Predicted': st.column_config.NumberColumn("Predicted Position", format="%.3f"),
+                        'Prediction Error': st.column_config.NumberColumn("Error (Pred - Actual)", format="%.3f"),
+                        'Absolute Error': st.column_config.NumberColumn("Absolute Error", format="%.3f")
+                    }
+                )
+                
+                # Summary stats
+                avg_prediction = bottom_10_display['Predicted'].mean()
+                avg_error = bottom_10_display['Prediction Error'].mean()
+                prediction_range = f"{bottom_10_display['Predicted'].min():.1f} - {bottom_10_display['Predicted'].max():.1f}"
+                st.write(f"Average predicted position: {avg_prediction:.3f}")
+                st.write(f"Average prediction error: {avg_error:.3f} ({'over-predicting' if avg_error > 0 else 'under-predicting'})")
+                st.write(f"Prediction range: {prediction_range}")
             else:
                 st.write("No bottom 10 positions in test set")
 
