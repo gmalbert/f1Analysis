@@ -2585,21 +2585,21 @@ if st.checkbox('Filter Results'):
 
     # Add visualizations for the filtered data
     st.subheader("Active Years v. Final Position")
-    st.scatter_chart(filtered_data, x='resultsFinalPositionNumber', x_label='Final Position', y='yearsActive', y_label='Years Active', use_container_width=True)
+    st.scatter_chart(filtered_data, x='resultsFinalPositionNumber', x_label='Final Position', y='yearsActive', y_label='Years Active', width="stretch")
     
     st.subheader("Positions Gained")
-    st.line_chart(filtered_data, x='short_date', x_label='Date', y='positionsGained', y_label='Positions Gained', use_container_width=True)
-    st.scatter_chart(filtered_data, x='short_date', x_label='Date', y='positionsGained', y_label='Positions Gained', use_container_width=True)
+    st.line_chart(filtered_data, x='short_date', x_label='Date', y='positionsGained', y_label='Positions Gained', width="stretch")
+    st.scatter_chart(filtered_data, x='short_date', x_label='Date', y='positionsGained', y_label='Positions Gained', width="stretch")
     
     st.subheader("Practice Position vs Final Position")
    
-    st.scatter_chart(filtered_data, x='lastFPPositionNumber', x_label='Last FP Position', y='resultsFinalPositionNumber', y_label='Final Position', use_container_width=True)
+    st.scatter_chart(filtered_data, x='lastFPPositionNumber', x_label='Last FP Position', y='resultsFinalPositionNumber', y_label='Final Position', width="stretch")
 
     st.subheader("Starting Position vs Final Position")
-    st.scatter_chart(filtered_data, x='resultsStartingGridPositionNumber', x_label='Starting Position', y='resultsFinalPositionNumber', y_label='Final Position', use_container_width=True)
+    st.scatter_chart(filtered_data, x='resultsStartingGridPositionNumber', x_label='Starting Position', y='resultsFinalPositionNumber', y_label='Final Position', width="stretch")
 
     st.subheader("Average Practice Position vs Final Position")
-    st.scatter_chart(filtered_data, x='averagePracticePosition', x_label='Average Practice Position', y='resultsFinalPositionNumber', y_label='Final Position', use_container_width=True)
+    st.scatter_chart(filtered_data, x='averagePracticePosition', x_label='Average Practice Position', y='resultsFinalPositionNumber', y_label='Final Position', width="stretch")
 
     # Perform linear regression
 
@@ -2621,7 +2621,7 @@ if st.checkbox('Filter Results'):
         ax.set_xlabel("Average Practice Position")
         ax.set_ylabel("Final Position")
         ax.legend()
-        st.pyplot(fig, use_container_width=False)
+        st.pyplot(fig, width="content")
         st.write(f"**Regression Equation:** y = {slope:.2f}x + {intercept:.2f}")
 
         avg_practice_position_vs_final_position_regression = (f"{slope:.2f}x + {intercept:.2f}")
@@ -2652,7 +2652,7 @@ if st.checkbox('Filter Results'):
         ax.set_xlabel("Starting Position")
         ax.set_ylabel("Final Position")
         ax.legend()
-        st.pyplot(fig, use_container_width=False)
+        st.pyplot(fig, width="content")
         st.write(f"**Regression Equation:** y = {slope:.2f}x + {intercept:.2f}")
         starting_vs_final_position_slope = slope
         starting_vs_final_position_intercept = intercept
@@ -2693,7 +2693,7 @@ if st.checkbox('Filter Results'):
     ).properties(width=800, height=400)
 
     # Display the Altair chart
-    st.altair_chart(chart, use_container_width=True)
+    st.altair_chart(chart, width="stretch")
 
     constructor_performance = filtered_data.groupby(['grandPrixYear', 'constructorName']).agg(
     total_wins=('resultsFinalPositionNumber', lambda x: (x == 1).sum()),
@@ -2703,13 +2703,13 @@ if st.checkbox('Filter Results'):
     
         
     st.subheader("Constructor Dominance Over the Years")
-    st.bar_chart(constructor_performance, x='grandPrixYear', y=['total_wins', 'total_podiums'], color='constructorName', x_label='Year', y_label='Wins and Podiums', use_container_width=True)
+    st.bar_chart(constructor_performance, x='grandPrixYear', y=['total_wins', 'total_podiums'], color='constructorName', x_label='Year', y_label='Wins and Podiums', width="stretch")
 
     st.subheader("Impact of Starting Grid Position on Final Position")
-    st.scatter_chart(filtered_data, x='resultsStartingGridPositionNumber', x_label='Starting Pos.', y_label='Final Pos.', y='resultsFinalPositionNumber', use_container_width=True)
+    st.scatter_chart(filtered_data, x='resultsStartingGridPositionNumber', x_label='Starting Pos.', y_label='Final Pos.', y='resultsFinalPositionNumber', width="stretch")
 
     st.subheader("Pit Stop Analysis")
-    st.scatter_chart(filtered_data, x='averageStopTime', x_label='Avg. Stop Time', y='resultsFinalPositionNumber', y_label='Final Pos.', use_container_width=True)
+    st.scatter_chart(filtered_data, x='averageStopTime', x_label='Avg. Stop Time', y='resultsFinalPositionNumber', y_label='Final Pos.', width="stretch")
 
     driver_vs_constructor = filtered_data.groupby(['constructorName', 'resultsDriverName']).agg(
     positionsGained=('positionsGained', 'sum'),
@@ -2728,7 +2728,7 @@ if st.checkbox('Filter Results'):
     dnf_reasons = filtered_data[filtered_data['DNF'] == 1].groupby('resultsReasonRetired').size().reset_index(name='count')
     
     st.subheader("Reasons for DNFs")
-    st.bar_chart(dnf_reasons, x='resultsReasonRetired', x_label='Reason', y='count', y_label='Count', use_container_width=True)
+    st.bar_chart(dnf_reasons, x='resultsReasonRetired', x_label='Reason', y='count', y_label='Count', width="stretch")
 
     # Count the number of entries (drivers) for each driver
     dnf_counts = (
@@ -2833,10 +2833,10 @@ if st.checkbox('Filter Results'):
     ).properties(width=400,height=400)
 
     # Display the pie chart
-    st.altair_chart(dnf_pie_chart, use_container_width=True)
+    st.altair_chart(dnf_pie_chart, width="stretch")
 
     st.subheader("Track Characteristics and Performance")
-    st.scatter_chart(filtered_data, x='turns', y='resultsFinalPositionNumber', use_container_width=True, x_label='Turns', y_label='Final Position')
+    st.scatter_chart(filtered_data, x='turns', y='resultsFinalPositionNumber', width="stretch", x_label='Turns', y_label='Final Position')
 
     season_summary = filtered_data[filtered_data['grandPrixYear'] == current_year].groupby('resultsDriverName').agg(
     positions_gained =('positionsGained', 'sum'),
@@ -2853,7 +2853,7 @@ if st.checkbox('Filter Results'):
     
     st.subheader("Driver Consistency")
     st.caption("(Lower is Better)")
-    st.bar_chart(driver_consistency, x='resultsDriverName', x_label='Driver', y_label='Standard Deviation - Finishing', y='finishing_position_std', use_container_width=True, )
+    st.bar_chart(driver_consistency, x='resultsDriverName', x_label='Driver', y_label='Standard Deviation - Finishing', y='finishing_position_std', width="stretch")
     driver_consistency = driver_consistency.sort_values(by='finishing_position_std', ascending=True)
     st.caption("Lower standard deviation indicates more consistent finishing positions.")
     st.dataframe(driver_consistency, hide_index=True, column_config={'resultsDriverName': st.column_config.TextColumn("Driver"),
@@ -3821,7 +3821,7 @@ if show_advanced:
         st.dataframe(mae_df, hide_index=True, width=600)
         
         # Create bar chart
-        st.bar_chart(mae_df.set_index('Position Group')['MAE'], use_container_width=True)
+        st.bar_chart(mae_df.set_index('Position Group')['MAE'], width="stretch")
     
     # Optional: More detailed breakdown by individual positions
     if st.checkbox("Show MAE by Individual Positions"):
@@ -3864,7 +3864,7 @@ if show_advanced:
         
         individual_mae_df = pd.DataFrame(individual_mae)
         st.dataframe(individual_mae_df, hide_index=True, width=600, height=750)
-        st.line_chart(individual_mae_df.set_index('Position')['MAE'], use_container_width=True)
+        st.line_chart(individual_mae_df.set_index('Position')['MAE'], width="stretch")
 
         # Display summary table after the box plot
         st.subheader("Position Group Summary")
@@ -3923,12 +3923,12 @@ if show_advanced:
         error_data = [results_analysis[results_analysis['Position_Group'] == group]['AbsError'].values 
                     for group in position_groups]
         
-        ax.boxplot(error_data, labels=position_groups)
+        ax.boxplot(error_data, tick_labels=position_groups)
         ax.set_ylabel('Absolute Error')
         ax.set_xlabel('Position Group')
         ax.set_title('Prediction Error Distribution by Position Group')
         
-        st.pyplot(fig, use_container_width=True)
+        st.pyplot(fig, width="stretch")
 
     if st.checkbox("Show Permutation Importance (Least Helpful Features)"):
         st.subheader("Permutation Importance (Feature Impact on Model Error)")
@@ -4331,7 +4331,7 @@ if show_advanced:
 
         # Optional: Show a scatter plot of Actual vs Predicted
         st.subheader("Actual vs Predicted Final Position (All Races)")
-        st.scatter_chart(results_df, x='ActualFinalPosition', y='PredictedFinalPosition', use_container_width=True)
+        st.scatter_chart(results_df, x='ActualFinalPosition', y='PredictedFinalPosition', width="stretch")
 
 
 
