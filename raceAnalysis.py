@@ -46,6 +46,188 @@ EarlyStopping = xgb.callback.EarlyStopping
 
 DATA_DIR = 'data_files/'
 
+def create_constructor_adjusted_driver_features(data):
+    """
+    Create driver performance features that are adjusted by constructor performance.
+    This helps account for drivers who have changed teams.
+    """
+    try:
+        # Check if required columns exist
+        required_cols = ['grandPrixYear', 'constructorName', 'resultsFinalPositionNumber']
+        if not all(col in data.columns for col in required_cols):
+            return data
+            
+        # Handle Points column (could have different names)
+        points_col = None
+        for col in ['Points', 'Points_results_with_qualifying', 'points']:
+            if col in data.columns:
+                points_col = col
+                break
+        
+        # Handle podium column
+        podium_col = None
+        for col in ['resultsPodium', 'podium', 'Podium']:
+            if col in data.columns:
+                podium_col = col
+                break
+        
+        # Calculate constructor performance by year
+        agg_dict = {'resultsFinalPositionNumber': 'mean'}
+        col_names = ['grandPrixYear', 'constructorName', 'constructorAvgPosition']
+        
+        if points_col:
+            agg_dict[points_col] = 'mean'
+            col_names.append('constructorAvgPoints')
+            
+        if podium_col:
+            agg_dict[podium_col] = 'mean'
+            col_names.append('constructorPodiumRate')
+        
+        constructor_performance = data.groupby(['grandPrixYear', 'constructorName']).agg(agg_dict).reset_index()
+        constructor_performance.columns = col_names
+        
+        # Merge back to main data
+        data_enhanced = data.merge(constructor_performance, on=['grandPrixYear', 'constructorName'], how='left')
+        
+        # Create relative driver performance metrics
+        data_enhanced['driverVsConstructorPosition'] = data_enhanced['resultsFinalPositionNumber'] - data_enhanced['constructorAvgPosition']
+        
+        if points_col and 'constructorAvgPoints' in data_enhanced.columns:
+            data_enhanced['driverRelativeToConstructor'] = data_enhanced[points_col] / (data_enhanced['constructorAvgPoints'] + 0.1)
+        
+        return data_enhanced
+        
+    except Exception as e:
+        return data
+
+def create_recent_performance_features(data, recent_races=5):
+    """
+    Create features based on recent performance to weight newer data more heavily.
+    """
+    try:
+        # Check if required columns exist
+        required_cols = ['resultsDriverId', 'grandPrixYear', 'resultsFinalPositionNumber']
+        if not all(col in data.columns for col in required_cols):
+            return data
+            
+        # Check for round column (might have different names)
+        round_col = None
+        for col in ['round', 'Round', 'race_round', 'grandPrixRound']:
+            if col in data.columns:
+                round_col = col
+                break
+        
+        if not round_col:
+            return data
+            
+        # Handle Points column
+        points_col = None
+        for col in ['Points', 'Points_results_with_qualifying', 'points']:
+            if col in data.columns:
+                points_col = col
+                break
+        
+        data_sorted = data.sort_values(['resultsDriverId', 'grandPrixYear', round_col]).copy()
+        
+        # Calculate rolling averages for recent performance
+        for window in [3, 5, 10]:
+            data_sorted[f'recentAvgPosition_{window}'] = (
+                data_sorted.groupby('resultsDriverId')['resultsFinalPositionNumber']
+                .rolling(window=window, min_periods=1)
+                .mean()
+                .reset_index(level=0, drop=True)
+            )
+            
+            if points_col:
+                data_sorted[f'recentAvgPoints_{window}'] = (
+                    data_sorted.groupby('resultsDriverId')[points_col]
+                    .rolling(window=window, min_periods=1)
+                    .mean()
+                    .reset_index(level=0, drop=True)
+                )
+        
+        return data_sorted
+        
+    except Exception as e:
+        return data
+
+def create_constructor_compatibility_features(data):
+    """
+    Create features that measure how well a driver performs with their current constructor
+    vs their career average.
+    """
+    try:
+        # Check if required columns exist
+        required_cols = ['resultsDriverId', 'constructorName', 'resultsFinalPositionNumber']
+        if not all(col in data.columns for col in required_cols):
+            return data
+            
+        # Handle Points and podium columns
+        points_col = None
+        for col in ['Points', 'Points_results_with_qualifying', 'points']:
+            if col in data.columns:
+                points_col = col
+                break
+                
+        podium_col = None
+        for col in ['resultsPodium', 'podium', 'Podium']:
+            if col in data.columns:
+                podium_col = col
+                break
+        
+        # Driver's career average
+        career_agg = {'resultsFinalPositionNumber': 'mean'}
+        career_cols = ['resultsDriverId', 'driverCareerAvgPosition']
+        
+        if points_col:
+            career_agg[points_col] = 'mean'
+            career_cols.append('driverCareerAvgPoints')
+            
+        if podium_col:
+            career_agg[podium_col] = 'mean'
+            career_cols.append('driverCareerPodiumRate')
+        
+        driver_career_avg = data.groupby('resultsDriverId').agg(career_agg).reset_index()
+        driver_career_avg.columns = career_cols
+        
+        # Driver's performance with current constructor
+        constructor_agg = {
+            'resultsFinalPositionNumber': 'mean',
+            'grandPrixYear': 'count'  # Number of races with this constructor
+        }
+        constructor_cols = ['resultsDriverId', 'constructorName', 'driverConstructorAvgPosition', 'racesWithConstructor']
+        
+        if points_col:
+            constructor_agg[points_col] = 'mean'
+            constructor_cols.insert(-1, 'driverConstructorAvgPoints')
+            
+        if podium_col:
+            constructor_agg[podium_col] = 'mean'
+            constructor_cols.insert(-1, 'driverConstructorPodiumRate')
+        
+        driver_constructor_performance = data.groupby(['resultsDriverId', 'constructorName']).agg(constructor_agg).reset_index()
+        driver_constructor_performance.columns = constructor_cols
+        
+        # Merge features
+        data_enhanced = data.merge(driver_career_avg, on='resultsDriverId', how='left')
+        data_enhanced = data_enhanced.merge(driver_constructor_performance, on=['resultsDriverId', 'constructorName'], how='left')
+        
+        # Create compatibility metrics
+        if 'driverCareerAvgPosition' in data_enhanced.columns and 'driverConstructorAvgPosition' in data_enhanced.columns:
+            data_enhanced['constructorCompatibilityPosition'] = data_enhanced['driverCareerAvgPosition'] - data_enhanced['driverConstructorAvgPosition']
+        
+        if points_col and 'driverCareerAvgPoints' in data_enhanced.columns and 'driverConstructorAvgPoints' in data_enhanced.columns:
+            data_enhanced['constructorCompatibilityPoints'] = data_enhanced['driverConstructorAvgPoints'] / (data_enhanced['driverCareerAvgPoints'] + 0.1)
+        
+        # Weight by experience with constructor (more races = more reliable metric)
+        if 'racesWithConstructor' in data_enhanced.columns:
+            data_enhanced['constructorExperienceWeight'] = np.clip(data_enhanced['racesWithConstructor'] / 10, 0.1, 1.0)
+        
+        return data_enhanced
+        
+    except Exception as e:
+        return data
+
 def simulate_rookie_predictions(data, all_active_driver_inputs, current_year, n_simulations=1000):
     """
     Adjust rookie driver predictions using Monte Carlo simulation based on historical rookie results,
@@ -794,6 +976,14 @@ if 'teammate_qual_delta_results_with_qualifying' in data.columns:
 elif 'teammate_qual_delta_qualifying' in data.columns:
     data.rename(columns={'teammate_qual_delta_qualifying': 'teammate_qual_delta'}, inplace=True)
 
+# Apply team-aware feature engineering (after column renaming)
+try:
+    data = create_constructor_adjusted_driver_features(data)
+    data = create_recent_performance_features(data, recent_races=5)
+    data = create_constructor_compatibility_features(data)
+except Exception as e:
+    st.warning(f"Could not create some team-aware features: {e}")
+    # Continue with original data if feature creation fails
 
 # Round averagePracticePosition to 2 decimal places
 data['averagePracticePosition'] = data['averagePracticePosition'].round(2)
@@ -1138,7 +1328,7 @@ def get_features_and_target(data):
         'track_familiarity',
         'recent_podium_streak',
         'grid_position_percentile_bin',
-        'constructor_recent_win_streak',
+        # 'constructor_recent_win_streak',
         'qual_to_final_delta_5yr_bin',
         'qual_to_final_delta_3yr_bin',
         'overtake_potential_3yr_bin',
@@ -1153,7 +1343,7 @@ def get_features_and_target(data):
         'driver_teammate_practice_gap_3r_bin',
         'driver_street_qual_avg',
         'driver_track_qual_avg',
-        'driver_street_practice_avg',
+        # 'driver_street_practice_avg',
         'driver_high_wind_qual_avg',
         'driver_high_humidity_qual_avg',
         'driver_wet_qual_avg',
@@ -1201,6 +1391,23 @@ def get_features_and_target(data):
         'podium_form_3_races', 'wins_last_5_races', 'championship_position', 'points_leader_gap',
                                         'pole_to_win_rate', 'front_row_conversion', 'recent_wins_3_races'
     ]
+    
+    # Add team-aware features if they exist (for drivers who change constructors)
+    team_aware_features = [
+        'constructorAvgPosition', 'constructorPodiumRate', 'constructorAvgPoints',
+        'driverVsConstructorPosition', 'driverRelativeToConstructor',
+        'recentAvgPosition_3', 'recentAvgPosition_5', 'recentAvgPosition_10',
+        'recentAvgPoints_3', 'recentAvgPoints_5', 'recentAvgPoints_10',
+        'driverCareerAvgPosition', 'driverCareerAvgPoints', 'driverCareerPodiumRate',
+        'driverConstructorAvgPosition', 'driverConstructorAvgPoints', 'driverConstructorPodiumRate',
+        'racesWithConstructor', 'constructorCompatibilityPosition', 'constructorCompatibilityPoints',
+        'constructorExperienceWeight'
+    ]
+    
+    # Only add team-aware features that actually exist in the data
+    available_team_features = [f for f in team_aware_features if f in data.columns]
+    features.extend(available_team_features)
+    
 
     dupes = [col for col in features if features.count(col) > 1]
     if dupes:
@@ -1302,7 +1509,7 @@ def get_preprocessor_position():
         'track_familiarity',
         'recent_podium_streak',
         'grid_position_percentile_bin',
-        'constructor_recent_win_streak',
+        # 'constructor_recent_win_streak',
         'qual_to_final_delta_5yr_bin',
         'qual_to_final_delta_3yr_bin',
         'overtake_potential_3yr_bin',
@@ -1317,7 +1524,7 @@ def get_preprocessor_position():
         'driver_teammate_practice_gap_3r_bin',
         'driver_street_qual_avg',
         'driver_track_qual_avg',
-        'driver_street_practice_avg',
+        # 'driver_street_practice_avg',
         'driver_high_wind_qual_avg',
         'driver_high_humidity_qual_avg',
         'driver_wet_qual_avg',
