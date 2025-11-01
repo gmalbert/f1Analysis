@@ -1,140 +1,128 @@
+# Python virtual environment
+.venv/
 Scripts/
 Lib/
 etc/
 share/
+pyvenv.cfg
+
+# Python cache and compiled files
+__pycache__/
+*.pyc
+
+# Cache files
+.cache.sqlite
+*.sqlite
+
+# IDE settings
+.vscode/settings.json
+
+# Log files
+*.log
+
+# Text files (general)
+*.txt
+
+# Calendar files
+*.ics
+
+# External projects
 /ollama-web/
 /localchat/
-__pycache__/
-/__pycache__/
-.cache.sqlite
+/.devcontainer
+
+# FastF1 cache
 data_files/f1_cache/
 data_files/complete_practice_files/
-.vscode/settings.json
-/Lib
-/Scripts
-/share
-/etc
-*.txt
-all_pitstops_2018_onward.csv
+
+# Test and backup Python files
+betting_test.py
+check_calendar.py
 checkboxPredictiveModel.py
 checktabdelimited.py
+cleanAir.py
+combine_practice_sets.py
 combined_pitstops_fastf1_ergast.py
 compare_actual_with_predicted.py
 convert_delimiter.py
 copiedDataModelCode.py
-combine_practice_sets.py
-.cache.sqlite
 delete_new.py
 delete_rows.py
-/etc
 f1-alt-analysis.py
 f1-analysis-combine.py
 f1-analysis-weather.py
 f1-bettingOdds.py
 f1-firstLap.py
 f1-telemetry.py
-f1_betting_odds.csv
-f1_data_processing.py
 f1_clean_air_analyzer.py
+f1_data_processing.py
 f1CleanAir.py
-f1Predictions-preDataImport.py
 f1Prediction_featureImportance.py
-f1RaceWithAltResults.csv
+f1Predictions-preDataImport.py
+f2-pull-data.py
 fastF1-pitStops-example.py
+fastF1-practices - Copy.py
+fastF1-practices - Copy (2).py
+fix_calendar.py
 fixFirstLap.py
 get current year data.py
-/Lib
-/Lib/site-packages
 live1-examply.py
 livef1-practice.py
-*.log
+missing_drivers.py
 missing_gpid.py
 missing_gpid_comma.py
+no_school_calendar.py
 old_raceAnalysis.py
 oldPracticeRounds.py
 pit_stop_fastf1_only.py
 pitStops-examply.py
 pitStops-fastf1-example.py
-pyvenv.cfg
-race_control_messages.csv
 raceAnalysis081925.py
 raceAnalysis_bkup.py
+raceAnalysis_with_commented_out_code.py
 recipes.py
-/Scripts
+secondcutandpaste.py
+temp_ending.py
 test.py
 use of prior year data.py
-secondcutandpaste.py
-/share
-f1Analysis/
-/.devcontainer
-*.pyc
-*.pyc
-/Lib/site-packages
+xgb_test.py
+
+# Test and backup CSV files
+all_pitstops_2018_onward.csv
+all_race_control_messages.csv
+f1_betting_odds.csv
+f1RaceResultsData_Grouped.csv
+f1RaceWithAltResults.csv
+processed_laps_data.csv
+race_control_messages.csv
+
+# Test data files
+data_files/1136_2025.csv
+data_files/active_drivers_interim.csv
+data_files/all_practice_laps - 082125.csv
+data_files/all_practice_laps - Copy.csv
+data_files/all_practice_laps - Copy (2).csv
+data_files/all_practice_laps - Copy (3).csv
+data_files/all_practice_laps - Copy (4).csv
+data_files/all_practice_laps - Copy (5).csv
+data_files/all_practice_laps - test.csv
+data_files/all_practice_laps 070525.csv
+data_files/all_practice_laps 071625.csv
+data_files/all_practice_laps 071725.csv
+data_files/all_qualifying_races - Copy.csv
+data_files/all_qualifying_races - Copy (2).csv
+data_files/all_qualifying_races 072925.csv
+data_files/all_qualifying_races 100825.csv
+data_files/all_qualifying_races_with_driverId.csv
+data_files/all_race_control_messages - 72325.csv
+data_files/debug_combined.csv
 data_files/f1_features_before_after_update.csv
 data_files/f1_features_before_practice_update.csv
 data_files/f1_results_test_line300.csv
+data_files/f1QualifyingTest.csv
+data_files/f1Test1.csv
 data_files/f1Test2.csv
 data_files/f1Test_300.csv
-/Lib/site-packages/__pycache__
-/Lib
-data_files/f1QualifyingTest.csv
-/Lib/site-packages/urllib3
-/Lib
-/Lib/site-packages
-/Lib
-*.pyc
-*.sqlite
-*.ics
-data_files/all_practice_laps - 082125.csv
-data_files/all_practice_laps - Copy (2).csv
-data_files/all_practice_laps - Copy (3).csv
-data_files/all_practice_laps - Copy (4).csv
-data_files/all_practice_laps - Copy (5).csv
-data_files/all_practice_laps - Copy.csv
-data_files/all_practice_laps - test.csv
-data_files/all_practice_laps 070525.csv
-data_files/all_practice_laps 071625.csv
-data_files/all_practice_laps 071725.csv
-data_files/active_drivers_interim.csv
-data_files/all_qualifying_races - Copy (2).csv
-data_files/all_qualifying_races - Copy.csv
-data_files/all_qualifying_races 100825.csv
-data_files/debug_combined.csv
-data_files/all_practice_laps - Copy (2).csv
-data_files/all_practice_laps - Copy (3).csv
-data_files/all_practice_laps - Copy (4).csv
-data_files/all_practice_laps - Copy (5).csv
-data_files/all_practice_laps - Copy.csv
-data_files/all_practice_laps - test.csv
-data_files/all_practice_laps 070525.csv
-data_files/all_practice_laps 071625.csv
-data_files/all_practice_laps 071725.csv
-data_files/all_practice_laps - Copy (4).csv
-f2-pull-data.py
-fastF1-practices - Copy (2).py
-fastF1-practices - Copy.py
-fix_calendar.py
-/Lib
-/Scripts
-raceAnalysis_with_commented_out_code.py
-no_school_calendar.py
-xgb_test.py
-missing_drivers.py
-check_calendar.py
-data_files/all_practice_laps - Copy (2).csv
+
+# Jupyter configuration
 etc/jupyter/nbconfig/notebook.d/pydeck.json
-data_files/f1Test1.csv
-/Lib/site-packages
-data_files/all_practice_laps - Copy.csv
-data_files/all_practice_laps - test.csv
-data_files/all_practice_laps 070525.csv
-/Lib
-.cache.sqlite
-/etc
-data_files/1136_2025.csv
-data_files/all_qualifying_races 072925.csv
-data_files/all_qualifying_races_with_driverId.csv
-data_files/all_race_control_messages - 72325.csv
-temp_ending.py
-pyvenv.cfg
-betting_test.py
