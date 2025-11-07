@@ -28,6 +28,10 @@ Short, actionable guidance for AI coding agents working on the Formula 1 Analysi
   - Weather: `['grandPrixId', 'short_date', 'average_temp', 'total_precipitation', 'average_humidity', 'average_wind_speed']`
   - Race results: `['resultsFinalPositionNumber', 'driverDNFCount', 'SafetyCarStatus']`
 - **ML features**: XGBoost model uses 70+ derived features (see README table) specifically selected to minimize MAE for final position predictions. Feature engineering happens in the generator around lines 1699+ ("NEW LEAKAGE-FREE FEATURES").
+- **Streamlit UI Pattern (Tab5)**: Uses nested structure - ONE `st.expander()` containing 6 `st.tabs()`. This pattern reduces visual clutter and organizes features logically. The expander is set to `expanded=True` for immediate visibility.
+- **Streamlit Chart Width Parameters**: 
+  - **Native charts** (`st.bar_chart`, `st.line_chart`, `st.scatter_chart`): Use `width='stretch'` for full width or `width='content'` for auto-sizing
+  - **Altair charts** (`st.altair_chart`): Use `use_container_width=True` (does NOT support `width` parameter)
 
 ## External integrations
 - **F1DB**: Source JSON files from github.com/f1db/f1db (all `f1db-*.json` files in `data_files/`)
@@ -52,6 +56,10 @@ streamlit run raceAnalysis.py
 - **Generator output changes**: If you modify the final `to_csv()` calls in `f1-generate-analysis.py` (around lines 2217-2218), update corresponding `read_csv()` calls in `raceAnalysis.py`.
 - **Column name changes**: The UI has ~30 filter controls. Changing column names breaks filters silently. Search for the column name in `raceAnalysis.py` before renaming.
 - **Data types**: The UI uses pandas type checking (`is_numeric_dtype`, `is_object_dtype`, etc.) for dynamic filtering. Ensure consistent dtypes.
+- **XGBoost preprocessing**: When using XGBoost with sklearn tools (cross_val_score, etc.), always use `get_preprocessor_position()` to handle categorical features. XGBoost can't handle object/string columns directly.
+- **Booster vs Estimator**: Trained XGBoost models return Booster objects. For sklearn compatibility (cross_val_score, GridSearchCV), create a fresh XGBRegressor estimator.
+- **Data leakage prevention**: Never use naive `.astype('category').cat.codes` for encoding. Always use proper preprocessor fitted on training data only.
+- **DataFrame vs Styler**: Styled DataFrames (`.style.map()`) return Styler objects. Use `.data` attribute to access underlying DataFrame before calling DataFrame methods.
 
 ## Useful examples from this codebase
 - **Adding an MAE-improving feature**: If you add `driver_recent_form`:
@@ -65,6 +73,49 @@ streamlit run raceAnalysis.py
 - **Pit stop timing features**: `numberOfStops`, `averageStopTime`, `totalStopTime`, `pit_stop_delta` (critical for race position)
 - **Feature interaction examples**: `qualPos_x_last_practicePos`, `grid_x_avg_pit_time`, `recent_form_x_qual` (often reduce MAE more than individual features)
 - **Tab-separated format**: Always use `pd.read_csv(path, sep='\t')` and `df.to_csv(path, sep='\t')`
+- **Streamlit chart width parameters**:
+  ```python
+  # Native Streamlit charts - use width parameter
+  st.bar_chart(data, width='stretch')     # Full width
+  st.line_chart(data, width='content')    # Auto-size
+  st.scatter_chart(data, width='stretch')
+  
+  # Altair charts - use use_container_width parameter
+  st.altair_chart(chart, use_container_width=True)   # Full width
+  st.altair_chart(chart, use_container_width=False)  # Default size
+  ```
+- **Tab5 refactoring pattern** (lines 3782-4375): ONE expander + 6 tabs for organizing advanced options:
+  ```python
+  with st.expander("🔧 Advanced Options", expanded=True):
+      tab_perf, tab_feat, tab_select, tab_hyper, tab_hist, tab_debug = st.tabs([...])
+      with tab_perf:
+          # Model performance metrics
+      with tab_feat:
+          # Feature analysis tools
+      # ... etc
+  ```
+- **Cross-validation with XGBoost** (line 4264-4273):
+  ```python
+  # Create fresh estimator for sklearn compatibility
+  xgb_for_cv = XGBRegressor(n_estimators=500, learning_rate=0.05, ...)
+  # Always preprocess before passing to sklearn tools
+  X_eval_preprocessed = preprocessor.fit_transform(X_eval)
+  cv_scores = cross_val_score(xgb_for_cv, X_eval_preprocessed, y_eval, ...)
+  ```
+- **Proper categorical encoding** (line 4358-4377):
+  ```python
+  # Use preprocessor instead of naive .cat.codes
+  preprocessor_q = get_preprocessor_position(X_temp_q)
+  X_temp_q_preprocessed = preprocessor_q.fit_transform(X_temp_q)
+  model_q.fit(X_temp_q_preprocessed, y_temp_q)
+  ```
+- **Handling Styler objects** (line 4113-4143):
+  ```python
+  # Extract DataFrame before calling DataFrame methods
+  correlation_df = correlation_matrix.data if hasattr(correlation_matrix, 'data') else correlation_matrix
+  correlation_matrix_display = correlation_df.rename(index={...})
+  correlation_matrix_display = correlation_matrix_display.style.map(...)
+  ```
 
 ## Dependencies (inferred from imports)
 Core: `streamlit`, `pandas`, `numpy`, `fastf1`, `openmeteo_requests`
