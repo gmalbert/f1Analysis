@@ -248,10 +248,8 @@ Besides filtering, you can also look at the upcoming race which shows historical
 ## Weather
 The weather is pulled from [Open-Meteo's free API](https://open-meteo.com/) which allows you to search historical weather data by hour going back to the 1940s. The hourly reports are pulled per race and then averaged to show a daily weather report on race day.
 
-[↑ Back to top](#table-of-contents)
-
-## To do
-- Figure out a way to reset the filters.
+### To do
+- ~~Figure out a way to reset the filters.~~
 - ~~Incorporate the linear regression equations for predictive race results.~~
 
 [↑ Back to top](#table-of-contents)
