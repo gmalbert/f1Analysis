@@ -1,3 +1,5 @@
+![Gridlocked Logo](data_files/gridlocked-logo-with-text.png)
+
 # Formula 1 Data Analysis
 Analysis of Formula 1 ```.json``` files based on the very generous data files from [F1DB](https://github.com/f1db/f1db) for the vast majority of the analysis. F1DB did not have race control messages which include Safety Cars and flags. For that data, I used [FastF1](https://docs.fastf1.dev/). Full data analysis is available through the [Formula 1 Analysis - Streamlit app](https://f1analysis-app.streamlit.app/).
 
@@ -37,9 +39,66 @@ In addition to correlation coefficients, I have added several linear regressions
 [↑ Back to top](#table-of-contents)
 
 ## Predictive Data Modeling
-I used [sckit-learn](https://scikit-learn.org/stable/) to perform machine learning by using data points to predict the race winner. ~~The model is in its infancy, and I am still trying to figure out the right data points to feed it.~~ I'm also currently trying to predict a driver's final place rather than their final time. That means that the [Mean Absolute Error](https://www.sciencedirect.com/topics/engineering/mean-absolute-error) relates to finisher placement which feels less exact than what I need. I'm using the XGBoost model. The predictive modeling is now under Advanced Options.
+I used [scikit-learn](https://scikit-learn.org/stable/) to perform machine learning by using data points to predict the race winner. ~~The model is in its infancy, and I am still trying to figure out the right data points to feed it.~~ I'm also currently trying to predict a driver's final place rather than their final time. That means that the [Mean Absolute Error](https://www.sciencedirect.com/topics/engineering/mean-absolute-error) relates to finisher placement which feels less exact than what I need. I'm using the XGBoost model. 
 
-I have added [Monte Carlo](https://www.ibm.com/think/topics/monte-carlo-simulation), [Recursive Feature Elimination (RFE)](https://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.RFE.html), and [Boruta](https://www.jstatsoft.org/v36/i11/) feature selection to pair down the data fields. After significant refinement, I have a MAE down to 1.5 or less.
+After significant refinement with [Monte Carlo](https://www.ibm.com/think/topics/monte-carlo-simulation), [Recursive Feature Elimination (RFE)](https://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.RFE.html), and [Boruta](https://www.jstatsoft.org/v36/i11/) feature selection, I have achieved a MAE of **1.5 or below**.
+
+### Advanced Options Structure (Tab 5)
+
+The predictive modeling interface has been refactored into a streamlined, organized structure:
+
+**🔧 Advanced Options** (Single Expander with 6 Tabs)
+
+1. **📊 Model Performance**
+   - Core metrics (MSE, R², MAE, Mean Error, boosting rounds)
+   - Driver error statistics
+   - MAE by position groups (Winner, Top3, Top10, Mid, Back, Bottom10)
+   - Individual position MAE analysis (positions 1-20)
+   - Error distribution visualization
+
+2. **🔍 Feature Analysis**
+   - Permutation importance (most/least helpful features)
+   - High-cardinality features analysis (overfitting risk assessment)
+   - Safety Car feature importance
+   - Correlation matrix for all races
+
+3. **🎯 Feature Selection**
+   - Monte Carlo feature subset search (1000+ iterations)
+   - Recursive Feature Elimination (RFE)
+   - Boruta feature selection
+   - RFE to minimize MAE
+   - All tools are button-controlled to prevent accidental slow operations
+
+4. **⚙️ Hyperparameters**
+   - Early stopping details with visualization
+   - MAE per round line chart
+   - Top 50 feature importances after training
+   - Hyperparameter tuning tool
+
+5. **📈 Historical Validation**
+   - Cross-validation metrics (Final Position, DNF, Safety Car models)
+   - Model accuracy across all races
+   - Scatter plot: Actual vs Predicted positions
+   - Race-by-race performance breakdown
+
+6. **🛠️ Debug & Experiments**
+   - Bin count comparison (q-value experimentation)
+   - Experimental features and debugging tools
+
+This new structure reduces visual clutter by ~90% (1 expander vs 17 checkboxes) while organizing related features logically and improving navigation.
+
+### Streamlit Chart Parameters
+
+The application uses different chart width parameters depending on the chart type:
+
+- **Native Streamlit Charts** (`st.bar_chart`, `st.line_chart`, `st.scatter_chart`):
+  - Use `width='stretch'` for full-width display
+  - Use `width='content'` for auto-sizing based on content
+  
+- **Altair/Vega Charts** (`st.altair_chart`):
+  - Use `use_container_width=True` for full-width display
+  - Use `use_container_width=False` for default sizing
+  - Note: The `width` parameter is NOT supported by `st.altair_chart()`
 
 [↑ Back to top](#table-of-contents)
 
