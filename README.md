@@ -1,4 +1,4 @@
-![Gridlocked Logo](data_files/gridlocked-logo-with-text.png)
+<img src="data_files/gridlocked-logo-with-text.png" alt="Gridlocked Logo" width="450">
 
 # Formula 1 Data Analysis
 Analysis of Formula 1 ```.json``` files based on the very generous data files from [F1DB](https://github.com/f1db/f1db) for the vast majority of the analysis. F1DB did not have race control messages which include Safety Cars and flags. For that data, I used [FastF1](https://docs.fastf1.dev/). Full data analysis is available through the [Formula 1 Analysis - Streamlit app](https://f1analysis-app.streamlit.app/).
@@ -78,6 +78,36 @@ The application uses different chart width parameters depending on the chart typ
 - **Native Streamlit Charts** (`st.bar_chart`, `st.line_chart`, `st.scatter_chart`):
   - Use `width='stretch'` for full-width display
   - Use `width='content'` for auto-sizing based on content
+  
+- **Altair/Vega Charts** (`st.altair_chart`):
+  - Use `use_container_width=True` for full-width display
+  - Use `use_container_width=False` for default sizing
+  - Note: The `width` parameter is NOT supported by `st.altair_chart()`
+
+### Streamlit DataFrame Height Optimization
+
+To prevent scrolling in dataframes, use the `get_dataframe_height()` helper function:
+
+```python
+# Automatically calculate height based on number of rows
+height = get_dataframe_height(df)
+st.dataframe(df, height=height)
+
+# With custom max height
+height = get_dataframe_height(df, max_height=400)
+st.dataframe(df, height=height)
+
+# No height limit
+height = get_dataframe_height(df, max_height=None)
+st.dataframe(df, height=height)
+```
+
+**Function parameters:**
+- `df`: The DataFrame to display (required)
+- `row_height`: Pixels per row (default: 35)
+- `header_height`: Header row height (default: 38)
+- `padding`: Extra padding (default: 2)
+- `max_height`: Maximum height cap (default: 600, use None for unlimited)
   
 - **Altair/Vega Charts** (`st.altair_chart`):
   - Use `use_container_width=True` for full-width display

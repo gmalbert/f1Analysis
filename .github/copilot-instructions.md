@@ -84,6 +84,20 @@ streamlit run raceAnalysis.py
   st.altair_chart(chart, use_container_width=True)   # Full width
   st.altair_chart(chart, use_container_width=False)  # Default size
   ```
+- **Streamlit DataFrame height optimization**:
+  ```python
+  # Use get_dataframe_height() to prevent scrolling
+  height = get_dataframe_height(df)  # Auto-calculates based on rows
+  st.dataframe(df, height=height)
+  
+  # With custom max height
+  height = get_dataframe_height(df, max_height=400)
+  st.dataframe(df, height=height)
+  
+  # No height limit (use carefully with large datasets)
+  height = get_dataframe_height(df, max_height=None)
+  st.dataframe(df, height=height)
+  ```
 - **Tab5 refactoring pattern** (lines 3782-4375): ONE expander + 6 tabs for organizing advanced options:
   ```python
   with st.expander("🔧 Advanced Options", expanded=True):

@@ -374,6 +374,31 @@ st.set_page_config(
 def km_to_miles(km):
     return km * 0.621371
 
+def get_dataframe_height(df, row_height=35, header_height=38, padding=2, max_height=600):
+    """
+    Calculate the optimal height for a Streamlit dataframe based on number of rows.
+    
+    Args:
+        df (pd.DataFrame): The dataframe to display
+        row_height (int): Height per row in pixels. Default: 35
+        header_height (int): Height of header row in pixels. Default: 38
+        padding (int): Extra padding in pixels. Default: 2
+        max_height (int): Maximum height cap in pixels. Default: 600 (None for no limit)
+    
+    Returns:
+        int: Calculated height in pixels
+    
+    Example:
+        height = get_dataframe_height(my_df)
+        st.dataframe(my_df, height=height)
+    """
+    num_rows = len(df)
+    calculated_height = (num_rows * row_height) + header_height + padding
+    
+    if max_height is not None:
+        return min(calculated_height, max_height)
+    return calculated_height
+
 def get_last_modified_file(dir_path):
     try:
         files = [path.join(dir_path, f) for f in os.listdir(dir_path) if path.isfile(os.path.join(dir_path, f))]
@@ -680,6 +705,25 @@ weather_columns_to_display = {
 st.image(path.join(DATA_DIR, 'gridlocked-logo-with-text.png'), width=450)
 st.title(f'F1 Races from {raceNoEarlierThan} to {current_year}')
 st.caption(f"Last updated: {readable_time}")
+
+# Table styling toggle - set to False to revert to default borders
+CLEAN_TABLE_BORDERS = True
+
+# Table styling note: st.dataframe() renders in an isolated iframe
+# so custom CSS cannot style its internal borders. You can style the container
+# but not individual cells/borders. To customize table appearance fully,
+# use st.table() (static), HTML tables, or third-party components like AgGrid.
+
+if CLEAN_TABLE_BORDERS:
+    st.markdown("""
+    <style>
+        /* Style the dataframe container only - internals are isolated */
+        div[data-testid="stDataFrame"] {
+            border: none !important;
+            border-radius: 8px;
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
 # Create main tabs
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
@@ -3697,7 +3741,6 @@ with tab4:
     # Filter for all prior races at the same Grand Prix as the next race
     # First, map raceId to grandPrixId using raceSchedule
     
-    # st.write(raceSchedule.columns.to_list())
     pitstops = pitstops.merge(
         raceSchedule[['id_grandPrix', 'grandPrixId', 'year', 'round']],
         left_on='raceId',
@@ -3712,12 +3755,12 @@ with tab4:
         # Find the fastest individual pit stop per constructor per race
         fastest_pitstops = (
             prior_gp_pitstops.loc[
-                # prior_gp_pitstops.groupby(['raceId', 'constructorId_results'])['timeMillis'].idxmin()
+
                 prior_gp_pitstops.groupby(['raceId', 'constructorId'])['timeMillis'].idxmin()
             ]
             .sort_values(['raceId', 'constructorId', 'timeMillis'])
         )
-        # st.write("Fastest pitstops columns:", fastest_pitstops.columns.tolist())
+
         # Optionally, merge with constructor names if needed
         if 'constructorName' in data.columns and 'constructorId' in fastest_pitstops.columns:
             constructor_names = data[['constructorId_results', 'constructorName']].drop_duplicates()
@@ -3736,8 +3779,6 @@ with tab4:
         elif 'round_y' in fastest_pitstops.columns:
             fastest_pitstops = fastest_pitstops.rename(columns={'round_y': 'round'})
 
-        # fastest_pitstops['pit_lane_time_constant'] = fastest_pitstops['pitStopSeconds'] * 1.5
-
         # Only assign if there is at least one value
         pit_lane_vals = data[data['grandPrixRaceId'] == next_race_id]['pit_lane_time_constant']
         if not pit_lane_vals.empty:
@@ -3751,16 +3792,17 @@ with tab4:
         st.write(f"Total number of fastest pit stops: {len(fastest_pitstops)}")
         st.write(f"Pit Time Constant:" , fastest_pitstops['pit_lane_time_constant'].head(1).values[0] if not fastest_pitstops['pit_lane_time_constant'].isnull().all() else "N/A")
         fastest_pitstops = fastest_pitstops.sort_values(by=['year', 'pitStopSeconds'], ascending=[False, True])
+        height = get_dataframe_height(fastest_pitstops)
         st.dataframe(
             fastest_pitstops[['year', 'round', 'constructorName', 'lap', 'pitStopSeconds', 'pit_time_stationary']],
             hide_index=True,
             width=800,
+            height=height,
             column_config={
-                # 'raceId': st.column_config.NumberColumn("Race ID"),
+                
                 'year': st.column_config.NumberColumn("Year"),
                 'round': st.column_config.NumberColumn("Round"),
                 'constructorName': st.column_config.TextColumn("Constructor"),
-                # 'driverId': st.column_config.TextColumn("Driver ID"),
                 'lap': st.column_config.NumberColumn("Lap"),
                 'pitStopSeconds': st.column_config.NumberColumn("Pit Stop (s)", format="%.3f"),
                 'pit_time_stationary': st.column_config.NumberColumn("Pit Time Stationary (s)", format="%.3f"),
