@@ -3620,8 +3620,22 @@ with tab4:
     st.subheader("Predictive Results for Active Drivers")
 
     st.write(f"MAE for Position Predictions: {global_mae:.3f}")
-    st.dataframe(all_active_driver_inputs, hide_index=False, column_config=predicted_position_columns_to_display, width=1000, height=800, 
-    column_order=['constructorName', 'resultsDriverName', 'PredictedFinalPosition', 'PredictedFinalPositionStd', 'PredictedFinalPosition_Low', 'PredictedFinalPosition_High',])    
+    st.dataframe(
+        all_active_driver_inputs,
+        hide_index=False,
+        column_config=predicted_position_columns_to_display,
+        width=1000,
+        height=800,
+        column_order=[
+            'constructorName',
+            'resultsDriverName',
+            'PredictedFinalPosition',
+            'PredictedFinalPositionStd',
+            'PredictedFinalPosition_Low',
+            'PredictedFinalPosition_High',
+            'Historical MAE by Rank',
+        ]
+    )
 
     st.subheader("Predictive DNF")
 
