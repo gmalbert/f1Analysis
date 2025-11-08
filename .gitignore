@@ -1,65 +1,46 @@
-# ============================================
-# Python Environment
-# ============================================
-__pycache__/
-*.pyc
+# Python virtual environment
+.venv/
+Scripts/
+Lib/
+etc/
+share/
 pyvenv.cfg
 
-# ============================================
-# Virtual Environment Directories
-# ============================================
-/Lib
-/Scripts
-/etc
-/share
-/.venv
+# Python cache and compiled files
+__pycache__/
+*.pyc
 
-# ============================================
-# IDE & Editor
-# ============================================
-.vscode/settings.json
-/.devcontainer
-.f1.code-workspace
-.github/
-
-# ============================================
-# Cache & Databases
-# ============================================
+# Cache files
 .cache.sqlite
 *.sqlite
+
+# IDE settings
+.vscode/settings.json
+
+# Log files
 *.log
 
-# ============================================
-# File Type Patterns
-# ============================================
+# Text files (general)
 *.txt
+
+# Calendar files
 *.ics
 
-# ============================================
-# External Projects
-# ============================================
+# External projects
 /ollama-web/
 /localchat/
+/.devcontainer
 
-# ============================================
-# FastF1 Cache & Complete Practice Files
-# ============================================
+# FastF1 cache
 data_files/f1_cache/
 data_files/complete_practice_files/
 
-# ============================================
-# Jupyter Configuration
-# ============================================
-etc/jupyter/nbconfig/notebook.d/pydeck.json
-
-# ============================================
-# Backup & Old Python Files
-# ============================================
-all_pitstops_2018_onward.csv
+# Test and backup Python files
 betting_test.py
 check_calendar.py
 checkboxPredictiveModel.py
 checktabdelimited.py
+cleanAir.py
 combine_practice_sets.py
 combined_pitstops_fastf1_ergast.py
 compare_actual_with_predicted.py
@@ -73,17 +54,15 @@ f1-analysis-weather.py
 f1-bettingOdds.py
 f1-firstLap.py
 f1-telemetry.py
-f1_betting_odds.csv
 f1_clean_air_analyzer.py
 f1_data_processing.py
 f1CleanAir.py
 f1Prediction_featureImportance.py
 f1Predictions-preDataImport.py
-f1RaceWithAltResults.csv
 f2-pull-data.py
 fastF1-pitStops-example.py
-fastF1-practices - Copy (2).py
 fastF1-practices - Copy.py
+fastF1-practices - Copy (2).py
 fix_calendar.py
 fixFirstLap.py
 get current year data.py
@@ -98,7 +77,6 @@ oldPracticeRounds.py
 pit_stop_fastf1_only.py
 pitStops-examply.py
 pitStops-fastf1-example.py
-race_control_messages.csv
 raceAnalysis081925.py
 raceAnalysis_bkup.py
 raceAnalysis_with_commented_out_code.py
@@ -109,23 +87,30 @@ test.py
 use of prior year data.py
 xgb_test.py
 
-# ============================================
-# Test & Temporary Data Files
-# ============================================
+# Test and backup CSV files
+all_pitstops_2018_onward.csv
+all_race_control_messages.csv
+f1_betting_odds.csv
+f1RaceResultsData_Grouped.csv
+f1RaceWithAltResults.csv
+processed_laps_data.csv
+race_control_messages.csv
+
+# Test data files
 data_files/1136_2025.csv
 data_files/active_drivers_interim.csv
 data_files/all_practice_laps - 082125.csv
+data_files/all_practice_laps - Copy.csv
 data_files/all_practice_laps - Copy (2).csv
 data_files/all_practice_laps - Copy (3).csv
 data_files/all_practice_laps - Copy (4).csv
 data_files/all_practice_laps - Copy (5).csv
-data_files/all_practice_laps - Copy.csv
 data_files/all_practice_laps - test.csv
 data_files/all_practice_laps 070525.csv
 data_files/all_practice_laps 071625.csv
 data_files/all_practice_laps 071725.csv
-data_files/all_qualifying_races - Copy (2).csv
 data_files/all_qualifying_races - Copy.csv
+data_files/all_qualifying_races - Copy (2).csv
 data_files/all_qualifying_races 072925.csv
 data_files/all_qualifying_races 100825.csv
 data_files/all_qualifying_races_with_driverId.csv
@@ -138,5 +123,6 @@ data_files/f1QualifyingTest.csv
 data_files/f1Test1.csv
 data_files/f1Test2.csv
 data_files/f1Test_300.csv
-data_files/formula1_logo.png
-TAB5_REFACTOR_PLAN.md
+
+# Jupyter configuration
+etc/jupyter/nbconfig/notebook.d/pydeck.json
