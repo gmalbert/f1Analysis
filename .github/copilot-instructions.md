@@ -92,15 +92,63 @@ streamlit run raceAnalysis.py
 - **Pit stop timing features**: `numberOfStops`, `averageStopTime`, `totalStopTime`, `pit_stop_delta` (critical for race position)
 - **Feature interaction examples**: `qualPos_x_last_practicePos`, `grid_x_avg_pit_time`, `recent_form_x_qual` (often reduce MAE more than individual features)
 - **Tab-separated format**: Always use `pd.read_csv(path, sep='\t')` and `df.to_csv(path, sep='\t')`
-- **Quantile binning**: Use `quantile_bin_feature()` helper (line 24 in generator) to bin high-cardinality numeric features into deciles.
-
-## Data flow architecture
-1. **Data ingestion**: F1DB JSONs + FastF1 API → raw data in `data_files/`
-2. **Feature engineering**: `f1-generate-analysis.py` merges, calculates rolling windows, creates interaction terms
-3. **CSV export**: Main dataset + specialized datasets (weather, pit stops, safety car) written to `data_files/`
-4. **UI loading**: `raceAnalysis.py` loads CSVs with Streamlit caching, builds filters dynamically from column dtypes
-5. **Model training**: XGBoost models trained on-demand with feature selection (RFE/Boruta) for position, DNF, and safety car predictions
-6. **Predictions**: Monte Carlo simulation for uncertainty quantification, rookie handling via truncated normal distributions
+- **Streamlit chart width parameters**:
+  ```python
+  # Native Streamlit charts - use width parameter
+  st.bar_chart(data, width='stretch')     # Full width
+  st.line_chart(data, width='content')    # Auto-size
+  st.scatter_chart(data, width='stretch')
+  
+  # Altair charts - use use_container_width parameter
+  st.altair_chart(chart, use_container_width=True)   # Full width
+  st.altair_chart(chart, use_container_width=False)  # Default size
+  ```
+- **Streamlit DataFrame height optimization**:
+  ```python
+  # Use get_dataframe_height() to prevent scrolling
+  height = get_dataframe_height(df)  # Auto-calculates based on rows
+  st.dataframe(df, height=height)
+  
+  # With custom max height
+  height = get_dataframe_height(df, max_height=400)
+  st.dataframe(df, height=height)
+  
+  # No height limit (use carefully with large datasets)
+  height = get_dataframe_height(df, max_height=None)
+  st.dataframe(df, height=height)
+  ```
+- **Tab5 refactoring pattern** (lines 3782-4375): ONE expander + 6 tabs for organizing advanced options:
+  ```python
+  with st.expander("🔧 Advanced Options", expanded=True):
+      tab_perf, tab_feat, tab_select, tab_hyper, tab_hist, tab_debug = st.tabs([...])
+      with tab_perf:
+          # Model performance metrics
+      with tab_feat:
+          # Feature analysis tools
+      # ... etc
+  ```
+- **Cross-validation with XGBoost** (line 4264-4273):
+  ```python
+  # Create fresh estimator for sklearn compatibility
+  xgb_for_cv = XGBRegressor(n_estimators=500, learning_rate=0.05, ...)
+  # Always preprocess before passing to sklearn tools
+  X_eval_preprocessed = preprocessor.fit_transform(X_eval)
+  cv_scores = cross_val_score(xgb_for_cv, X_eval_preprocessed, y_eval, ...)
+  ```
+- **Proper categorical encoding** (line 4358-4377):
+  ```python
+  # Use preprocessor instead of naive .cat.codes
+  preprocessor_q = get_preprocessor_position(X_temp_q)
+  X_temp_q_preprocessed = preprocessor_q.fit_transform(X_temp_q)
+  model_q.fit(X_temp_q_preprocessed, y_temp_q)
+  ```
+- **Handling Styler objects** (line 4113-4143):
+  ```python
+  # Extract DataFrame before calling DataFrame methods
+  correlation_df = correlation_matrix.data if hasattr(correlation_matrix, 'data') else correlation_matrix
+  correlation_matrix_display = correlation_df.rename(index={...})
+  correlation_matrix_display = correlation_matrix_display.style.map(...)
+  ```
 
 ## Dependencies (inferred from imports)
 Core: `streamlit`, `pandas`, `numpy`, `fastf1`, `openmeteo_requests`
