@@ -7,6 +7,7 @@ from os import path
 import os
 import streamlit as st
 import numpy as np
+import warnings
 from pandas.api.types import (
     is_categorical_dtype,
     is_datetime64_any_dtype,
@@ -45,6 +46,10 @@ EarlyStopping = xgb.callback.EarlyStopping
 
 
 DATA_DIR = 'data_files/'
+
+# Suppress numpy warnings about empty slices during calculations
+warnings.filterwarnings('ignore', message='Mean of empty slice', category=RuntimeWarning, module='numpy')
+warnings.filterwarnings('ignore', message='All-NaN slice encountered', category=RuntimeWarning, module='numpy')
 
 def create_constructor_adjusted_driver_features(data):
     """
@@ -3360,7 +3365,11 @@ with tab4:
         if latest_col in all_active_driver_inputs.columns:
             # Only combine if the column is not empty or all-NA
             if not all_active_driver_inputs[latest_col].isnull().all():
-                all_active_driver_inputs[col] = all_active_driver_inputs[latest_col].combine_first(all_active_driver_inputs[col])
+                # Filter out empty entries before combine_first to avoid FutureWarning
+                mask = ~all_active_driver_inputs[latest_col].isnull()
+                if mask.any():  # Only proceed if there are non-null values to combine
+                    # Use fillna instead of combine_first to avoid the deprecated behavior
+                    all_active_driver_inputs.loc[mask, col] = all_active_driver_inputs.loc[mask, col].fillna(all_active_driver_inputs.loc[mask, latest_col])
             all_active_driver_inputs = all_active_driver_inputs.drop(columns=[latest_col], errors='ignore')
  
     
@@ -3430,6 +3439,11 @@ with tab4:
     if missing_cols:
         st.error(f"These columns are missing from your prediction data and required by the preprocessor: {missing_cols}")
         st.stop()
+
+    # Fill all-NaN features with 0 to avoid imputer warning
+    for col in X_predict.columns:
+        if X_predict[col].isnull().all():
+            X_predict.loc[:, col] = X_predict[col].fillna(0)
 
     preprocessor.fit(X_predict)  # Fit if not already fitted, or reuse fitted preprocessor
     X_predict_prep = preprocessor.transform(X_predict)

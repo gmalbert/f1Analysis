@@ -10,14 +10,16 @@ Short, actionable guidance for AI coding agents working on the Formula 1 Analysi
 - Heavy computations live in the generator step so the UI remains responsive. Don't modify UI behavior without checking how CSVs are produced.
 
 ## Key files & locations
-- `f1-generate-analysis.py` — generator that creates grouped CSVs and processed JSONs (2531 lines).
+- `f1-generate-analysis.py` — generator that creates grouped CSVs and processed JSONs (2543 lines).
   - Uses `LOCAL_RUN` environment variable to enable FastF1 caching for local development.
   - Feature engineering section starts at line 1699 with comment "NEW LEAKAGE-FREE FEATURES".
   - Final CSV writes at lines 2217+ define the data contract with the UI.
+  - Weather fetching logic updated to pull data for all missing races, not just the most recent one.
 - `raceAnalysis.py` — Streamlit UI that consumes the outputs in `data_files/` (4692 lines).
   - All data loading functions use `@st.cache_data` decorator for performance.
   - Three prediction models: position (final placement), DNF (did not finish), and safety car likelihood.
   - Rookie simulation functions at lines 231+ and 309+ for handling drivers without historical data.
+  - Includes warning suppression for numpy RuntimeWarnings and pandas deprecation warnings.
 - `data_files/` — contains generated CSVs, F1DB JSONs, and FastF1 cache. Key outputs:
   - `f1ForAnalysis.csv` — main dataset (tab-separated), ~2200+ columns including all engineered features
   - `f1WeatherData_Grouped.csv` — weather by race (grouped from hourly data)
@@ -57,6 +59,8 @@ Short, actionable guidance for AI coding agents working on the Formula 1 Analysi
   - Two endpoints: archive API (past) and forecast API (next 16 days)
   - Hourly data pulled for race day, then grouped to daily averages
   - Results cached in `f1WeatherData_AllData.csv` to minimize API calls
+  - Weather fetching logic updated to pull data for all missing races, not just the most recent one
+  - Uses proper YYYY-MM-DD date format for API compatibility
 
 ## How to run
 ```powershell
@@ -161,3 +165,5 @@ Utils: `requests_cache`, `retry_requests`
 - **No formal tests**: Testing is manual via Streamlit UI and MAE evaluation. Use `xgb_test.py` as a reference for XGBoost early stopping.
 - **Version control**: `.gitignore` excludes `.venv/`, `data_files/f1_cache/`, and many backup/intermediate files. Only track core scripts and final CSVs.
 - **Naming conventions**: Files prefixed with `f1-` are data generation scripts. Files suffixed with `_bkup`, `_with_commented_out_code`, or dates are backups (not actively maintained).
+- **Warning fixes**: Recent updates resolved imputation warnings, numpy RuntimeWarnings, pandas deprecation warnings (including combine_first FutureWarning), and scikit-learn warnings. Always ensure virtual environment is activated to avoid module import issues.
+- **Data quality**: Active driver NaN values are filled with baseline values before CSV export. Weather data is fetched for all missing races, not just recent ones.
