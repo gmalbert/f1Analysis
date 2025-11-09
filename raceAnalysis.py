@@ -549,6 +549,8 @@ predicted_position_columns_to_display = {
     'PredictedFinalPosition_Low': st.column_config.NumberColumn("Final Pos (Low)", format="%.3f"),
     'PredictedFinalPosition_High': st.column_config.NumberColumn("Final Pos (High)", format="%.3f"),
     'PredictedPositionMAE': st.column_config.NumberColumn("Position MAE", format="%.3f"),
+    'PredictedPositionMAE_Low': st.column_config.NumberColumn("Position MAE (Low)", format="%.3f"),
+    'PredictedPositionMAE_High': st.column_config.NumberColumn("Position MAE (High)", format="%.3f"),
 }
 predicted_dnf_position_columns_to_display = {
     'resultsDriverName': st.column_config.TextColumn("Driver"),
@@ -3671,12 +3673,15 @@ with tab4:
         .fillna(global_mae)
     )
 
+    all_active_driver_inputs['PredictedPositionMAE_Low'] = all_active_driver_inputs['PredictedFinalPosition'] - all_active_driver_inputs['PredictedPositionMAE']
+    all_active_driver_inputs['PredictedPositionMAE_High'] = all_active_driver_inputs['PredictedFinalPosition'] + all_active_driver_inputs['PredictedPositionMAE']
+
     # st.write(all_active_driver_inputs.columns.tolist())
     st.subheader("Predictive Results for Active Drivers")
 
     st.write(f"MAE for Position Predictions: {global_mae:.3f}")
-    st.dataframe(all_active_driver_inputs, hide_index=False, column_config=predicted_position_columns_to_display, width=1000, height=800, 
-    column_order=['constructorName', 'resultsDriverName', 'PredictedFinalPosition', 'PredictedFinalPositionStd', 'PredictedFinalPosition_Low', 'PredictedFinalPosition_High', 'PredictedPositionMAE'])
+    st.dataframe(all_active_driver_inputs, hide_index=False, column_config=predicted_position_columns_to_display, width=1200, height=800, 
+    column_order=['constructorName', 'resultsDriverName', 'PredictedFinalPosition', 'PredictedFinalPositionStd', 'PredictedFinalPosition_Low', 'PredictedFinalPosition_High', 'PredictedPositionMAE', 'PredictedPositionMAE_Low', 'PredictedPositionMAE_High'])
 
     st.subheader("Predictive DNF")
 
