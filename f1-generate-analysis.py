@@ -6,6 +6,7 @@ import os
 import openmeteo_requests
 import requests_cache
 import numpy as np
+import warnings
 from retry_requests import retry
 from openmeteo_sdk.Variable import Variable
 from pit_constants import PIT_LANE_TIME_S, TYPICAL_STATIONARY_TIME_S
@@ -13,6 +14,10 @@ import fastf1
 from fastf1.ergast import Ergast
 
 DATA_DIR = 'data_files/'
+
+# Suppress numpy warnings about empty slices during rolling calculations for new drivers
+warnings.filterwarnings('ignore', message='Mean of empty slice', category=RuntimeWarning, module='numpy')
+warnings.filterwarnings('ignore', message='All-NaN slice encountered', category=RuntimeWarning, module='numpy')
 
 current_year = datetime.datetime.now().year
 raceNoEarlierThan = current_year - 10
@@ -2214,6 +2219,15 @@ static_columns=['grandPrixYear', 'grandPrixName', 'raceId_results', 'circuitId',
 # Concatenate static columns and bin_fields
 all_columns = static_columns + bin_fields
 
+# Fill NaN values for active drivers (current year) with reasonable defaults
+# to avoid all-NaN features that cause imputation warnings
+active_mask = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['activeDriver'] == True
+
+# Fill all NaN values for active drivers with 0 - this provides baseline values
+# for features that would otherwise be all-NaN and cause imputation warnings
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.loc[active_mask] = \
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.loc[active_mask].fillna(0)
+
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.to_csv(
     path.join(DATA_DIR, 'f1ForAnalysis.csv'),
     columns=all_columns,
@@ -2373,19 +2387,17 @@ circuits_and_races_lat_long = circuits_and_races_lat_long.copy()
 circuits_and_races_lat_long['date'] = pd.to_datetime(circuits_and_races_lat_long['date'])
 most_recent_date = circuits_and_races_lat_long['date'].max()
 
-if most_recent_date >= pd.Timestamp.today().normalize():
-    races_to_pull = circuits_and_races_lat_long[circuits_and_races_lat_long['date'] == most_recent_date]
-else:
-    races_to_pull = pd.DataFrame()  # No races to pull
+# Pull weather for all races that don't have weather data yet
+races_to_pull = circuits_and_races_lat_long[~circuits_and_races_lat_long['date'].dt.strftime('%Y-%m-%d').isin(processed_weather_set)]
 
 # Only build params for races not already processed
 full_params = []
 # for race in circuits_and_races_lat_long.itertuples():
 for race in races_to_pull.itertuples():
-     # Standardize date for comparison
+    # Standardize date for comparison and API
     short_date_compare = pd.to_datetime(race.date).strftime('%Y-%m-%d')
-    # Keep original format for API and CSV
-    short_date_original = pd.to_datetime(race.date).strftime('%m/%d/%Y')
+    # Use YYYY-MM-DD format for API (required by Open-Meteo)
+    short_date_api = pd.to_datetime(race.date).strftime('%Y-%m-%d')
     lat = race.latitude
     lon = race.longitude
     print("Checking:", (short_date_compare))
@@ -2396,14 +2408,14 @@ for race in races_to_pull.itertuples():
     params = {
         "latitude": lat,
         "longitude": lon,
-        "start_date": short_date_original,
-        "end_date": short_date_original,
+        "start_date": short_date_api,
+        "end_date": short_date_api,
         "hourly": ["temperature_2m", "precipitation", "relative_humidity_2m", "wind_speed_10m", "precipitation_probability"],
         "temperature_unit": "fahrenheit",
         "wind_speed_unit": "mph",
         "precipitation_unit": "inch"
     }
-    full_params.append((params, short_date_original, race.latitude, race.longitude))
+    full_params.append((params, short_date_api, race.latitude, race.longitude))
 
 all_hourly_data = []
 
@@ -2419,13 +2431,13 @@ else:
     for params, short_date, lat, lon in full_params:
         # use different URLs depending on whether we are seeking current or past weather
         # if datetime.datetime.strptime(params['start_date'], '%Y-%m-%d') < datetime.datetime.now():
-        if datetime.datetime.strptime(params['start_date'], '%m/%d/%Y') < datetime.datetime.now():
+        if datetime.datetime.strptime(params['start_date'], '%Y-%m-%d') < datetime.datetime.now():
             url = "https://archive-api.open-meteo.com/v1/archive"
-        elif datetime.datetime.strptime(params['start_date'], '%m/%d/%Y') >= datetime.datetime.now() and datetime.datetime.strptime(params['start_date'], '%m/%d/%Y') <= (datetime.datetime.now() + timedelta(days=16)):
+        elif datetime.datetime.strptime(params['start_date'], '%Y-%m-%d') >= datetime.datetime.now() and datetime.datetime.strptime(params['start_date'], '%Y-%m-%d') <= (datetime.datetime.now() + timedelta(days=16)):
             url = "https://api.open-meteo.com/v1/forecast"
         else:
             print("Break!")
-            print(datetime.datetime.strptime(params['start_date'], '%m/%d/%Y'))
+            print(datetime.datetime.strptime(params['start_date'], '%Y-%m-%d'))
             break
 
         responses = openmeteo.weather_api(url, params=params)

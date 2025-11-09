@@ -3,6 +3,60 @@
 # Formula 1 Data Analysis
 Analysis of Formula 1 ```.json``` files based on the very generous data files from [F1DB](https://github.com/f1db/f1db) for the vast majority of the analysis. F1DB did not have race control messages which include Safety Cars and flags. For that data, I used [FastF1](https://docs.fastf1.dev/). Full data analysis is available through the [Formula 1 Analysis - Streamlit app](https://f1analysis-app.streamlit.app/).
 
+## Quick Start
+
+### Prerequisites
+- Python 3.8+
+- Virtual environment (recommended)
+
+### Setup and Run
+```bash
+# Clone the repository
+git clone <repository-url>
+cd f1Analysis
+
+# Create and activate virtual environment
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1  # Windows
+# or
+source .venv/bin/activate     # Linux/Mac
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Generate analysis data (required first step, ~10-30 min)
+python f1-generate-analysis.py
+
+# Run the Streamlit app
+streamlit run raceAnalysis.py
+```
+
+The app will open at http://localhost:8501
+
+## Recent Improvements
+
+### Data Quality & Performance
+- **Warning Fixes**: Resolved all pandas deprecation warnings, numpy RuntimeWarnings, and scikit-learn imputation warnings
+- **Data Integrity**: Active driver NaN values are now properly filled with baseline values before CSV export
+- **Weather Data**: Enhanced weather fetching to pull data for all missing races (not just recent ones) with proper API date formatting
+
+### Dependencies
+- Core: `streamlit`, `pandas`, `numpy`, `fastf1`, `openmeteo_requests`
+- ML: `scikit-learn`, `xgboost`, `boruta`, `shap`
+- Visualization: `altair`, `matplotlib`, `seaborn`
+- Utils: `requests_cache`, `retry_requests`
+
+### Virtual Environment
+The project uses a Python virtual environment (`.venv/`) to manage dependencies. Always activate the virtual environment before running scripts:
+
+```powershell
+.\.venv\Scripts\Activate.ps1  # Windows
+```
+
+```bash
+source .venv/bin/activate     # Linux/Mac
+```
+
 ## Table of Contents
 - [File organization](#file-organization)
 - [Filtering](#filtering)
@@ -248,10 +302,18 @@ Besides filtering, you can also look at the upcoming race which shows historical
 ## Weather
 The weather is pulled from [Open-Meteo's free API](https://open-meteo.com/) which allows you to search historical weather data by hour going back to the 1940s. The hourly reports are pulled per race and then averaged to show a daily weather report on race day.
 
+**Recent Improvements:**
+- Weather data is now fetched for all missing races, not just the most recent one
+- Uses proper YYYY-MM-DD date format for API compatibility
+- Supports both historical data (archive API) and forecast data (up to 16 days ahead)
+- Data is cached to minimize API calls and improve performance
+
 [↑ Back to top](#table-of-contents)
 
 ### To do
 - ~~Figure out a way to reset the filters.~~
 - ~~Incorporate the linear regression equations for predictive race results.~~
+- ~~Fix pandas/numpy warnings and data quality issues.~~
+- ~~Improve weather data fetching for all races.~~
 
 [↑ Back to top](#table-of-contents)
