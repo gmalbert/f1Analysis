@@ -4550,7 +4550,7 @@ with tab6:
     # if st.checkbox('Show Raw Data', value=True):
     st.write(f"Total number of results: {len(data):,d}")
     st.dataframe(data, column_config=columns_to_display,
-        hide_index=True,  width=800, height=600)
+        hide_index=True,  width='stretch', height=600)
 
         
 #         # MAE by Position Groups
