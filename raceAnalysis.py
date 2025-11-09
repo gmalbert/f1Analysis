@@ -7,6 +7,7 @@ from os import path
 import os
 import streamlit as st
 import numpy as np
+import warnings
 from pandas.api.types import (
     is_categorical_dtype,
     is_datetime64_any_dtype,
@@ -45,6 +46,10 @@ EarlyStopping = xgb.callback.EarlyStopping
 
 
 DATA_DIR = 'data_files/'
+
+# Suppress numpy warnings about empty slices during calculations
+warnings.filterwarnings('ignore', message='Mean of empty slice', category=RuntimeWarning, module='numpy')
+warnings.filterwarnings('ignore', message='All-NaN slice encountered', category=RuntimeWarning, module='numpy')
 
 def create_constructor_adjusted_driver_features(data):
     """
@@ -3320,6 +3325,9 @@ with tab4:
     features, _ = get_features_and_target(data)
     feature_names = features.columns.tolist()
 
+    # Get MAE by position from Tab 5's session state
+    position_mae_dict = st.session_state.get('position_mae_dict', {})
+
     if next_race_id not in practices['raceId'].values:
         # The upcoming race is NOT in the practices dataset
         practices = practices[practices['raceId'] == last_race['raceId_results']]
@@ -3358,7 +3366,11 @@ with tab4:
         if latest_col in all_active_driver_inputs.columns:
             # Only combine if the column is not empty or all-NA
             if not all_active_driver_inputs[latest_col].isnull().all():
-                all_active_driver_inputs[col] = all_active_driver_inputs[latest_col].combine_first(all_active_driver_inputs[col])
+                # Filter out empty entries before combine_first to avoid FutureWarning
+                mask = ~all_active_driver_inputs[latest_col].isnull()
+                if mask.any():  # Only proceed if there are non-null values to combine
+                    # Use fillna instead of combine_first to avoid the deprecated behavior
+                    all_active_driver_inputs.loc[mask, col] = all_active_driver_inputs.loc[mask, col].fillna(all_active_driver_inputs.loc[mask, latest_col])
             all_active_driver_inputs = all_active_driver_inputs.drop(columns=[latest_col], errors='ignore')
  
     
@@ -3428,6 +3440,11 @@ with tab4:
     if missing_cols:
         st.error(f"These columns are missing from your prediction data and required by the preprocessor: {missing_cols}")
         st.stop()
+
+    # Fill all-NaN features with 0 to avoid imputer warning
+    for col in X_predict.columns:
+        if X_predict[col].isnull().all():
+            X_predict.loc[:, col] = X_predict[col].fillna(0)
 
     preprocessor.fit(X_predict)  # Fit if not already fitted, or reuse fitted preprocessor
     X_predict_prep = preprocessor.transform(X_predict)
@@ -3611,6 +3628,7 @@ with tab4:
 
     all_active_driver_inputs.sort_values(by='PredictedFinalPosition', ascending=True, inplace=True)
     all_active_driver_inputs['Rank'] = range(1, len(all_active_driver_inputs) + 1)
+    all_active_driver_inputs['Historical MAE by Rank'] = all_active_driver_inputs['Rank'].map(position_mae_dict)
     all_active_driver_inputs = all_active_driver_inputs.set_index('Rank')
 
     # Fix the column data for display after the merge
@@ -3658,7 +3676,7 @@ with tab4:
 
     st.write(f"MAE for Position Predictions: {global_mae:.3f}")
     st.dataframe(all_active_driver_inputs, hide_index=False, column_config=predicted_position_columns_to_display, width=1000, height=800, 
-    column_order=['constructorName', 'resultsDriverName', 'PredictedFinalPosition', 'PredictedFinalPositionStd', 'PredictedFinalPosition_Low', 'PredictedFinalPosition_High', 'PredictedPositionMAE',])    
+    column_order=['constructorName', 'resultsDriverName', 'PredictedFinalPosition', 'PredictedFinalPositionStd', 'PredictedFinalPosition_Low', 'PredictedFinalPosition_High', 'PredictedPositionMAE',])
 
     st.subheader("Predictive DNF")
 
@@ -3867,6 +3885,9 @@ with tab5:
         "Early stopping rounds", min_value=1, max_value=100, value=20, step=1, 
         help="Number of rounds with no improvement to stop training"
     )
+
+    # Store for use in Tab 4
+    st.session_state['early_stopping_rounds'] = early_stopping_rounds
 
     # Train model once at the top level for reuse
     model, mse, r2, mae, mean_err, evals_result = train_and_evaluate_model(data, early_stopping_rounds=early_stopping_rounds)
@@ -4088,6 +4109,9 @@ with tab5:
             individual_mae_df = pd.DataFrame(individual_mae)
             st.dataframe(individual_mae_df, hide_index=True, width=600, height=750)
             st.line_chart(individual_mae_df.set_index('Position')['MAE'], width='stretch')
+
+            # Store for use in Tab 4
+            st.session_state['position_mae_dict'] = dict(zip(individual_mae_df['Position'], individual_mae_df['MAE']))
 
             # Position group summary
             st.subheader("Position Group Summary")
