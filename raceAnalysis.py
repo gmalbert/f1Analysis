@@ -543,6 +543,7 @@ predicted_position_columns_to_display = {
     'PredictedFinalPositionStd': st.column_config.NumberColumn("Rookie Uncertainty (Std)", format="%.3f"),
     'PredictedFinalPosition_Low': st.column_config.NumberColumn("Final Pos (Low)", format="%.3f"),
     'PredictedFinalPosition_High': st.column_config.NumberColumn("Final Pos (High)", format="%.3f"),
+    'PredictedPositionMAE': st.column_config.NumberColumn("Position MAE", format="%.3f"),
 }
 predicted_dnf_position_columns_to_display = {
     'resultsDriverName': st.column_config.TextColumn("Driver"),
@@ -3616,12 +3617,48 @@ with tab4:
     all_active_driver_inputs.drop(columns=['constructorName', 'constructorName_y'], inplace=True, errors='ignore')
     all_active_driver_inputs = all_active_driver_inputs.rename(columns={'constructorName_x': 'constructorName'})
 
+    # Calculate MAE by individual positions for mapping to predicted positions
+    X_mae, y_mae = get_features_and_target(data)
+    X_train_mae, X_test_mae, y_train_mae, y_test_mae = train_test_split(X_mae, y_mae, test_size=0.2, random_state=42)
+    preprocessor_mae = get_preprocessor_position()
+    preprocessor_mae.fit(X_train_mae)
+    X_test_prep_mae = preprocessor_mae.transform(X_test_mae)
+    y_pred_mae = model.predict(xgb.DMatrix(X_test_prep_mae))
+    
+    results_df_analysis_mae = pd.DataFrame({
+        'Actual': y_test_mae.values,
+        'Predicted': y_pred_mae
+    })
+    
+    individual_mae = []
+    for pos in range(1, 21):
+        pos_data = results_df_analysis_mae[results_df_analysis_mae['Actual'] == pos]
+        if len(pos_data) > 0:
+            mae_pos = mean_absolute_error(pos_data['Actual'], pos_data['Predicted'])
+            individual_mae.append({
+                'Position': pos,
+                'MAE': mae_pos,
+                'Sample Size': len(pos_data)
+            })
+    
+    individual_mae_df = pd.DataFrame(individual_mae)
+    
+    # Create mapping from position to MAE
+    mae_by_position = dict(zip(individual_mae_df['Position'], individual_mae_df['MAE']))
+    
+    # Add MAE for predicted position to the dataframe
+    all_active_driver_inputs['PredictedPositionMAE'] = (
+        all_active_driver_inputs.index
+        .map(mae_by_position)
+        .fillna(global_mae)
+    )
+
     # st.write(all_active_driver_inputs.columns.tolist())
     st.subheader("Predictive Results for Active Drivers")
 
     st.write(f"MAE for Position Predictions: {global_mae:.3f}")
     st.dataframe(all_active_driver_inputs, hide_index=False, column_config=predicted_position_columns_to_display, width=1000, height=800, 
-    column_order=['constructorName', 'resultsDriverName', 'PredictedFinalPosition', 'PredictedFinalPositionStd', 'PredictedFinalPosition_Low', 'PredictedFinalPosition_High',])    
+    column_order=['constructorName', 'resultsDriverName', 'PredictedFinalPosition', 'PredictedFinalPositionStd', 'PredictedFinalPosition_Low', 'PredictedFinalPosition_High', 'PredictedPositionMAE',])    
 
     st.subheader("Predictive DNF")
 
