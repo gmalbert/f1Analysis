@@ -11,6 +11,7 @@ Analysis of Formula 1 ```.json``` files based on the very generous data files fr
 - [Features used in data model](#features-used-in-data-model)
 - [Other options](#other-options)
 - [Weather](#weather)
+- [Roadmap](#roadmap)
 - [To do](#to-do)
 
 ## File organization
@@ -247,6 +248,18 @@ Besides filtering, you can also look at the upcoming race which shows historical
 
 ## Weather
 The weather is pulled from [Open-Meteo's free API](https://open-meteo.com/) which allows you to search historical weather data by hour going back to the 1940s. The hourly reports are pulled per race and then averaged to show a daily weather report on race day.
+
+[↑ Back to top](#table-of-contents)
+
+## Roadmap
+
+For detailed project roadmap including upcoming features, performance optimization plans, and future enhancements, see the [Roadmap](ROADMAP.md).
+
+**Current Focus:**
+- Model performance optimization (MAE reduction)
+- Enhanced feature engineering
+- Real-time data integration
+- UI/UX improvements
 
 [↑ Back to top](#table-of-contents)
 
