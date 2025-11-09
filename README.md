@@ -65,6 +65,7 @@ source .venv/bin/activate     # Linux/Mac
 - [Features used in data model](#features-used-in-data-model)
 - [Other options](#other-options)
 - [Weather](#weather)
+- [Roadmap](#roadmap)
 - [To do](#to-do)
 
 ## File organization
@@ -307,6 +308,18 @@ The weather is pulled from [Open-Meteo's free API](https://open-meteo.com/) whic
 - Uses proper YYYY-MM-DD date format for API compatibility
 - Supports both historical data (archive API) and forecast data (up to 16 days ahead)
 - Data is cached to minimize API calls and improve performance
+
+[↑ Back to top](#table-of-contents)
+
+## Roadmap
+
+For detailed project roadmap including upcoming features, performance optimization plans, and future enhancements, see the [Roadmap](ROADMAP.md).
+
+**Current Focus:**
+- Model performance optimization (MAE reduction)
+- Enhanced feature engineering
+- Real-time data integration
+- UI/UX improvements
 
 [↑ Back to top](#table-of-contents)
 

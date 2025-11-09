@@ -3324,6 +3324,9 @@ with tab4:
     features, _ = get_features_and_target(data)
     feature_names = features.columns.tolist()
 
+    # Get MAE by position from Tab 5's session state
+    position_mae_dict = st.session_state.get('position_mae_dict', {})
+
     if next_race_id not in practices['raceId'].values:
         # The upcoming race is NOT in the practices dataset
         practices = practices[practices['raceId'] == last_race['raceId_results']]
@@ -3624,18 +3627,32 @@ with tab4:
 
     all_active_driver_inputs.sort_values(by='PredictedFinalPosition', ascending=True, inplace=True)
     all_active_driver_inputs['Rank'] = range(1, len(all_active_driver_inputs) + 1)
+    all_active_driver_inputs['Historical MAE by Rank'] = all_active_driver_inputs['Rank'].map(position_mae_dict)
     all_active_driver_inputs = all_active_driver_inputs.set_index('Rank')
 
     # Fix the column data for display after the merge
     all_active_driver_inputs.drop(columns=['constructorName', 'constructorName_y'], inplace=True, errors='ignore')
     all_active_driver_inputs = all_active_driver_inputs.rename(columns={'constructorName_x': 'constructorName'})
 
-    # st.write(all_active_driver_inputs.columns.tolist())
     st.subheader("Predictive Results for Active Drivers")
 
     st.write(f"MAE for Position Predictions: {global_mae:.3f}")
-    st.dataframe(all_active_driver_inputs, hide_index=False, column_config=predicted_position_columns_to_display, width=1000, height=800, 
-    column_order=['constructorName', 'resultsDriverName', 'PredictedFinalPosition', 'PredictedFinalPositionStd', 'PredictedFinalPosition_Low', 'PredictedFinalPosition_High',])    
+    st.dataframe(
+        all_active_driver_inputs,
+        hide_index=False,
+        column_config=predicted_position_columns_to_display,
+        width=1000,
+        height=800,
+        column_order=[
+            'constructorName',
+            'resultsDriverName',
+            'PredictedFinalPosition',
+            'PredictedFinalPositionStd',
+            'PredictedFinalPosition_Low',
+            'PredictedFinalPosition_High',
+            'Historical MAE by Rank',
+        ]
+    )    
 
     st.subheader("Predictive DNF")
 
@@ -3844,6 +3861,9 @@ with tab5:
         "Early stopping rounds", min_value=1, max_value=100, value=20, step=1, 
         help="Number of rounds with no improvement to stop training"
     )
+
+    # Store for use in Tab 4
+    st.session_state['early_stopping_rounds'] = early_stopping_rounds
 
     # Train model once at the top level for reuse
     model, mse, r2, mae, mean_err, evals_result = train_and_evaluate_model(data, early_stopping_rounds=early_stopping_rounds)
@@ -4065,6 +4085,9 @@ with tab5:
             individual_mae_df = pd.DataFrame(individual_mae)
             st.dataframe(individual_mae_df, hide_index=True, width=600, height=750)
             st.line_chart(individual_mae_df.set_index('Position')['MAE'], width='stretch')
+
+            # Store for use in Tab 4
+            st.session_state['position_mae_dict'] = dict(zip(individual_mae_df['Position'], individual_mae_df['MAE']))
 
             # Position group summary
             st.subheader("Position Group Summary")
