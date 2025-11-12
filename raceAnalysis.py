@@ -3234,15 +3234,29 @@ with tab2:
 with tab3:
     st.header(f"{current_year} Season")
     st.write(f"Complete schedule and information for the {current_year} Formula 1 season.")
-    
-    # if st.checkbox(f"Show {current_year} Schedule", value=True):
-    raceSchedule_display = raceSchedule[raceSchedule['year'] == current_year]
-    
+
+    raceSchedule_display = raceSchedule[raceSchedule['year'] == current_year].copy()
     st.write(f"Total number of races: {len(raceSchedule_display)}")
-    
-    st.dataframe(raceSchedule_display, column_config=schedule_columns_to_display,
-        hide_index=True,  width=1000, height=900, column_order=['round', 'fullName', 'date', 'time', 
-        'circuitType', 'courseLength', 'laps', 'turns', 'distance', 'totalRacesHeld'])
+
+    # Highlight the current week (next race) in a different color within the main schedule table
+    today = datetime.datetime.today().date()
+    raceSchedule_display['date_only'] = pd.to_datetime(raceSchedule_display['date']).dt.date
+    next_race_date = raceSchedule_display[raceSchedule_display['date_only'] >= today]['date_only'].min()
+
+    def highlight_current_week(row):
+        color = 'background-color: #ffe599' if row['date_only'] == next_race_date else ''
+        return [color] * len(row)
+
+    styled_schedule = raceSchedule_display.style.apply(highlight_current_week, axis=1)
+
+    st.dataframe(
+        styled_schedule,
+        column_config=schedule_columns_to_display,
+        hide_index=True,
+        width=1000,
+        height=900,
+        column_order=['round', 'fullName', 'date', 'time', 'circuitType', 'courseLength', 'laps', 'turns', 'distance', 'totalRacesHeld']
+    )
 
 with tab4:
     st.header("Next Race")
