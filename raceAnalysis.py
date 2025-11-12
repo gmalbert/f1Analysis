@@ -3234,8 +3234,9 @@ with tab2:
 with tab3:
     st.header(f"{current_year} Season")
     st.write(f"Complete schedule and information for the {current_year} Formula 1 season.")
-
-    raceSchedule_display = raceSchedule[raceSchedule['year'] == current_year].copy()
+    
+    # if st.checkbox(f"Show {current_year} Schedule", value=True):
+    raceSchedule_display = raceSchedule[raceSchedule['year'] == current_year]
     st.write(f"Total number of races: {len(raceSchedule_display)}")
 
     # Highlight the current week (next race) in a different color within the main schedule table
@@ -3247,6 +3248,7 @@ with tab3:
         color = 'background-color: #ffe599' if row['date_only'] == next_race_date else ''
         return [color] * len(row)
 
+    # Apply styling directly to the main schedule table
     styled_schedule = raceSchedule_display.style.apply(highlight_current_week, axis=1)
 
     st.dataframe(
@@ -3743,11 +3745,12 @@ with tab4:
     st.write("Historical Safety Car Probabilities (mean):", safety_cars['PredictedSafetyCarProbabilityPercentage'].mean())
     st.write("Historical Safety Car Probabilities (min/max):", safety_cars['PredictedSafetyCarProbabilityPercentage'].min(), safety_cars['PredictedSafetyCarProbabilityPercentage'].max())
 
+    height = get_dataframe_height(display_df)
     st.dataframe(
         display_df[['grandPrixName', 'grandPrixYear', 'PredictedSafetyCarProbabilityPercentage', 'Type']].sort_values(by=['grandPrixYear'], ascending=[False]),
         hide_index=True,
         width=800,
-        height=400,
+        height=height,
         column_config={
             'grandPrixName': st.column_config.TextColumn("Grand Prix"),
             'grandPrixYear': st.column_config.NumberColumn("Year"),
