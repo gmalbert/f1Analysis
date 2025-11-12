@@ -2953,7 +2953,30 @@ with tab2:
         st.subheader("Correlation Matrix")
         st.caption("Correlation values range from -1 to 1, where -1 indicates a perfect negative correlation, 0 indicates no correlation, and 1 indicates a perfect positive correlation.")
         # Display the correlation matrix
-        st.dataframe(correlation_matrix, column_config=correlation_columns_to_display, width=800, height=600)
+        st.subheader("Feature Correlations with Final Position and Podium")
+        # Select only relevant columns for review
+        relevant_corr_cols = [
+            'resultsFinalPositionNumber', 'resultsPodium', 'resultsTop5', 'resultsTop10',
+            'resultsStartingGridPositionNumber', 'positionsGained', 'averagePracticePosition',
+            'grandPrixLaps', 'lastFPPositionNumber', 'resultsQualificationPositionNumber',
+            'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions',
+            'turns', 'numberOfStops', 'driverBestStartingGridPosition', 'driverBestRaceResult',
+            'driverTotalChampionshipWins', 'yearsActive', 'driverTotalRaceEntries', 'driverTotalRaceStarts',
+            'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums', 'driverTotalPolePositions',
+            'streetRace', 'trackRace', 'avgLapPace', 'finishingTime', 'DNF'
+        ]
+        # Filter and sort by absolute correlation with final position
+        corr_df = correlation_matrix[['Unnamed: 0'] + relevant_corr_cols].copy()
+        corr_df = corr_df.rename(columns={'Unnamed: 0': 'Feature'})
+        # Sort by correlation with final position
+        corr_df = corr_df.sort_values(by='resultsFinalPositionNumber', key=lambda x: abs(x), ascending=False)
+        st.dataframe(
+            corr_df,
+            column_config=correlation_columns_to_display,
+            hide_index=True,
+            width='stretch',
+            height=600
+        )
 
         driver_performance = filtered_data.groupby(['grandPrixYear', 'resultsDriverName']).agg(
             average_final_position=('resultsFinalPositionNumber', 'mean'),
