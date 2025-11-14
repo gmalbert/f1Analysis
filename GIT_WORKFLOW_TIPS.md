@@ -1,3 +1,21 @@
+## One-line Git Workflow Checklist (Safe Feature Branching)
+
+**Before you start work:**
+
+1. `git checkout main && git pull --ff-only`
+   - Ensures your local main branch is up to date with the remote and only fast-forwards (no merges or rebases). This prevents working on an outdated base and avoids merge conflicts later.
+2. `git checkout -b my/feature-branch`
+   - Creates a new feature branch from the latest main. This isolates your changes and makes it easy to track, review, and merge work.
+3. Edit code → `git add` → `git commit` → `git push origin my/feature-branch`
+   - Make your changes, stage them, commit with a message, and push to the remote feature branch. This keeps your work separate and safe from overwriting.
+
+**Why this pattern prevents overwriting changes:**
+- By always starting from an up-to-date main branch, you avoid working on stale code and reduce the risk of merge conflicts.
+- Feature branches isolate your work, so local edits never overwrite changes on main or other branches.
+- Pushing to a feature branch means your work is backed up and ready for review or merging, without affecting main until you open a pull request.
+
+**Summary:**
+Following this checklist ensures you never get the “your changes would be overwritten” error, keeps your work organized, and makes collaboration safe and predictable.
 # Git Workflow Tips & Best Practices
 
 ## Understanding Git Terminology
