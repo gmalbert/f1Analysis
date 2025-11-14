@@ -3259,7 +3259,7 @@ with tab3:
     st.write(f"Complete schedule and information for the {current_year} Formula 1 season.")
     
     # if st.checkbox(f"Show {current_year} Schedule", value=True):
-    raceSchedule_display = raceSchedule[raceSchedule['year'] == current_year]
+    raceSchedule_display = raceSchedule[raceSchedule['year'] == current_year].copy()
     st.write(f"Total number of races: {len(raceSchedule_display)}")
 
     # Highlight the current week (next race) in a different color within the main schedule table
@@ -3295,7 +3295,7 @@ with tab4:
     nextRace = raceSchedule[raceSchedule['date_only'] >= datetime.datetime.today().date()]
 
     # Create a copy of the slice to avoid the warning 
-    nextRace = nextRace.sort_values(by=['date'], ascending = True).head(1).copy()
+    nextRace = nextRace.sort_values(by=['date'], ascending = True).head(1)
     
     st.dataframe(nextRace, width=800, column_config=next_race_columns_to_display, hide_index=True, 
         column_order=['date', 'time', 'fullName', 'courseLength', 'turns', 'laps'])
@@ -3304,8 +3304,8 @@ with tab4:
     next_race_id = nextRace['grandPrixId'].head(1).values[0]
     upcoming_race = pd.merge(nextRace, raceSchedule, left_on='grandPrixId', right_on='grandPrixId', how='inner', suffixes=('_nextrace', '_races'))
 
-    upcoming_race = upcoming_race.sort_values(by='date_nextrace', ascending = False).head(1).copy()
-    upcoming_race_id = upcoming_race['id_grandPrix_nextrace'].unique().copy()
+    upcoming_race = upcoming_race.sort_values(by='date_nextrace', ascending = False).head(1)
+    upcoming_race_id = upcoming_race['id_grandPrix_nextrace'].unique()
 
     st.subheader("Past Results:")
     detailsOfNextRace = data[data['grandPrixRaceId'] == next_race_id]
@@ -3847,7 +3847,7 @@ with tab4:
         right_on='id_grandPrix',
         how='left'
     )
-    prior_gp_pitstops = pitstops[pitstops['grandPrixId'] == next_race_id].copy()
+    prior_gp_pitstops = pitstops[pitstops['grandPrixId'] == next_race_id]
 
     # st.write("Data columns:", data.columns.tolist())
 

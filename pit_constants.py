@@ -50,7 +50,7 @@ PIT_LANE_TIME_S = {
     'detroit': 24.62,  # TODO: Unknown, using 2023 average
     'great-britain': 21.0,  # TODO: Fill in actual value
     'indianapolis': 24.0,  # TODO: Fill in actual value
-    'las-vegas': 22.32,  # TODO: Fill in actual value
+    'las-vegas': 20.0,  # Updated based on 2023-2024 pit stop data
     'luxembourg': 24.62,  # TODO: Unknown, using 2023 average
     'morocco': 24.62,  # TODO: Unknown, using 2023 average
     'pescara': 24.62,  # TODO: Unknown, using 2023 average
@@ -61,7 +61,7 @@ PIT_LANE_TIME_S = {
     'sweden': 24.62,  # TODO: Unknown, using 2023 average
     'switzerland': 24.62,  # TODO: Unknown, using 2023 average
     'united-states': 23.54,  # TODO: Fill in actual value
-    'united-states-west': 22.32,  # TODO: Fill in actual value
+    'united-states-west': 20.0,  # Updated based on 2023-2024 pit stop data - Las Vegas
     # Add/adjust as needed for new/old circuits
 }
 
