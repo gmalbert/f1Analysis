@@ -21,25 +21,25 @@ Minimize MAE (Mean Absolute Error) for Formula 1 race predictions with a target 
 **Goal:** Reduce MAE below 1.5 consistently across all position groups
 
 ### 1.1 Feature Engineering Enhancements
-- [ ] **Driver form momentum features**
+- [x] **Driver form momentum features**
   - Rolling 3-race win percentage
   - Recent qualifying improvement trend
   - Head-to-head teammate performance delta
   - Championship position pressure factor
   
-- [ ] **Constructor reliability features**
+- [x] **Constructor reliability features**
   - Recent mechanical DNF rate by constructor
   - Engine penalty impact on grid position
   - Component age vs. failure probability
   - Constructor development rate (mid-season upgrades)
 
-- [ ] **Track-specific intelligence**
+- [x] **Track-specific intelligence**
   - Driver historical performance at specific circuit types (street, high-speed, technical)
   - Weather pattern analysis by circuit location
   - Tire compound strategy effectiveness by track
   - Overtaking difficulty index per circuit
 
-- [ ] **Qualifying-to-race correlation**
+- [x] **Qualifying-to-race correlation**
   - Q1/Q2/Q3 sector time consistency
   - Qualifying position vs. race pace delta by track
   - Tire compound used in qualifying vs. race start

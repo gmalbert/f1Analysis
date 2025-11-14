@@ -134,7 +134,7 @@ st.dataframe(df, height=height)
 
 ## Features used in data model
 
-After going through a 1,000 test Monte Carlo simulation, these are the fields and descriptions of all of the features I used to achieve an MAE of 1.50 or below:
+After extensive feature engineering implementing all roadmap enhancements, Monte Carlo simulation (1000+ iterations), and feature selection (RFE, Boruta), I have achieved a MAE of **1.5 or below**. The model now includes 86+ engineered features, with automatic loading of Monte Carlo-selected best features when available. Feature lists are externalized to text files for easy maintenance and updates.
 
 | Field Name                           | Description                                                                                   |
 |-------------------------------------- |----------------------------------------------------------------------------------------------|
@@ -237,6 +237,22 @@ After going through a 1,000 test Monte Carlo simulation, these are the fields an
 | constructor_podium_ratio             | Constructor's podium rate (podiums per entry).                                                |
 | driver_age_squared                   | Driver's age squared, capturing nonlinear age effects.                                        |
 | constructor_recent_win_streak        | Number of wins by the constructor in the last 3 races.                                        |
+| rolling_3_race_win_percentage        | Rolling win percentage over the last 3 races, shifted to avoid data leakage.                   |
+| head_to_head_teammate_performance_delta | Historical performance difference between driver and teammate.                               |
+| recent_qualifying_improvement_trend  | Trend in qualifying position improvement over recent races.                                   |
+| championship_position_pressure_factor | Pressure factor based on driver's current championship position.                              |
+| recent_mechanical_dnf_rate_by_constructor | Constructor's mechanical DNF rate in recent races.                                          |
+| engine_penalty_impact_on_grid        | Impact of engine penalties on starting grid position.                                         |
+| component_age_vs_failure_probability | Probability of component failure based on age.                                               |
+| constructor_development_rate         | Rate of mid-season upgrades and development by constructor.                                   |
+| driver_historical_performance_at_circuit_types | Driver's performance across different circuit types (street, high-speed, technical).         |
+| weather_pattern_analysis_by_circuit  | Weather pattern analysis specific to circuit location.                                        |
+| tire_compound_strategy_effectiveness_by_track | Effectiveness of tire compound strategy at specific tracks.                               |
+| overtaking_difficulty_index_per_circuit | Index measuring overtaking difficulty at each circuit.                                       |
+| q1_q2_q3_sector_time_consistency     | Consistency of sector times across Q1, Q2, Q3 sessions.                                      |
+| qualifying_position_vs_race_pace_delta_by_track | Delta between qualifying position and race pace by track.                                 |
+| tire_compound_used_in_qualifying_vs_race_start | Comparison of tire compounds used in qualifying vs. race start.                              |
+| traffic_impact_on_qualifying_laps    | Impact of traffic on qualifying lap times.                                                    |
 
 [↑ Back to top](#table-of-contents)
 

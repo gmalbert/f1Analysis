@@ -1969,6 +1969,73 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
     .transform(lambda x: (x == 1).rolling(window=3, min_periods=1).sum().shift(1))
 )
 
+# --- NEW FEATURES FROM ROADMAP ---
+
+# Driver form momentum features
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['rolling_3_race_win_percentage'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .groupby('resultsDriverId')['resultsFinalPositionNumber']
+    .transform(lambda x: (x == 1).rolling(window=3, min_periods=1).mean().shift(1))
+)
+
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['recent_qualifying_improvement_trend'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .groupby('resultsDriverId')['resultsQualificationPositionNumber']
+    .transform(lambda x: x.rolling(window=3, min_periods=1).mean().shift(1) - x.rolling(window=3, min_periods=1).mean().shift(4))
+)
+
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['head_to_head_teammate_performance_delta'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .groupby(['resultsDriverId'])['resultsFinalPositionNumber']
+    .transform(lambda x: x.shift(1).mean()) - 
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .groupby(['constructorName', 'grandPrixYear'])['resultsFinalPositionNumber']
+    .transform(lambda x: x.shift(1).mean())
+)
+
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['championship_position_pressure_factor'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['championship_position'] / 
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.groupby('grandPrixYear')['championship_position'].transform('max')
+)
+
+# Constructor reliability features
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['constructor_recent_mechanical_dnf_rate'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .groupby('constructorName')['DNF']
+    .transform(lambda x: x.rolling(window=5, min_periods=1).mean().shift(1))
+)
+
+# Track-specific intelligence
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_performance_at_circuit_type'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .groupby(['resultsDriverId', 'circuitType'])['resultsFinalPositionNumber']
+    .transform(lambda x: x.shift(1).mean())
+)
+
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['weather_pattern_analysis_by_location'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['average_temp'] * 
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['total_precipitation']
+)
+
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['overtaking_difficulty_index'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['turns'] / 
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['courseLength']
+)
+
+# Qualifying-to-race correlation
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['q1_q2_q3_sector_consistency'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[['q1_sec', 'q2_sec', 'q3_sec']].std(axis=1)
+)
+
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['qualifying_position_vs_race_pace_delta_by_track'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .groupby('circuitId')['resultsStartingGridPositionNumber']
+    .transform(lambda x: x.shift(1).mean()) - 
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .groupby('circuitId')['resultsFinalPositionNumber']
+    .transform(lambda x: x.shift(1).mean())
+)
+
 
 # Quantile binning for high-cardinality numerical features
 # high_cardinality_features = [
@@ -2119,12 +2186,21 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
 #     "constructor_qual_improvement_3r"
 #     ]
 
-from feature_lists import (
-    high_cardinality_features_q2,
-    high_cardinality_features_q3,
-    high_cardinality_features_q5,
-    high_cardinality_features_q10plus
-)
+# Function to load features from text files
+def load_features_from_file(filename):
+    filepath = path.join('data_files', filename)
+    if path.exists(filepath):
+        with open(filepath, 'r') as f:
+            return [line.strip() for line in f if line.strip()]
+    else:
+        print(f"Warning: {filepath} not found, returning empty list")
+        return []
+
+# Load feature lists from text files
+high_cardinality_features_q2 = load_features_from_file('high_cardinality_features_q2.txt')
+high_cardinality_features_q3 = load_features_from_file('high_cardinality_features_q3.txt')
+high_cardinality_features_q5 = load_features_from_file('high_cardinality_features_q5.txt')
+high_cardinality_features_q10plus = load_features_from_file('high_cardinality_features_q10plus.txt')
 
 # Map q_bin to the correct feature list
 high_cardinality_features_q = {
@@ -2213,7 +2289,10 @@ static_columns=['grandPrixYear', 'grandPrixName', 'raceId_results', 'circuitId',
                                         'practice_position_vs_constructor_recent_form','qualifying_position_vs_constructor_recent_form','practice_position_vs_field_recent_form',
                                         'qualifying_position_vs_field_recent_form', 'currentRookie',
                                         'podium_form_3_races', 'wins_last_5_races', 'championship_position', 'points_leader_gap',
-                                        'pole_to_win_rate', 'front_row_conversion', 'recent_wins_3_races'
+                                        'pole_to_win_rate', 'front_row_conversion', 'recent_wins_3_races',
+                                        'rolling_3_race_win_percentage', 'recent_qualifying_improvement_trend', 'head_to_head_teammate_performance_delta', 'championship_position_pressure_factor',
+                                        'constructor_recent_mechanical_dnf_rate', 'driver_performance_at_circuit_type', 'weather_pattern_analysis_by_location', 'overtaking_difficulty_index',
+                                        'q1_q2_q3_sector_consistency', 'qualifying_position_vs_race_pace_delta_by_track'
                                                                               ]
 
 # Concatenate static columns and bin_fields
