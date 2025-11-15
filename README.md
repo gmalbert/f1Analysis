@@ -31,7 +31,7 @@ streamlit run raceAnalysis.py
 The app is deployed on [Streamlit Cloud](https://f1analysis-app.streamlit.app/) and uses aggressive caching with `@st.cache_data` decorators to improve performance. 
 
 ### Cache Management
-- **CACHE_VERSION**: The app uses a version-based cache invalidation system (`CACHE_VERSION="v2.1"`) to ensure cached data and models remain consistent across deployments
+- **CACHE_VERSION**: The app uses a version-based cache invalidation system (`CACHE_VERSION="v2.2"`) to ensure cached data and models remain consistent across deployments
 - **Cache Dependencies**: All cached functions include `CACHE_VERSION` as a dependency to force cache invalidation when the version changes
 - **Model Caching**: ML models are cached with preprocessing pipelines to prevent feature shape mismatches between training and prediction
 

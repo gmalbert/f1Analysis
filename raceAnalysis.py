@@ -53,7 +53,7 @@ EarlyStopping = xgb.callback.EarlyStopping
 DATA_DIR = 'data_files/'
 
 # Cache version - increment this when preprocessor logic changes
-CACHE_VERSION = "v2.1"
+CACHE_VERSION = "v2.2"
 
 # Suppress numpy warnings about empty slices during calculations
 warnings.filterwarnings('ignore', message='Mean of empty slice', category=RuntimeWarning, module='numpy')
@@ -589,34 +589,28 @@ raceNoEarlierThan = current_year - 10
 # start = time.time()
 
 @st.cache_data
-def load_correlation(nrows):
-    # Include cache version to invalidate when preprocessor changes
-    _ = CACHE_VERSION
+def load_correlation(nrows, CACHE_VERSION):
     correlation_matrix = pd.read_csv(path.join(DATA_DIR, 'f1PositionCorrelation.csv'), sep='\t', nrows=nrows)
-
     return correlation_matrix
-correlation_matrix = load_correlation(10000)
+
+correlation_matrix = load_correlation(10000, CACHE_VERSION)
 
 @st.cache_data
-def load_data_schedule(nrows):
-    # Include cache version to invalidate when preprocessor changes
-    _ = CACHE_VERSION
+def load_data_schedule(nrows, CACHE_VERSION):
     raceSchedule = pd.read_json(path.join(DATA_DIR, 'f1db-races.json'))
     grandPrix = pd.read_json(path.join(DATA_DIR, 'f1db-grands-prix.json'))
     raceSchedule = raceSchedule.merge(grandPrix, left_on='grandPrixId', right_on='id', how='inner', suffixes=['_grandPrix', '_schedule'])
     #raceSchedule = raceSchedule.merge(grandPrix, left_on='grandPrixId', right_on='id', how='inner', suffixes=['_grandPrix', '_schedule'])
     return raceSchedule
 
-raceSchedule = load_data_schedule(10000)
+raceSchedule = load_data_schedule(10000, CACHE_VERSION)
 
 @st.cache_data
-def load_drivers(nrows):
-    # Include cache version to invalidate when preprocessor changes
-    _ = CACHE_VERSION
+def load_drivers(nrows, CACHE_VERSION):
     drivers = pd.read_json(path.join(DATA_DIR, 'f1db-drivers.json'))
     return drivers
 
-drivers = load_drivers(10000)
+drivers = load_drivers(10000, CACHE_VERSION)
 
 @st.cache_data
 def load_qualifying(nrows):
@@ -628,24 +622,19 @@ def load_qualifying(nrows):
 qualifying = load_qualifying(10000)
 
 @st.cache_data
-def load_practices(nrows):
-    # Include cache version to invalidate when preprocessor changes
-    _ = CACHE_VERSION
+def load_practices(nrows, CACHE_VERSION):
     practices = pd.read_csv(path.join(DATA_DIR, 'all_practice_laps.csv'), sep='\t', dtype={'PitOutTime': str}) 
     practices = practices[practices['Driver'] != 'ERROR']  # Remove rows where Driver is 'ERROR'
     return practices
 
-practices = load_practices(10000)
+practices = load_practices(10000, CACHE_VERSION)
 
 @st.cache_data
-def load_data_race_messages(nrows):
-    # Include cache version to invalidate when preprocessor changes
-    _ = CACHE_VERSION
+def load_data_race_messages(nrows, CACHE_VERSION):
     race_messages = pd.read_csv(path.join(DATA_DIR, 'race_control_messages_grouped_with_dnf.csv'),sep='\t')
-
     return race_messages
 
-race_messages = load_data_race_messages(10000)
+race_messages = load_data_race_messages(10000, CACHE_VERSION)
 
 
 schedule_columns_to_display = {
@@ -703,15 +692,13 @@ schedule_columns_to_display = {
 }
 
 @st.cache_data
-def load_weather_data(nrows):
-    # Include cache version to invalidate when preprocessor changes
-    _ = CACHE_VERSION
+def load_weather_data(nrows, CACHE_VERSION):
     weather = pd.read_csv(path.join(DATA_DIR, 'f1WeatherData_Grouped.csv'), sep='\t', nrows=nrows, usecols=['grandPrixId', 'short_date', 'average_temp', 'total_precipitation', 'average_humidity', 'average_wind_speed', 'id_races'])
     grandPrix = pd.read_json(path.join(DATA_DIR, 'f1db-grands-prix.json'))
     weather_with_grandprix = pd.merge(weather, grandPrix, left_on='grandPrixId', right_on='id', how='inner', suffixes=['_weather', '_grandPrix'])
     return weather_with_grandprix
 
-weatherData = load_weather_data(10000)
+weatherData = load_weather_data(10000, CACHE_VERSION)
 
 
 weather_columns_to_display = {
@@ -954,9 +941,7 @@ season_summary_columns_to_display = {
 }
 
 @st.cache_data
-def load_data(nrows):
-    # Include cache version to invalidate when preprocessor changes
-    _ = CACHE_VERSION
+def load_data(nrows, CACHE_VERSION):
     # Read the header only to get all column names
     all_columns = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t', nrows=0).columns.tolist()
     selected_columns = ['grandPrixYear', 'grandPrixName', 'resultsDriverName', 'resultsPodium', 'resultsTop5', 'resultsTop10', 'constructorName',  'resultsStartingGridPositionNumber', 'resultsFinalPositionNumber', 
@@ -1043,7 +1028,7 @@ def load_data(nrows):
 
     return fullResults, pitStops
 
-data, pitStops = load_data(10000)
+data, pitStops = load_data(10000, CACHE_VERSION)
 
 # Check for duplicate columns and remove them
 dupes = [col for col in data.columns if data.columns.tolist().count(col) > 1]
@@ -1735,16 +1720,14 @@ def get_preprocessor_safety_car():
     return preprocessor
 
 @st.cache_data
-def load_safetycars(nrows):
-    # Include cache version to invalidate when preprocessor changes
-    _ = CACHE_VERSION
+def load_safetycars(nrows, CACHE_VERSION):
     safety_cars = pd.read_csv(path.join(DATA_DIR, 'f1SafetyCarFeatures.csv'), sep='\t', nrows=nrows)
     safety_cars = safety_cars.drop_duplicates()
     # Drop duplicate rows based on all feature columns
     features, _ = get_features_and_target_safety_car(safety_cars)
     safety_cars = safety_cars.drop_duplicates(subset=features.columns.tolist())
     return safety_cars
-safety_cars = load_safetycars(10000)
+safety_cars = load_safetycars(10000, CACHE_VERSION)
 
 
 ###### Training model for final racing position prediction
@@ -1931,9 +1914,7 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
 
 
 @st.cache_data
-def train_and_evaluate_dnf_model(data):
-    # Include cache version to invalidate when preprocessor changes
-    _ = CACHE_VERSION
+def train_and_evaluate_dnf_model(data, CACHE_VERSION):
     from sklearn.linear_model import LogisticRegression
     X, y = get_features_and_target_dnf(data)
     preprocessor = get_preprocessor_dnf()
@@ -1946,9 +1927,7 @@ def train_and_evaluate_dnf_model(data):
 
 
 @st.cache_data
-def train_and_evaluate_safetycar_model(data):
-    # Include cache version to invalidate when preprocessor changes
-    _ = CACHE_VERSION
+def train_and_evaluate_safetycar_model(data, CACHE_VERSION):
     from sklearn.linear_model import LogisticRegression
     X, y = get_features_and_target_safety_car(data)
     if X.isnull().any().any():
@@ -1965,15 +1944,12 @@ def train_and_evaluate_safetycar_model(data):
 
 # @st.cache_resource
 @st.cache_data
-def get_trained_model(early_stopping_rounds=20):
-    # Include cache version to invalidate when preprocessor changes
-    _ = CACHE_VERSION
+def get_trained_model(early_stopping_rounds, CACHE_VERSION):
     model, mse, r2, mae, mean_err, evals_result = train_and_evaluate_model(data, early_stopping_rounds=early_stopping_rounds)
     # global_mae = mae
     return model
 
-
-model = get_trained_model()
+model = get_trained_model(20, CACHE_VERSION)
 model, mse, r2, mae, mean_err, evals_result = train_and_evaluate_model(data, early_stopping_rounds=20)
 global_mae = mae
 
@@ -1992,9 +1968,9 @@ clf.fit(X_dnf_prep, y_dnf)
 probs = clf.predict_proba(X_dnf_prep)[:, 1]
 
 
-dnf_model = train_and_evaluate_dnf_model(data)
+dnf_model = train_and_evaluate_dnf_model(data, CACHE_VERSION)
 
-safetycar_model = train_and_evaluate_safetycar_model(safety_cars)
+safetycar_model = train_and_evaluate_safetycar_model(safety_cars, CACHE_VERSION)
 
 
 X_sc, y_sc = get_features_and_target_safety_car(safety_cars)
@@ -3038,7 +3014,7 @@ with tab4:
     X_train, y_train = get_features_and_target_safety_car(train)
     X_test, y_test = get_features_and_target_safety_car(test)
 
-    holdout_model = train_and_evaluate_safetycar_model(train)
+    holdout_model = train_and_evaluate_safetycar_model(train, CACHE_VERSION)
     # Now use holdout_model for predictions:
     # y_pred = holdout_model.predict_proba(X_test)[:, 1]
     if X_test.isnull().any().any():
@@ -3061,7 +3037,7 @@ with tab4:
         X_test, y_test = get_features_and_target_safety_car(test)
 
         # Do NOT re-fit safetycar_model! Instead, create a new model for holdout/test:
-        holdout_model = train_and_evaluate_safetycar_model(train)
+        holdout_model = train_and_evaluate_safetycar_model(train, CACHE_VERSION)
         y_pred = holdout_model.predict_proba(X_test)[:, 1]
         from sklearn.metrics import roc_auc_score
         # st.write(f"Safety Car ROC AUC (holdout year {holdout_year}):", roc_auc_score(y_test, y_pred))
