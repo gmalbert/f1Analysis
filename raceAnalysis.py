@@ -1323,7 +1323,7 @@ def get_features_and_target(data):
     #         ]
 
     features = [
-        'grandPrixName',
+        # 'grandPrixName',  # Removed categorical feature to avoid imputation errors
         'resultsDriverName',
         'constructorName',
         'resultsStartingGridPositionNumber',
@@ -1746,39 +1746,35 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
     X_test_prep = preprocessor.transform(X_test)
 
     if model_type == "XGBoost":
-        # Convert to DMatrix
-        dtrain = xgb.DMatrix(X_train_prep, label=y_train, weight=sample_weights_train)
-        dtest = xgb.DMatrix(X_test_prep, label=y_test)
+        # Use XGBRegressor for better compatibility with early stopping on Streamlit Cloud
         
-
-        # Parameters
-        params = {
-            "objective": "reg:absoluteerror",
-            "learning_rate": 0.1,
-            "max_depth": 4,
-            "tree_method": "hist",
-            "n_jobs": -1,
-            "random_state": 42,
-            # "reg_alpha": 0.3,                # L1 regularization
-            # "colsample_bytree": 0.80,         # Sample 80% of features per tree
-            # "colsample_bylevel": 0.80,        # Sample 80% per tree level
-            # "colsample_bynode": 0.80,         # Sample 80% per split
-        }
-
-        # Train with early stopping
-        evals_result = {}
-        booster = xgb.train(
-            params,
-            dtrain,
-            num_boost_round=200,
-            evals=[(dtest, "eval")],
+        model = XGBRegressor(
+            n_estimators=200,
+            learning_rate=0.1,
+            max_depth=4,
+            random_state=42,
+            n_jobs=-1,
             early_stopping_rounds=early_stopping_rounds,
-            evals_result=evals_result,
-            verbose_eval=False,
+            eval_metric='mae'
         )
         
+        model.fit(
+            X_train_prep, y_train,
+            sample_weight=sample_weights_train,
+            eval_set=[(X_test_prep, y_test)],
+            verbose=False
+        )
+        
+        # Get evaluation results
+        evals_result = {}
+        if hasattr(model, 'evals_result_'):
+            evals_result = model.evals_result_
+        else:
+            # Fallback for older versions
+            evals_result = {'eval': {'mae': [getattr(model, 'best_score', 0)]}}
+        
         # Predict
-        y_pred = booster.predict(dtest)
+        y_pred = model.predict(X_test_prep)
         
         # Compute metrics
         mse = mean_squared_error(y_test, y_pred)
@@ -1786,10 +1782,10 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
         mae = mean_absolute_error(y_test, y_pred)
         mean_err = np.mean(y_pred - y_test)
         
-        return booster, mse, r2, mae, mean_err, evals_result
+        return model, mse, r2, mae, mean_err, evals_result
 
     elif model_type == "LightGBM":
-        from lightgbm import LGBMRegressor, early_stopping, log_evaluation
+        from lightgbm import LGBMRegressor
         
         model = LGBMRegressor(
             n_estimators=200,
@@ -1804,8 +1800,7 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
             X_train_prep, y_train,
             sample_weight=sample_weights_train,
             eval_set=[(X_test_prep, y_test)],
-            eval_metric='mae',
-            callbacks=[early_stopping(early_stopping_rounds), log_evaluation(0)]
+            eval_metric='mae'
         )
         
         y_pred = model.predict(X_test_prep)
@@ -2671,8 +2666,8 @@ with tab2:
             feature_names = [name.replace('num__', '').replace('cat__', '') for name in feature_names]
 
             # Get importances based on model type
-            if hasattr(model, 'get_score'):  # XGBoost
-                importances_dict = model.get_score(importance_type='weight')
+            if hasattr(model, 'get_booster'):  # XGBoost (XGBRegressor)
+                importances_dict = model.get_booster().get_score(importance_type='weight')
                 importances = []
                 for i, name in enumerate(feature_names):
                     importances.append(importances_dict.get(f'f{i}', 0))
@@ -3622,8 +3617,8 @@ with tab5:
             feature_names = [name.replace('num__', '').replace('cat__', '') for name in feature_names]
 
             # Get importances based on model type
-            if hasattr(model, 'get_score'):  # XGBoost
-                importances_dict = model.get_score(importance_type='weight')
+            if hasattr(model, 'get_booster'):  # XGBoost (XGBRegressor)
+                importances_dict = model.get_booster().get_score(importance_type='weight')
                 importances = []
                 for i, name in enumerate(feature_names):
                     importances.append(importances_dict.get(f'f{i}', 0))
@@ -3976,18 +3971,29 @@ with tab5:
             
             # Early Stopping Details
             st.write("### Early Stopping Details")
-            mae_per_round = evals_result['eval']['absolute_error'] if 'absolute_error' in evals_result['eval'] else evals_result['eval']['mae']
-            best_round = int(np.argmin(mae_per_round))
-            lowest_mae = mae_per_round[best_round]
-            st.write(f"Early stopping occurred at round {best_round + 1} (lowest MAE: {lowest_mae:.4f})")
-            st.line_chart(mae_per_round)
+            # Handle different evals_result formats for different XGBoost APIs
+            if 'eval' in evals_result and ('absolute_error' in evals_result['eval'] or 'mae' in evals_result['eval']):
+                mae_per_round = evals_result['eval']['absolute_error'] if 'absolute_error' in evals_result['eval'] else evals_result['eval']['mae']
+            elif 'validation_0' in evals_result and 'mae' in evals_result['validation_0']:
+                mae_per_round = evals_result['validation_0']['mae']
+            else:
+                # Fallback
+                mae_per_round = [getattr(model, 'best_score', 0)]
+            
+            if len(mae_per_round) > 0:
+                best_round = int(np.argmin(mae_per_round))
+                lowest_mae = mae_per_round[best_round]
+                st.write(f"Early stopping occurred at round {best_round + 1} (lowest MAE: {lowest_mae:.4f})")
+                st.line_chart(mae_per_round)
+            else:
+                st.write("Early stopping details not available")
 
             feature_names_early = preprocessor.get_feature_names_out()
             feature_names_early = [name.replace('num__', '').replace('cat__', '') for name in feature_names_early]
 
             # Get importances based on model type (early stopping section)
-            if hasattr(model, 'get_score'):  # XGBoost
-                importances_dict_early = model.get_score(importance_type='weight')
+            if hasattr(model, 'get_booster'):  # XGBoost (XGBRegressor)
+                importances_dict_early = model.get_booster().get_score(importance_type='weight')
                 importances_early = []
                 for i, name in enumerate(feature_names_early):
                     importances_early.append(importances_dict_early.get(f'f{i}', 0))
@@ -4171,11 +4177,10 @@ with tab5:
                 st.write(f"MAE for Points Positions (1-10): {points_mae_hist:.3f}")
 
             st.dataframe(
-                results_df_all[['grandPrixName', 'constructorName', 'resultsDriverName', 'ActualFinalPosition', 'PredictedFinalPosition', 'Error']].sort_values(by=['grandPrixName', 'ActualFinalPosition']),
+                results_df_all[['constructorName', 'resultsDriverName', 'ActualFinalPosition', 'PredictedFinalPosition', 'Error']].sort_values(by=['ActualFinalPosition']),
                 hide_index=True,
                 width=1000,
                 column_config={
-                    'grandPrixName': st.column_config.TextColumn("Grand Prix"),
                     'constructorName': st.column_config.TextColumn("Constructor"),
                     'resultsDriverName': st.column_config.TextColumn("Driver"),
                     'ActualFinalPosition': st.column_config.NumberColumn("Actual", format="%d"),
