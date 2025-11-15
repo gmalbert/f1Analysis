@@ -52,6 +52,9 @@ EarlyStopping = xgb.callback.EarlyStopping
 
 DATA_DIR = 'data_files/'
 
+# Cache version - increment this when preprocessor logic changes
+CACHE_VERSION = "v2.1"
+
 # Suppress numpy warnings about empty slices during calculations
 warnings.filterwarnings('ignore', message='Mean of empty slice', category=RuntimeWarning, module='numpy')
 warnings.filterwarnings('ignore', message='All-NaN slice encountered', category=RuntimeWarning, module='numpy')
@@ -587,6 +590,8 @@ raceNoEarlierThan = current_year - 10
 
 @st.cache_data
 def load_correlation(nrows):
+    # Include cache version to invalidate when preprocessor changes
+    _ = CACHE_VERSION
     correlation_matrix = pd.read_csv(path.join(DATA_DIR, 'f1PositionCorrelation.csv'), sep='\t', nrows=nrows)
 
     return correlation_matrix
@@ -594,6 +599,8 @@ correlation_matrix = load_correlation(10000)
 
 @st.cache_data
 def load_data_schedule(nrows):
+    # Include cache version to invalidate when preprocessor changes
+    _ = CACHE_VERSION
     raceSchedule = pd.read_json(path.join(DATA_DIR, 'f1db-races.json'))
     grandPrix = pd.read_json(path.join(DATA_DIR, 'f1db-grands-prix.json'))
     raceSchedule = raceSchedule.merge(grandPrix, left_on='grandPrixId', right_on='id', how='inner', suffixes=['_grandPrix', '_schedule'])
@@ -604,6 +611,8 @@ raceSchedule = load_data_schedule(10000)
 
 @st.cache_data
 def load_drivers(nrows):
+    # Include cache version to invalidate when preprocessor changes
+    _ = CACHE_VERSION
     drivers = pd.read_json(path.join(DATA_DIR, 'f1db-drivers.json'))
     return drivers
 
@@ -611,6 +620,8 @@ drivers = load_drivers(10000)
 
 @st.cache_data
 def load_qualifying(nrows):
+    # Include cache version to invalidate when preprocessor changes
+    _ = CACHE_VERSION
     qualifying = pd.read_csv(path.join(DATA_DIR, 'all_qualifying_races.csv'), sep='\t')
     return qualifying
 
@@ -618,6 +629,8 @@ qualifying = load_qualifying(10000)
 
 @st.cache_data
 def load_practices(nrows):
+    # Include cache version to invalidate when preprocessor changes
+    _ = CACHE_VERSION
     practices = pd.read_csv(path.join(DATA_DIR, 'all_practice_laps.csv'), sep='\t', dtype={'PitOutTime': str}) 
     practices = practices[practices['Driver'] != 'ERROR']  # Remove rows where Driver is 'ERROR'
     return practices
@@ -626,6 +639,8 @@ practices = load_practices(10000)
 
 @st.cache_data
 def load_data_race_messages(nrows):
+    # Include cache version to invalidate when preprocessor changes
+    _ = CACHE_VERSION
     race_messages = pd.read_csv(path.join(DATA_DIR, 'race_control_messages_grouped_with_dnf.csv'),sep='\t')
 
     return race_messages
@@ -689,6 +704,8 @@ schedule_columns_to_display = {
 
 @st.cache_data
 def load_weather_data(nrows):
+    # Include cache version to invalidate when preprocessor changes
+    _ = CACHE_VERSION
     weather = pd.read_csv(path.join(DATA_DIR, 'f1WeatherData_Grouped.csv'), sep='\t', nrows=nrows, usecols=['grandPrixId', 'short_date', 'average_temp', 'total_precipitation', 'average_humidity', 'average_wind_speed', 'id_races'])
     grandPrix = pd.read_json(path.join(DATA_DIR, 'f1db-grands-prix.json'))
     weather_with_grandprix = pd.merge(weather, grandPrix, left_on='grandPrixId', right_on='id', how='inner', suffixes=['_weather', '_grandPrix'])
@@ -938,6 +955,8 @@ season_summary_columns_to_display = {
 
 @st.cache_data
 def load_data(nrows):
+    # Include cache version to invalidate when preprocessor changes
+    _ = CACHE_VERSION
     # Read the header only to get all column names
     all_columns = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t', nrows=0).columns.tolist()
     selected_columns = ['grandPrixYear', 'grandPrixName', 'resultsDriverName', 'resultsPodium', 'resultsTop5', 'resultsTop10', 'constructorName',  'resultsStartingGridPositionNumber', 'resultsFinalPositionNumber', 
@@ -1717,6 +1736,8 @@ def get_preprocessor_safety_car():
 
 @st.cache_data
 def load_safetycars(nrows):
+    # Include cache version to invalidate when preprocessor changes
+    _ = CACHE_VERSION
     safety_cars = pd.read_csv(path.join(DATA_DIR, 'f1SafetyCarFeatures.csv'), sep='\t', nrows=nrows)
     safety_cars = safety_cars.drop_duplicates()
     # Drop duplicate rows based on all feature columns
@@ -1735,7 +1756,7 @@ if missing:
     st.stop()
 
 
-def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost"):
+def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost", preprocessor_version="v2"):
     import xgboost as xgb
     from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
     from sklearn.model_selection import train_test_split
@@ -3162,7 +3183,7 @@ with tab4:
     # Calculate MAE by individual positions for mapping to predicted positions
     X_mae, y_mae = get_features_and_target(data)
     X_train_mae, X_test_mae, y_train_mae, y_test_mae = train_test_split(X_mae, y_mae, test_size=0.2, random_state=42)
-    preprocessor_mae = get_preprocessor_position()
+    preprocessor_mae = get_preprocessor_position(X_mae)
     preprocessor_mae.fit(X_train_mae)
     X_test_prep_mae = preprocessor_mae.transform(X_test_mae)
     
@@ -3775,9 +3796,8 @@ with tab5:
             X_feat, y_feat = get_features_and_target(data)
             mask = y_feat.notnull() & np.isfinite(y_feat)
             X_feat, y_feat = X_feat[mask], y_feat[mask]
-            preprocessor_feat = get_preprocessor_position()
+            preprocessor_feat = get_preprocessor_position(X_feat)
             X_prep_feat = preprocessor_feat.fit_transform(X_feat)
-
             model_feat = XGBRegressor(n_estimators=100, max_depth=4, n_jobs=-1, tree_method='hist', random_state=42)
             model_feat.fit(X_prep_feat, y_feat)
 
@@ -4058,28 +4078,28 @@ with tab5:
                     season_clean = season_groups[mask_hyper] if season_groups is not None else None
                     
                     if tuning_method == "Grid Search":
-                        param_grid = {
-                            'regressor__learning_rate': [0.01, 0.05, 0.1, 0.2],
-                            'regressor__max_depth': [3, 4, 5, 6, 7],
-                            'regressor__min_child_weight': [1, 3, 5, 7],
-                        }
-                        pipeline = Pipeline([
-                            ('preprocessor', get_preprocessor_position()),
-                            ('regressor', XGBRegressor(n_estimators=100, random_state=42))
-                        ])
-                        
-                        # Use GroupKFold if season data available, else StratifiedKFold approximation
-                        if season_clean is not None:
-                            cv = GroupKFold(n_splits=5)
-                            groups = season_clean
-                        else:
-                            cv = 5
-                            groups = None
-                            
-                        grid_search = GridSearchCV(pipeline, param_grid, cv=cv, groups=groups, scoring='neg_mean_absolute_error')
-                        grid_search.fit(X_clean, y_clean)
-                        st.write("Best params:", grid_search.best_params_)
-                        st.write(f"Best MAE: {-grid_search.best_score_:.4f}")
+                          param_grid = {
+                              'regressor__learning_rate': [0.01, 0.05, 0.1, 0.2],
+                              'regressor__max_depth': [3, 4, 5, 6, 7],
+                              'regressor__min_child_weight': [1, 3, 5, 7],
+                          }
+                          pipeline = Pipeline([
+                              ('preprocessor', get_preprocessor_position(X_clean)),
+                              ('regressor', XGBRegressor(n_estimators=100, random_state=42))
+                          ])
+                          
+                          # Use GroupKFold if season data available, else StratifiedKFold approximation
+                          if season_clean is not None:
+                              cv = GroupKFold(n_splits=5)
+                              groups = season_clean
+                          else:
+                              cv = 5
+                              groups = None
+                              
+                          grid_search = GridSearchCV(pipeline, param_grid, cv=cv, groups=groups, scoring='neg_mean_absolute_error')
+                          grid_search.fit(X_clean, y_clean)
+                          st.write("Best params:", grid_search.best_params_)
+                          st.write(f"Best MAE: {-grid_search.best_score_:.4f}")
                         
                     elif tuning_method == "Bayesian Optimization":
                         import optuna
@@ -4088,11 +4108,11 @@ with tab5:
                             learning_rate = trial.suggest_float('learning_rate', 0.01, 0.3)
                             max_depth = trial.suggest_int('max_depth', 3, 10)
                             min_child_weight = trial.suggest_int('min_child_weight', 1, 10)
-                            
+
                             pipeline = Pipeline([
-                                ('preprocessor', get_preprocessor_position()),
+                                ('preprocessor', get_preprocessor_position(X_clean)),
                                 ('regressor', XGBRegressor(
-                                    n_estimators=100, 
+                                    n_estimators=100,
                                     learning_rate=learning_rate,
                                     max_depth=max_depth,
                                     min_child_weight=min_child_weight,
@@ -4162,7 +4182,7 @@ with tab5:
             X_all, y_all = get_features_and_target(data)
             X_train_all, X_test_all, y_train_all, y_test_all = train_test_split(X_all, y_all, test_size=0.2, random_state=42)
 
-            preprocessor_all = get_preprocessor_position()
+            preprocessor_all = get_preprocessor_position(X_all)
             preprocessor_all.fit(X_train_all)
             X_test_prep_all = preprocessor_all.transform(X_test_all)
             
@@ -4236,25 +4256,27 @@ with tab5:
                             df_bin[f"{col}_bin"] = pd.qcut(df_bin[col], q=q, labels=False, duplicates='drop')
                         except Exception as e:
                             continue
-                    X_bin, y_bin = get_features_and_target(df_bin)
-                    mask_bin = y_bin.notnull() & np.isfinite(y_bin)
-                    X_bin, y_bin = X_bin[mask_bin], y_bin[mask_bin]
-                    
-                    # Use proper preprocessor instead of naive cat.codes
-                    preprocessor_bin = get_preprocessor_position()
-                    X_train_bin, X_test_bin, y_train_bin, y_test_bin = train_test_split(X_bin, y_bin, test_size=0.2, random_state=42)
-                    X_train_bin_prep = preprocessor_bin.fit_transform(X_train_bin)
-                    X_test_bin_prep = preprocessor_bin.transform(X_test_bin)
-                    
-                    model_bin = XGBRegressor(n_estimators=100, max_depth=4, n_jobs=-1, tree_method='hist', random_state=42)
-                    model_bin.fit(X_train_bin_prep, y_train_bin)
-                    y_pred_bin = model_bin.predict(X_test_bin_prep)
-                    mae_bin = mean_absolute_error(y_test_bin, y_pred_bin)
-                    results_bin.append({'q': q, 'MAE': mae_bin})
-                results_df_bin = pd.DataFrame(results_bin).sort_values('q')
-                st.write("MAE for each bin count (q):")
-                st.dataframe(results_df_bin, hide_index=True)
-                st.line_chart(results_df_bin.set_index('q'))
+                            
+                        X_bin, y_bin = get_features_and_target(df_bin)
+                        mask_bin = y_bin.notnull() & np.isfinite(y_bin)
+                        X_bin, y_bin = X_bin[mask_bin], y_bin[mask_bin]
+
+                        # Use proper preprocessor instead of naive cat.codes
+                        preprocessor_bin = get_preprocessor_position(X_bin)
+                        X_train_bin, X_test_bin, y_train_bin, y_test_bin = train_test_split(X_bin, y_bin, test_size=0.2, random_state=42)
+                        X_train_bin_prep = preprocessor_bin.fit_transform(X_train_bin)
+                        X_test_bin_prep = preprocessor_bin.transform(X_test_bin)
+                        
+                        model_bin = XGBRegressor(n_estimators=100, max_depth=4, n_jobs=-1, tree_method='hist', random_state=42)
+                        model_bin.fit(X_train_bin_prep, y_train_bin)
+                        y_pred_bin = model_bin.predict(X_test_bin_prep)
+                        mae_bin = mean_absolute_error(y_test_bin, y_pred_bin)
+                        results_bin.append({'q': q, 'MAE': mae_bin})
+                        
+                    results_df_bin = pd.DataFrame(results_bin).sort_values('q')
+                    st.write("MAE for each bin count (q):")
+                    st.dataframe(results_df_bin, hide_index=True)
+                    st.line_chart(results_df_bin.set_index('q'))
 
 with tab6:
     st.header("Raw Data")
