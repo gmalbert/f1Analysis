@@ -53,7 +53,40 @@ EarlyStopping = xgb.callback.EarlyStopping
 DATA_DIR = 'data_files/'
 
 # Cache version - increment this when preprocessor logic changes
-CACHE_VERSION = "v2.2"
+CACHE_VERSION = "v2.3"
+
+# Preprocessor used when training the main position model. Set during training so
+# prediction uses the exact same feature ordering and transforms (prevents
+# feature-shape mismatches between training and prediction environments).
+TRAINING_PREPROCESSOR = None
+
+# Debugging toggle: set environment variable F1_DEBUG=1 to enable detailed
+# runtime diagnostics (prints shapes, feature lists, and model-reported feature counts).
+import logging
+DEBUG = os.environ.get('F1_DEBUG', '0') == '1'
+logger = logging.getLogger('f1analysis')
+if DEBUG:
+    logging.basicConfig(level=logging.DEBUG)
+
+def debug_log(msg, obj=None):
+    """Helper to emit diagnostics both to Streamlit UI and logs when DEBUG is enabled."""
+    if not DEBUG:
+        return
+    try:
+        # Streamlit-friendly display
+        try:
+            st.write(f"DEBUG: {msg}")
+            if obj is not None:
+                st.write(obj)
+        except Exception:
+            pass
+        # Logger
+        if obj is None:
+            logger.debug(msg)
+        else:
+            logger.debug(f"%s -- %r", msg, obj)
+    except Exception:
+        pass
 
 # Suppress numpy warnings about empty slices during calculations
 warnings.filterwarnings('ignore', message='Mean of empty slice', category=RuntimeWarning, module='numpy')
@@ -1772,9 +1805,12 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
                       np.where(y_train <= 10, 1.2,      # 1.2x weight for points
                               1.0)))
 
-    # Preprocess manually
+    # Preprocess manually and store the fitted preprocessor globally so prediction
+    # uses identical feature ordering and transforms (important on Streamlit Cloud).
+    global TRAINING_PREPROCESSOR
     X_train_prep = preprocessor.fit_transform(X_train)
     X_test_prep = preprocessor.transform(X_test)
+    TRAINING_PREPROCESSOR = preprocessor
 
     if model_type == "XGBoost":
         # Use XGBRegressor for better compatibility with early stopping on Streamlit Cloud
@@ -1824,8 +1860,7 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
             max_depth=4,
             random_state=42,
             n_jobs=-1,
-            verbose=-1,
-            feature_name='auto'  # Don't store feature names to avoid prediction warnings
+            verbose=-1
         )
         
         model.fit(
@@ -1887,7 +1922,7 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
         
         base_estimators = [
             ('xgb', XGBRegressor(n_estimators=100, max_depth=4, learning_rate=0.1, random_state=42, n_jobs=-1)),
-            ('lgb', LGBMRegressor(n_estimators=100, max_depth=4, learning_rate=0.1, random_state=42, n_jobs=-1, verbose=-1, feature_name='auto')),
+            ('lgb', LGBMRegressor(n_estimators=100, max_depth=4, learning_rate=0.1, random_state=42, n_jobs=-1, verbose=-1)),
             ('cat', CatBoostRegressor(iterations=100, depth=4, learning_rate=0.1, random_state=42, verbose=False))
         ]
         
@@ -2958,23 +2993,87 @@ with tab4:
     
     # commented out on 9/17/2025 for early stopping
     # predicted_position = model.predict(X_predict)
-    preprocessor = get_preprocessor_position(X_predict)
-    all_preprocessor_columns = []
-    for name, _, cols in preprocessor.transformers:
-        all_preprocessor_columns.extend(cols)
-    missing_cols = [col for col in all_preprocessor_columns if col not in X_predict.columns]
-    if missing_cols:
-        st.error(f"These columns are missing from your prediction data and required by the preprocessor: {missing_cols}")
-        st.stop()
+    # Prefer the preprocessor used during training to ensure identical
+    # feature ordering/transforms. Fall back to creating a new preprocessor
+    # from `X_predict` if training preprocessor is not available.
+    if TRAINING_PREPROCESSOR is not None:
+        preprocessor = TRAINING_PREPROCESSOR
+        all_preprocessor_columns = []
+        for name, _, cols in preprocessor.transformers:
+            all_preprocessor_columns.extend(cols)
+        missing_cols = [col for col in all_preprocessor_columns if col not in X_predict.columns]
+        if missing_cols:
+            st.error(f"These columns are missing from your prediction data and required by the training preprocessor: {missing_cols}")
+            st.stop()
 
-    # Fill all-NaN features with 0 to avoid imputer warning
-    for col in X_predict.columns:
-        if X_predict[col].isnull().all():
-            X_predict.loc[:, col] = X_predict[col].fillna(0)
+        # Fill any all-NaN columns expected by the preprocessor
+        for col in all_preprocessor_columns:
+            if col in X_predict.columns and X_predict[col].isnull().all():
+                X_predict.loc[:, col] = X_predict[col].fillna(0)
 
-    preprocessor.fit(X_predict)  # Fit if not already fitted, or reuse fitted preprocessor
-    X_predict_prep = preprocessor.transform(X_predict)
+        X_predict_prep = preprocessor.transform(X_predict)
+    else:
+        preprocessor = get_preprocessor_position(X_predict)
+        all_preprocessor_columns = []
+        for name, _, cols in preprocessor.transformers:
+            all_preprocessor_columns.extend(cols)
+        missing_cols = [col for col in all_preprocessor_columns if col not in X_predict.columns]
+        if missing_cols:
+            st.error(f"These columns are missing from your prediction data and required by the preprocessor: {missing_cols}")
+            st.stop()
+
+        # Fill all-NaN features with 0 to avoid imputer warning
+        for col in X_predict.columns:
+            if X_predict[col].isnull().all():
+                X_predict.loc[:, col] = X_predict[col].fillna(0)
+
+        preprocessor.fit(X_predict)  # Fit if not already fitted, or reuse fitted preprocessor
+        X_predict_prep = preprocessor.transform(X_predict)
     
+    # Runtime diagnostics: when DEBUG enabled, emit model and feature info
+    if DEBUG:
+        try:
+            debug_log("Model type", type(model))
+            # XGBoost trained via sklearn wrapper
+            try:
+                booster = None
+                if hasattr(model, 'get_booster'):
+                    booster = model.get_booster()
+                elif isinstance(model, xgb.Booster):
+                    booster = model
+                if booster is not None and hasattr(booster, 'num_features'):
+                    debug_log("XGBoost booster.num_features()", booster.num_features())
+            except Exception as _e:
+                debug_log("Could not read XGBoost booster features", str(_e))
+
+            # sklearn-style attribute
+            try:
+                if hasattr(model, 'n_features_in_'):
+                    debug_log('model.n_features_in_', getattr(model, 'n_features_in_', None))
+            except Exception:
+                pass
+
+            debug_log('X_predict.shape', X_predict.shape)
+            try:
+                debug_log('X_predict_prep.shape', X_predict_prep.shape)
+            except Exception:
+                debug_log('X_predict_prep', type(X_predict_prep))
+
+            # Feature names expected by preprocessor
+            if TRAINING_PREPROCESSOR is not None:
+                try:
+                    feat_names = TRAINING_PREPROCESSOR.get_feature_names_out()
+                except Exception:
+                    feat_names = []
+                    for name, _, cols in TRAINING_PREPROCESSOR.transformers:
+                        feat_names.extend(cols)
+                debug_log('training_preprocessor_feature_count', len(feat_names))
+                debug_log('training_preprocessor_feature_sample', feat_names[:50])
+            else:
+                debug_log('TRAINING_PREPROCESSOR not set', None)
+        except Exception as _ex:
+            debug_log('Diagnostics error', str(_ex))
+
     # Predict based on model type
     if isinstance(model, xgb.Booster):  # XGBoost
         predicted_position = model.predict(xgb.DMatrix(X_predict_prep))

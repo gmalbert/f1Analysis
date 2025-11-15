@@ -27,7 +27,7 @@ Short, actionable guidance for AI coding agents working on the Formula 1 Analysi
   - Weather fetching logic updated to pull data for all missing races, not just the most recent one.
 - `raceAnalysis.py` — Streamlit UI that consumes the outputs in `data_files/` (4973 lines).
   - All data loading functions use `@st.cache_data` decorator for performance.
-  - Uses CACHE_VERSION="v2.2" for version-based cache invalidation to prevent stale cached models on Streamlit Cloud.
+  - Uses CACHE_VERSION="v2.3" for version-based cache invalidation to prevent stale cached models on Streamlit Cloud.
   - Four prediction models: XGBoost, LightGBM, CatBoost, and Ensemble stacking (XGBoost + LightGBM + CatBoost).
   - Hyperparameter optimization with Bayesian optimization (Optuna) and grid search.
   - Season-stratified cross-validation to prevent data leakage.
@@ -165,9 +165,6 @@ streamlit run raceAnalysis.py
   ```
 - **Model-specific parameter handling**:
   ```python
-  # LightGBM requires feature_name='auto' to avoid warnings
-  if model_type == 'LightGBM':
-      model = LGBMRegressor(feature_name='auto', ...)
   # CatBoost handles categorical features automatically
   elif model_type == 'CatBoost':
       model = CatBoostRegressor(cat_features=categorical_cols, ...)
