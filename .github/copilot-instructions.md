@@ -27,6 +27,7 @@ Short, actionable guidance for AI coding agents working on the Formula 1 Analysi
   - Weather fetching logic updated to pull data for all missing races, not just the most recent one.
 - `raceAnalysis.py` — Streamlit UI that consumes the outputs in `data_files/` (4973 lines).
   - All data loading functions use `@st.cache_data` decorator for performance.
+  - Uses CACHE_VERSION="v2.1" for version-based cache invalidation to prevent stale cached models on Streamlit Cloud.
   - Four prediction models: XGBoost, LightGBM, CatBoost, and Ensemble stacking (XGBoost + LightGBM + CatBoost).
   - Hyperparameter optimization with Bayesian optimization (Optuna) and grid search.
   - Season-stratified cross-validation to prevent data leakage.
@@ -60,6 +61,7 @@ Short, actionable guidance for AI coding agents working on the Formula 1 Analysi
 - **Leakage prevention**: All features use `.shift()` or filtering to avoid using future data. Safety car features (line 2224+) are specifically designed to be available before race starts.
 - **Incremental data pulls**: Scripts like `f1-raceMessages.py` track previously processed sessions and only pull new data to avoid API rate limits and reduce runtime.
 - **Streamlit caching**: All heavy data operations use `@st.cache_data` to avoid recomputation on every widget interaction.
+- **Cache invalidation**: Uses CACHE_VERSION system for all cached functions to prevent feature shape mismatches on Streamlit Cloud deployments.
 
 ## External integrations
 - **F1DB**: Source JSON files from github.com/f1db/f1db (all `f1db-*.json` files in `data_files/`)
@@ -99,6 +101,7 @@ streamlit run raceAnalysis.py
 - **Feature importance**: Different models have different APIs - XGBoost uses get_score(), LightGBM uses feature_importances_, CatBoost uses get_feature_importance().
 - **Prediction formats**: XGBoost uses xgb.DMatrix for prediction, others use regular numpy arrays.
 - **Early stopping**: Different models have different early stopping APIs and attribute names.
+- **Cache invalidation**: Always include CACHE_VERSION in cached function parameters to prevent stale models on Streamlit Cloud. Update CACHE_VERSION when making breaking changes to cached data structures.
 
 ## Useful examples from this codebase
 - **Adding an MAE-improving feature**: If you add `driver_recent_form`:
@@ -138,6 +141,36 @@ streamlit run raceAnalysis.py
       st.write(f"Boosting rounds used: {model.best_iteration + 1}")
   elif hasattr(model, 'get_best_iteration'):  # CatBoost
       st.write(f"Boosting rounds used: {model.get_best_iteration()}")
+  ```
+- **Cache invalidation pattern**:
+  ```python
+  # Always include CACHE_VERSION in cached functions to prevent stale models
+  @st.cache_data
+  def load_and_preprocess_data(CACHE_VERSION):
+      # Data loading and preprocessing logic
+      return processed_data
+  
+  @st.cache_data  
+  def train_model(X, y, model_type, CACHE_VERSION):
+      # Model training logic
+      return trained_model
+  ```
+- **Model-specific prediction handling**:
+  ```python
+  # Different models need different prediction formats
+  if isinstance(model, xgb.Booster):  # XGBoost
+      y_pred = model.predict(xgb.DMatrix(X_test_prep))
+  else:  # LightGBM, CatBoost, sklearn models
+      y_pred = model.predict(X_test_prep)
+  ```
+- **Model-specific parameter handling**:
+  ```python
+  # LightGBM requires feature_name='auto' to avoid warnings
+  if model_type == 'LightGBM':
+      model = LGBMRegressor(feature_name='auto', ...)
+  # CatBoost handles categorical features automatically
+  elif model_type == 'CatBoost':
+      model = CatBoostRegressor(cat_features=categorical_cols, ...)
   ```
   ```python
   # Native Streamlit charts - use width parameter
@@ -210,3 +243,4 @@ Utils: `requests_cache`, `retry_requests`
 - **Warning fixes**: Recent updates resolved imputation warnings, numpy RuntimeWarnings, pandas deprecation warnings (including combine_first FutureWarning), and scikit-learn warnings. Always ensure virtual environment is activated to avoid module import issues.
 - **Data quality**: Active driver NaN values are filled with baseline values before CSV export. Weather data is fetched for all missing races, not just recent ones.
 - **Model compatibility**: All new code must handle XGBoost, LightGBM, CatBoost, and Ensemble models. Use isinstance() and hasattr() checks for API differences.
+- **Cache invalidation**: Streamlit Cloud requires explicit cache invalidation for all cached objects. Use CACHE_VERSION system to prevent feature mismatch errors on deployment.
