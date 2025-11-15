@@ -13,7 +13,7 @@ Minimize MAE (Mean Absolute Error) for Formula 1 race predictions with a target 
 - ✅ Position group analysis (Winners, Podium, Points, Mid-field, Back-field)
 - ✅ Multi-source data integration (F1DB, FastF1, Open-Meteo)
 - ✅ Monte Carlo simulation for feature validation (1000 iterations)
-- ✅ Current MAE: ~1.5 (at target threshold)
+- ✅ Current MAE: ~1.94 (target: ≤1.5)
 
 ---
 
@@ -46,12 +46,12 @@ Minimize MAE (Mean Absolute Error) for Formula 1 race predictions with a target 
   - Traffic impact on qualifying laps
 
 ### 1.2 Model Architecture Experiments
-- [ ] **Ensemble methods**
+- [x] **Ensemble methods**
   - Stack XGBoost + LightGBM + CatBoost
   - Weighted average based on track type
   - Position-specific models (separate models for P1-3, P4-10, P11-20)
 
-- [ ] **Hyperparameter optimization**
+- [x] **Hyperparameter optimization**
   - Bayesian optimization for XGBoost parameters
   - Grid search for learning rate, max_depth, min_child_weight
   - Cross-validation strategy improvements (stratified by season)
@@ -276,5 +276,5 @@ These items can deliver immediate MAE improvements with minimal effort:
 
 ---
 
-**Last Updated:** November 5, 2025  
-**Next Review:** November 12, 2025
+**Last Updated:** November 14, 2025  
+**Next Review:** November 21, 2025

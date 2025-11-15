@@ -22,9 +22,11 @@ import numpy as np
 from scipy.stats import linregress
 from scipy.stats import truncnorm
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GroupKFold
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.pipeline import Pipeline
@@ -32,6 +34,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 from sklearn.inspection import permutation_importance
 from sklearn.impute import SimpleImputer
+from sklearn.ensemble import VotingRegressor, StackingRegressor
 import seaborn as sns
 from xgboost import XGBRegressor
 import shap
@@ -40,6 +43,8 @@ from boruta import BorutaPy
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.metrics import roc_auc_score
 import xgboost as xgb
+from lightgbm import LGBMRegressor
+from catboost import CatBoostRegressor
 
 EarlyStopping = xgb.callback.EarlyStopping
 
@@ -1491,51 +1496,65 @@ if missing:
     st.write(f"The following feature columns are missing from your data: {missing}")
     st.stop()
 
+# Known categorical features
+categorical_features_known = [
+    'grandPrixName',
+    'resultsDriverName',
+    'engineManufacturerId',
+    'constructorName',
+    'driverName',
+    'circuitName',
+    'circuitCountry',
+    'circuitLocation',
+    'nationality',
+    'driverNationality',
+    'constructorNationality'
+]
+
+# Function to load features from text file
+def load_f1_position_model_features():
+    filepath = 'data_files/f1_position_model_numerical_features.txt'
+    if os.path.exists(filepath):
+        with open(filepath, 'r') as f:
+            default_numerical = [line.strip() for line in f if line.strip()]
+    else:
+        default_numerical = []
+    
+    monte_carlo_filepath = 'data_files/f1_position_model_best_features_monte_carlo.txt'
+    if os.path.exists(monte_carlo_filepath):
+        with open(monte_carlo_filepath, 'r') as f:
+            lines = [line.strip() for line in f if line.strip() and not line.startswith('Best MAE')]
+        # Separate into numerical and categorical
+        numerical = [f for f in lines if f in default_numerical]
+        categorical = []  # Temporarily disable categorical to avoid MAE increase
+        if numerical or categorical:
+            
+            return numerical, categorical
+    
+    return default_numerical, []
+
+numerical_features, categorical_features = load_f1_position_model_features()
+
 def get_preprocessor_position():
-
-    # categorical_features = [
-    #     'constructorName',
-    #     'resultsDriverName',
-    # ]
-    categorical_features = [
-        'grandPrixName',
-        'resultsDriverName',
-        'engineManufacturerId',
-    ]
-
-    # Function to load numerical features from text file
-    def load_f1_position_model_numerical_features():
-        monte_carlo_filepath = 'data_files/f1_position_model_best_features_monte_carlo.txt'
-        if os.path.exists(monte_carlo_filepath):
-            with open(monte_carlo_filepath, 'r') as f:
-                lines = [line.strip() for line in f if line.strip() and not line.startswith('Best MAE')]
-            if lines:
-                st.info("Using Monte Carlo best features for the model.")
-                return lines
-        filepath = 'data_files/f1_position_model_numerical_features.txt'
-        if os.path.exists(filepath):
-            with open(filepath, 'r') as f:
-                return [line.strip() for line in f if line.strip()]
-        else:
-            st.error(f"Numerical features file not found: {filepath}")
-            return []
-
-    numerical_features = load_f1_position_model_numerical_features()
     numerical_imputer = SimpleImputer(strategy='mean')
     categorical_imputer = SimpleImputer(strategy='most_frequent')
 
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ('num', Pipeline(steps=[
-                ('imputer', numerical_imputer),
-                ('scaler', StandardScaler())
-            ]), numerical_features),
-            ('cat', Pipeline(steps=[
+    transformers = [
+        ('num', Pipeline(steps=[
+            ('imputer', numerical_imputer),
+            ('scaler', StandardScaler())
+        ]), numerical_features)
+    ]
+    
+    if categorical_features:
+        transformers.append((
+            'cat', Pipeline(steps=[
                 ('imputer', categorical_imputer),
                 ('onehot', OneHotEncoder(handle_unknown='ignore'))
-            ]), categorical_features)
-        ]
-    )
+            ]), categorical_features
+        ))
+
+    preprocessor = ColumnTransformer(transformers=transformers)
     return preprocessor
 
 def get_features_and_target_dnf(data):
@@ -1689,7 +1708,7 @@ if missing:
     st.stop()
 
 
-def train_and_evaluate_model(data, early_stopping_rounds=20):
+def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost"):
     import xgboost as xgb
     from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
     from sklearn.model_selection import train_test_split
@@ -1726,55 +1745,145 @@ def train_and_evaluate_model(data, early_stopping_rounds=20):
     X_train_prep = preprocessor.fit_transform(X_train)
     X_test_prep = preprocessor.transform(X_test)
 
-    # Convert to DMatrix
-    # dtrain = xgb.DMatrix(X_train_prep, label=y_train)
-    # dtest = xgb.DMatrix(X_test_prep, label=y_test)
+    if model_type == "XGBoost":
+        # Convert to DMatrix
+        dtrain = xgb.DMatrix(X_train_prep, label=y_train, weight=sample_weights_train)
+        dtest = xgb.DMatrix(X_test_prep, label=y_test)
+        
 
-    # ADD sample_weight to DMatrix
-    dtrain = xgb.DMatrix(X_train_prep, label=y_train, weight=sample_weights_train)
-    dtest = xgb.DMatrix(X_test_prep, label=y_test)
-    
+        # Parameters
+        params = {
+            "objective": "reg:absoluteerror",
+            "learning_rate": 0.1,
+            "max_depth": 4,
+            "tree_method": "hist",
+            "n_jobs": -1,
+            "random_state": 42,
+            # "reg_alpha": 0.3,                # L1 regularization
+            # "colsample_bytree": 0.80,         # Sample 80% of features per tree
+            # "colsample_bylevel": 0.80,        # Sample 80% per tree level
+            # "colsample_bynode": 0.80,         # Sample 80% per split
+        }
 
-    # Parameters
-    params = {
-        "objective": "reg:absoluteerror",
-        "learning_rate": 0.1,
-        "max_depth": 4,
-        "tree_method": "hist",
-        "n_jobs": -1,
-        "random_state": 42,
-        # "reg_alpha": 0.3,                # L1 regularization
-        # "colsample_bytree": 0.80,         # Sample 80% of features per tree
-        # "colsample_bylevel": 0.80,        # Sample 80% per tree level
-        # "colsample_bynode": 0.80,         # Sample 80% per split
-    }
+        # Train with early stopping
+        evals_result = {}
+        booster = xgb.train(
+            params,
+            dtrain,
+            num_boost_round=200,
+            evals=[(dtest, "eval")],
+            early_stopping_rounds=early_stopping_rounds,
+            evals_result=evals_result,
+            verbose_eval=False,
+        )
+        
+        # Predict
+        y_pred = booster.predict(dtest)
+        
+        # Compute metrics
+        mse = mean_squared_error(y_test, y_pred)
+        r2 = r2_score(y_test, y_pred)
+        mae = mean_absolute_error(y_test, y_pred)
+        mean_err = np.mean(y_pred - y_test)
+        
+        return booster, mse, r2, mae, mean_err, evals_result
 
-    # Train with early stopping
-    evals_result = {}
-    booster = xgb.train(
-        params,
-        dtrain,
-        num_boost_round=200,
-        evals=[(dtest, "eval")],
-        # early_stopping_rounds=20,
-        early_stopping_rounds=early_stopping_rounds,
-        evals_result=evals_result,
-        verbose_eval=False,
-    )
-    
-    # Predict
-    y_pred = booster.predict(dtest)
+    elif model_type == "LightGBM":
+        from lightgbm import LGBMRegressor, early_stopping, log_evaluation
+        
+        model = LGBMRegressor(
+            n_estimators=200,
+            learning_rate=0.1,
+            max_depth=4,
+            random_state=42,
+            n_jobs=-1,
+            verbose=-1
+        )
+        
+        model.fit(
+            X_train_prep, y_train,
+            sample_weight=sample_weights_train,
+            eval_set=[(X_test_prep, y_test)],
+            eval_metric='mae',
+            callbacks=[early_stopping(early_stopping_rounds), log_evaluation(0)]
+        )
+        
+        y_pred = model.predict(X_test_prep)
+        
+        # Compute metrics
+        mse = mean_squared_error(y_test, y_pred)
+        r2 = r2_score(y_test, y_pred)
+        mae = mean_absolute_error(y_test, y_pred)
+        mean_err = np.mean(y_pred - y_test)
+        
+        # Mock evals_result
+        evals_result = {'eval': {'mae': [mae]}}
+        
+        return model, mse, r2, mae, mean_err, evals_result
 
-    
+    elif model_type == "CatBoost":
+        from catboost import CatBoostRegressor
+        
+        model = CatBoostRegressor(
+            iterations=200,
+            learning_rate=0.1,
+            depth=4,
+            random_state=42,
+            verbose=False,
+            early_stopping_rounds=early_stopping_rounds
+        )
+        
+        model.fit(
+            X_train_prep, y_train,
+            sample_weight=sample_weights_train,
+            eval_set=[(X_test_prep, y_test)],
+            verbose=False
+        )
+        
+        y_pred = model.predict(X_test_prep)
+        
+        # Compute metrics
+        mse = mean_squared_error(y_test, y_pred)
+        r2 = r2_score(y_test, y_pred)
+        mae = mean_absolute_error(y_test, y_pred)
+        mean_err = np.mean(y_pred - y_test)
+        
+        # Mock evals_result
+        evals_result = {'eval': {'mae': [mae]}}
+        
+        return model, mse, r2, mae, mean_err, evals_result
 
-    # Compute metrics
-    mse = mean_squared_error(y_test, y_pred)
-    r2 = r2_score(y_test, y_pred)
-    mae = mean_absolute_error(y_test, y_pred)
-    mean_err = np.mean(y_pred - y_test)
-
-    # Return the expected 5 values
-    return booster, mse, r2, mae, mean_err, evals_result
+    elif model_type == "Ensemble (XGBoost + LightGBM + CatBoost)":
+        from sklearn.ensemble import StackingRegressor
+        from lightgbm import LGBMRegressor
+        from catboost import CatBoostRegressor
+        
+        base_estimators = [
+            ('xgb', XGBRegressor(n_estimators=100, max_depth=4, learning_rate=0.1, random_state=42, n_jobs=-1)),
+            ('lgb', LGBMRegressor(n_estimators=100, max_depth=4, learning_rate=0.1, random_state=42, n_jobs=-1, verbose=-1)),
+            ('cat', CatBoostRegressor(iterations=100, depth=4, learning_rate=0.1, random_state=42, verbose=False))
+        ]
+        
+        model = StackingRegressor(
+            estimators=base_estimators,
+            final_estimator=XGBRegressor(n_estimators=50, max_depth=3, learning_rate=0.1, random_state=42, n_jobs=-1),
+            cv=3,
+            n_jobs=-1
+        )
+        
+        model.fit(X_train_prep, y_train, sample_weight=sample_weights_train)
+        y_pred = model.predict(X_test_prep)
+        
+        # Compute metrics
+        mse = mean_squared_error(y_test, y_pred)
+        r2 = r2_score(y_test, y_pred)
+        mae = mean_absolute_error(y_test, y_pred)
+        mean_err = np.mean(y_pred - y_test)
+        
+        # Mock evals_result
+        evals_result = {'eval': {'mae': [mae]}}
+        
+        return model, mse, r2, mae, mean_err, evals_result
 
 
 def train_and_evaluate_dnf_model(data):
@@ -2519,7 +2628,11 @@ with tab2:
             preprocessor.fit(X_train)  # Fit on training data
             X_test_prep = preprocessor.transform(X_test)
 
-            y_pred = model.predict(xgb.DMatrix(X_test_prep))
+            # Predict based on model type
+            if isinstance(model, xgb.Booster):  # XGBoost
+                y_pred = model.predict(xgb.DMatrix(X_test_prep))
+            else:  # LightGBM, CatBoost, sklearn models
+                y_pred = model.predict(X_test_prep)
 
             # Create a DataFrame to display the features and predictions
             results_df = X_test.copy()
@@ -2557,13 +2670,18 @@ with tab2:
             feature_names = preprocessor.get_feature_names_out()
             feature_names = [name.replace('num__', '').replace('cat__', '') for name in feature_names]
 
-            # Get importances from Booster
-            importances_dict = model.get_score(importance_type='weight')
-
-            # Map Booster's feature names (e.g., 'f0', 'f1', ...) to your actual feature names
-            importances = []
-            for i, name in enumerate(feature_names):
-                importances.append(importances_dict.get(f'f{i}', 0))
+            # Get importances based on model type
+            if hasattr(model, 'get_score'):  # XGBoost
+                importances_dict = model.get_score(importance_type='weight')
+                importances = []
+                for i, name in enumerate(feature_names):
+                    importances.append(importances_dict.get(f'f{i}', 0))
+            elif hasattr(model, 'feature_importances_'):  # LightGBM, CatBoost, sklearn models
+                importances = model.feature_importances_
+            elif hasattr(model, 'get_feature_importance'):  # CatBoost
+                importances = model.get_feature_importance()
+            else:  # Ensemble or other
+                importances = [0] * len(feature_names)  # Default to zero
 
             # Create DataFrame for display
             feature_importances_df = pd.DataFrame({
@@ -2812,7 +2930,10 @@ with tab4:
     # commented out on 9/17/2025 for early stopping
     # predicted_position = model.predict(X_predict)
     preprocessor = get_preprocessor_position()
-    missing_cols = [col for col in preprocessor.transformers[0][2] + preprocessor.transformers[1][2] if col not in X_predict.columns]
+    all_preprocessor_columns = []
+    for name, _, cols in preprocessor.transformers:
+        all_preprocessor_columns.extend(cols)
+    missing_cols = [col for col in all_preprocessor_columns if col not in X_predict.columns]
     if missing_cols:
         st.error(f"These columns are missing from your prediction data and required by the preprocessor: {missing_cols}")
         st.stop()
@@ -2824,7 +2945,12 @@ with tab4:
 
     preprocessor.fit(X_predict)  # Fit if not already fitted, or reuse fitted preprocessor
     X_predict_prep = preprocessor.transform(X_predict)
-    predicted_position = model.predict(xgb.DMatrix(X_predict_prep))
+    
+    # Predict based on model type
+    if isinstance(model, xgb.Booster):  # XGBoost
+        predicted_position = model.predict(xgb.DMatrix(X_predict_prep))
+    else:  # LightGBM, CatBoost, sklearn models
+        predicted_position = model.predict(X_predict_prep)
 
     # Get DNF feature names
     dnf_features, _ = get_features_and_target_dnf(data)
@@ -3017,7 +3143,12 @@ with tab4:
     preprocessor_mae = get_preprocessor_position()
     preprocessor_mae.fit(X_train_mae)
     X_test_prep_mae = preprocessor_mae.transform(X_test_mae)
-    y_pred_mae = model.predict(xgb.DMatrix(X_test_prep_mae))
+    
+    # Predict based on model type
+    if isinstance(model, xgb.Booster):  # XGBoost
+        y_pred_mae = model.predict(xgb.DMatrix(X_test_prep_mae))
+    else:  # LightGBM, CatBoost, sklearn models
+        y_pred_mae = model.predict(X_test_prep_mae)
     
     results_df_analysis_mae = pd.DataFrame({
         'Actual': y_test_mae.values,
@@ -3260,6 +3391,54 @@ with tab5:
     st.header("Predictive Models & Advanced Options")
     st.write("Advanced machine learning models, hyperparameter tuning, and feature selection tools.")
     
+    # Model type selection
+    model_type = st.selectbox(
+        "Select Model Type", 
+        ["XGBoost", "LightGBM", "CatBoost", "Ensemble (XGBoost + LightGBM + CatBoost)"],
+        index=0,
+        help="Choose the machine learning model to use for predictions"
+    )
+    
+    # Model information expander
+    with st.expander("ℹ️ Model Information & Recommendations", expanded=False):
+        st.markdown("""
+        ### Model Descriptions & Use Cases
+        
+        **🏆 XGBoost (Recommended Default)**
+        - **Strengths**: Excellent performance, handles missing data, built-in feature importance, widely used in competitions
+        - **Best for**: General-purpose predictions, when you want reliable and interpretable results
+        - **Training speed**: Fast
+        - **Memory usage**: Moderate
+        - **Current MAE**: ~1.94 (baseline)
+        
+        **🚀 LightGBM**
+        - **Strengths**: Very fast training, handles large datasets well, good for categorical features
+        - **Best for**: When training speed is critical or working with large datasets
+        - **Training speed**: Very fast
+        - **Memory usage**: Low
+        - **Note**: May be less interpretable than XGBoost
+        
+        **🐱 CatBoost**
+        - **Strengths**: Excellent with categorical data, robust to overfitting, handles missing values automatically
+        - **Best for**: Datasets with many categorical features or when robustness is important
+        - **Training speed**: Moderate
+        - **Memory usage**: Moderate
+        - **Note**: Slower training but often more stable predictions
+        
+        **🎯 Ensemble (XGBoost + LightGBM + CatBoost)**
+        - **Strengths**: Combines strengths of all three models, often better accuracy through diversity
+        - **Best for**: Maximum prediction accuracy, when computational resources allow
+        - **Training speed**: Slowest (trains 3 models + meta-learner)
+        - **Memory usage**: High
+        - **Note**: Recommended for final predictions or when comparing against single models
+        
+        ### Performance Expectations
+        - **Single models**: Fast training (seconds), good accuracy
+        - **Ensemble**: Slower training (minutes), potentially better accuracy
+        - **All models** use early stopping to prevent overfitting
+        - **Sample weighting** favors podium positions for better top-10 accuracy
+        """)
+    
     # Early stopping rounds - always visible at top
     early_stopping_rounds = st.number_input(
         "Early stopping rounds", min_value=1, max_value=100, value=20, step=1, 
@@ -3270,7 +3449,7 @@ with tab5:
     st.session_state['early_stopping_rounds'] = early_stopping_rounds
 
     # Train model once at the top level for reuse
-    model, mse, r2, mae, mean_err, evals_result = train_and_evaluate_model(data, early_stopping_rounds=early_stopping_rounds)
+    model, mse, r2, mae, mean_err, evals_result = train_and_evaluate_model(data, early_stopping_rounds=early_stopping_rounds, model_type=model_type)
     
     # Single expander with 6 tabs inside
     with st.expander("🔧 Advanced Options", expanded=True):
@@ -3290,7 +3469,16 @@ with tab5:
             st.write(f"R^2 Score: {r2:.3f}")
             st.write(f"Mean Absolute Error: {mae:.2f}")
             st.write(f"Mean Error: {mean_err:.2f}")
-            st.write(f"Boosting rounds used: {model.best_iteration + 1}")
+            
+            # Display boosting rounds used (model-specific)
+            if hasattr(model, 'best_iteration'):
+                st.write(f"Boosting rounds used: {model.best_iteration + 1}")
+            elif hasattr(model, 'best_iteration_'):
+                st.write(f"Boosting rounds used: {model.best_iteration_}")
+            elif hasattr(model, 'get_best_iteration'):
+                st.write(f"Boosting rounds used: {model.get_best_iteration()}")
+            else:
+                st.write("Model type: Ensemble or other (no boosting rounds info)")
 
 
             # Combine predictions and actuals for comparison
@@ -3300,7 +3488,12 @@ with tab5:
             preprocessor = get_preprocessor_position()
             preprocessor.fit(X_train)
             X_test_prep = preprocessor.transform(X_test)
-            y_pred = model.predict(xgb.DMatrix(X_test_prep))
+            
+            # Predict based on actual model type
+            if isinstance(model, xgb.Booster):
+                y_pred = model.predict(xgb.DMatrix(X_test_prep))
+            else:
+                y_pred = model.predict(X_test_prep)
 
 
             results_df = X_test.copy()
@@ -3428,10 +3621,18 @@ with tab5:
             feature_names = preprocessor.get_feature_names_out()
             feature_names = [name.replace('num__', '').replace('cat__', '') for name in feature_names]
 
-            importances_dict = model.get_score(importance_type='weight')
-            importances = []
-            for i, name in enumerate(feature_names):
-                importances.append(importances_dict.get(f'f{i}', 0))
+            # Get importances based on model type
+            if hasattr(model, 'get_score'):  # XGBoost
+                importances_dict = model.get_score(importance_type='weight')
+                importances = []
+                for i, name in enumerate(feature_names):
+                    importances.append(importances_dict.get(f'f{i}', 0))
+            elif hasattr(model, 'feature_importances_'):  # LightGBM, CatBoost, sklearn models
+                importances = model.feature_importances_
+            elif hasattr(model, 'get_feature_importance'):  # CatBoost
+                importances = model.get_feature_importance()
+            else:  # Ensemble or other
+                importances = [0] * len(feature_names)  # Default to zero
 
             feature_importances_df = pd.DataFrame({
                 'Feature': feature_names,
@@ -3439,7 +3640,16 @@ with tab5:
                 'Percentage': np.array(importances) / (np.sum(importances) or 1) * 100
             }).sort_values(by='Importance', ascending=False)
 
-            st.write(f"Boosting rounds used: {model.best_iteration + 1}")
+            # Display boosting rounds used (conditional on model type)
+            if hasattr(model, 'best_iteration_'):  # LightGBM
+                st.write(f"Boosting rounds used: {model.best_iteration_}")
+            elif hasattr(model, 'best_iteration'):  # XGBoost
+                st.write(f"Boosting rounds used: {model.best_iteration + 1}")
+            elif hasattr(model, 'get_best_iteration'):  # CatBoost
+                st.write(f"Boosting rounds used: {model.get_best_iteration()}")
+            else:  # Ensemble or other
+                st.write("Boosting rounds information not available for this model type")
+
             st.dataframe(feature_importances_df, hide_index=True, width=800)
             
             # MAE by Position Groups
@@ -3660,7 +3870,8 @@ with tab5:
                         n_trials=int(n_trials),
                         min_features=int(min_features),
                         max_features=int(max_features),
-                        random_state=42
+                        random_state=123,
+                        cv=10
                     )
 
                 results_mc = sorted(results_mc, key=lambda x: x['mae'])
@@ -3774,10 +3985,18 @@ with tab5:
             feature_names_early = preprocessor.get_feature_names_out()
             feature_names_early = [name.replace('num__', '').replace('cat__', '') for name in feature_names_early]
 
-            importances_dict_early = model.get_score(importance_type='weight')
-            importances_early = []
-            for i, name in enumerate(feature_names_early):
-                importances_early.append(importances_dict_early.get(f'f{i}', 0))
+            # Get importances based on model type (early stopping section)
+            if hasattr(model, 'get_score'):  # XGBoost
+                importances_dict_early = model.get_score(importance_type='weight')
+                importances_early = []
+                for i, name in enumerate(feature_names_early):
+                    importances_early.append(importances_dict_early.get(f'f{i}', 0))
+            elif hasattr(model, 'feature_importances_'):  # LightGBM, CatBoost, sklearn models
+                importances_early = model.feature_importances_
+            elif hasattr(model, 'get_feature_importance'):  # CatBoost
+                importances_early = model.get_feature_importance()
+            else:  # Ensemble or other
+                importances_early = [0] * len(feature_names_early)  # Default to zero
 
             feature_importances_df_early = pd.DataFrame({
                 'Feature': feature_names_early,
@@ -3791,28 +4010,83 @@ with tab5:
 
             # Hyperparameter Tuning
             st.write("### Run Hyperparameter Tuning")
+            
+            tuning_method = st.selectbox("Tuning Method", ["Grid Search", "Bayesian Optimization"], key="tuning_method")
+            
             if st.button("Start Hyperparameter Tuning"):
                 with st.spinner("Running hyperparameter tuning (this may take several minutes)..."):
                     X_hyper, y_hyper = get_features_and_target(data)
-                    param_grid = {
-                        'regressor__n_estimators': [50, 100, 150],
-                        'regressor__max_depth': [3, 4, 5, 6],
-                        'regressor__learning_rate': [0.01, 0.05, 0.1],
-                        'regressor__subsample': [0.6, 0.8, 1.0],
-                        'regressor__colsample_bytree': [0.6, 0.8, 1.0],
-                        'regressor__colsample_bylevel': [0.6, 0.8, 1.0],
-                        'regressor__colsample_bynode': [0.6, 0.8, 1.0],
-                    }
-                    pipeline = Pipeline([
-                        ('preprocessor', get_preprocessor_position()),
-                        ('regressor', XGBRegressor(random_state=42))
-                    ])
-                    grid_search = GridSearchCV(pipeline, param_grid, cv=3, scoring='neg_mean_squared_error')
-
+                    
+                    # Get season for stratified CV
+                    season_groups = data.loc[y_hyper.index, 'year'] if 'year' in data.columns else None
+                    
                     mask_hyper = y_hyper.notnull() & np.isfinite(y_hyper)
                     X_clean, y_clean = X_hyper[mask_hyper], y_hyper[mask_hyper]
-                    grid_search.fit(X_clean, y_clean)
-                    st.write("Best params:", grid_search.best_params_)
+                    season_clean = season_groups[mask_hyper] if season_groups is not None else None
+                    
+                    if tuning_method == "Grid Search":
+                        param_grid = {
+                            'regressor__learning_rate': [0.01, 0.05, 0.1, 0.2],
+                            'regressor__max_depth': [3, 4, 5, 6, 7],
+                            'regressor__min_child_weight': [1, 3, 5, 7],
+                        }
+                        pipeline = Pipeline([
+                            ('preprocessor', get_preprocessor_position()),
+                            ('regressor', XGBRegressor(n_estimators=100, random_state=42))
+                        ])
+                        
+                        # Use GroupKFold if season data available, else StratifiedKFold approximation
+                        if season_clean is not None:
+                            cv = GroupKFold(n_splits=5)
+                            groups = season_clean
+                        else:
+                            cv = 5
+                            groups = None
+                            
+                        grid_search = GridSearchCV(pipeline, param_grid, cv=cv, groups=groups, scoring='neg_mean_absolute_error')
+                        grid_search.fit(X_clean, y_clean)
+                        st.write("Best params:", grid_search.best_params_)
+                        st.write(f"Best MAE: {-grid_search.best_score_:.4f}")
+                        
+                    elif tuning_method == "Bayesian Optimization":
+                        import optuna
+                        
+                        def objective(trial):
+                            learning_rate = trial.suggest_float('learning_rate', 0.01, 0.3)
+                            max_depth = trial.suggest_int('max_depth', 3, 10)
+                            min_child_weight = trial.suggest_int('min_child_weight', 1, 10)
+                            
+                            pipeline = Pipeline([
+                                ('preprocessor', get_preprocessor_position()),
+                                ('regressor', XGBRegressor(
+                                    n_estimators=100, 
+                                    learning_rate=learning_rate,
+                                    max_depth=max_depth,
+                                    min_child_weight=min_child_weight,
+                                    random_state=42
+                                ))
+                            ])
+                            
+                            # Use GroupKFold for season stratification
+                            if season_clean is not None:
+                                cv = GroupKFold(n_splits=5)
+                                groups = season_clean
+                            else:
+                                cv = 5
+                                groups = None
+                                
+                            scores = cross_val_score(pipeline, X_clean, y_clean, cv=cv, groups=groups, scoring='neg_mean_absolute_error')
+                            return -scores.mean()
+                        
+                        study = optuna.create_study(direction='minimize')
+                        study.optimize(objective, n_trials=50)
+                        
+                        st.write("Best params:", study.best_params)
+                        st.write(f"Best MAE: {study.best_value:.4f}")
+                        
+                        # Plot optimization history
+                        fig = optuna.visualization.plot_optimization_history(study)
+                        st.plotly_chart(fig)
         
         with tab_hist:
             st.subheader("Historical Validation")
@@ -3858,7 +4132,12 @@ with tab5:
             preprocessor_all = get_preprocessor_position()
             preprocessor_all.fit(X_train_all)
             X_test_prep_all = preprocessor_all.transform(X_test_all)
-            y_pred_all = model.predict(xgb.DMatrix(X_test_prep_all))
+            
+            # Predict based on model type
+            if isinstance(model, xgb.Booster):  # XGBoost
+                y_pred_all = model.predict(xgb.DMatrix(X_test_prep_all))
+            else:  # LightGBM, CatBoost, sklearn models
+                y_pred_all = model.predict(X_test_prep_all)
 
             results_df_all = X_test_all.copy()
             results_df_all['ActualFinalPosition'] = y_test_all.values

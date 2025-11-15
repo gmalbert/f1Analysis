@@ -4,10 +4,20 @@ Short, actionable guidance for AI coding agents working on the Formula 1 Analysi
 ## Top-level summary
 - **Prediction-focused F1 analysis app**: The primary goal is predicting race winners, DNFs, and pit stop times. All data processing, feature engineering, and UI filters serve these prediction objectives.
 - **Success metric: MAE minimization**: Mean Absolute Error (MAE) is the key performance indicator. Current target is MAE ≤1.5 for final position predictions. All feature engineering and model improvements should focus on reducing MAE.
+- **Multiple Model Support**: Now supports XGBoost, LightGBM, CatBoost, and Ensemble stacking for maximum prediction accuracy and flexibility.
+- **Multiple Model Support**: Now supports XGBoost, LightGBM, CatBoost, and Ensemble stacking for maximum prediction accuracy and flexibility.
 - This is a Streamlit-based data analysis app. The canonical runtime flow is:
   1. Run `f1-generate-analysis.py` to precompute data and write CSVs into `data_files/`.
   2. Run the Streamlit app `raceAnalysis.py` which reads those CSVs and displays the UI.
 - Heavy computations live in the generator step so the UI remains responsive. Don't modify UI behavior without checking how CSVs are produced.
+
+## Model Architecture & Selection
+- **XGBoost** (Default): Excellent general-purpose performance, handles missing data, built-in feature importance. Best MAE performance.
+- **LightGBM**: Very fast training, good for large datasets, handles categorical features well. Use when speed is critical.
+- **CatBoost**: Excellent with categorical data, robust to overfitting, handles missing values automatically. Best for stability.
+- **Ensemble (XGBoost + LightGBM + CatBoost)**: Stacks all three models using sklearn StackingRegressor. Highest accuracy but slowest training.
+- **Hyperparameter Optimization**: Bayesian optimization (Optuna) and grid search with season-stratified GroupKFold CV to prevent data leakage.
+- **Model-Specific Handling**: Conditional code for different APIs (feature importance, prediction formats, boosting rounds display).
 
 ## Key files & locations
 - `f1-generate-analysis.py` — generator that creates grouped CSVs and processed JSONs (2543 lines).
@@ -15,9 +25,12 @@ Short, actionable guidance for AI coding agents working on the Formula 1 Analysi
   - Feature engineering section starts at line 1699 with comment "NEW LEAKAGE-FREE FEATURES".
   - Final CSV writes at lines 2217+ define the data contract with the UI.
   - Weather fetching logic updated to pull data for all missing races, not just the most recent one.
-- `raceAnalysis.py` — Streamlit UI that consumes the outputs in `data_files/` (4692 lines).
+- `raceAnalysis.py` — Streamlit UI that consumes the outputs in `data_files/` (4973 lines).
   - All data loading functions use `@st.cache_data` decorator for performance.
-  - Three prediction models: position (final placement), DNF (did not finish), and safety car likelihood.
+  - Four prediction models: XGBoost, LightGBM, CatBoost, and Ensemble stacking (XGBoost + LightGBM + CatBoost).
+  - Hyperparameter optimization with Bayesian optimization (Optuna) and grid search.
+  - Season-stratified cross-validation to prevent data leakage.
+  - Model-specific feature importance extraction and prediction handling.
   - Rookie simulation functions at lines 231+ and 309+ for handling drivers without historical data.
   - Includes warning suppression for numpy RuntimeWarnings and pandas deprecation warnings.
 - `data_files/` — contains generated CSVs, F1DB JSONs, and FastF1 cache. Key outputs:
@@ -75,14 +88,17 @@ streamlit run raceAnalysis.py
 ```
 
 ## What to watch for when editing
+- **Compile and test after fixes**: Every time you claim to have fixed a bug or made a change, immediately use `py_compile.compile()` on the affected script (e.g., `python -c "import py_compile; py_compile.compile('f1-generate-analysis.py')"` or `python -c "import py_compile; py_compile.compile('raceAnalysis.py')"` ) to verify it compiles without syntax errors. Don't assume the fix works—validate it.
 - **MAE impact first**: Always measure MAE before/after feature changes. The goal is MAE ≤1.5 for final position predictions. Use cross-validation to validate improvements.
 - **Feature selection validation**: New features should improve MAE in Monte Carlo simulations (1000+ iterations). Consider RFE and Boruta for feature selection.
 - **Generator output changes**: If you modify the final `to_csv()` calls in `f1-generate-analysis.py` (around lines 2217-2218), update corresponding `read_csv()` calls in `raceAnalysis.py`.
 - **Column name changes**: The UI has ~30 filter controls. Changing column names breaks filters silently. Search for the column name in `raceAnalysis.py` before renaming.
 - **Data types**: The UI uses pandas type checking (`is_numeric_dtype`, `is_object_dtype`, etc.) for dynamic filtering. Ensure consistent dtypes.
 - **Time string conversions**: Use `time_to_seconds()` helper function (line 250 in generator) for lap time conversions. Handles various F1DB time formats.
-- **Rookie handling**: Rookies lack historical features. Use simulation functions in `raceAnalysis.py` (lines 231+, 309+) to generate synthetic features based on truncated normal distributions.
-- **FastF1 caching**: Enable with `LOCAL_RUN=1` env var. Cache directory is `data_files/f1_cache/`. Without it, FastF1 re-downloads data every run.
+- **Model compatibility**: When adding features that interact with models, ensure compatibility across all four model types (XGBoost, LightGBM, CatBoost, Ensemble). Use isinstance() checks and hasattr() for API differences.
+- **Feature importance**: Different models have different APIs - XGBoost uses get_score(), LightGBM uses feature_importances_, CatBoost uses get_feature_importance().
+- **Prediction formats**: XGBoost uses xgb.DMatrix for prediction, others use regular numpy arrays.
+- **Early stopping**: Different models have different early stopping APIs and attribute names.
 
 ## Useful examples from this codebase
 - **Adding an MAE-improving feature**: If you add `driver_recent_form`:
@@ -95,8 +111,34 @@ streamlit run raceAnalysis.py
 - **DNF prediction features**: `driverDNFCount`, `recent_dnf_rate_3_races`, `SafetyCarStatus` (affects position predictions)
 - **Pit stop timing features**: `numberOfStops`, `averageStopTime`, `totalStopTime`, `pit_stop_delta` (critical for race position)
 - **Feature interaction examples**: `qualPos_x_last_practicePos`, `grid_x_avg_pit_time`, `recent_form_x_qual` (often reduce MAE more than individual features)
-- **Tab-separated format**: Always use `pd.read_csv(path, sep='\t')` and `df.to_csv(path, sep='\t')`
-- **Streamlit chart width parameters**:
+- **Model-specific prediction handling**:
+  ```python
+  # Different models need different prediction formats
+  if isinstance(model, xgb.Booster):  # XGBoost
+      y_pred = model.predict(xgb.DMatrix(X_test_prep))
+  else:  # LightGBM, CatBoost, sklearn models
+      y_pred = model.predict(X_test_prep)
+  ```
+- **Model-specific feature importance**:
+  ```python
+  # Different APIs for feature importance
+  if hasattr(model, 'get_score'):  # XGBoost
+      importances_dict = model.get_score(importance_type='weight')
+  elif hasattr(model, 'feature_importances_'):  # LightGBM, CatBoost
+      importances = model.feature_importances_
+  elif hasattr(model, 'get_feature_importance'):  # CatBoost
+      importances = model.get_feature_importance()
+  ```
+- **Model-specific boosting rounds display**:
+  ```python
+  # Different attribute names for boosting rounds
+  if hasattr(model, 'best_iteration_'):  # LightGBM
+      st.write(f"Boosting rounds used: {model.best_iteration_}")
+  elif hasattr(model, 'best_iteration'):  # XGBoost
+      st.write(f"Boosting rounds used: {model.best_iteration + 1}")
+  elif hasattr(model, 'get_best_iteration'):  # CatBoost
+      st.write(f"Boosting rounds used: {model.get_best_iteration()}")
+  ```
   ```python
   # Native Streamlit charts - use width parameter
   st.bar_chart(data, width='stretch')     # Full width
@@ -156,8 +198,8 @@ streamlit run raceAnalysis.py
 
 ## Dependencies (inferred from imports)
 Core: `streamlit`, `pandas`, `numpy`, `fastf1`, `openmeteo_requests`
-ML: `scikit-learn`, `xgboost`, `boruta`, `shap`  
-Viz: `altair`, `matplotlib`, `seaborn`
+ML: `scikit-learn`, `xgboost`, `lightgbm`, `catboost`, `optuna`, `boruta`, `shap`  
+Viz: `altair`, `matplotlib`, `seaborn`, `plotly`
 Utils: `requests_cache`, `retry_requests`
 
 ## Notes for AI agents
@@ -167,3 +209,4 @@ Utils: `requests_cache`, `retry_requests`
 - **Naming conventions**: Files prefixed with `f1-` are data generation scripts. Files suffixed with `_bkup`, `_with_commented_out_code`, or dates are backups (not actively maintained).
 - **Warning fixes**: Recent updates resolved imputation warnings, numpy RuntimeWarnings, pandas deprecation warnings (including combine_first FutureWarning), and scikit-learn warnings. Always ensure virtual environment is activated to avoid module import issues.
 - **Data quality**: Active driver NaN values are filled with baseline values before CSV export. Weather data is fetched for all missing races, not just recent ones.
+- **Model compatibility**: All new code must handle XGBoost, LightGBM, CatBoost, and Ensemble models. Use isinstance() and hasattr() checks for API differences.

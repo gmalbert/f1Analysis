@@ -39,9 +39,33 @@ In addition to correlation coefficients, I have added several linear regressions
 [↑ Back to top](#table-of-contents)
 
 ## Predictive Data Modeling
-I used [scikit-learn](https://scikit-learn.org/stable/) to perform machine learning by using data points to predict the race winner. ~~The model is in its infancy, and I am still trying to figure out the right data points to feed it.~~ I'm also currently trying to predict a driver's final place rather than their final time. That means that the [Mean Absolute Error](https://www.sciencedirect.com/topics/engineering/mean-absolute-error) relates to finisher placement which feels less exact than what I need. I'm using the XGBoost model. 
+I used [scikit-learn](https://scikit-learn.org/stable/) to perform machine learning by using data points to predict the race winner. ~~The model is in its infancy, and I am still trying to figure out the right data points to feed it.~~ I'm also currently trying to predict a driver's final place rather than their final time. That means that the [Mean Absolute Error](https://www.sciencedirect.com/topics/engineering/mean-absolute-error) relates to finisher placement which feels less exact than what I need. 
 
 After significant refinement with [Monte Carlo](https://www.ibm.com/think/topics/monte-carlo-simulation), [Recursive Feature Elimination (RFE)](https://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.RFE.html), and [Boruta](https://www.jstatsoft.org/v36/i11/) feature selection, I have achieved a MAE of **1.5 or below**.
+
+### Multiple Model Support
+The app now supports four different machine learning algorithms for maximum flexibility and accuracy:
+
+- **🏆 XGBoost** (Recommended Default): Excellent performance, handles missing data, built-in feature importance
+- **🚀 LightGBM**: Very fast training, good for large datasets, handles categorical features well  
+- **🐱 CatBoost**: Excellent with categorical data, robust to overfitting, handles missing values automatically
+- **🎯 Ensemble (XGBoost + LightGBM + CatBoost)**: Combines all three models for maximum prediction accuracy
+
+### Advanced Hyperparameter Optimization
+- **Bayesian Optimization**: Intelligent parameter tuning using Optuna
+- **Grid Search**: Systematic parameter exploration
+- **Season-Stratified Cross-Validation**: Prevents data leakage across racing seasons
+- **Early Stopping**: Automatic training termination to prevent overfitting
+
+### Model Selection Guide
+Choose the right model based on your needs:
+
+| Model | Speed | Accuracy | Best For |
+|-------|-------|----------|----------|
+| XGBoost | Fast | High | General-purpose predictions |
+| LightGBM | Very Fast | High | Large datasets, speed-critical |
+| CatBoost | Moderate | High | Categorical data, robustness |
+| Ensemble | Slow | Highest | Maximum accuracy, final predictions |
 
 ### Advanced Options Structure (Tab 5)
 
@@ -134,7 +158,7 @@ st.dataframe(df, height=height)
 
 ## Features used in data model
 
-After extensive feature engineering implementing all roadmap enhancements, Monte Carlo simulation (1000+ iterations), and feature selection (RFE, Boruta), I have achieved a MAE of **1.5 or below**. The model now includes 86+ engineered features, with automatic loading of Monte Carlo-selected best features when available. Feature lists are externalized to text files for easy maintenance and updates.
+After extensive feature engineering implementing all roadmap enhancements, Monte Carlo simulation (1000+ iterations), and feature selection (RFE, Boruta), I have achieved a MAE of **1.94** (target: ≤1.5). The model now includes 86+ engineered features, with automatic loading of Monte Carlo-selected best features when available. Feature lists are externalized to text files for easy maintenance and updates.
 
 | Field Name                           | Description                                                                                   |
 |-------------------------------------- |----------------------------------------------------------------------------------------------|
