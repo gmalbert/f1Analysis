@@ -1535,24 +1535,51 @@ def load_f1_position_model_features():
 
 numerical_features, categorical_features = load_f1_position_model_features()
 
-def get_preprocessor_position():
+def get_preprocessor_position(X=None):
     numerical_imputer = SimpleImputer(strategy='mean')
     categorical_imputer = SimpleImputer(strategy='most_frequent')
 
-    transformers = [
-        ('num', Pipeline(steps=[
-            ('imputer', numerical_imputer),
-            ('scaler', StandardScaler())
-        ]), numerical_features)
-    ]
-    
-    if categorical_features:
-        transformers.append((
-            'cat', Pipeline(steps=[
-                ('imputer', categorical_imputer),
-                ('onehot', OneHotEncoder(handle_unknown='ignore'))
-            ]), categorical_features
-        ))
+    # If no features were loaded from files, fall back to all available features
+    if not numerical_features and not categorical_features:
+        # Get all features from the data and determine which are numerical vs categorical
+        if X is None:
+            # This shouldn't happen in normal flow, but provide a fallback
+            numerical_features_fallback = []
+            categorical_features_fallback = []
+        else:
+            from pandas.api.types import is_numeric_dtype
+            numerical_features_fallback = [col for col in X.columns if is_numeric_dtype(X[col])]
+            categorical_features_fallback = [col for col in X.columns if not is_numeric_dtype(X[col])]
+        
+        transformers = [
+            ('num', Pipeline(steps=[
+                ('imputer', numerical_imputer),
+                ('scaler', StandardScaler())
+            ]), numerical_features_fallback)
+        ]
+        
+        if categorical_features_fallback:
+            transformers.append((
+                'cat', Pipeline(steps=[
+                    ('imputer', categorical_imputer),
+                    ('onehot', OneHotEncoder(handle_unknown='ignore'))
+                ]), categorical_features_fallback
+            ))
+    else:
+        transformers = [
+            ('num', Pipeline(steps=[
+                ('imputer', numerical_imputer),
+                ('scaler', StandardScaler())
+            ]), numerical_features)
+        ]
+        
+        if categorical_features:
+            transformers.append((
+                'cat', Pipeline(steps=[
+                    ('imputer', categorical_imputer),
+                    ('onehot', OneHotEncoder(handle_unknown='ignore'))
+                ]), categorical_features
+            ))
 
     preprocessor = ColumnTransformer(transformers=transformers)
     return preprocessor
@@ -1715,7 +1742,7 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
     import numpy as np
 
     X, y = get_features_and_target(data)
-    preprocessor = get_preprocessor_position()
+    preprocessor = get_preprocessor_position(X)
 
     # Check for missing columns in X
     all_preprocessor_columns = []
