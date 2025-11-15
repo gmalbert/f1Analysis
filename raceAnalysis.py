@@ -2646,7 +2646,7 @@ with tab2:
                    
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-            preprocessor = get_preprocessor_position()
+            preprocessor = get_preprocessor_position(X)
             preprocessor.fit(X_train)  # Fit on training data
             X_test_prep = preprocessor.transform(X_test)
 
@@ -3507,7 +3507,7 @@ with tab5:
             X, y = get_features_and_target(data)
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-            preprocessor = get_preprocessor_position()
+            preprocessor = get_preprocessor_position(X)
             preprocessor.fit(X_train)
             X_test_prep = preprocessor.transform(X_test)
             
@@ -4131,7 +4131,7 @@ with tab5:
             X_eval, y_eval = X_eval[mask_eval], y_eval[mask_eval]
             
             # Preprocess the features (handle string columns)
-            preprocessor = get_preprocessor_position()
+            preprocessor = get_preprocessor_position(X_eval)
             X_eval_prep = preprocessor.fit_transform(X_eval)
             
             # Create a fresh estimator for cross-validation
