@@ -53,7 +53,8 @@ EarlyStopping = xgb.callback.EarlyStopping
 DATA_DIR = 'data_files/'
 
 # Cache version - increment this when preprocessor logic changes
-CACHE_VERSION = "v2.2"
+import time
+CACHE_VERSION = f"v2.2_{int(time.time())}"
 
 # Suppress numpy warnings about empty slices during calculations
 warnings.filterwarnings('ignore', message='Mean of empty slice', category=RuntimeWarning, module='numpy')
@@ -1775,6 +1776,9 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
     # Preprocess manually
     X_train_prep = preprocessor.fit_transform(X_train)
     X_test_prep = preprocessor.transform(X_test)
+    
+    print(f"DEBUG TRAIN: X_train shape: {X_train.shape}, X_train_prep shape: {X_train_prep.shape}")
+    print(f"DEBUG TRAIN: X_test shape: {X_test.shape}, X_test_prep shape: {X_test_prep.shape}")
 
     if model_type == "XGBoost":
         # Use XGBRegressor for better compatibility with early stopping on Streamlit Cloud
@@ -2974,6 +2978,11 @@ with tab4:
 
     preprocessor.fit(X_predict)  # Fit if not already fitted, or reuse fitted preprocessor
     X_predict_prep = preprocessor.transform(X_predict)
+    
+    print(f"DEBUG: X_predict shape: {X_predict.shape}, X_predict_prep shape: {X_predict_prep.shape}")
+    print(f"DEBUG: Model type: {type(model)}")
+    if hasattr(model, 'n_features_in_'):
+        print(f"DEBUG: Model expects {model.n_features_in_} features")
     
     # Predict based on model type
     if isinstance(model, xgb.Booster):  # XGBoost
