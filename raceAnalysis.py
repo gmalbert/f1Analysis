@@ -2951,7 +2951,7 @@ with tab4:
     
     # commented out on 9/17/2025 for early stopping
     # predicted_position = model.predict(X_predict)
-    preprocessor = get_preprocessor_position()
+    preprocessor = get_preprocessor_position(X_predict)
     all_preprocessor_columns = []
     for name, _, cols in preprocessor.transformers:
         all_preprocessor_columns.extend(cols)
