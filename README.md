@@ -4,6 +4,8 @@
 Analysis of Formula 1 ```.json``` files based on the very generous data files from [F1DB](https://github.com/f1db/f1db) for the vast majority of the analysis. F1DB did not have race control messages which include Safety Cars and flags. For that data, I used [FastF1](https://docs.fastf1.dev/). Full data analysis is available through the [Formula 1 Analysis - Streamlit app](https://f1analysis-app.streamlit.app/).
 
 ## Table of Contents
+- [How to run](#how-to-run)
+- [Deployment and caching](#deployment-and-caching)
 - [File organization](#file-organization)
 - [Filtering](#filtering)
 - [Linear regression](#linear-regression)
@@ -12,6 +14,31 @@ Analysis of Formula 1 ```.json``` files based on the very generous data files fr
 - [Other options](#other-options)
 - [Weather](#weather)
 - [To do](#to-do)
+
+## How to run
+```powershell
+# Activate the virtual environment
+.\.venv\Scripts\Activate.ps1
+
+# Generate the data (required first step, ~10-30 min depending on incremental updates)
+python f1-generate-analysis.py
+
+# Run the Streamlit app (opens in browser at localhost:8501)
+streamlit run raceAnalysis.py
+```
+
+## Deployment and caching
+The app is deployed on [Streamlit Cloud](https://f1analysis-app.streamlit.app/) and uses aggressive caching with `@st.cache_data` decorators to improve performance. 
+
+### Cache Management
+- **CACHE_VERSION**: The app uses a version-based cache invalidation system (`CACHE_VERSION="v2.1"`) to ensure cached data and models remain consistent across deployments
+- **Cache Dependencies**: All cached functions include `CACHE_VERSION` as a dependency to force cache invalidation when the version changes
+- **Model Caching**: ML models are cached with preprocessing pipelines to prevent feature shape mismatches between training and prediction
+
+### Deployment Notes
+- **Streamlit Cloud Compatibility**: The app is optimized for Streamlit Cloud deployment with proper cache management to prevent stale cached models
+- **Environment Variables**: Set `LOCAL_RUN=1` for local development to enable FastF1 caching
+- **Model Compatibility**: Supports XGBoost, LightGBM, CatBoost, and Ensemble models with model-specific parameter handling
 
 ## File organization
 There are two python files involved in this app: ```raceAnalysis.py``` and ```f1-generate-analysis.py```, though there are other python files which generate content. The Race Analysis file is what runs the Streamlit code and displays the data, filters, charts, etc. Before that file is run, you need to run the Generate Analysis page. This creates a bunch of dataframes, and it creates several .csv files for easier retrievel during the Streamlit display. This is done so fewer calculations are required in the Streamlit app which should improve performance. However, it does require that you run the ```f1-generate-analysis.py``` before you run the Steamlit.

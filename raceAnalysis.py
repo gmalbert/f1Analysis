@@ -1841,7 +1841,8 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
             max_depth=4,
             random_state=42,
             n_jobs=-1,
-            verbose=-1
+            verbose=-1,
+            feature_name='auto'  # Don't store feature names to avoid prediction warnings
         )
         
         model.fit(
@@ -1903,7 +1904,7 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
         
         base_estimators = [
             ('xgb', XGBRegressor(n_estimators=100, max_depth=4, learning_rate=0.1, random_state=42, n_jobs=-1)),
-            ('lgb', LGBMRegressor(n_estimators=100, max_depth=4, learning_rate=0.1, random_state=42, n_jobs=-1, verbose=-1)),
+            ('lgb', LGBMRegressor(n_estimators=100, max_depth=4, learning_rate=0.1, random_state=42, n_jobs=-1, verbose=-1, feature_name='auto')),
             ('cat', CatBoostRegressor(iterations=100, depth=4, learning_rate=0.1, random_state=42, verbose=False))
         ]
         
@@ -1929,7 +1930,10 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
         return model, mse, r2, mae, mean_err, evals_result
 
 
+@st.cache_data
 def train_and_evaluate_dnf_model(data):
+    # Include cache version to invalidate when preprocessor changes
+    _ = CACHE_VERSION
     from sklearn.linear_model import LogisticRegression
     X, y = get_features_and_target_dnf(data)
     preprocessor = get_preprocessor_dnf()
@@ -1941,7 +1945,10 @@ def train_and_evaluate_dnf_model(data):
     return model
 
 
+@st.cache_data
 def train_and_evaluate_safetycar_model(data):
+    # Include cache version to invalidate when preprocessor changes
+    _ = CACHE_VERSION
     from sklearn.linear_model import LogisticRegression
     X, y = get_features_and_target_safety_car(data)
     if X.isnull().any().any():
@@ -1957,7 +1964,10 @@ def train_and_evaluate_safetycar_model(data):
     return model
 
 # @st.cache_resource
+@st.cache_data
 def get_trained_model(early_stopping_rounds=20):
+    # Include cache version to invalidate when preprocessor changes
+    _ = CACHE_VERSION
     model, mse, r2, mae, mean_err, evals_result = train_and_evaluate_model(data, early_stopping_rounds=early_stopping_rounds)
     # global_mae = mae
     return model
