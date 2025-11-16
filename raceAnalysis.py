@@ -45,6 +45,7 @@ from sklearn.metrics import roc_auc_score
 import xgboost as xgb
 from lightgbm import LGBMRegressor
 from catboost import CatBoostRegressor
+import audit_temporal_leakage
 
 EarlyStopping = xgb.callback.EarlyStopping
 
@@ -782,7 +783,7 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "🏎️ Schedule",
     "🏁 Next Race",
     "🤖 Predictive Models",
-    "💾 Raw Data"
+    "💾 Data & Debug"
 ])
 
 columns_to_display = {'grandPrixYear': st.column_config.NumberColumn("Year", format="%d"),
@@ -2345,18 +2346,12 @@ with tab1:
         st.write(f"Number of filtered results: {len(filtered_data):,d}")
         filtered_data = filtered_data.sort_values(by=['grandPrixYear', 'resultsFinalPositionNumber'], ascending=[False, True])
         filtered_data = filtered_data.drop_duplicates()
-        st.dataframe(filtered_data, column_config=columns_to_display, column_order=['grandPrixYear', 'grandPrixName', 'streetRace', 'trackRace', 'constructorName', 'resultsDriverName', 'resultsPodium', 'resultsTop5',
-             'resultsTop10','resultsStartingGridPositionNumber','resultsFinalPositionNumber','positionsGained', 'DNF', 'resultsQualificationPositionNumber',
-               'q1End', 'q2End', 'q3Top10', 'averagePracticePosition',  'lastFPPositionNumber','numberOfStops', 'averageStopTime', 'totalStopTime',
-               'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'resultsReasonRetired',
-               'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums', 'positionsGained', 'avgLapTime', 'finishingTime'
-               ], hide_index=True, width=2400, height=600)
-
+        # Compute correlation matrix for selected numeric fields (used elsewhere)
         positionCorrelation = filtered_data[[
-        'lastFPPositionNumber', 'resultsFinalPositionNumber', 'resultsStartingGridPositionNumber','grandPrixLaps', 'averagePracticePosition', 'DNF', 'resultsTop10', 'resultsTop5', 'resultsPodium', 'streetRace', 'trackRace',
-        'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 'positionsGained', 'q1End', 'q2End', 'q3Top10',  'driverBestStartingGridPosition', 'yearsActive',
-        'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums', 'positionsGained',
-        'avgLapPace', 'finishingTime']].corr(method='pearson')
+            'lastFPPositionNumber', 'resultsFinalPositionNumber', 'resultsStartingGridPositionNumber','grandPrixLaps', 'averagePracticePosition', 'DNF', 'resultsTop10', 'resultsTop5', 'resultsPodium', 'streetRace', 'trackRace',
+            'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 'positionsGained', 'q1End', 'q2End', 'q3Top10',  'driverBestStartingGridPosition', 'yearsActive',
+            'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums', 'positionsGained',
+            'avgLapPace', 'finishingTime']].corr(method='pearson')
 
         ## Rename Correlation Rows
         positionCorrelation.index=['Last FP.', 'Final Pos.' ,'Starting Grid Pos.', 'Laps', 'Avg Practice Pos.', 
@@ -2364,6 +2359,19 @@ with tab1:
          'Turns', 'Positions Gained', 'Out at Q1', 'Out at Q2', 'Q3 Top 10', 'Best Starting Grid Pos.', 'Years Active',
          'Best Result', 'Total Championship Wins', 'Total Pole Positions', 'Race Entries', 'Race Starts', 'Race Wins',
         'Race Laps', 'Total Podiums', 'Positions Gained', 'Avg. Lap Pace', 'Finishing Time']
+
+        # Create inner tabs so users can view the filtered data or the Data & Debug tools (including the leakage audit)
+        data_tab, data_debug_tab = st.tabs(["Data", "Data & Debug"])
+
+        with data_tab:
+            st.dataframe(filtered_data, column_config=columns_to_display, column_order=['grandPrixYear', 'grandPrixName', 'streetRace', 'trackRace', 'constructorName', 'resultsDriverName', 'resultsPodium', 'resultsTop5',
+                 'resultsTop10','resultsStartingGridPositionNumber','resultsFinalPositionNumber','positionsGained', 'DNF', 'resultsQualificationPositionNumber',
+                   'q1End', 'q2End', 'q3Top10', 'averagePracticePosition',  'lastFPPositionNumber','numberOfStops', 'averageStopTime', 'totalStopTime',
+                   'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'resultsReasonRetired',
+                   'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums', 'positionsGained', 'avgLapTime', 'finishingTime'
+                   ], hide_index=True, width=2400, height=600)
+
+        # Note: Data & Debug inner tab removed here; leakage audit moved to the top-level 'Data & Debug' tab (tab6).
 
 with tab2:
     st.header("Analytics & Visualizations")
@@ -2456,7 +2464,7 @@ with tab2:
         positionCorrelation = positionCorrelation.loc[~positionCorrelation.index.duplicated(keep='first')]
         positionCorrelation = positionCorrelation.loc[:, ~positionCorrelation.columns.duplicated(keep='first')]
 
-        correlation_matrix = positionCorrelation.style.map(highlight_correlation, subset=positionCorrelation.columns[1:])
+        styled_correlation = positionCorrelation.style.map(highlight_correlation, subset=positionCorrelation.columns[1:])
         
         st.subheader("Correlation Matrix")
         st.caption("Correlation values range from -1 to 1, where -1 indicates a perfect negative correlation, 0 indicates no correlation, and 1 indicates a perfect positive correlation.")
@@ -2474,10 +2482,15 @@ with tab2:
             'streetRace', 'trackRace', 'avgLapPace', 'finishingTime', 'DNF'
         ]
         # Filter and sort by absolute correlation with final position
-        corr_df = correlation_matrix[['Unnamed: 0'] + relevant_corr_cols].copy()
-        corr_df = corr_df.rename(columns={'Unnamed: 0': 'Feature'})
-        # Sort by correlation with final position
-        corr_df = corr_df.sort_values(by='resultsFinalPositionNumber', key=lambda x: abs(x), ascending=False)
+        # Convert correlation matrix to a DataFrame with the row labels as a column
+        corr_df = positionCorrelation.reset_index().rename(columns={'index': 'Feature'})
+        # Only keep relevant columns that actually exist in this correlation matrix
+        existing_corr_cols = [c for c in relevant_corr_cols if c in corr_df.columns]
+        selected_cols = ['Feature'] + existing_corr_cols
+        corr_df = corr_df[selected_cols].copy()
+        # If 'resultsFinalPositionNumber' is present, sort by its absolute correlation
+        if 'resultsFinalPositionNumber' in corr_df.columns:
+            corr_df = corr_df.sort_values(by='resultsFinalPositionNumber', key=lambda x: abs(x), ascending=False)
         st.dataframe(
             corr_df,
             column_config=correlation_columns_to_display,
@@ -2503,7 +2516,7 @@ with tab2:
         ).properties(width=800, height=400)
 
         # Display the Altair chart
-        st.altair_chart(chart, use_container_width=True)
+        st.altair_chart(chart, width='stretch')
 
         constructor_performance = filtered_data.groupby(['grandPrixYear', 'constructorName']).agg(
         total_wins=('resultsFinalPositionNumber', lambda x: (x == 1).sum()),
@@ -2643,7 +2656,7 @@ with tab2:
         ).properties(width=400,height=400)
 
         # Display the pie chart
-        st.altair_chart(dnf_pie_chart, use_container_width=True)
+        st.altair_chart(dnf_pie_chart, width='stretch')
 
         st.subheader("Track Characteristics and Performance")
         st.scatter_chart(filtered_data, x='turns', y='resultsFinalPositionNumber', width="stretch", x_label='Turns', y_label='Final Position')
@@ -2704,6 +2717,17 @@ with tab2:
             results_df['Predicted'] = y_pred
             results_df['Error'] = results_df['Actual'] - results_df['Predicted']
 
+            # Ensure some common metadata columns are available for display (if present in the original filtered dataset)
+            meta_cols = ['grandPrixName', 'constructorName', 'resultsDriverName']
+            for col in meta_cols:
+                if col not in results_df.columns and 'filtered_data' in globals() and col in filtered_data.columns:
+                    try:
+                        # Align by index from the split (train_test_split preserves the DataFrame index)
+                        results_df[col] = filtered_data.loc[results_df.index, col]
+                    except Exception:
+                        # If alignment fails, fall back to adding a column of NaNs so later display logic can ignore it
+                        results_df[col] = pd.NA
+
             # Select the top 3 actual finishers in each race (or just overall if not grouped by race)
             top3_actual = results_df.nsmallest(3, 'Actual')
 
@@ -2713,19 +2737,30 @@ with tab2:
 
             # Optionally, display the top 3 actual vs predicted
             st.subheader("Top 3 Podium Drivers: Actual vs Predicted")
-            st.dataframe(top3_actual[['grandPrixName', 'constructorName', 'resultsDriverName', 'Actual', 'Predicted', 'Error']], hide_index=True)
+            # Only request columns that actually exist to avoid KeyError
+            display_cols = [c for c in ['grandPrixName', 'constructorName', 'resultsDriverName', 'Actual', 'Predicted', 'Error'] if c in top3_actual.columns]
+            st.dataframe(top3_actual[display_cols], hide_index=True)
 
             # Display the first 30 rows
             st.subheader("First 30 Results with Accuracy")
-            st.dataframe(results_df[['grandPrixName', 'constructorName', 'resultsDriverName','Actual', 'Predicted', 'Error']].head(30), hide_index=True, #width=800, height=600,
-                         column_order=['grandPrixName', 'constructorName', 'resultsDriverName', 'Actual', 'Predicted', 'Error'],
-                         column_config={
-                            'grandPrixName': st.column_config.TextColumn("Grand Prix"),
-                            'constructorName': st.column_config.TextColumn("Constructor"),
-                            'resultsDriverName': st.column_config.TextColumn("Driver"),
-                            'Actual': st.column_config.NumberColumn("Actual Pos.", format="%d"),
-                            'Predicted': st.column_config.NumberColumn("Predicted Pos.", format="%.3f"),
-                            'Error': st.column_config.NumberColumn("Error", format="%.3f")})
+            # Build a safe column order and column config based on what's actually present
+            wanted_order = ['grandPrixName', 'constructorName', 'resultsDriverName', 'Actual', 'Predicted', 'Error']
+            present_order = [c for c in wanted_order if c in results_df.columns]
+            column_config = {}
+            if 'grandPrixName' in results_df.columns:
+                column_config['grandPrixName'] = st.column_config.TextColumn("Grand Prix")
+            if 'constructorName' in results_df.columns:
+                column_config['constructorName'] = st.column_config.TextColumn("Constructor")
+            if 'resultsDriverName' in results_df.columns:
+                column_config['resultsDriverName'] = st.column_config.TextColumn("Driver")
+            if 'Actual' in results_df.columns:
+                column_config['Actual'] = st.column_config.NumberColumn("Actual Pos.", format="%d")
+            if 'Predicted' in results_df.columns:
+                column_config['Predicted'] = st.column_config.NumberColumn("Predicted Pos.", format="%.3f")
+            if 'Error' in results_df.columns:
+                column_config['Error'] = st.column_config.NumberColumn("Error", format="%.3f")
+
+            st.dataframe(results_df[present_order].head(30), hide_index=True, column_order=present_order, column_config=column_config)
 
             # Display feature importances
             st.subheader("Feature Importance")
@@ -3074,11 +3109,33 @@ with tab4:
         except Exception as _ex:
             debug_log('Diagnostics error', str(_ex))
 
-    # Predict based on model type
+    # For sklearn-style models (LightGBM, CatBoost, sklearn wrappers) convert
+    # the preprocessed array back into a DataFrame with the exact feature
+    # names used during training. This prevents LightGBM from warning that
+    # "X does not have valid feature names" when it was fitted with names.
     if isinstance(model, xgb.Booster):  # XGBoost
         predicted_position = model.predict(xgb.DMatrix(X_predict_prep))
     else:  # LightGBM, CatBoost, sklearn models
-        predicted_position = model.predict(X_predict_prep)
+        X_for_predict = X_predict_prep
+        if TRAINING_PREPROCESSOR is not None:
+            try:
+                try:
+                    feat_names = TRAINING_PREPROCESSOR.get_feature_names_out()
+                except Exception:
+                    feat_names = []
+                    for name, _, cols in TRAINING_PREPROCESSOR.transformers:
+                        feat_names.extend(cols)
+
+                if len(feat_names) == 0:
+                    # fallback: use numeric column indices
+                    X_for_predict = X_predict_prep
+                else:
+                    # If transformer returned a numpy array, wrap it with column names
+                    X_for_predict = pd.DataFrame(X_predict_prep, columns=feat_names)
+            except Exception:
+                X_for_predict = X_predict_prep
+
+        predicted_position = model.predict(X_for_predict)
 
     # Get DNF feature names
     dnf_features, _ = get_features_and_target_dnf(data)
@@ -4326,6 +4383,7 @@ with tab5:
         
         with tab_debug:
             st.subheader("Debug & Experiments")
+            st.info("Temporal leakage audit moved to the Data Explorer tab under 'Data & Debug'.")
             
             # Bin Count Comparison
             st.write("### Compare Different Bin Counts (q)")
@@ -4363,792 +4421,124 @@ with tab5:
                     st.dataframe(results_df_bin, hide_index=True)
                     st.line_chart(results_df_bin.set_index('q'))
 
+def leakage_audit_ui():
+    """Admin UI to run the temporal leakage audit from Streamlit."""
+    try:
+        with st.expander("🔍 Run Temporal Leakage Audit (Admin)", expanded=False):
+            st.write("Run a heuristics-based audit that checks for features likely to leak future information into training.")
+            # Short explainer for users/admins describing what the audit does and its outputs
+            with st.expander("About this Leakage Audit", expanded=False):
+                st.write(
+                    "This audit scans the analysis dataset for features that may leak future or post-event information into training."
+                )
+                st.write("It applies several heuristics:")
+                st.write("- Name-pattern checks (e.g. columns containing 'post', 'after', 'final', 'result', 'total').")
+                st.write("- Very high Pearson correlation with targets (abs >= 0.95).")
+                st.write("- Per-driver lagged-correlation checks: flags features whose correlation with the *next* race result is substantially higher than with the current result, suggesting future information.")
+                st.write("- Safety-car related candidate checks (features mentioning 'safety' or similar).")
+                st.write("")
+                st.write("Output: a CSV at `leakage_audit_report.csv` with columns: feature, issue, target, value, value2, metric_name, explanation, delta, note.")
+                st.write("Recommendation: review flagged features and remove or re-engineer any that use post-race or future information before training models.")
+            nrows = st.number_input("Rows to read (0 = all)", min_value=0, value=0)
+            run = st.button("Run Leakage Audit")
+            if run:
+                nr = None if int(nrows) == 0 else int(nrows)
+                with st.spinner("Running leakage audit..."):
+                    try:
+                        report_df = audit_temporal_leakage.run_audit(nrows=nr)
+                        if report_df is None or report_df.empty:
+                            st.success("No suspicious features found by heuristics.")
+                        else:
+                            st.success(f"Audit finished: {len(report_df)} items")
+                            # Rename columns for a friendly UI display
+                            ui_map = {
+                                'feature': 'Feature',
+                                'issue_type': 'Issue',
+                                'target': 'Target',
+                                'metric': 'Value',
+                                'metric2': 'Value2',
+                                'metric_name': 'Metric Name',
+                                'explanation': 'Explanation',
+                                'diff': 'Delta',
+                                'extra_info': 'Note'
+                            }
+                            display_df = report_df.rename(columns=ui_map)
+
+                            st.dataframe(display_df, hide_index=True, width='stretch', column_config={
+                                'Feature': st.column_config.TextColumn("Feature"),
+                                'Issue': st.column_config.TextColumn("Issue"),
+                                'Target': st.column_config.TextColumn("Target"),
+                                'Value': st.column_config.NumberColumn("Value", format="%.6f"),
+                                'Value2': st.column_config.NumberColumn("Value2", format="%.6f"),
+                                'Metric Name': st.column_config.TextColumn("Metric Name"),
+                                'Explanation': st.column_config.TextColumn("Explanation"),
+                                'Delta': st.column_config.NumberColumn("Delta", format="%.6f"),
+                                'Note': st.column_config.TextColumn("Note")
+                            })
+
+                            # Prepare downloadable CSV with the friendlier headers
+                            csv_df = report_df.rename(columns={
+                                'feature': 'feature',
+                                'issue_type': 'issue',
+                                'target': 'target',
+                                'metric': 'value',
+                                'metric2': 'value2',
+                                'metric_name': 'metric_name',
+                                'explanation': 'explanation',
+                                'diff': 'delta',
+                                'extra_info': 'note'
+                            })
+                            csv = csv_df.to_csv(index=False)
+                            st.download_button("Download CSV", csv, file_name='leakage_audit_report.csv')
+                    except Exception as e:
+                        st.error(f"Audit failed: {e}")
+    except Exception:
+        # If Streamlit not available or UI errors, fail silently
+        pass
+
+
 with tab6:
-    st.header("Raw Data")
-    st.write("View the complete unfiltered dataset.")
-    
-    # if st.checkbox('Show Raw Data', value=True):
-    st.write(f"Total number of results: {len(data):,d}")
-    st.dataframe(data, column_config=columns_to_display,
-        hide_index=True,  width='stretch', height=600)
 
-        
-#         # MAE by Position Groups
-#         st.subheader("MAE by Position Groups")
-#         st.info("📊 This analysis uses a 20% test set. Some position ranges may not have data in the test set due to random sampling. This is normal and doesn't affect the overall model performance.")
-        
-            
-#             # DEFINE POSITION GROUPS BEFORE USING THEM
-#             winners_actual = results_analysis[results_analysis['Actual'] == 1]
-#             podium_actual = results_analysis[results_analysis['Actual'] <= 3]
-#             points_actual = results_analysis[results_analysis['Actual'] <= 10]
-#             mid_field_actual = results_analysis[(results_analysis['Actual'] >= 11) & (results_analysis['Actual'] <= 15)]
-#             back_actual = results_analysis[results_analysis['Actual'] >= 16]
-#             bottom_10_actual = results_analysis[results_analysis['Actual'] >= 11]
-        
-#             # Define position groups and calculate MAE for each
-#             position_groups = [
-#             ("Winner (P1)", winners_actual),
-#             ("Top 3 Podium (P1-3)", podium_actual),
-#             ("Top 10 Points (P1-10)", points_actual),
-#             ("Mid-field (P11-15)", mid_field_actual),
-#             ("Back (P16-20)", back_actual),
-#             ("Bottom 10 (P11-20)", bottom_10_actual)
-#             ]
-            
-#             mae_data = []
-#             for group_name, group_data in position_groups:
-#                 if len(group_data) > 0:
-#                     mae = mean_absolute_error(group_data['Actual'], group_data['Predicted'])
-#                     mae_data.append({
-#                         'Position Group': group_name,
-#                         'MAE': mae,
-#                         'Sample Size': len(group_data)
-#                     })
-            
-#             mae_df = pd.DataFrame(mae_data)
-            
-#             # Display the underlying data for each position group
-#             st.subheader("Underlying Data for Position Groups")
-
-#             # Create tabs for each position group
-#             tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Winner (P1)", "Top 3 (P1-3)", "Top 10 (P1-10)", "Mid-field (P11-15)", "Back (P16-20)", "Bottom 10 (P11-20)"])
-
-#             with tab1:
-#                 if len(winners_actual) > 0:
-#                     st.write(f"Race Winners (Position 1) - {len(winners_actual)} predictions")
-#                     st.write(f"MAE: {mean_absolute_error(winners_actual['Actual'], winners_actual['Predicted']):.3f}")
-                    
-#                     # Create a more informative display for winners
-#                     winners_display = winners_actual.copy()
-#                     winners_display['Prediction Error'] = winners_display['Predicted'] - 1.0
-#                     winners_display['Absolute Error'] = abs(winners_display['Prediction Error'])
-                    
-#                     # Show only the relevant columns
-#                     st.dataframe(
-#                         winners_display[['Predicted', 'Prediction Error', 'Absolute Error']].round(3), 
-#                         hide_index=True, 
-#                         width=600,
-#                         column_config={
-#                             'Predicted': st.column_config.NumberColumn("Predicted Position", format="%.3f"),
-#                             'Prediction Error': st.column_config.NumberColumn("Error (Pred - 1)", format="%.3f"),
-#                             'Absolute Error': st.column_config.NumberColumn("Absolute Error", format="%.3f")
-#                         }
-#                     )
-                    
-#                     # Add some summary stats
-#                     avg_prediction = winners_display['Predicted'].mean()
-#                     st.write(f"Average predicted position for winners: {avg_prediction:.3f}")
-#                     worst_prediction = winners_display['Predicted'].max()
-#                     st.write(f"Worst prediction for a winner: {worst_prediction:.3f}")
-#                 else:
-#                     st.info("ℹ️ No race winners (P1) in the test set. This position group may appear in other test splits.")
-
-#             with tab2:
-#                 if len(podium_actual) > 0:
-#                     st.write(f"Top 3 Podium Finishers (Positions 1-3) - {len(podium_actual)} predictions")
-#                     st.write(f"MAE: {mean_absolute_error(podium_actual['Actual'], podium_actual['Predicted']):.3f}")
-                    
-#                     # Create enhanced display for podium finishers
-#                     podium_display = podium_actual.copy()
-#                     podium_display['Prediction Error'] = podium_display['Predicted'] - podium_display['Actual']
-#                     podium_display['Absolute Error'] = abs(podium_display['Prediction Error'])
-                    
-#                     st.dataframe(
-#                         podium_display[['Actual', 'Predicted', 'Prediction Error', 'Absolute Error']].round(3), 
-#                         hide_index=True, 
-#                         width=600,
-#                         column_config={
-#                             'Actual': st.column_config.NumberColumn("Actual Position", format="%.0f"),
-#                             'Predicted': st.column_config.NumberColumn("Predicted Position", format="%.3f"),
-#                             'Prediction Error': st.column_config.NumberColumn("Error (Pred - Actual)", format="%.3f"),
-#                             'Absolute Error': st.column_config.NumberColumn("Absolute Error", format="%.3f")
-#                         }
-#                     )
-                    
-#                     # Summary stats
-#                     avg_prediction = podium_display['Predicted'].mean()
-#                     avg_error = podium_display['Prediction Error'].mean()
-#                     st.write(f"Average predicted position: {avg_prediction:.3f}")
-#                     st.write(f"Average prediction error: {avg_error:.3f} ({'over-predicting' if avg_error > 0 else 'under-predicting'})")
-#                 else:
-#                     st.info("ℹ️ No top 3 positions (P1-3) in the test set. This position group may appear in other test splits.")
-
-#             with tab3:
-#                 if len(points_actual) > 0:
-#                     st.write(f"Top 10 Points-Scoring Positions (1-10) - {len(points_actual)} predictions")
-#                     st.write(f"MAE: {mean_absolute_error(points_actual['Actual'], points_actual['Predicted']):.3f}")
-                    
-#                     # Create enhanced display for points positions
-#                     points_display = points_actual.copy()
-#                     points_display['Prediction Error'] = points_display['Predicted'] - points_display['Actual']
-#                     points_display['Absolute Error'] = abs(points_display['Prediction Error'])
-                    
-#                     st.dataframe(
-#                         points_display[['Actual', 'Predicted', 'Prediction Error', 'Absolute Error']].round(3), 
-#                         hide_index=True, 
-#                         width=600,
-#                         column_config={
-#                             'Actual': st.column_config.NumberColumn("Actual Position", format="%.0f"),
-#                             'Predicted': st.column_config.NumberColumn("Predicted Position", format="%.3f"),
-#                             'Prediction Error': st.column_config.NumberColumn("Error (Pred - Actual)", format="%.3f"),
-#                             'Absolute Error': st.column_config.NumberColumn("Absolute Error", format="%.3f")
-#                         }
-#                     )
-                    
-#                     # Summary stats
-#                     avg_prediction = points_display['Predicted'].mean()
-#                     avg_error = points_display['Prediction Error'].mean()
-#                     worst_error = points_display['Absolute Error'].max()
-#                     st.write(f"Average predicted position: {avg_prediction:.3f}")
-#                     st.write(f"Average prediction error: {avg_error:.3f} ({'over-predicting' if avg_error > 0 else 'under-predicting'})")
-#                     st.write(f"Worst absolute error: {worst_error:.3f}")
-#                 else:
-#                     st.info("ℹ️ No top 10 positions (P1-10) in the test set. This position group may appear in other test splits.")
-
-#             with tab4:
-#                 if len(mid_field_actual) > 0:
-#                     st.write(f"Mid-field (Positions 11-15) - {len(mid_field_actual)} predictions")
-#                     st.write(f"MAE: {mean_absolute_error(mid_field_actual['Actual'], mid_field_actual['Predicted']):.3f}")
-                    
-#                     # Create enhanced display for mid-field positions
-#                     mid_field_display = mid_field_actual.copy()
-#                     mid_field_display['Prediction Error'] = mid_field_display['Predicted'] - mid_field_display['Actual']
-#                     mid_field_display['Absolute Error'] = abs(mid_field_display['Prediction Error'])
-                    
-#                     st.dataframe(
-#                         mid_field_display[['Actual', 'Predicted', 'Prediction Error', 'Absolute Error']].round(3), 
-#                         hide_index=True, 
-#                         width=600,
-#                         column_config={
-#                             'Actual': st.column_config.NumberColumn("Actual Position", format="%.0f"),
-#                             'Predicted': st.column_config.NumberColumn("Predicted Position", format="%.3f"),
-#                             'Prediction Error': st.column_config.NumberColumn("Error (Pred - Actual)", format="%.3f"),
-#                             'Absolute Error': st.column_config.NumberColumn("Absolute Error", format="%.3f")
-#                         }
-#                     )
-                    
-#                     # Summary stats
-#                     avg_prediction = mid_field_display['Predicted'].mean()
-#                     avg_error = mid_field_display['Prediction Error'].mean()
-#                     worst_error = mid_field_display['Absolute Error'].max()
-#                     st.write(f"Average predicted position: {avg_prediction:.3f}")
-#                     st.write(f"Average prediction error: {avg_error:.3f} ({'over-predicting' if avg_error > 0 else 'under-predicting'})")
-#                     st.write(f"Worst absolute error: {worst_error:.3f}")
-#                 else:
-#                     st.info("ℹ️ No positions 11-15 in the test set. Try a larger test_size or different random_state, or view other position groups.")
-
-#             with tab5:
-#                 if len(back_actual) > 0:
-#                     st.write(f"Back of Field (Positions 16-20) - {len(back_actual)} predictions")
-#                     st.write(f"MAE: {mean_absolute_error(back_actual['Actual'], back_actual['Predicted']):.3f}")
-                    
-#                     # Create enhanced display for back of field positions
-#                     back_display = back_actual.copy()
-#                     back_display['Prediction Error'] = back_display['Predicted'] - back_display['Actual']
-#                     back_display['Absolute Error'] = abs(back_display['Prediction Error'])
-                    
-#                     st.dataframe(
-#                         back_display[['Actual', 'Predicted', 'Prediction Error', 'Absolute Error']].round(3), 
-#                         hide_index=True, 
-#                         width=600,
-#                         column_config={
-#                             'Actual': st.column_config.NumberColumn("Actual Position", format="%.0f"),
-#                             'Predicted': st.column_config.NumberColumn("Predicted Position", format="%.3f"),
-#                             'Prediction Error': st.column_config.NumberColumn("Error (Pred - Actual)", format="%.3f"),
-#                             'Absolute Error': st.column_config.NumberColumn("Absolute Error", format="%.3f")
-#                         }
-#                     )
-                    
-#                     # Summary stats
-#                     avg_prediction = back_display['Predicted'].mean()
-#                     avg_error = back_display['Prediction Error'].mean()
-#                     best_prediction = back_display['Absolute Error'].min()
-#                     st.write(f"Average predicted position: {avg_prediction:.3f}")
-#                     st.write(f"Average prediction error: {avg_error:.3f} ({'over-predicting' if avg_error > 0 else 'under-predicting'})")
-#                     st.write(f"Best absolute error: {best_prediction:.3f}")
-#                 else:
-#                     st.info("ℹ️ No back of field positions (P16-20) in the test set. This position group may appear in other test splits.")
-
-#             with tab6:
-#                 if len(bottom_10_actual) > 0:
-#                     st.write(f"Bottom 10 (Positions 11-20) - {len(bottom_10_actual)} predictions")
-#                     st.write(f"MAE: {mean_absolute_error(bottom_10_actual['Actual'], bottom_10_actual['Predicted']):.3f}")
-                    
-#                     # Create enhanced display for bottom 10 positions
-#                     bottom_10_display = bottom_10_actual.copy()
-#                     bottom_10_display['Prediction Error'] = bottom_10_display['Predicted'] - bottom_10_display['Actual']
-#                     bottom_10_display['Absolute Error'] = abs(bottom_10_display['Prediction Error'])
-                    
-#                     st.dataframe(
-#                         bottom_10_display[['Actual', 'Predicted', 'Prediction Error', 'Absolute Error']].round(3), 
-#                         hide_index=True, 
-#                         width=600,
-#                         column_config={
-#                             'Actual': st.column_config.NumberColumn("Actual Position", format="%.0f"),
-#                             'Predicted': st.column_config.NumberColumn("Predicted Position", format="%.3f"),
-#                             'Prediction Error': st.column_config.NumberColumn("Error (Pred - Actual)", format="%.3f"),
-#                             'Absolute Error': st.column_config.NumberColumn("Absolute Error", format="%.3f")
-#                         }
-#                     )
-                    
-#                     # Summary stats
-#                     avg_prediction = bottom_10_display['Predicted'].mean()
-#                     avg_error = bottom_10_display['Prediction Error'].mean()
-#                     prediction_range = f"{bottom_10_display['Predicted'].min():.1f} - {bottom_10_display['Predicted'].max():.1f}"
-#                     st.write(f"Average predicted position: {avg_prediction:.3f}")
-#                     st.write(f"Average prediction error: {avg_error:.3f} ({'over-predicting' if avg_error > 0 else 'under-predicting'})")
-#                     st.write(f"Prediction range: {prediction_range}")
-#                 else:
-#                     st.info("ℹ️ No bottom 10 positions (P11-20) in the test set. This position group may appear in other test splits.")
-
-#             # Display the data
-#             st.dataframe(mae_df, hide_index=True, width=600)
-            
-#             # Create bar chart
-#             st.bar_chart(mae_df.set_index('Position Group')['MAE'], width="stretch")
-    
-#     # Optional: More detailed breakdown by individual positions
-#     if st.checkbox("Show MAE by Individual Positions"):
-        
-#         X, y = get_features_and_target(data)
-#         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-        
-#         model, _, _, _, _, _ = train_and_evaluate_model(data, early_stopping_rounds=early_stopping_rounds)
-        
-#         preprocessor = get_preprocessor_position()
-#         preprocessor.fit(X_train)
-#         X_test_prep = preprocessor.transform(X_test)
-#         y_pred = model.predict(xgb.DMatrix(X_test_prep))
-        
-#         # Create results DataFrame
-#         results_analysis = pd.DataFrame({
-#             'Actual': y_test.values,
-#             'Predicted': y_pred
-#         })
-        
-#         position_groups = [
-#         ("Winner (P1)", results_analysis[results_analysis['Actual'] == 1]),
-#         ("Top 3 Podium (P1-3)", results_analysis[results_analysis['Actual'] <= 3]),
-#         ("Top 10 Points (P1-10)", results_analysis[results_analysis['Actual'] <= 10]),
-#         ("Mid-field (P11-15)", results_analysis[(results_analysis['Actual'] >= 11) & (results_analysis['Actual'] <= 15)]),
-#         ("Back (P16-20)", results_analysis[results_analysis['Actual'] >= 16]),
-#         ("Bottom 10 (P11-20)", results_analysis[results_analysis['Actual'] >= 11])
-#         ]
-
-#         individual_mae = []
-#         for pos in range(1, 21):  # Positions 1-20
-#             pos_data = results_analysis[results_analysis['Actual'] == pos]
-#             if len(pos_data) > 0:
-#                 mae = mean_absolute_error(pos_data['Actual'], pos_data['Predicted'])
-#                 individual_mae.append({
-#                     'Position': pos,
-#                     'MAE': mae,
-#                     'Sample Size': len(pos_data)
-#                 })
-        
-#         individual_mae_df = pd.DataFrame(individual_mae)
-#         st.dataframe(individual_mae_df, hide_index=True, width=600, height=750)
-#         st.line_chart(individual_mae_df.set_index('Position')['MAE'], width="stretch")
-
-#         # Display summary table after the box plot
-#         st.subheader("Position Group Summary")
-#         summary_data = []
-#         for group_name, group_data in position_groups:
-#             if len(group_data) > 0:
-#                 mae = mean_absolute_error(group_data['Actual'], group_data['Predicted'])
-#                 avg_error = (group_data['Predicted'] - group_data['Actual']).mean()
-#                 median_error = (group_data['Predicted'] - group_data['Actual']).median()
-#                 summary_data.append({
-#                     'Position Group': group_name,
-#                     'Sample Size': len(group_data),
-#                     'MAE': mae,
-#                     'Average Error': avg_error,
-#                     'Median Error': median_error
-#                 })
-
-#         summary_df = pd.DataFrame(summary_data)
-#         st.dataframe(summary_df, hide_index=True, width=1000)
-
-#     if st.checkbox("Show Error Distribution by Position"):
-#         st.subheader("Prediction Error Distribution by Position Groups")
-        
-#         X, y = get_features_and_target(data)
-#         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-        
-#         model, _, _, _, _, _ = train_and_evaluate_model(data, early_stopping_rounds=early_stopping_rounds)
-        
-#         preprocessor = get_preprocessor_position()
-#         preprocessor.fit(X_train)
-#         X_test_prep = preprocessor.transform(X_test)
-#         y_pred = model.predict(xgb.DMatrix(X_test_prep))
-        
-#         # Create results DataFrame
-#         results_analysis = pd.DataFrame({
-#             'Actual': y_test.values,
-#             'Predicted': y_pred
-#         })
-
-#         # Calculate absolute errors for each group
-#         results_analysis['AbsError'] = abs(results_analysis['Actual'] - results_analysis['Predicted'])
-        
-#         # Create bins for different position groups
-#         results_analysis['Position_Group'] = pd.cut(
-#             results_analysis['Actual'], 
-#             bins=[0, 1, 3, 10, 15, 20], 
-#             labels=['Winner', 'Podium', 'Points', 'Mid-field', 'Back'],
-#             include_lowest=True
-#         )
-        
-#         # Box plot showing error distribution
-#         import matplotlib.pyplot as plt
-#         fig, ax = plt.subplots(figsize=(10, 6))
-        
-#         position_groups = results_analysis['Position_Group'].cat.categories
-#         error_data = [results_analysis[results_analysis['Position_Group'] == group]['AbsError'].values 
-#                     for group in position_groups]
-        
-#         ax.boxplot(error_data, tick_labels=position_groups)
-#         ax.set_ylabel('Absolute Error')
-#         ax.set_xlabel('Position Group')
-#         ax.set_title('Prediction Error Distribution by Position Group')
-        
-#         st.pyplot(fig, width="stretch")
-
-#     if st.checkbox("Show Permutation Importance (Least Helpful Features)"):
-#         st.subheader("Permutation Importance (Feature Impact on Model Error)")
-#         from sklearn.inspection import permutation_importance
-
-#         # Get features and target
-#         X, y = get_features_and_target(data)
-#         mask = y.notnull() & np.isfinite(y)
-#         X, y = X[mask], y[mask]
-#         preprocessor = get_preprocessor_position()
-#         X_prep = preprocessor.fit_transform(X)
-
-#         # Fit model
-#         model = XGBRegressor(n_estimators=100, max_depth=4, n_jobs=-1, tree_method='hist', random_state=42)
-#         model.fit(X_prep, y)
-
-#         # Run permutation importance
-#         result = permutation_importance(model, X_prep, y, n_repeats=10, random_state=42)
-#         importances = result.importances_mean
-#         feature_names = preprocessor.get_feature_names_out()
-#         feature_names = [name.replace('num__', '').replace('cat__', '') for name in feature_names]
-
-#         perm_df = pd.DataFrame({
-#             'Feature': feature_names,
-#             'Permutation Importance': importances
-#         }).sort_values(by='Permutation Importance', ascending=True)
-
-#         st.write("Features with lowest permutation importance (least helpful):")
-#         st.dataframe(perm_df.head(100), hide_index=True, width=800)
-#         st.write("Features with highest permutation importance (most helpful):")
-#         st.dataframe(perm_df.tail(100).sort_values(by='Permutation Importance', ascending=False), hide_index=True, width=800)
-
-#     if st.checkbox("Show High-Cardinality Features (Overfitting Risk)"):
-#         st.subheader("High-Cardinality Features (Potential Overfitting Risk)")
-#         X, _ = get_features_and_target(data)
-#         cardinality = X.nunique().sort_values(ascending=False)
-#         cardinality_df = pd.DataFrame({
-#             'Feature': cardinality.index,
-#             'Unique Values': cardinality.values
-#         })
-#         # Highlight features with >50 unique values (you can adjust this threshold)
-#         cardinality_df['Risk'] = np.where(cardinality_df['Unique Values'] > 50, 'High', 'Low')
-#         st.write("Features with high cardinality (many unique values) are more likely to cause overfitting, especially if they are IDs or post-event info.")
-#         st.dataframe(cardinality_df, hide_index=True, width=800)
-
-#     if st.checkbox("Early Stopping Details"):
-#         st.subheader("Early Stopping & Most Important Feature")
-
-#         # 1. Where early stopping occurred
-#         # mae_per_round = evals_result['eval']['absolute_error'] if 'absolute_error' in evals_result['eval'] else evals_result['eval']['mae']
-#         # # best_round = model.best_iteration
-        
-        
-#         # if hasattr(model, "best_iteration"):
-#         #     best_round = model.best_iteration
-#         #     lowest_mae = mae_per_round[best_round]
-#         #     st.write(f"Early stopping occurred at round {best_round + 1} (lowest MAE: {lowest_mae:.4f})")
-#         # else:
-#         #     # For Booster object, use num_boosted_rounds if available
-#         #     if hasattr(model, "num_boosted_rounds"):
-#         #         best_round = model.num_boosted_rounds()
-#         #         lowest_mae = mae_per_round[best_round]
-#         #         st.write(f"Early stopping was not used. Model ran for {best_round} boosting rounds.")
-#         #     else:
-#         #         st.write("Early stopping was not used or best_iteration is not available.")
-#         # # st.write(f"Early stopping occurred at round {best_round + 1} (lowest MAE: {lowest_mae:.4f})")
-#         # st.line_chart(mae_per_round)
-#         # Add this in your advanced options section, before calling train_and_evaluate_model
-        
-#         mae_per_round = evals_result['eval']['absolute_error'] if 'absolute_error' in evals_result['eval'] else evals_result['eval']['mae']
-#         best_round = int(np.argmin(mae_per_round))  # Index of lowest MAE
-#         lowest_mae = mae_per_round[best_round]
-#         st.write(f"Early stopping occurred at round {best_round + 1} (lowest MAE: {lowest_mae:.4f})")
-#         st.line_chart(mae_per_round)
-
-
-#         feature_names = preprocessor.get_feature_names_out()
-#         feature_names = [name.replace('num__', '').replace('cat__', '') for name in feature_names]
-
-#         # --- FIX: Define importances here ---
-#         # importances_dict = model.get_score(importance_type='weight')
-#         # importances_dict = model.get_booster().get_score(importance_type='weight')
-#         # importances_dict = model.get_score(importance_type='weight')
-#         # importances_dict = model.get_booster().get_score(importance_type='weight')
-#         importances_dict = model.get_score(importance_type='weight')
-#         importances = []
-#         for i, name in enumerate(feature_names):
-#             importances.append(importances_dict.get(f'f{i}', 0))
-
-#         # 2. Most important feature after training
-#         feature_importances_df = pd.DataFrame({
-#             'Feature': feature_names,
-#             'Importance': importances,
-#             'Percentage': np.array(importances) / (np.sum(importances) or 1) * 100
-#         }).sort_values(by='Importance', ascending=False)
-
-#         top_feature = feature_importances_df.iloc[0]
-#         st.write(f"Most important feature after training: **{top_feature['Feature']}** (Importance: {top_feature['Importance']})")
-#         st.dataframe(feature_importances_df.head(50), hide_index=True, width=800)
-
-#     if st.checkbox("Compare Different Bin Counts (q)"):
-#         from feature_lists import high_cardinality_features
-#         st.subheader("Compare Quantile Bin Counts (q) for Binning Features")
-#         q_values = st.multiselect("Select q values (number of bins)", [2, 3, 4, 5, 6, 7, 8, 9, 10], default=[2, 3, 4, 5, 6, 7, 8, 9, 10])
-#         results = []
-#         for q in q_values:
-#             df = data.copy()
-#             for col in high_cardinality_features:
-#                 try:
-#                     df[f"{col}_bin"] = pd.qcut(df[col], q=q, labels=False, duplicates='drop')
-#                 except Exception as e:
-#                     continue
-#             X, y = get_features_and_target(df)
-#             mask = y.notnull() & np.isfinite(y)
-#             X, y = X[mask], y[mask]
-#             # Convert object columns to category codes for XGBoost
-#             for col in X.select_dtypes(include='object').columns:
-#                 X[col] = X[col].astype('category').cat.codes
-#             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-#             model = XGBRegressor(n_estimators=100, max_depth=4, n_jobs=-1, tree_method='hist', random_state=42)
-#             model.fit(X_train, y_train)
-#             y_pred = model.predict(X_test)
-#             mae = mean_absolute_error(y_test, y_pred)
-#             results.append({'q': q, 'MAE': mae})
-#         results_df = pd.DataFrame(results).sort_values('q')
-#         st.write("MAE for each bin count (q):")
-#         st.dataframe(results_df, hide_index=True)
-#         st.line_chart(results_df.set_index('q'))
-
-#     if st.checkbox("Show Model Evaluation Metrics (slow)"):
-#         st.subheader("Model Evaluation Metrics")
-#         # Final Position Model
-#         X, y = get_features_and_target(data)
-#         mask = y.notnull() & np.isfinite(y)
-#         X, y = X[mask], y[mask]
-#         scores = cross_val_score(model, X, y, cv=5, scoring='neg_mean_squared_error')
-#         avg_mse = -scores.mean()
-#         std_mse = scores.std()
-#         st.write(f"Final Position Model - Cross-validated MSE: {avg_mse:.3f} (± {std_mse:.3f})")
-
-#         # DNF Model
-#         X_dnf, y_dnf = get_features_and_target_dnf(data)
-#         mask_dnf = y_dnf.notnull() & np.isfinite(y_dnf)
-#         X_dnf, y_dnf = X_dnf[mask_dnf], y_dnf[mask_dnf]
-#         X_train_dnf, X_test_dnf, y_train_dnf, y_test_dnf = train_test_split(X_dnf, y_dnf, test_size=0.2, random_state=42)
-#         y_pred_dnf_proba = dnf_model.predict_proba(X_test_dnf)[:, 1]
-#         from sklearn.metrics import mean_absolute_error
-#         mae_dnf = mean_absolute_error(y_test_dnf, y_pred_dnf_proba)
-#         st.write(f"Mean Absolute Error (MAE) for DNF Probability (test set): {mae_dnf:.3f}")
-#         scores_dnf = cross_val_score(dnf_model, X_dnf, y_dnf, cv=5, scoring='roc_auc')
-#         st.write(f"DNF Model - Cross-validated ROC AUC: {scores_dnf.mean():.3f} (± {scores_dnf.std():.3f})")
-
-#         # Safety Car Model
-#         X_sc, y_sc = get_features_and_target_safety_car(safety_cars)
-#         mask_sc = y_sc.notnull() & np.isfinite(y_sc)
-#         X_sc, y_sc = X_sc[mask_sc], y_sc[mask_sc]
-#         scores_sc = cross_val_score(safetycar_model, X_sc, y_sc, cv=5, scoring='roc_auc')
-#         st.write(f"Safety Car Model - Cross-validated ROC AUC (unique rows): {scores_sc.mean():.3f} (± {scores_sc.std():.3f})")
-
-#     if st.checkbox("Show Safety Car Data Importances"):
-#         st.subheader("Safety Car Feature Importance")
-#         # Get feature names and importances from the trained safetycar_model
-#         preprocessor = safetycar_model.named_steps['preprocessor']
-#         feature_names = preprocessor.get_feature_names_out()
-#         feature_names = [name.replace('num__', '').replace('cat__', '') for name in feature_names]
-#         importances = safetycar_model.named_steps['classifier'].coef_[0]
-
-#         # Odds ratio: exp(coef)
-#         odds_ratios = np.exp(importances)
-
-#         # Probability change (approximate, for small coefficients): sigmoid(coef) - 0.5
-#         prob_change = (1 / (1 + np.exp(-importances))) - 0.5
-
-#         df = pd.DataFrame({
-#             'Feature': feature_names,
-#             'Coefficient': importances,
-#             'Odds Ratio': odds_ratios,
-#             'Prob Change (per unit)': prob_change
-#         }).sort_values('Coefficient', key=np.abs, ascending=False, ignore_index=True)
-
-#         st.dataframe(df, width=1000, hide_index=True)
-
-#     # --- Monte Carlo Feature Subset Search UI ---
-#     if st.checkbox("Run Monte Carlo Feature Subset Search"):
-#         st.subheader("Monte Carlo Feature Subset Search (Feature Selection)")
-
-#         # Get features and target from your data
-#         X, y = get_features_and_target(data)
-#         feature_names = X.columns.tolist()
-
-#         # User controls
-#         n_trials = st.number_input("Number of random trials", min_value=10, max_value=100000, value=50, step=10)
-#         min_features = st.number_input("Minimum features per trial", min_value=3, max_value=len(feature_names)-1, value=8, step=1)
-#         max_features = st.number_input(
-#         "Maximum features per trial",
-#         min_value=min_features+1,
-#         max_value=len(feature_names),
-#         value=min(min_features+1, len(feature_names)),
-#         step=1
-#     )
-        
-#         # Run the Monte Carlo feature selection
-#         with st.spinner("Running Monte Carlo feature subset search..."):
-#             results = monte_carlo_feature_selection(
-#                 X, y,
-#                 model_class=lambda: XGBRegressor(n_estimators=100, max_depth=4, n_jobs=-1, tree_method='hist'),
-#                 n_trials=int(n_trials),
-#                 min_features=int(min_features),
-#                 max_features=int(max_features),
-#                 random_state=42
-#             )
-
-
-#         # Find the best feature sets
-#         results = sorted(results, key=lambda x: x['mae'])
-#         best = results[0]
-#         st.write("Best feature subset:", best['features'])
-#         st.write(", ".join([f"'{f}'" for f in best['features']]))
-#         st.write("Best MAE:", best['mae'])
-
-#         # Show top 20 feature sets
-#         st.subheader("Top 20 Feature Subsets")
-#         st.dataframe(pd.DataFrame(results[:20]), hide_index=True, column_config={
-#             "features": "Feature Subset",
-#             "mae": "Mean Absolute Error (MAE)",
-#             "rmse": "Root Mean Squared Error (RMSE)",
-#             "r2": "R² Score"
-#         })
-
-#         # Count feature appearances in top 20 subsets
-#         from collections import Counter
-#         top_features = [f for r in results[:20] for f in r['features']]
-#         feature_counts = Counter(top_features)
-#         feature_counts_df = pd.DataFrame(feature_counts.items(), columns=['Feature', 'Appearances']).sort_values(by='Appearances', ascending=False)
-#         st.subheader("Feature Appearance in Top 20 Subsets")
-#         st.dataframe(feature_counts_df, hide_index=True, width=600)
-
-#     if st.checkbox("Run Recursive Feature Elimination (RFE)"):
-#         X, y = get_features_and_target(data)
-#         mask = y.notnull() & np.isfinite(y)
-#         X, y = X[mask], y[mask]
-#         # Convert object columns to category codes for RFE/XGBoost
-#         for col in X.select_dtypes(include='object').columns:
-#             X[col] = X[col].astype('category').cat.codes
-        
-#         n_features = st.number_input("Number of features to select (RFE)", min_value=1, max_value=len(X.columns), value=10, step=1)
-#         with st.spinner("Running RFE..."):
-#             selected_features, ranking = run_rfe_feature_selection(X, y, n_features_to_select=int(n_features))
-#         st.write("Selected features:", selected_features)
-#         st.dataframe(pd.DataFrame({'Feature': X.columns, 'Ranking': ranking}).sort_values('Ranking'), width=600, hide_index=True)
-
-#     if st.checkbox("Run Boruta Feature Selection"):
-#         X, y = get_features_and_target(data)
-#         mask = y.notnull() & np.isfinite(y)
-#         X, y = X[mask], y[mask]
-#         # Convert object columns to category codes for RFE/XGBoost
-#         for col in X.select_dtypes(include='object').columns:
-#             X[col] = X[col].astype('category').cat.codes
-#         max_iter = st.number_input("Boruta max iterations", min_value=10, max_value=200, value=50, step=10)
-#         with st.spinner("Running Boruta..."):
-#             selected_features, ranking = run_boruta_feature_selection(X, y, max_iter=int(max_iter))
-#         st.write("Selected features:", selected_features)
-#         # Use the columns from the DataFrame used in Boruta
-#         st.dataframe(pd.DataFrame({'Feature': X.columns[:len(ranking)], 'Ranking': ranking}).sort_values('Ranking'))
-#         st.write("Best feature subset (quoted, comma-delimited):")
-#         st.write(", ".join([f"'{f}'" for f in selected_features]))
-
-#     if st.checkbox("Run RFE to Minimize MAE"):
-#         X, y = get_features_and_target(data)
-#         mask = y.notnull() & np.isfinite(y)
-#         X, y = X[mask], y[mask]
-#         min_features = st.number_input("Min features", min_value=1, max_value=len(X.columns)-1, value=3, step=1)
-#         max_features = st.number_input(
-#         "Max features",
-#         min_value=min_features+1,
-#         max_value=len(X.columns),
-#         value=min(min_features+5, len(X.columns)),
-#         step=1
-#     )
-#         with st.spinner("Running RFE to minimize MAE..."):
-#             best_features, best_ranking, best_mae, maes = rfe_minimize_mae(X, y, min_features=int(min_features), max_features=int(max_features))
-#         st.write(f"Best MAE: {best_mae:.3f}")
-#         st.write("Best feature subset:", best_features)
-#         st.dataframe(pd.DataFrame({'Feature': best_features}))
-#         st.line_chart(pd.DataFrame(maes, columns=['n_features', 'MAE']).set_index('n_features'))
-#         st.write("Best feature subset (quoted, comma-delimited):")
-#         st.write(", ".join([f"'{f}'" for f in best_features]))
-
-#     if st.checkbox('Show Correlations for all races'):
-#         st.subheader("Correlation Matrix")
-        
-#         # Rename rows and columns in the correlation matrix
-#         correlation_matrix = correlation_matrix.rename(
-#             index={
-#                 'resultsPodium': 'Podium',
-#                 'resultsTop5': 'Top 5',
-#                 'resultsTop10': 'Top 10',
-#                 'resultsStartingGridPositionNumber': 'Starting Grid Position',
-#                 'resultsFinalPositionNumber': 'Final Position',
-#                 'positionsGained': 'Positions Gained',
-#                 'DNF': 'DNF',
-#                 'averagePracticePosition': 'Avg Practice Pos.',
-#                 'grandPrixLaps': 'Laps',
-#                 'lastFPPositionNumber': 'Last FP Pos.',
-#                 'resultsQualificationPositionNumber': 'Qual. Pos.',
-#                 'constructorTotalRaceStarts': 'Constructor Race Starts',
-#                 'constructorTotalRaceWins': 'Constructor Race Wins',
-#                 'constructorTotalPolePositions': 'Constructor Pole Pos.',
-#                 'turns': 'Turns',
-#                 'q1End': 'Out at Q1',
-#                 'q2End': 'Out at Q2',
-
-#                 'q3Top10': 'Q3 Top 10',
-#                 'numberOfStops': 'Number of Stops',
-#                 'positionsGained': 'Positions Gained',
-#                 'avgLapTime': 'Avg Lap Time',
-#                 'finishingTime': 'Finishing Time',
-#             }
-#         )
-
-#         # Apply styling to highlight correlations
-#         correlation_matrix = correlation_matrix.style.map(highlight_correlation, subset=correlation_matrix.columns[1:])
-        
-#         # Display the correlation matrix
-#         st.dataframe(correlation_matrix, column_config=correlation_columns_to_display, hide_index=True, height=600)
-
-#     if st.checkbox('Show Model Accuracy for All Races'):
-#         st.subheader("Model Accuracy Across All Races")
-
-#         # Extract features and target from the full dataset
-#         X, y = get_features_and_target(data)
-
-#         # Split the data into train and test sets
-#         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-#         # Train the model on the training set
-#         model, mse, r2, mae, mean_err, evals_result = train_and_evaluate_model(data, early_stopping_rounds=early_stopping_rounds)
-
-#         preprocessor = get_preprocessor_position()
-#         preprocessor.fit(X_train)  # Fit on training data
-#         X_test_prep = preprocessor.transform(X_test)
-#         y_pred = model.predict(xgb.DMatrix(X_test_prep))
-
-#         # Combine predictions and actuals for comparison
-#         results_df = X_test.copy()
-#         results_df['ActualFinalPosition'] = y_test.values
-#         results_df['PredictedFinalPosition'] = y_pred
-#         results_df['Error'] = results_df['ActualFinalPosition'] - results_df['PredictedFinalPosition']
-
-#         # Display metrics
-#         st.write(f"Mean Squared Error: {mse:.3f}")
-#         st.write(f"R^2 Score: {r2:.3f}")
-#         st.write(f"Mean Absolute Error: {mae:.2f}")
-#         st.write(f"Mean Error: {mean_err:.2f}")
-
-#         # Position-specific MAE analysis
-#         results_df = pd.DataFrame({
-#             'Actual': y_test.values,
-#             'Predicted': y_pred
-#         })
-
-#         # Calculate MAE for different position groups
-#         podium_actual = results_df[results_df['Actual'] <= 3]
-#         points_actual = results_df[results_df['Actual'] <= 10]
-#         winners_actual = results_df[results_df['Actual'] == 1]
-
-#         if len(podium_actual) > 0:
-#             podium_mae = mean_absolute_error(podium_actual['Actual'], podium_actual['Predicted'])
-#             st.write(f"MAE for Podium Finishers (1-3): {podium_mae:.3f}")
-            
-#         if len(winners_actual) > 0:
-#             winner_mae = mean_absolute_error(winners_actual['Actual'], winners_actual['Predicted'])
-#             st.write(f"MAE for Race Winners: {winner_mae:.3f}")
-
-#         if len(points_actual) > 0:
-#             points_mae = mean_absolute_error(points_actual['Actual'], points_actual['Predicted'])
-#             st.write(f"MAE for Points Positions (1-10): {points_mae:.3f}")
-
-#         # Combine predictions and actuals for comparison
-#         results_df = X_test.copy()
-#         results_df['ActualFinalPosition'] = y_test.values
-#         results_df['PredictedFinalPosition'] = y_pred
-#         results_df['Error'] = results_df['ActualFinalPosition'] - results_df['PredictedFinalPosition']
-
-
-#         # Show a table of predictions vs actuals
-#         st.dataframe(
-#             results_df[['grandPrixName', 'constructorName', 'resultsDriverName', 'ActualFinalPosition', 'PredictedFinalPosition', 'Error']].sort_values(by=['grandPrixName', 'ActualFinalPosition']),
-#             hide_index=True,
-#             width=1000,
-#             column_config={
-#                 'grandPrixName': st.column_config.TextColumn("Grand Prix"),
-#                 'constructorName': st.column_config.TextColumn("Constructor"),
-#                 'resultsDriverName': st.column_config.TextColumn("Driver"),
-#                 'ActualFinalPosition': st.column_config.NumberColumn("Actual", format="%d"),
-#                 'PredictedFinalPosition': st.column_config.NumberColumn("Predicted", format="%.2f"),
-#                 'Error': st.column_config.NumberColumn("Error", format="%.2f"),
-#             }
-#         )
-
-#         # Optional: Show a scatter plot of Actual vs Predicted
-#         st.subheader("Actual vs Predicted Final Position (All Races)")
-#         st.scatter_chart(results_df, x='ActualFinalPosition', y='PredictedFinalPosition', width="stretch")
-
-
-
-# with tab6:
-#     st.header("Raw Data")
-#     st.write("View the complete unfiltered dataset.")
-    
-#     if st.checkbox('Show Raw Data', value=True):
-#         st.write(f"Total number of results: {len(data):,d}")
-#         st.dataframe(data, column_config=columns_to_display,
-#             hide_index=True,  width=800, height=600)
-
-#     if st.checkbox("Run Hyperparameter Tuning"):
-#         X, y = get_features_and_target(data)
-#         param_grid = {
-#             'regressor__n_estimators': [100, 200],
-#             'regressor__max_depth': [3, 4, 5],
-#             'regressor__learning_rate': [0.05, 0.1, 0.2],
-#             'regressor__reg_alpha': [0, 0.1, 0.3],           # L1 regularization
-#             'regressor__colsample_bytree': [0.6, 0.8, 1.0],  # Sample % of features per tree
-#             'regressor__colsample_bylevel': [0.6, 0.8, 1.0], # Sample % per tree level
-#             'regressor__colsample_bynode': [0.6, 0.8, 1.0],  # Sample % per split
-#         }
-#         pipeline = Pipeline([
-#             ('preprocessor', get_preprocessor_position()),
-#             ('regressor', XGBRegressor(random_state=42))
-#         ])
-#         grid_search = GridSearchCV(pipeline, param_grid, cv=3, scoring='neg_mean_squared_error')
-
-#         mask = y.notnull() & np.isfinite(y)
-#         X_clean, y_clean = X[mask], y[mask]
-#         grid_search.fit(X_clean, y_clean)
-#         st.write("Best params:", grid_search.best_params_)
-        
-        
+    st.header("Data & Debug Tools")
+    # Split Data & Debug into three subtabs: Raw Data, Temporal Leakage Audit, Hyperparameter Tuning
+    raw_tab, audit_tab, tuning_tab = st.tabs(["Raw Data", "Temporal Leakage Audit", "Hyperparameter Tuning"])
+
+    with raw_tab:
+        st.write("View the complete unfiltered dataset.")
+        if st.checkbox('Show Raw Data (subtab)', value=False):
+            st.write(f"Total number of results: {len(data):,d}")
+            st.dataframe(data, column_config=columns_to_display,
+                hide_index=True, width='stretch', height=600)
+
+    with audit_tab:
+        st.write("Run heuristics-based checks for features that may leak future information into models.")
+        # with st.expander("Run Temporal Leakage Audit (Admin)", expanded=False):
+        try:
+            leakage_audit_ui()
+        except Exception as e:
+            st.error(f"Leakage audit UI failed to render: {e}")
+
+    with tuning_tab:
+        st.write("Run basic hyperparameter tuning (GridSearch) on the full dataset.")
+        if st.checkbox("Run Hyperparameter Tuning (subtab)"):
+            X, y = get_features_and_target(data)
+            param_grid = {
+                'regressor__n_estimators': [100, 200],
+                'regressor__max_depth': [3, 4, 5],
+                'regressor__learning_rate': [0.05, 0.1, 0.2],
+                'regressor__reg_alpha': [0, 0.1, 0.3],           # L1 regularization
+                'regressor__colsample_bytree': [0.6, 0.8, 1.0],  # Sample % of features per tree
+                'regressor__colsample_bylevel': [0.6, 0.8, 1.0], # Sample % of features per tree level
+                'regressor__colsample_bynode': [0.6, 0.8, 1.0],  # Sample % per split
+            }
+            pipeline = Pipeline([
+                ('preprocessor', get_preprocessor_position()),
+                ('regressor', XGBRegressor(random_state=42))
+            ])
+            grid_search = GridSearchCV(pipeline, param_grid, cv=3, scoring='neg_mean_squared_error')
+
+            mask = y.notnull() & np.isfinite(y)
+            X_clean, y_clean = X[mask], y[mask]
+            grid_search.fit(X_clean, y_clean)
+            st.write("Best params:", grid_search.best_params_)
+                
