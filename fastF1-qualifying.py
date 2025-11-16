@@ -47,12 +47,23 @@ def add_teammate_delta(df, group_cols, value_col, new_col):
 if os.path.exists(csv_path):
     processed_df = pd.read_csv(csv_path, sep='\t')
     # Build a set of already processed session keys (Year, Round)
-    processed_sessions = set(
-        zip(
-            processed_df['Year'],
-            processed_df['Round']
+    # Only consider a session processed if it already has qualifying times (avoid placeholders)
+    def session_has_times(row):
+        for col in ['Q1', 'Q1_sec', 'Q1_sec', 'Q2_sec', 'Q3_sec', 'best_qual_time', 'q1_sec', 'q2_sec', 'q3_sec']:
+            if col in processed_df.columns and not processed_df[col].isna().all():
+                # we'll detect per-row below
+                break
+    # Build processed_sessions by selecting rows where at least one qualifying time exists
+    if not processed_df.empty:
+        has_time_mask = (
+            processed_df.get('q1_sec').notna().fillna(False)
+            | processed_df.get('q2_sec').notna().fillna(False)
+            | processed_df.get('q3_sec').notna().fillna(False)
+            | processed_df.get('best_qual_time').notna().fillna(False)
         )
-    )
+        processed_sessions = set(zip(processed_df.loc[has_time_mask, 'Year'], processed_df.loc[has_time_mask, 'Round']))
+    else:
+        processed_sessions = set()
 else:
     processed_df = pd.DataFrame()
     processed_sessions = set()
@@ -98,9 +109,11 @@ for i in range(current_year, current_year + 1):
             print(f"Could not determine qualifying date for {i} round {round_number}: {e}")
             continue
 
-        # Only process sessions less than 3 days in the future
-        if (qual_date - today).days > 0:
-            print(f"Skipping session: {session_key} (qualifying in the future)")
+        # Only process sessions more than 3 days in the future (allow upcoming sessions within 3 days)
+        days_until = (qual_date - today).days
+        print(f"Session {session_key} qualifying date: {qual_date} (days until: {days_until})")
+        if days_until > 3:
+            print(f"Skipping session: {session_key} (qualifying more than 3 days in the future)")
             continue
 
         try:
@@ -139,17 +152,25 @@ if qualifying_results_list:
     races['Year'] = races['Year'].astype(int)
     races['Round'] = races['Round'].astype(int)
 
-    # Merge raceId into your qualifying results DataFrame
-    # (Assuming new_results_df is your qualifying results DataFrame)
-    results_with_raceId = pd.merge(
-        combined_df,
-        races[['Year', 'Round', 'raceId']],
-        left_on=['Year', 'Round'],
-        right_on=['Year', 'Round'],
+
+    # Save the combined DataFrame to a CSV file
+    # Merge raceId into your qualifying results DataFrame so new rows get raceId filled
+    # Use a renamed column on the right to avoid duplicate-column suffix conflicts
+    races_sub = races[['Year', 'Round', 'raceId']].rename(columns={'raceId': 'raceId_from_races'})
+    results_with_raceId = combined_df.merge(
+        races_sub,
+        on=['Year', 'Round'],
         how='left'
     )
-    #print(results_with_raceId)
+    # If a raceId column already exists, prefer the existing one and fill any missing values
+    if 'raceId' in results_with_raceId.columns and 'raceId_from_races' in results_with_raceId.columns:
+        results_with_raceId['raceId'] = results_with_raceId['raceId'].fillna(results_with_raceId['raceId_from_races'])
+        results_with_raceId.drop(columns=['raceId_from_races'], inplace=True)
+    elif 'raceId_from_races' in results_with_raceId.columns:
+        results_with_raceId.rename(columns={'raceId_from_races': 'raceId'}, inplace=True)
 
+    # Ensure we save the enriched DataFrame (with raceId) rather than the raw combined_df
+    combined_df = results_with_raceId
 
     # Save the combined DataFrame to a CSV file
     combined_df.to_csv(csv_path, sep='\t', index=False)
@@ -212,24 +233,56 @@ qualifying_with_driverId = add_teammate_delta(
 
 # qualifying_with_driverId.rename(columns={'driverId_drivers': 'driverId'}, inplace=True)
 
-qualifying_with_driverId = pd.merge(
-    qualifying,
-    races[['Year', 'Round', 'raceId']],
+# Merge raceId into the already-enriched qualifying_with_driverId (avoid duplicate-column merge errors)
+# Rename the right-hand raceId column so we can safely fill missing values without creating conflicting suffixes
+races_sub = races[['Year', 'Round', 'raceId']].rename(columns={'raceId': 'raceId_from_races'})
+qualifying_with_driverId = qualifying_with_driverId.merge(
+    races_sub,
     left_on=['Year', 'Round'],
     right_on=['Year', 'Round'],
-    how='left',
-    suffixes=('', '_races')
+    how='left'
 )
+# If a raceId column already exists, prefer the existing one and fill any missing values from the merged column
+if 'raceId' in qualifying_with_driverId.columns and 'raceId_from_races' in qualifying_with_driverId.columns:
+    qualifying_with_driverId['raceId'] = qualifying_with_driverId['raceId'].fillna(qualifying_with_driverId['raceId_from_races'])
+    qualifying_with_driverId.drop(columns=['raceId_from_races'], inplace=True)
+elif 'raceId_from_races' in qualifying_with_driverId.columns:
+    qualifying_with_driverId.rename(columns={'raceId_from_races': 'raceId'}, inplace=True)
 
 # Calculate position (rank) for Q1, Q2, Q3 times (lower time = better rank)
+# Ensure numeric seconds columns
+for _c in ['q1_sec', 'q2_sec', 'q3_sec']:
+    if _c in qualifying_with_driverId.columns:
+        # Handle possible duplicate column names (which yield a DataFrame slice)
+        col = qualifying_with_driverId.loc[:, _c]
+        if isinstance(col, pd.DataFrame):
+            col = col.iloc[:, 0]
+        qualifying_with_driverId[_c] = pd.to_numeric(col, errors='coerce')
+
 for q in ['q1_sec', 'q2_sec', 'q3_sec']:
     if q in qualifying_with_driverId.columns:
         pos_col = q.lower().replace('_sec', '_pos')
-        qualifying_with_driverId[pos_col] = (
-            qualifying_with_driverId
-            .groupby(['Year', 'Round'])[q]
-            .rank(method='min', ascending=True)
-        )
+        # Compute per-group ranks robustly even if selecting q yields a DataFrame
+        def _rank_for_group(g):
+            col = g[q]
+            if isinstance(col, pd.DataFrame):
+                col = col.iloc[:, 0]
+            return col.rank(method='min', ascending=True)
+
+        # Use groupby on the specific column to avoid applying on grouping columns
+        # This prevents the FutureWarning about DataFrameGroupBy.apply operating on grouping cols.
+        try:
+            ranked = qualifying_with_driverId.groupby(['Year', 'Round'])[q].apply(lambda s: s.rank(method='min', ascending=True))
+            # Align to original index by dropping the group index levels
+            ranked = ranked.reset_index(level=[0, 1], drop=True)
+            qualifying_with_driverId[pos_col] = ranked
+        except Exception:
+            # Fallback: use the earlier robust approach if selecting the column behaves unexpectedly
+            ranked = qualifying_with_driverId.groupby(['Year', 'Round']).apply(_rank_for_group)
+            if isinstance(ranked, pd.DataFrame):
+                ranked = ranked.iloc[:, 0]
+            ranked = ranked.reset_index(level=[0, 1], drop=True)
+            qualifying_with_driverId[pos_col] = ranked
 
 # Optionally, rename for consistency with your output columns
 qualifying_with_driverId.rename(columns={

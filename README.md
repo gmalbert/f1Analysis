@@ -27,6 +27,17 @@ python f1-generate-analysis.py
 streamlit run raceAnalysis.py
 ```
 
+### Optional post-generation smoke check
+After generating data you can run a small smoke test that verifies the analysis CSV covers the races present in `f1db-races.json` and that qualifying data is reasonably complete. Run the generator with the optional `--check-smoke` flag to execute the smoke test automatically:
+
+```powershell
+python f1-generate-analysis.py --check-smoke
+# to fail the script on problems (useful for CI):
+python f1-generate-analysis.py --check-smoke --smoke-strict
+```
+
+The smoke test is implemented in `scripts/check_generation_smoke.py` and supports `--qual-threshold` and `--tolerance-days` to tune warning/failure thresholds.
+
 ## Deployment and caching
 The app is deployed on [Streamlit Cloud](https://f1analysis-app.streamlit.app/) and uses aggressive caching with `@st.cache_data` decorators to improve performance. 
 

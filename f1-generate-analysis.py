@@ -4,6 +4,7 @@ import pandas as pd
 from os import path
 import os
 import openmeteo_requests
+import argparse
 import requests_cache
 import numpy as np
 import warnings
@@ -50,13 +51,14 @@ def quantile_bin_feature(df, feature, q=10, suffix='_bin', dropna=True):
     # Use pd.qcut to bin into quantiles
     try:
         bins = pd.qcut(valid, q=q, labels=False, duplicates='drop')
-        # Reindex to original DataFrame
-        df[feature + suffix] = bins.reindex(df.index)
+        # Reindex to original DataFrame index and return as a Series
+        result_series = bins.reindex(df.index)
+        result_series.name = feature + suffix
+        return result_series
     except ValueError as e:
         print(f"Could not bin feature '{feature}': {e}")
-        df[feature + suffix] = np.nan
-
-    return df
+        # Return an all-NaN Series with the correct index and name
+        return pd.Series(np.nan, index=df.index, name=feature + suffix)
 
 
 ## Results and Qualifying
@@ -183,7 +185,15 @@ results_and_drivers_and_constructors.rename(columns={'name': 'constructorName', 
 
 results_and_drivers_and_constructors_and_grandprix = pd.merge(results_and_drivers_and_constructors, races_and_grandPrix, left_on='raceId', right_on='raceIdFromGrandPrix', how='inner', suffixes=['_results', '_grandprix'])
 
-results_and_drivers_and_constructors_and_grandprix_and_qualifying = pd.merge(results_and_drivers_and_constructors_and_grandprix, qualifying, left_on=['raceIdFromGrandPrix', 'resultsDriverId'], right_on=['raceId', 'driverId'], how='inner', suffixes=['_results', '_qualifying']) 
+# Qualifying is an optional artifact; use a left join so missing qualifying rows don't drop races
+results_and_drivers_and_constructors_and_grandprix_and_qualifying = pd.merge(
+    results_and_drivers_and_constructors_and_grandprix,
+    qualifying,
+    left_on=['raceIdFromGrandPrix', 'resultsDriverId'],
+    right_on=['raceId', 'driverId'],
+    how='left',
+    suffixes=['_results', '_qualifying']
+)
 
 results_and_drivers_and_constructors_and_grandprix_and_qualifying.rename(columns={'constructorName_qualifying': 'constructorName'}, inplace=True)
 
@@ -312,10 +322,11 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
     results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['pole_time_sec']
 )
 
-results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = quantile_bin_feature(
+_new_col = quantile_bin_feature(
     results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices,
     'qualifying_gap_to_pole', q=5
 )
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[_new_col.name] = _new_col
 
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['q3Top10'] = (results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsQualificationPositionNumber'] <=10)
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['q2End'] = ((results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsQualificationPositionNumber'] >10) & (results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsQualificationPositionNumber'] <=15))
@@ -1918,10 +1929,21 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
 
 # Add to your feature engineering section:
 # Podium prediction features
-results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['podium_form_3_races'] = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.groupby('resultsDriverId')['resultsPodium'].rolling(3).mean().reset_index(level=0, drop=True)
-results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['wins_last_5_races'] = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.groupby('resultsDriverId').apply(
-    lambda x: (x['resultsFinalPositionNumber'] == 1).rolling(5).sum()
-).reset_index(level=0, drop=True)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['podium_form_3_races'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .groupby('resultsDriverId')['resultsPodium']
+    .rolling(3)
+    .mean()
+    .reset_index(level=0, drop=True)
+)
+
+# Compute wins in last 5 races using SeriesGroupBy to avoid DataFrameGroupBy.apply deprecation warnings
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['wins_last_5_races'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .groupby('resultsDriverId')['resultsFinalPositionNumber']
+    .apply(lambda s: (s == 1).rolling(5).sum())
+    .reset_index(level=0, drop=True)
+)
 
 # Championship position features
 # results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['championship_position'] = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.groupby(['grandPrixYear', 'resultsDriverId'])['Points'].rank(ascending=False)
@@ -1931,16 +1953,27 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['points_leader_gap'] = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.groupby('grandPrixYear')['driverPoints'].transform('max') - results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driverPoints']
 
 # Calculate pole to win rate per driver
-pole_to_win_rate = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.groupby('resultsDriverId').apply(
-    lambda x: ((x['resultsFinalPositionNumber'] == 1) & 
-               (x['resultsStartingGridPositionNumber'] == 1)).mean()
-).reset_index(name='pole_to_win_rate')
+# Calculate pole-to-win rate per driver without DataFrameGroupBy.apply by grouping a boolean Series
+_pole_cond = (
+    (results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsFinalPositionNumber'] == 1)
+    & (results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsStartingGridPositionNumber'] == 1)
+)
+pole_to_win_rate = (
+    _pole_cond.groupby(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsDriverId'])
+    .mean()
+    .reset_index(name='pole_to_win_rate')
+)
 
-# Calculate front row conversion rate per driver
-front_row_conversion = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.groupby('resultsDriverId').apply(
-    lambda x: ((x['resultsFinalPositionNumber'] <= 3) & 
-               (x['resultsStartingGridPositionNumber'] <= 2)).mean()
-).reset_index(name='front_row_conversion')
+# Calculate front row conversion rate per driver similarly
+_front_row_cond = (
+    (results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsFinalPositionNumber'] <= 3)
+    & (results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsStartingGridPositionNumber'] <= 2)
+)
+front_row_conversion = (
+    _front_row_cond.groupby(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsDriverId'])
+    .mean()
+    .reset_index(name='front_row_conversion')
+)
 
 # Merge these stats back into the main DataFrame
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = pd.merge(
@@ -2036,156 +2069,6 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
     .transform(lambda x: x.shift(1).mean())
 )
 
-
-# Quantile binning for high-cardinality numerical features
-# high_cardinality_features = [
-#     "LapTime_sec",
-#     "driverFastestPracticeLap_sec",
-#     "bestQualifyingTime_sec",
-#     "best_qual_time",
-#     "best_theory_lap_sec",
-#     "best_s3_sec",
-#     "delta_from_race_avg",
-#     "best_s2_sec",
-#     "best_s1_sec",
-#     "practice_qual_consistency_5r",
-#     "fp1_lap_delta_vs_best",
-#     "practice_lap_time_consistency_vs_field",
-#     "practice_lap_time_consistency",
-#     "grid_x_avg_pit_time",
-#     "pit_delta_x_driver_age",
-#     "practice_consistency_vs_teammate",
-#     "Delta_FP2",
-#     "CleanAirAvg_FP2",
-#     "DirtyAirAvg_FP2",
-#     "Delta_FP1",
-#     "DirtyAirAvg_FP1",
-#     "CleanAirAvg_FP1",
-#     "practice_consistency_vs_constructor_historical",
-#     "qualifying_lap_time_consistency_vs_field",
-#     "teammate_qual_delta",
-#     "fp1_lap_time_delta_to_best",
-#     "teammate_practice_delta",
-#     "practice_position_percentile_vs_constructor",
-#     "practice_time_improvement_1T_2T",
-#     "qualifying_lap_time_delta_to_constructor_best",
-#     "qual_lap_time_consistency",
-#     "practice_lap_time_delta_to_constructor_best",
-#     "practice_time_improvement_2T_3T",
-#     "practice_time_improvement_time_time",
-#     "practice_lap_time_improvement_rate",
-#     "practice_time_improvement_1T_3T",
-#     "last_race_vs_track_avg",
-#     "DirtyAirAvg_FP3",
-#     "CleanAirAvg_FP3",
-#     "Delta_FP3",
-#     "practice_gap_to_teammate",
-#     "qualifying_position_percentile_vs_constructor",
-#     "practice_position_vs_teammate_historical",
-#     "BestConstructorPracticeLap_sec",
-#     "teammate_practice_delta_at_track",
-#     "constructor_qual_consistency_5r",
-#     "historical_avgLapPace",
-#     "historical_race_pace_vs_median",
-#     "practice_position_vs_field_recent_form",
-#     "driver_teammate_practice_gap_3r",
-#     "qual_gap_to_teammate",
-#     "practice_improvement_vs_field",
-#     "practice_improvement_vs_constructor_historical",
-#     "dnf_rate_x_practice_std",
-#     "qual_vs_track_avg",
-#     "practice_improvement_vs_teammate",
-#     "qualifying_position_vs_teammate_historical",
-#     "qual_vs_constructor_avg_at_track",
-#     "practice_position_vs_constructor_recent_form",
-#     "driver_teammate_qual_gap_3r",
-#     "practice_to_qual_improvement_rate",
-#     "constructor_form_ratio",
-#     "practice_std_x_qual",
-#     "recent_form_ratio",
-#     "recent_vs_season",
-#     "qualifying_improvement_vs_constructor_historical",
-#     "qual_vs_constructor_avg",
-#     "qualifying_consistency_vs_constructor_historical",
-#     "qual_improvement_vs_teammate",
-#     "practice_improvement_vs_field_avg",
-#     "fp3_vs_constructor_avg",
-#     "constructor_recent_x_track_exp",
-#     "constructor_practice_improvement_3r",
-#     "average_practice_x_driver_podiums",
-#     "grid_position_percentile",
-#     "driver_practice_improvement_3r",
-#     "power_to_corner_ratio",
-#     "top_speed_x_turns",
-#     "qualifying_position_percentile",
-#     "qualPos_x_avg_practicePos",
-#     "fp3_position_percentile",
-#     "qual_improvement_vs_field_avg",
-#     "practice_position_vs_constructor_median_at_track",
-#     "practice_position_vs_field_median_at_track",
-#     "practice_improvement_rate",
-#     "practice_to_qualifying_delta_vs_constructor_historical",
-#     "recent_form_x_qual",
-#     "driver_avg_practice_pos_at_track",
-#     "practice_vs_track_median",
-#     "constructor_avg_practice_pos_at_track",
-#     "practice_vs_best_at_track",
-#     "avg_final_position_per_track",
-#     "avg_final_position_per_track_constructor",
-#     "practice_vs_worst_at_track",
-#     "practice_position_vs_constructor_best_at_track",
-#     "practice_position_vs_constructor_worst_at_track",
-#     "qualifying_position_vs_field_recent_form",
-#     "constructor_practice_improvement_rate",
-#     "track_fp1_fp3_improvement",
-#     "constructor_avg_qual_pos_at_track",
-#     "constructor_avg_grid_pos_at_track",
-#     "qualifying_position_vs_constructor_recent_form",
-#     "constructor_avg_practice_position",
-#     "SpeedFL_mph",
-#     "practice_improvement_x_qual",
-#     "SpeedI2_mph",
-#     "SpeedI1_mph",
-#     "practice_position_vs_field_worst_at_track",
-#     "practice_to_qualifying_delta",
-#     "practice_to_qual_position_delta",
-#     "constructor_points_x_grid",
-#     "recent_form_5_races",
-#     "practice_position_vs_field_best_at_track",
-#     "driver_positionsGained_5_races",
-#     "qualPos_x_last_practicePos",
-#     "constructor_recent_form_5_races",
-#     "qual_x_constructor_wins",
-#     "races_with_constructor",
-#     "driver_avg_qual_pos_at_track",
-#     "driver_avg_grid_pos_at_track",
-#     "driver_starting_position_5_races",
-#     "practice_position_std",
-#     "practice_consistency_std",
-#     "overtake_potential_5yr",
-#     "SpeedST_mph",
-#     "overtake_potential_3yr",
-#     "qual_to_final_delta_5yr",
-#     "qual_to_final_delta_3yr",
-#     "top_speed_rank",
-#     "grid_x_constructor_rank",
-#     "practice_x_safetycar",
-#     "total_experience",
-#     "averagePracticePosition",
-#     "driver_positionsGained_3_races",
-#     "recent_positions_gained_3_races",
-#     "positions_gained_first_lap_pct",
-#     "grid_penalty_x_constructor",
-#     "driver_constructor_avg_qual_position",
-#     "driver_constructor_avg_final_position",
-#     "constructor_recent_form_3_races",
-#     "recent_form_3_races",
-#     "driver_starting_position_3_races",
-#     "qualifying_position_vs_constructor_median_at_track",
-#     "driver_qual_improvement_3r",
-#     "constructor_qual_improvement_3r"
-#     ]
-
 # Function to load features from text files
 def load_features_from_file(filename):
     filepath = path.join('data_files', filename)
@@ -2212,12 +2095,24 @@ high_cardinality_features_q = {
 
 q_lists = [2, 3, 5, 10]
 
+# Collect new binned columns first, then concat once to avoid DataFrame fragmentation
+_new_bin_series = []
 for q_bin in q_lists:
     for field in high_cardinality_features_q[q_bin]:
-        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = quantile_bin_feature(
+        _s = quantile_bin_feature(
             results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices,
             field, q=q_bin
         )
+        # quantile_bin_feature returns a Series named '<feature>_bin'
+        _new_bin_series.append(_s)
+
+if _new_bin_series:
+    _new_bins_df = pd.concat(_new_bin_series, axis=1)
+    # Concatenate once to the main DataFrame
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = pd.concat(
+        [results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices, _new_bins_df],
+        axis=1
+    )
 
 
 # Check missing data before export
@@ -2304,8 +2199,13 @@ active_mask = results_and_drivers_and_constructors_and_grandprix_and_qualifying_
 
 # Fill all NaN values for active drivers with 0 - this provides baseline values
 # for features that would otherwise be all-NaN and cause imputation warnings
-results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.loc[active_mask] = \
-    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.loc[active_mask].fillna(0)
+import contextlib
+with warnings.catch_warnings():
+    warnings.filterwarnings('ignore', message='Downcasting object dtype arrays on .fillna', category=FutureWarning)
+    _filled_active = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.loc[active_mask].fillna(0)
+# Ensure downcast behavior is explicit / future-safe by inferring dtypes after fillna
+_filled_active = _filled_active.infer_objects(copy=False)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.loc[active_mask] = _filled_active
 
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.to_csv(
     path.join(DATA_DIR, 'f1ForAnalysis.csv'),
@@ -2555,7 +2455,8 @@ circuits_and_races_lat_long = circuits_and_races_lat_long.copy()
 # Merge new hourly data with circuits_and_races_lat_long
 if len(all_hourly_data) > 0:
     circuits_and_races_lat_long['date'] = pd.to_datetime(circuits_and_races_lat_long['date']).dt.strftime('%Y-%m-%d')
-    races_and_weather_for_concat = pd.merge(all_hourly_data, circuits_and_races_lat_long, left_on='short_date', right_on='date', how='inner', suffixes=['_hourly', '_lat_long'])
+    # Use left join so hourly weather without a matching race/date won't drop other rows
+    races_and_weather_for_concat = pd.merge(all_hourly_data, circuits_and_races_lat_long, left_on='short_date', right_on='date', how='left', suffixes=['_hourly', '_lat_long'])
 
     # Load existing weather data if present
     if os.path.exists(weather_csv_path):
@@ -2619,3 +2520,31 @@ print(duplicates)
 print("All active drivers saved to active_drivers.csv")
 
 print("Successfully generated F1 analysis data files.")
+
+# Optional smoke check: run post-generation smoke tests when --check-smoke is provided
+def parse_args_for_smoke():
+    p = argparse.ArgumentParser(add_help=False)
+    p.add_argument('--check-smoke', action='store_true', help='Run post-generation smoke checks (scripts/check_generation_smoke.py)')
+    p.add_argument('--smoke-strict', action='store_true', help='Pass --strict to smoke check')
+    p.add_argument('--smoke-qual-threshold', type=float, default=None, help='Pass --qual-threshold to smoke check')
+    p.add_argument('--smoke-tolerance-days', type=int, default=None, help='Pass --tolerance-days to smoke check')
+    return p.parse_known_args()
+
+
+if __name__ == '__main__':
+    # Only run the optional smoke check if the user requested it via CLI
+    args, _rest = parse_args_for_smoke()
+    if args.check_smoke:
+        smoke_cmd = ['python', 'scripts/check_generation_smoke.py']
+        if args.smoke_strict:
+            smoke_cmd.append('--strict')
+        if args.smoke_qual_threshold is not None:
+            smoke_cmd.extend(['--qual-threshold', str(args.smoke_qual_threshold)])
+        if args.smoke_tolerance_days is not None:
+            smoke_cmd.extend(['--tolerance-days', str(args.smoke_tolerance_days)])
+        print('Running smoke checks:', ' '.join(smoke_cmd))
+        rc = os.system(' '.join(smoke_cmd))
+        if rc != 0:
+            print('Smoke checks returned non-zero (rc={}).'.format(rc))
+        else:
+            print('Smoke checks passed (rc=0).')
