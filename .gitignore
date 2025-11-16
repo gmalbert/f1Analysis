@@ -10,6 +10,9 @@ pyvenv.cfg
 __pycache__/
 *.pyc
 
+# Test scripts
+/scripts/
+
 # Cache files
 .cache.sqlite
 *.sqlite
@@ -100,6 +103,7 @@ processed_laps_data.csv
 race_control_messages.csv
 
 # Test data files
+data_files/all_qualifying_races.csv.bak
 data_files/1136_2025.csv
 data_files/active_drivers_interim.csv
 data_files/all_practice_laps - 082125.csv

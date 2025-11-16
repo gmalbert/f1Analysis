@@ -1045,6 +1045,7 @@ def load_data(nrows, CACHE_VERSION):
                                         'rolling_3_race_win_percentage', 'recent_qualifying_improvement_trend', 'head_to_head_teammate_performance_delta', 'championship_position_pressure_factor',
                                         'constructor_recent_mechanical_dnf_rate', 'driver_performance_at_circuit_type', 'weather_pattern_analysis_by_location', 'overtaking_difficulty_index',
                                         'q1_q2_q3_sector_consistency', 'qualifying_position_vs_race_pace_delta_by_track']
+
     bin_columns = [col for col in all_columns if col.endswith('_bin')]
     usecols = selected_columns + bin_columns
         #    ], dtype={'resultsStartingGridPositionNumber': 'Float64', 'resultsFinalPositionNumber': 'Float64', 'positionsGained': 'Int64', 'averagePracticePosition': 'Float64', 'lastFPPositionNumber': 'Float64', 'resultsQualificationPositionNumber': 'Int64'})
@@ -2182,8 +2183,6 @@ with tab1:
                    'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'resultsReasonRetired',
                    'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums', 'positionsGained', 'avgLapTime', 'finishingTime'
                    ], hide_index=True, width=2400, height=600)
-
-        # Note: Data & Debug inner tab removed here; leakage audit moved to the top-level 'Data & Debug' tab (tab6).
 
 with tab2:
     st.header("Analytics & Visualizations")
@@ -4307,7 +4306,6 @@ def leakage_audit_ui():
     except Exception:
         # If Streamlit not available or UI errors, fail silently
         pass
-
 
 with tab6:
 

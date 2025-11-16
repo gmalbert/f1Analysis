@@ -20,11 +20,13 @@ Short, actionable guidance for AI coding agents working on the Formula 1 Analysi
 - **Model-Specific Handling**: Conditional code for different APIs (feature importance, prediction formats, boosting rounds display).
 
 ## Key files & locations
-- `f1-generate-analysis.py` — generator that creates grouped CSVs and processed JSONs (2543 lines).
+ - `f1-generate-analysis.py` — generator that creates grouped CSVs and processed JSONs (2543 lines).
   - Uses `LOCAL_RUN` environment variable to enable FastF1 caching for local development.
   - Feature engineering section starts at line 1699 with comment "NEW LEAKAGE-FREE FEATURES".
   - Final CSV writes at lines 2217+ define the data contract with the UI.
   - Weather fetching logic updated to pull data for all missing races, not just the most recent one.
+  - Optional post-run smoke checks: pass `--check-smoke` to run `scripts/check_generation_smoke.py` (see helper scripts). Forward `--smoke-strict`, `--smoke-qual-threshold`, and `--smoke-tolerance-days` to control behavior.
+  - Recent fixes batch high-cardinality bin creation to reduce DataFrame fragmentation and silence PerformanceWarnings.
 - `raceAnalysis.py` — Streamlit UI that consumes the outputs in `data_files/` (4973 lines).
   - All data loading functions use `@st.cache_data` decorator for performance.
   - Uses CACHE_VERSION="v2.3" for version-based cache invalidation to prevent stale cached models on Streamlit Cloud.
@@ -43,9 +45,11 @@ Short, actionable guidance for AI coding agents working on the Formula 1 Analysi
   - `f1PositionCorrelation.csv` — Pearson correlation matrix for key position features
   - `all_race_control_messages.csv` — safety car/flag data from FastF1 (2018-present)
 - `pit_constants.py` — track-specific pit lane times (entry to exit) as a dictionary. Used for pit stop calculations.
-- Helper scripts (mostly utility/exploration, not part of main workflow):
+ - Helper scripts (mostly utility/exploration, not part of main workflow):
   - `f1-raceMessages.py` — pulls race control messages from FastF1 API (skips existing sessions)
   - `f1-pit-stop-loss.py` — calculates pit stop time loss using constants from `pit_constants.py`
+  - `scripts/check_generation_smoke.py` — smoke test that validates `f1ForAnalysis.csv` coverage vs `f1db-races.json` and checks qualifying completeness (use `--strict` to fail CI).
+  - `scripts/repair_qualifying.py` — repair helpers for `all_qualifying_races.csv` used during the recent data-repair workflow.
   - `f1-analysis-weather.py`, `f1-constructorStandings.py`, etc. — older data pull scripts
 
 ## Important project-specific patterns
