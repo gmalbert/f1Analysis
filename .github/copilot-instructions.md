@@ -50,6 +50,8 @@ Short, actionable guidance for AI coding agents working on the Formula 1 Analysi
   - `f1-pit-stop-loss.py` — calculates pit stop time loss using constants from `pit_constants.py`
   - `scripts/check_generation_smoke.py` — smoke test that validates `f1ForAnalysis.csv` coverage vs `f1db-races.json` and checks qualifying completeness (use `--strict` to fail CI).
   - `scripts/repair_qualifying.py` — repair helpers for `all_qualifying_races.csv` used during the recent data-repair workflow.
+  - `fastF1-qualifying.py` — fetches qualifying sessions (FastF1), merges with active drivers, and writes `data_files/all_qualifying_races.csv`.
+    - New behavior: the qualifying script now computes `teammate_qual_delta` vectorially and will infer missing `constructorId`/`constructorName` from `f1db-races-race-results.json` when possible (this prevents missing constructor metadata from blocking teammate-delta computation).
   - `f1-analysis-weather.py`, `f1-constructorStandings.py`, etc. — older data pull scripts
 
 ## Important project-specific patterns
@@ -100,6 +102,8 @@ streamlit run raceAnalysis.py
 - **Generator output changes**: If you modify the final `to_csv()` calls in `f1-generate-analysis.py` (around lines 2217-2218), update corresponding `read_csv()` calls in `raceAnalysis.py`.
 - **Column name changes**: The UI has ~30 filter controls. Changing column names breaks filters silently. Search for the column name in `raceAnalysis.py` before renaming.
 - **Data types**: The UI uses pandas type checking (`is_numeric_dtype`, `is_object_dtype`, etc.) for dynamic filtering. Ensure consistent dtypes.
+
+- **Creating checks and repair helpers**: When you add diagnostic, smoke-test, or repair logic, prefer creating a new script under the `scripts/` directory (e.g., `scripts/my_check.py`) instead of editing existing production scripts. This keeps the generator and UI code stable and makes CI smoke tests easier to review and run.
 - **Time string conversions**: Use `time_to_seconds()` helper function (line 250 in generator) for lap time conversions. Handles various F1DB time formats.
 - **Model compatibility**: When adding features that interact with models, ensure compatibility across all four model types (XGBoost, LightGBM, CatBoost, Ensemble). Use isinstance() checks and hasattr() for API differences.
 - **Feature importance**: Different models have different APIs - XGBoost uses get_score(), LightGBM uses feature_importances_, CatBoost uses get_feature_importance().

@@ -16,6 +16,12 @@ from fastf1.ergast import Ergast
 
 DATA_DIR = 'data_files/'
 
+# CLI: optionally include partial (non-placeholder) rows for scheduled races
+parser = argparse.ArgumentParser(description='Generate F1 analysis CSVs', add_help=False)
+parser.add_argument('--include-partial', action='store_true', help='Include partial rows for scheduled races when qualifying/practice data exists (no empty placeholders)')
+# parse_known_args so the later optional smoke-check parser can handle smoke flags without conflict
+args, _unknown = parser.parse_known_args()
+
 # Suppress numpy warnings about empty slices during rolling calculations for new drivers
 warnings.filterwarnings('ignore', message='Mean of empty slice', category=RuntimeWarning, module='numpy')
 warnings.filterwarnings('ignore', message='All-NaN slice encountered', category=RuntimeWarning, module='numpy')
@@ -223,6 +229,59 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
     .apply(lambda row: (pd.to_datetime(row['date']) - pd.to_datetime(row['dateOfBirth'])).days // 365, axis=1)
 )
 
+# If the user requested partial inclusion of scheduled races, append partial rows
+# but only when those rows carry real artifact data (qualifying/practice/standings),
+# to avoid creating empty placeholder rows for future events.
+if args.include_partial:
+    # existing raceIds already represented by results
+    existing_race_ids = set(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['raceId_results'].unique())
+    # candidate scheduled raceIds (from races file)
+    candidate_race_ids = set(races['id'].unique()) - existing_race_ids
+
+    # collect partial rows from qualifying and practices for those candidate races
+    partial_quals = qualifying_csv[qualifying_csv['raceId'].isin(candidate_race_ids)].copy()
+    partial_pracs = current_practices[current_practices['raceId'].isin(candidate_race_ids)].copy()
+
+    partial_frames = []
+    if not partial_quals.empty:
+        # merge driver metadata and race metadata so partial rows have contextual fields
+        pq = partial_quals.merge(drivers[['id', 'name', 'dateOfBirth']], left_on='driverId', right_on='id', how='left', suffixes=('', '_drv'))
+        pq = pq.merge(races[['id', 'year', 'round', 'date', 'grandPrixId']], left_on='raceId', right_on='id', how='left', suffixes=('', '_race'))
+        # align a few key column names so they'll slot into the main DataFrame
+        pq['raceId_results'] = pq['raceId']
+        pq['resultsDriverId'] = pq['driverId']
+        # prefer existing FullName if present
+        if 'FullName' in pq.columns:
+            pq['resultsDriverName'] = pq['FullName']
+        else:
+            pq['resultsDriverName'] = pq['name']
+        pq['resultsYear'] = pq['year']
+        pq['round'] = pq['round']
+        pq['short_date'] = pd.to_datetime(pq['date']).dt.strftime('%Y-%m-%d')
+        partial_frames.append(pq)
+
+    if not partial_pracs.empty:
+        pp = partial_pracs.merge(drivers[['id', 'name', 'dateOfBirth']], left_on='resultsDriverId', right_on='id', how='left', suffixes=('', '_drv'))
+        pp = pp.merge(races[['id', 'year', 'round', 'date', 'grandPrixId']], left_on='raceId', right_on='id', how='left', suffixes=('', '_race'))
+        pp['raceId_results'] = pp['raceId']
+        pp['resultsDriverId'] = pp['resultsDriverId']
+        pp['resultsDriverName'] = pp.get('resultsDriverName', pp.get('driverName', pp['name']))
+        pp['resultsYear'] = pp['year']
+        pp['round'] = pp['round']
+        pp['short_date'] = pd.to_datetime(pp['date']).dt.strftime('%Y-%m-%d')
+        partial_frames.append(pp)
+
+    if partial_frames:
+        partial_all = pd.concat(partial_frames, ignore_index=True, sort=False)
+        # Select only columns that exist in the main DataFrame to avoid schema churn
+        common_cols = [c for c in partial_all.columns if c in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns]
+        if common_cols:
+            to_append = partial_all[common_cols]
+            results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = pd.concat([
+                results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices,
+                to_append
+            ], ignore_index=True, sort=False)
+
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['short_date'] = pd.to_datetime(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['date']).dt.strftime('%Y-%m-%d')
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsPodium'] = (results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsFinalPositionNumber'] <=3)
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsTop5'] = (results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsFinalPositionNumber'] <=5)
@@ -256,6 +315,53 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
 
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['bestQualifyingTime'] = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
     ['q3_sec', 'q2_sec', 'q1_sec']].bfill(axis=1).iloc[:, 0]
+
+# Ensure `teammate_qual_delta` is populated when possible. Some qualifying CSVs
+# (especially recently appended or partially-available races) may lack the
+# precomputed teammate delta. Compute it here from a robust vectorized
+# calculation using the available best times per (raceId_results, constructorId_results)
+# group. This uses transform so the result aligns with the DataFrame index.
+group_keys = ['raceId_results', 'constructorId_results']
+if all(k in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns for k in group_keys):
+    try:
+        df = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+        # Create a single canonical "best" time column from available fields
+        if 'best_qual_time' in df.columns:
+            df['_my_best'] = df['best_qual_time']
+        else:
+            df['_my_best'] = np.nan
+        # fall back to bestQualifyingTime (computed from q3/q2/q1) when necessary
+        if 'bestQualifyingTime' in df.columns:
+            df['_my_best'] = df['_my_best'].fillna(df['bestQualifyingTime'])
+
+        # Count non-null best times per team and sum per team
+        team_count = df.groupby(group_keys)['_my_best'].transform(lambda s: s.notna().sum())
+        team_sum = df.groupby(group_keys)['_my_best'].transform(lambda s: s.fillna(0).sum())
+
+        # Compute teammate (other drivers) mean: (team_sum - my_best) / (team_count - 1)
+        # Only valid when team_count > 1 and my_best is present
+        other_mean = pd.Series(index=df.index, dtype='float')
+        valid_mask = (team_count > 1) & df['_my_best'].notna()
+        # avoid divide-by-zero; compute only where valid
+        other_mean.loc[valid_mask] = (team_sum.loc[valid_mask] - df.loc[valid_mask, '_my_best']) / (team_count.loc[valid_mask] - 1)
+
+        teammate_delta_calc = pd.Series(index=df.index, dtype='float')
+        teammate_delta_calc.loc[valid_mask] = df.loc[valid_mask, '_my_best'] - other_mean.loc[valid_mask]
+
+        # If the canonical column exists, fill missing values from our calc; otherwise create it
+        if 'teammate_qual_delta' in df.columns:
+            df['teammate_qual_delta'] = df['teammate_qual_delta'].where(df['teammate_qual_delta'].notna(), teammate_delta_calc)
+        else:
+            df['teammate_qual_delta'] = teammate_delta_calc
+
+        # Clean up helper column
+        df.drop(columns=['_my_best'], inplace=True)
+
+        # Write back into the main variable
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = df
+    except Exception:
+        # If any unexpected issue arises, do not fail the generator; leave existing values as-is
+        pass
 
 # Calculate pole position time per race
 pole_times = qualifying[qualifying['positionNumber'] == 1][['raceId', 'q1', 'q2', 'q3']].copy()

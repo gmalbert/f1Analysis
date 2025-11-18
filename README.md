@@ -38,6 +38,17 @@ python f1-generate-analysis.py --check-smoke --smoke-strict
 
 The smoke test is implemented in `scripts/check_generation_smoke.py` and supports `--qual-threshold` and `--tolerance-days` to tune warning/failure thresholds.
 
+### Qualifying CSV and teammate deltas
+The qualifying exporter `fastF1-qualifying.py` now computes `teammate_qual_delta` during CSV generation. It will also attempt to infer missing `constructorId`/`constructorName` from `data_files/f1db-races-race-results.json` when those fields are absent so teammate deltas can be computed reliably. To regenerate qualifying data independently:
+
+```powershell
+python .\fastF1-qualifying.py
+python f1-generate-analysis.py --check-smoke
+```
+
+### Adding checks and repair scripts
+When adding smoke tests, diagnostics, or repair utilities, prefer creating a new script under the `scripts/` directory (for example `scripts/check_my_fix.py`) rather than modifying production generator files. This keeps the main generator stable and makes CI reviews simpler.
+
 ## Deployment and caching
 The app is deployed on [Streamlit Cloud](https://f1analysis-app.streamlit.app/) and uses aggressive caching with `@st.cache_data` decorators to improve performance. 
 

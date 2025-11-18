@@ -23,6 +23,7 @@ drivers = drivers[drivers['id'] != 'jos-verstappen']
 
 active_drivers = pd.read_csv(path.join(DATA_DIR, 'active_drivers.csv'), sep='\t')
 constructors = pd.read_json(path.join(DATA_DIR, 'f1db-constructors.json')) 
+race_results = pd.read_json(path.join(DATA_DIR, 'f1db-races-race-results.json'))
 
 # Path to the qualifying results CSV
 csv_path = path.join(DATA_DIR, 'all_qualifying_races.csv')
@@ -30,16 +31,27 @@ csv_path = path.join(DATA_DIR, 'all_qualifying_races.csv')
 def add_teammate_delta(df, group_cols, value_col, new_col):
     """
     Adds a column with the difference between each driver's value_col and their teammate's for each group.
-    Only works for teams with exactly 2 drivers per group.
+    Computes, for each row, the difference between the driver's value and the mean of their teammates'
+    values within the same group (group_cols). Leaves NaN when there is no teammate data.
     """
-    def teammate_diff(x):
-        if len(x) != 2:
-            return [None] * len(x)
-        return [x.iloc[0] - x.iloc[1], x.iloc[1] - x.iloc[0]]
-    df[new_col] = (
-        df.groupby(group_cols)[value_col]
-        .transform(lambda x: teammate_diff(x) if len(x) == 2 else [None]*len(x))
-    )
+    # Create a canonical numeric series for the value to use
+    vals = pd.to_numeric(df[value_col], errors='coerce') if value_col in df.columns else pd.Series([np.nan]*len(df), index=df.index)
+
+    # per-group count of non-null values and sum
+    team_count = df.groupby(group_cols)[vals.name if hasattr(vals, 'name') else value_col].transform(lambda s: pd.to_numeric(s, errors='coerce').notna().sum())
+    team_sum = df.groupby(group_cols)[vals.name if hasattr(vals, 'name') else value_col].transform(lambda s: pd.to_numeric(s, errors='coerce').fillna(0).sum())
+
+    # compute teammates' mean excluding self: (team_sum - my_val) / (team_count - 1)
+    my_val = vals
+    other_mean = pd.Series(index=df.index, dtype='float')
+    valid_mask = (team_count > 1) & my_val.notna()
+    other_mean.loc[valid_mask] = (team_sum.loc[valid_mask] - my_val.loc[valid_mask]) / (team_count.loc[valid_mask] - 1)
+
+    # teammate delta = my_val - other_mean
+    teammate_delta = pd.Series(index=df.index, dtype='float')
+    teammate_delta.loc[valid_mask] = my_val.loc[valid_mask] - other_mean.loc[valid_mask]
+
+    df[new_col] = teammate_delta
     return df
 
 
@@ -140,10 +152,28 @@ if qualifying_results_list:
     for col in ['Q1', 'Q2', 'Q3']:
         if col in new_results_df.columns:
             new_results_df[f'{col}_sec'] = pd.to_timedelta(new_results_df[col]).dt.total_seconds()
-    # Combine with existing data and drop duplicates
+    # Combine with existing data and drop duplicates.
+    # Prefer rows with non-null qualifying times and driverId when deduplicating
     if not processed_df.empty:
         combined_df = pd.concat([processed_df, new_results_df], ignore_index=True)
-        combined_df = combined_df.drop_duplicates(subset=['Year', 'Round', 'DriverNumber'], keep='last')
+        # Group by the natural key and pick the first non-null value for each column when available.
+        group_keys = ['Year', 'Round', 'DriverNumber']
+
+        def _pick_first_non_null(g):
+            # For each column in the group, prefer the first non-null value, otherwise fall back to the last value
+            out = {}
+            for c in g.columns:
+                s = g[c]
+                non_null = s.dropna()
+                if not non_null.empty:
+                    out[c] = non_null.iloc[0]
+                else:
+                    out[c] = s.iloc[-1]
+            return pd.Series(out)
+
+        combined_df = combined_df.groupby(group_keys, as_index=False).apply(_pick_first_non_null)
+        # groupby+apply produces a hierarchical index; reset it to a clean numeric index
+        combined_df = combined_df.reset_index(drop=True)
     else:
         combined_df = new_results_df
 
@@ -223,9 +253,14 @@ qualifying_with_driverId.rename(columns={'Q1_sec': 'q1_sec', 'Q2_sec': 'q2_sec',
 # Create a column for each driver's best qualifying time (lowest non-null Q1/Q2/Q3)
 qualifying_with_driverId['best_qual_time'] = qualifying_with_driverId[['q1_sec', 'q2_sec', 'q3_sec']].min(axis=1)
 
+# Create a stable grouping key for teammates. Prefer `constructorId` (stable),
+# fall back to `constructorName` when `constructorId` is missing.
+qualifying_with_driverId['constructor_group'] = qualifying_with_driverId['constructorId'].fillna(qualifying_with_driverId.get('constructorName'))
+
+# initial teammate delta attempt (may be incomplete if constructorId/name missing)
 qualifying_with_driverId = add_teammate_delta(
     qualifying_with_driverId,
-    ['Year', 'Round', 'constructorName'],
+    ['Year', 'Round', 'constructor_group'],
     'best_qual_time',
     'teammate_qual_delta'
 )
@@ -248,6 +283,40 @@ if 'raceId' in qualifying_with_driverId.columns and 'raceId_from_races' in quali
     qualifying_with_driverId.drop(columns=['raceId_from_races'], inplace=True)
 elif 'raceId_from_races' in qualifying_with_driverId.columns:
     qualifying_with_driverId.rename(columns={'raceId_from_races': 'raceId'}, inplace=True)
+
+# Fill missing constructorId using race_results (if raceId and driverId match present in race_results)
+if 'constructorId' in qualifying_with_driverId.columns:
+    missing_ctor_mask = qualifying_with_driverId['constructorId'].isnull() & qualifying_with_driverId['raceId'].notna()
+    if missing_ctor_mask.any():
+        # build mapping from (raceId, driverId) -> constructorId
+        rr_map = race_results[['raceId', 'driverId', 'constructorId']].dropna()
+        rr_map = rr_map.astype({'raceId': 'int64'})
+        rr_key = rr_map.set_index(['raceId', 'driverId'])['constructorId'].to_dict()
+
+        def _infer_constructor(row):
+            try:
+                key = (int(row['raceId']), row['driverId'])
+            except Exception:
+                return row['constructorId']
+            return rr_key.get(key, row['constructorId'])
+
+        qualifying_with_driverId.loc[missing_ctor_mask, 'constructorId'] = qualifying_with_driverId.loc[missing_ctor_mask].apply(_infer_constructor, axis=1)
+
+# Fill constructorName from constructors mapping when missing
+ctor_map = constructors.set_index('id')['name'].to_dict()
+if 'constructorName' in qualifying_with_driverId.columns:
+    qualifying_with_driverId['constructorName'] = qualifying_with_driverId['constructorName'].fillna(qualifying_with_driverId['constructorId'].map(ctor_map))
+else:
+    qualifying_with_driverId['constructorName'] = qualifying_with_driverId['constructorId'].map(ctor_map)
+
+# Recompute a stable constructor_group and re-run teammate-delta to catch rows previously missed
+qualifying_with_driverId['constructor_group'] = qualifying_with_driverId['constructorId'].fillna(qualifying_with_driverId.get('constructorName'))
+qualifying_with_driverId = add_teammate_delta(
+    qualifying_with_driverId,
+    ['Year', 'Round', 'constructor_group'],
+    'best_qual_time',
+    'teammate_qual_delta'
+)
 
 # Calculate position (rank) for Q1, Q2, Q3 times (lower time = better rank)
 # Ensure numeric seconds columns
