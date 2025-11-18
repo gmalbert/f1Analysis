@@ -14,7 +14,29 @@ from pit_constants import PIT_LANE_TIME_S, TYPICAL_STATIONARY_TIME_S
 import fastf1
 from fastf1.ergast import Ergast
 
+# Try to import helper functions for missing-data handling; fall back gracefully
+try:
+    from scripts.impute_missing_practice import impute_practice
+    from scripts.handle_sprint_weekends import normalize_sprint_weekends
+    from scripts.fill_weather_gaps import fill_weather_gaps
+    _HAS_MISSING_HELPERS = True
+except Exception:
+    _HAS_MISSING_HELPERS = False
+
 DATA_DIR = 'data_files/'
+
+
+def get_preferred_file(filename: str) -> str:
+    """Return the best available variant of a data file in DATA_DIR.
+    Preference order: <filename>.imputed.csv, <filename>.normalized.csv, <filename>
+    """
+    variants = ['.imputed.csv', '.normalized.csv']
+    base = path.join(DATA_DIR, filename)
+    for v in variants:
+        cand = base.replace('.csv', v) if base.endswith('.csv') else base + v
+        if path.exists(cand):
+            return cand
+    return base
 
 # CLI: optionally include partial (non-placeholder) rows for scheduled races
 parser = argparse.ArgumentParser(description='Generate F1 analysis CSVs', add_help=False)
@@ -32,6 +54,32 @@ raceNoEarlierThan = current_year - 10
 if os.environ.get('LOCAL_RUN') == '1':
 
     fastf1.Cache.enable_cache(path.join(DATA_DIR, 'f1_cache'))
+
+
+# Run missing-data handling helpers early to normalize/impute optional artifacts.
+def run_missing_data_handlers():
+    if not _HAS_MISSING_HELPERS:
+        print('Missing-data helper modules not importable — skipping helper execution')
+        return
+    try:
+        print('Running impute_missing_practice.impute_practice...')
+        impute_practice(path.join(DATA_DIR, 'all_practice_results.csv'))
+    except Exception as e:
+        print(f'Warning: impute_practice failed: {e}')
+    try:
+        print('Running handle_sprint_weekends.normalize_sprint_weekends...')
+        normalize_sprint_weekends(path.join(DATA_DIR, 'all_practice_results.csv'))
+    except Exception as e:
+        print(f'Warning: normalize_sprint_weekends failed: {e}')
+    try:
+        print('Running fill_weather_gaps.fill_weather_gaps...')
+        fill_weather_gaps(path.join(DATA_DIR, 'f1WeatherData_AllData.csv'), path.join(DATA_DIR, 'f1WeatherData_Grouped.csv'))
+    except Exception as e:
+        print(f'Warning: fill_weather_gaps failed: {e}')
+
+
+# Call handlers (best-effort): they will skip or emit warnings if inputs missing
+run_missing_data_handlers()
 
 def quantile_bin_feature(df, feature, q=10, suffix='_bin', dropna=True):
     """
@@ -83,8 +131,8 @@ fp1 = pd.read_json(path.join(DATA_DIR, 'f1db-races-free-practice-1-results.json'
 fp2 = pd.read_json(path.join(DATA_DIR, 'f1db-races-free-practice-2-results.json')) 
 fp3 = pd.read_json(path.join(DATA_DIR, 'f1db-races-free-practice-3-results.json')) 
 # fp4 = pd.read_json(path.join(DATA_DIR, 'f1db-races-free-practice-4-results.json')) 
-current_practices = pd.read_csv(path.join(DATA_DIR, 'all_practice_laps.csv'), sep='\t') 
-practice_best = pd.read_csv(path.join(DATA_DIR, 'practice_best_fp1_fp2.csv'), sep='\t')
+current_practices = pd.read_csv(get_preferred_file('all_practice_laps.csv'), sep='\t') 
+practice_best = pd.read_csv(get_preferred_file('practice_best_fp1_fp2.csv'), sep='\t')
 pitstops = pd.read_json(path.join(DATA_DIR, 'f1db-races-pit-stops.json'))
 all_laps = pd.read_csv(path.join(DATA_DIR, 'all_laps.csv'), sep='\t')
 constructor_standings = pd.read_csv(path.join(DATA_DIR, 'constructor_standings.csv'), sep='\t')
@@ -830,17 +878,12 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices 
     how='left'
 )
 
-
-results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.to_csv(path.join(DATA_DIR, 'f1_features_before_practice_update.csv'), index=False, sep='\t')
 # List of columns to update from the reference table
 columns_to_update = [
     'LapTime_sec', 'best_s1_sec', 'best_s2_sec', 'best_s3_sec',
     'SpeedI1_mph', 'SpeedI2_mph', 'SpeedFL_mph', 'SpeedST_mph',
     'best_theory_lap_sec', 'Session', 
 ]
-
-results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.to_csv(path.join(DATA_DIR, 'f1_features_before_after_update.csv'), index=False, sep='\t')
-
 
 # Drop all 'raceId' and 'driverId' columns except those with suffixes
 for col in ['raceId', 'driverId']:
@@ -855,13 +898,21 @@ for col in ['raceId', 'driverId']:
                 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.drop(columns=[c])
 
 # Merge in the updated columns using raceId and driverId as keys
-results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = pd.merge(
-    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices,
-    practice_best[['raceId', 'driverId'] + columns_to_update],
-    left_on=['raceId_results', 'resultsDriverId'],
-    right_on=['raceId', 'driverId'],
-    how='left'
-).drop_duplicates(['raceId_results', 'resultsDriverId'])
+# Safely merge practice_best fields: only use columns that actually exist in the practice_best table.
+if not set(['raceId', 'driverId']).issubset(set(practice_best.columns)):
+    print("Warning: `practice_best` is missing 'raceId' and/or 'driverId' — skipping practice merge")
+else:
+    available_practice_cols = ['raceId', 'driverId'] + [c for c in columns_to_update if c in practice_best.columns]
+    if len(available_practice_cols) <= 2:
+        print("Warning: No practice columns available to merge from `practice_best` — skipping practice merge")
+    else:
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = pd.merge(
+            results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices,
+            practice_best[available_practice_cols],
+            left_on=['raceId_results', 'resultsDriverId'],
+            right_on=['raceId', 'driverId'],
+            how='left'
+        ).drop_duplicates(['raceId_results', 'resultsDriverId'])
 
 # (Optional) Drop the merge keys from the reference if you don't want them in your final DataFrame
 # results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.drop(columns=['raceId', 'driverId'])
@@ -2444,7 +2495,7 @@ positionCorrelation.to_csv(path.join(DATA_DIR, 'f1PositionCorrelation.csv'), sep
 
 races = pd.read_json(path.join(DATA_DIR, 'f1db-races.json')) 
 circuits = pd.read_json(path.join(DATA_DIR, 'f1db-circuits.json')) 
-weatherData = pd.read_csv(path.join(DATA_DIR, 'f1WeatherData_Grouped.csv'), sep='\t') 
+weatherData = pd.read_csv(get_preferred_file('f1WeatherData_Grouped.csv'), sep='\t') 
 
 races = races[races['year'].between(raceNoEarlierThan, current_year)]
 
@@ -2458,13 +2509,27 @@ circuits_and_races_lat_long = circuits_and_races[['id_races', 'latitude', 'longi
 print(len(circuits_and_races_lat_long))
 newRecords = True
 
-weather_csv_path = os.path.join(DATA_DIR, 'f1WeatherData_AllData.csv')
+weather_csv_path = get_preferred_file('f1WeatherData_AllData.csv')
 if os.path.exists(weather_csv_path):
-    processed_weather = pd.read_csv(weather_csv_path, sep='\t', usecols=['short_date'])
-    # Convert to datetime and then to standard format for comparison
-    processed_weather['short_date_compare'] = pd.to_datetime(processed_weather['short_date'], format='mixed').dt.strftime('%Y-%m-%d')
-    processed_weather_set = set(processed_weather['short_date_compare'])
-    
+    try:
+        processed_weather = pd.read_csv(weather_csv_path, sep='\t', usecols=['short_date'])
+        # Convert to datetime and then to standard format for comparison
+        processed_weather['short_date_compare'] = pd.to_datetime(processed_weather['short_date'], format='mixed').dt.strftime('%Y-%m-%d')
+        processed_weather_set = set(processed_weather['short_date_compare'])
+    except ValueError:
+        # The expected 'short_date' column is not present in the weather file; attempt to find an alternative
+        print(f"Warning: '{weather_csv_path}' does not contain 'short_date' column — attempting to infer date column")
+        processed_weather_set = set()
+        try:
+            processed_weather = pd.read_csv(weather_csv_path, sep='\t', low_memory=False)
+            # try common alternatives
+            for alt in ('short_date', 'date', 'datetime', 'time'):
+                if alt in processed_weather.columns:
+                    processed_weather_set = set(pd.to_datetime(processed_weather[alt]).dt.strftime('%Y-%m-%d'))
+                    print(f"Inferred date column '{alt}' from {weather_csv_path}")
+                    break
+        except Exception:
+            print(f"Could not read {weather_csv_path} to infer dates; proceeding as if no processed weather exists")
 else:
     processed_weather_set = set()
 
@@ -2566,19 +2631,44 @@ if len(all_hourly_data) > 0:
 
     # Load existing weather data if present
     if os.path.exists(weather_csv_path):
-        races_and_weather = pd.read_csv(weather_csv_path, sep='\t', usecols=['date_hourly', 'latitude_hourly', 'longitude_hourly', 'temperature_2m', 'hourly_precipitation', 
-            'relative_humidity_2m', 'short_date', 'wind_speed_10m',  'id_races', 'grandPrixId', 'circuitId', 'hourly_precipitation_probability'])
-        # Exclude rows in races_and_weather where short_date matches any value in races_and_weather_for_concat['short_date']
-        races_and_weather = races_and_weather[~races_and_weather['short_date'].isin(races_and_weather_for_concat['short_date'])]
-        print(f"Prior weather records were current: {len(races_and_weather_for_concat)} added.")
-        # Merge the new data with the existing weatherData DataFrame
-        races_and_weather = pd.concat([races_and_weather, races_and_weather_for_concat], ignore_index=True)
+        try:
+            races_and_weather = pd.read_csv(weather_csv_path, sep='\t', usecols=['date_hourly', 'latitude_hourly', 'longitude_hourly', 'temperature_2m', 'hourly_precipitation', 
+                'relative_humidity_2m', 'short_date', 'wind_speed_10m',  'id_races', 'grandPrixId', 'circuitId', 'hourly_precipitation_probability'])
+            # Exclude rows in races_and_weather where short_date matches any value in races_and_weather_for_concat['short_date']
+            races_and_weather = races_and_weather[~races_and_weather['short_date'].isin(races_and_weather_for_concat['short_date'])]
+            print(f"Prior weather records were current: {len(races_and_weather_for_concat)} added.")
+            # Merge the new data with the existing weatherData DataFrame
+            races_and_weather = pd.concat([races_and_weather, races_and_weather_for_concat], ignore_index=True)
+        except ValueError:
+            print(f"Warning: '{weather_csv_path}' does not contain expected hourly columns; falling back to concatenating new hourly data")
+            # If existing weather file can't be read with expected columns, just use the new concatenated data
+            races_and_weather = races_and_weather_for_concat
+        except Exception:
+            print(f"Could not read {weather_csv_path}; using new hourly data only")
+            races_and_weather = races_and_weather_for_concat
     else:
         races_and_weather = races_and_weather_for_concat
 else:
     # If no new data, just load existing
-    races_and_weather = pd.read_csv(weather_csv_path, sep='\t', usecols=['date_hourly', 'latitude_hourly', 'longitude_hourly', 'temperature_2m', 'hourly_precipitation', 
-        'relative_humidity_2m', 'short_date', 'wind_speed_10m',  'id_races', 'grandPrixId', 'circuitId', 'hourly_precipitation_probability'])
+    try:
+        races_and_weather = pd.read_csv(weather_csv_path, sep='\t', usecols=['date_hourly', 'latitude_hourly', 'longitude_hourly', 'temperature_2m', 'hourly_precipitation',
+            'relative_humidity_2m', 'short_date', 'wind_speed_10m',  'id_races', 'grandPrixId', 'circuitId', 'hourly_precipitation_probability'])
+    except ValueError:
+        print(f"Warning: '{weather_csv_path}' is missing some expected weather columns — attempting to read available columns")
+        try:
+            temp_weather = pd.read_csv(weather_csv_path, sep='\t', low_memory=False)
+            expected = ['date_hourly', 'latitude_hourly', 'longitude_hourly', 'temperature_2m', 'hourly_precipitation',
+                        'relative_humidity_2m', 'short_date', 'wind_speed_10m',  'id_races', 'grandPrixId', 'circuitId', 'hourly_precipitation_probability']
+            avail = [c for c in expected if c in temp_weather.columns]
+            if avail:
+                races_and_weather = temp_weather[avail].copy()
+                print(f"Inferred available weather columns: {avail}")
+            else:
+                print(f"No usable weather columns found in {weather_csv_path}; continuing as if no hourly weather exists")
+                races_and_weather = pd.DataFrame()
+        except Exception:
+            print(f"Could not read {weather_csv_path}; proceeding without hourly weather")
+            races_and_weather = pd.DataFrame()
 
 races_and_weather.to_csv(path.join(DATA_DIR, 'f1WeatherData_AllData.csv'), columns=['date_hourly', 'latitude_hourly', 'longitude_hourly', 'temperature_2m', 'hourly_precipitation', 'relative_humidity_2m', 'short_date',
     'wind_speed_10m', 'id_races', 'hourly_precipitation_probability', 'grandPrixId', 'circuitId'], sep='\t', index=False)
