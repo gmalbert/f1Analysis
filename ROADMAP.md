@@ -68,10 +68,11 @@ Minimize MAE (Mean Absolute Error) for Formula 1 race predictions with a target 
   - Check practice/qualifying data availability timing
   - Ensure safety car features don't include race outcome data
 
-- [ ] **Missing data handling**
-  - Imputation strategy for missing practice sessions
-  - Sprint race weekend data handling
-  - Weather data gaps filling methodology
+ - [x] **Missing data handling**
+  - [x] Imputation strategy for missing practice sessions
+  - [x] Sprint race weekend data handling
+  - [x] Weather data gaps filling methodology
+  - Note: the generator treats future (scheduled) races as "not-yet-processed" — the pipeline does not invent practice/qualifying data for races that haven't happened. Smoke tests compare processed-data dates (from generated CSVs) with the schedule and will warn when the schedule extends beyond processed coverage. To change this behavior, either relax the smoke-test tolerance or add generator options to include scheduled placeholders or forecast-based backfills.
 
 ---
 

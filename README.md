@@ -38,6 +38,8 @@ python f1-generate-analysis.py --check-smoke --smoke-strict
 
 The smoke test is implemented in `scripts/check_generation_smoke.py` and supports `--qual-threshold` and `--tolerance-days` to tune warning/failure thresholds.
 
+Note about future races: the generator treats future (scheduled) races as "not-yet-processed". The smoke test compares the latest processed data date (`short_date.max` in `f1ForAnalysis.csv`) with the race schedule from `f1db-races.json` and will emit a warning if the schedule contains races beyond the last processed data. This is expected behavior — the pipeline does not fabricate practice/qualifying data for races that haven't occurred. See `scripts/check_generation_smoke.py` if you want to change this behavior (for example, to ignore future dates or adjust tolerance).
+
 ### Qualifying CSV and teammate deltas
 The qualifying exporter `fastF1-qualifying.py` now computes `teammate_qual_delta` during CSV generation. It will also attempt to infer missing `constructorId`/`constructorName` from `data_files/f1db-races-race-results.json` when those fields are absent so teammate deltas can be computed reliably. To regenerate qualifying data independently:
 
