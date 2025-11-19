@@ -44,11 +44,16 @@ Short, actionable guidance for AI coding agents working on the Formula 1 Analysi
   - `f1SafetyCarFeatures.csv` — safety car prediction features (leakage-free subset)
   - `f1PositionCorrelation.csv` — Pearson correlation matrix for key position features
   - `all_race_control_messages.csv` — safety car/flag data from FastF1 (2018-present)
+  
+Additional preferred practice-best filenames:
+  - `data_files/practice_best_by_session.imputed.round_filled.csv` — preferred by the generator when present (produced by `scripts/impute_missing_practice.py` + `scripts/aggregate_practice_laps.py` and a small `round` fill).
+  - Fallbacks: `data_files/practice_best_by_session.imputed.csv`, `data_files/practice_best_by_session.csv`, then legacy `practice_best_fp1_fp2.csv` via `get_preferred_file()`.
 - `pit_constants.py` — track-specific pit lane times (entry to exit) as a dictionary. Used for pit stop calculations.
  - Helper scripts (mostly utility/exploration, not part of main workflow):
   - `f1-raceMessages.py` — pulls race control messages from FastF1 API (skips existing sessions)
   - `f1-pit-stop-loss.py` — calculates pit stop time loss using constants from `pit_constants.py`
   - `scripts/check_generation_smoke.py` — smoke test that validates `f1ForAnalysis.csv` coverage vs `f1db-races.json` and checks qualifying completeness (use `--strict` to fail CI).
+    - `scripts/run_all_smoke_checks.py` — new convenience runner that discovers and executes smoke/check scripts in `scripts/` and prints a summarized pass/fail report. Use it from the repo root to run the full battery of checks (see script header for usage examples).
   - `scripts/repair_qualifying.py` — repair helpers for `all_qualifying_races.csv` used during the recent data-repair workflow.
   - `fastF1-qualifying.py` — fetches qualifying sessions (FastF1), merges with active drivers, and writes `data_files/all_qualifying_races.csv`.
     - New behavior: the qualifying script now computes `teammate_qual_delta` vectorially and will infer missing `constructorId`/`constructorName` from `f1db-races-race-results.json` when possible (this prevents missing constructor metadata from blocking teammate-delta computation).
@@ -104,6 +109,7 @@ streamlit run raceAnalysis.py
 - **Data types**: The UI uses pandas type checking (`is_numeric_dtype`, `is_object_dtype`, etc.) for dynamic filtering. Ensure consistent dtypes.
 
 - **Creating checks and repair helpers**: When you add diagnostic, smoke-test, or repair logic, prefer creating a new script under the `scripts/` directory (e.g., `scripts/my_check.py`) instead of editing existing production scripts. This keeps the generator and UI code stable and makes CI smoke tests easier to review and run.
+  The new `scripts/run_all_smoke_checks.py` script is intended to be the one-stop command for running these scripts locally or in CI. It will list discovered checks with `--list-only`, and supports `--continue-on-fail` for non-fatal runs.
 - **Time string conversions**: Use `time_to_seconds()` helper function (line 250 in generator) for lap time conversions. Handles various F1DB time formats.
 - **Model compatibility**: When adding features that interact with models, ensure compatibility across all four model types (XGBoost, LightGBM, CatBoost, Ensemble). Use isinstance() checks and hasattr() for API differences.
 - **Feature importance**: Different models have different APIs - XGBoost uses get_score(), LightGBM uses feature_importances_, CatBoost uses get_feature_importance().
