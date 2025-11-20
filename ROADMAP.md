@@ -63,7 +63,7 @@ Minimize MAE (Mean Absolute Error) for Formula 1 race predictions with a target 
   - Test feature interactions (polynomial features for top predictors)
 
 ### 1.3 Data Quality & Leakage Prevention
-- [ ] **Audit current features for temporal leakage**
+- [x] **Audit current features for temporal leakage** — implemented `scripts/audit_temporal_leakage.py` and integrated into the unified smoke-runner; added diagnostic `scripts/check_points_leader_gap.py` for quick manual checks.
   - Verify no future-looking data in training set
   - Check practice/qualifying data availability timing
   - Ensure safety car features don't include race outcome data

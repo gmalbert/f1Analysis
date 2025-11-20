@@ -370,3 +370,19 @@ The weather is pulled from [Open-Meteo's free API](https://open-meteo.com/) whic
 - **Fallbacks:** `data_files/practice_best_by_session.imputed.csv`, `data_files/practice_best_by_session.csv`, then legacy `practice_best_fp1_fp2.csv` via the generator's `get_preferred_file()` logic.
 
 Usage note: If you run the missing-data helpers (`scripts/impute_missing_practice.py` and `scripts/aggregate_practice_laps.py`) they will produce the `practice_best_by_session.*` variants; `f1-generate-analysis.py` will prefer the `round_filled` variant when available and will also attempt to backfill missing `round` values from `data_files/f1db-races.json`.
+
+## Diagnostics & Temporal-Leakage Audit
+
+- **Audit script:** `scripts/audit_temporal_leakage.py` — conservative automated checks to surface potential future-looking features, practice/qualifying timing on scheduled races, and suspicious SafetyCar/leader columns. This audit is integrated into the unified smoke-runner but is intentionally conservative and intended to flag items for manual review.
+- **Quick diagnostic:** `scripts/check_points_leader_gap.py` — a lightweight diagnostic that verifies `round` population and sanity-checks `points_leader_gap` per race snapshot (non-negative and at least one zero-gap leader). Keep this in the repo as a manual troubleshooting helper.
+
+Usage:
+```pwsh
+# Run the full audit (also executed by the unified smoke-runner)
+python .\scripts\audit_temporal_leakage.py
+
+# Run the quick points-leader diagnostic
+python .\scripts\check_points_leader_gap.py
+```
+
+Note: The generator was updated to compute `points_leader_gap` using a per-race snapshot (grouped by `grandPrixYear` + `round`/`raceId`/`short_date`) to avoid leaking future race information into earlier rows.
