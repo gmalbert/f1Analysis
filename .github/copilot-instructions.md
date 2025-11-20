@@ -44,6 +44,8 @@ Short, actionable guidance for AI coding agents working on the Formula 1 Analysi
   - `f1SafetyCarFeatures.csv` — safety car prediction features (leakage-free subset)
   - `f1PositionCorrelation.csv` — Pearson correlation matrix for key position features
   - `all_race_control_messages.csv` — safety car/flag data from FastF1 (2018-present)
+  - `scripts/audit_temporal_leakage.py` — conservative audit for temporal leakage; integrated into `scripts/run_all_smoke_checks.py`.
+  - `scripts/check_points_leader_gap.py` — quick diagnostic to validate `points_leader_gap` and `round` population per race snapshot.
   
 Additional preferred practice-best filenames:
   - `data_files/practice_best_by_session.imputed.round_filled.csv` — preferred by the generator when present (produced by `scripts/impute_missing_practice.py` + `scripts/aggregate_practice_laps.py` and a small `round` fill).
@@ -70,6 +72,7 @@ Additional preferred practice-best filenames:
   - Race results: `['resultsFinalPositionNumber', 'driverDNFCount', 'SafetyCarStatus']`
 - **ML features**: XGBoost model uses 70+ derived features (see README table) specifically selected to minimize MAE for final position predictions. Feature engineering happens in the generator around lines 1699+ ("NEW LEAKAGE-FREE FEATURES").
 - **Leakage prevention**: All features use `.shift()` or filtering to avoid using future data. Safety car features (line 2224+) are specifically designed to be available before race starts.
+ - **Leakage prevention**: All features use `.shift()` or filtering to avoid using future data. Safety car features (line 2224+) are specifically designed to be available before race starts. A temporal leakage audit script (`scripts/audit_temporal_leakage.py`) was added and runs as part of smoke checks to flag suspicious columns; `points_leader_gap` was updated to compute the per-race snapshot leader gap (grouped by `grandPrixYear` + `round`/`raceId`/`short_date`) to avoid season-wide leakage.
 - **Incremental data pulls**: Scripts like `f1-raceMessages.py` track previously processed sessions and only pull new data to avoid API rate limits and reduce runtime.
 - **Streamlit caching**: All heavy data operations use `@st.cache_data` to avoid recomputation on every widget interaction.
 - **Cache invalidation**: Uses CACHE_VERSION system for all cached functions to prevent feature shape mismatches on Streamlit Cloud deployments.

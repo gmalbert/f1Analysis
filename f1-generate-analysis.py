@@ -2138,7 +2138,29 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
 # results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['points_leader_gap'] = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.groupby('grandPrixYear')['Points'].transform('max') - results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['Points']
 # Championship position features (using driverPoints instead of Points)
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['championship_position'] = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.groupby(['grandPrixYear', 'resultsDriverId'])['driverPoints'].rank(ascending=False)
-results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['points_leader_gap'] = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.groupby('grandPrixYear')['driverPoints'].transform('max') - results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driverPoints']
+
+# Compute `points_leader_gap` without leaking future races.
+# Instead of taking the season-wide max (which includes future races) we compute
+# the leader's points at the same race snapshot (grouped by year+round/race identifier)
+# and subtract the driver's points. This ensures the feature only uses information
+# available at that race.
+race_key = None
+if 'round' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns and not results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['round'].isna().all():
+    race_key = ['grandPrixYear', 'round']
+elif 'raceId' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+    race_key = ['grandPrixYear', 'raceId']
+elif 'short_date' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+    race_key = ['grandPrixYear', 'short_date']
+
+if race_key is not None:
+    leader_points = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.groupby(race_key)['driverPoints'].transform('max')
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['points_leader_gap'] = leader_points - results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driverPoints']
+else:
+    # fallback: season-wide gap (conservative, but may include future data) — keep for compatibility
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['points_leader_gap'] = (
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.groupby('grandPrixYear')['driverPoints'].transform('max')
+        - results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driverPoints']
+    )
 
 # Calculate pole to win rate per driver
 # Calculate pole-to-win rate per driver without DataFrameGroupBy.apply by grouping a boolean Series
