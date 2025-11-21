@@ -1,3 +1,23 @@
+# Roadmap
+
+This file summarizes short-to-medium term priorities for the Formula 1 Analysis project.
+
+Short term (next sprint)
+- Stabilize feature-selection UX:
+  - Provide CSV + HTML exporter for feature-selection artifacts (`scripts/export_feature_selection.py`).
+  - Wire exporter into Streamlit UI for downloads and on-demand regeneration.
+  - Harden SHAP parsing in the UI to tolerate format variations.
+- Improve Streamlit performance by reviewing cache usage for large DataFrames and charts.
+
+Medium term
+- Add automated MAE regression checks in CI to prevent accidental performance regressions.
+- Add optional export formats if they can be implemented without adding native binary dependencies.
+
+Long term
+- Experiment with ensemble stacking improvements and automated hyperparameter tuning snapshots.
+- Explore a lightweight web report generator for distribution (HTML-first approach).
+
+If you'd like to rearrange priorities or add items, tell me which items to promote and I'll update this file.
 # F1 Analysis App Roadmap
 
 [← Back to README](README.md)

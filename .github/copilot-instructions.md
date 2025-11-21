@@ -52,6 +52,7 @@ Additional preferred practice-best filenames:
   - Fallbacks: `data_files/practice_best_by_session.imputed.csv`, `data_files/practice_best_by_session.csv`, then legacy `practice_best_fp1_fp2.csv` via `get_preferred_file()`.
 - `pit_constants.py` — track-specific pit lane times (entry to exit) as a dictionary. Used for pit stop calculations.
  - Helper scripts (mostly utility/exploration, not part of main workflow):
+  - `scripts/export_feature_selection.py` — consolidates SHAP, Boruta, and correlation artifacts into `scripts/output/feature_selection_summary.csv` and `scripts/output/feature_selection_report.html` (CSV/HTML-first, intended for sharing and quick review).
   - `f1-raceMessages.py` — pulls race control messages from FastF1 API (skips existing sessions)
   - `f1-pit-stop-loss.py` — calculates pit stop time loss using constants from `pit_constants.py`
   - `scripts/check_generation_smoke.py` — smoke test that validates `f1ForAnalysis.csv` coverage vs `f1db-races.json` and checks qualifying completeness (use `--strict` to fail CI).
@@ -113,6 +114,7 @@ streamlit run raceAnalysis.py
 
 - **Creating checks and repair helpers**: When you add diagnostic, smoke-test, or repair logic, prefer creating a new script under the `scripts/` directory (e.g., `scripts/my_check.py`) instead of editing existing production scripts. This keeps the generator and UI code stable and makes CI smoke tests easier to review and run.
   The new `scripts/run_all_smoke_checks.py` script is intended to be the one-stop command for running these scripts locally or in CI. It will list discovered checks with `--list-only`, and supports `--continue-on-fail` for non-fatal runs.
+ - **Feature-selection artifacts & exporter**: The feature-selection pipeline emits lightweight artifacts into `scripts/output/` (SHAP ranking, Boruta selected, correlated pairs). Use `scripts/export_feature_selection.py` to create a CSV summary and an HTML report. The Streamlit UI includes download buttons and an on-demand "Regenerate CSV/HTML exporters" action in the Feature Selection tab.
 - **Time string conversions**: Use `time_to_seconds()` helper function (line 250 in generator) for lap time conversions. Handles various F1DB time formats.
 - **Model compatibility**: When adding features that interact with models, ensure compatibility across all four model types (XGBoost, LightGBM, CatBoost, Ensemble). Use isinstance() checks and hasattr() for API differences.
 - **Feature importance**: Different models have different APIs - XGBoost uses get_score(), LightGBM uses feature_importances_, CatBoost uses get_feature_importance().

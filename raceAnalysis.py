@@ -5,6 +5,8 @@ import datetime
 import json
 from os import path
 import os
+import sys
+import subprocess
 import streamlit as st
 import numpy as np
 import warnings
@@ -3295,7 +3297,8 @@ with tab4:
     st.dataframe(individual_race_grouped, hide_index=True, width=800, height=600, column_config=individual_race_grouped_columns_to_display)
 
     st.subheader(f"Constructor Performance in {nextRace['fullName'].head(1).values[0]}:")
-    st.dataframe(individual_race_grouped_constructor, hide_index=True, width=800, height=600, column_config=individual_race_grouped_columns_to_display)
+    height = get_dataframe_height(individual_race_grouped_constructor)
+    st.dataframe(individual_race_grouped_constructor, hide_index=True, width=800, height=height, column_config=individual_race_grouped_columns_to_display)
 
      # Load raw pit stop data (individual stops)
     pitstops = pd.read_json(path.join(DATA_DIR, 'f1db-races-pit-stops.json'))
@@ -3965,6 +3968,226 @@ with tab5:
                     f.write('\n'.join(best_features))
                     f.write(f"\nBest MAE: {best_mae:.4f}\n")
                 st.success("RFE MAE best features saved to f1_position_model_rfe_mae_best_features.txt")
+
+            # External script runner (feature selection helper)
+            st.write("### External Feature Selection Script")
+            
+            if st.button("Run feature-selection helper", help="Runs the feature_selection_refinement.py script to perform additional feature selection analyses."):
+                with st.spinner('Launching feature selection script...'):
+                    import subprocess, sys
+                    script_path = os.path.join('scripts', 'feature_selection_refinement.py')
+                    log_dir = os.path.join('scripts', 'output')
+                    os.makedirs(log_dir, exist_ok=True)
+                    log_path = os.path.join(log_dir, 'feature_selection_stdout.log')
+                    try:
+                        # Capture full stdout/stderr to a log file for post-mortem
+                        with open(log_path, 'w', encoding='utf-8') as logfile:
+                            proc = subprocess.Popen([sys.executable, script_path], stdout=logfile, stderr=subprocess.STDOUT, text=True)
+                            proc.wait()
+
+                        # Read final summary from feature_selection_report.txt if available
+                        report_path = os.path.join(log_dir, 'feature_selection_report.txt')
+                        if os.path.exists(report_path):
+                            try:
+                                rpt = open(report_path, 'r', encoding='utf-8').read()
+                                st.subheader('Feature selection summary')
+                                st.code(rpt)
+                            except Exception:
+                                st.write('Feature selection completed; could not read summary report.')
+                        else:
+                            st.write('Feature selection completed; no summary report found.')
+
+                        if proc.returncode == 0:
+                            st.success('Feature selection script completed successfully.')
+                        else:
+                            st.error(f'Feature selection script exited with code {proc.returncode}. See full log below for details.')
+                            # Show tail of the log to help debugging
+                            try:
+                                with open(log_path, 'r', encoding='utf-8', errors='ignore') as lf:
+                                    lines = lf.readlines()[-200:]
+                                with st.expander('Show last 200 lines of full run log'):
+                                    for l in lines:
+                                        st.text(l.rstrip())
+                            except Exception:
+                                st.write('Could not read log file')
+                    except Exception as e:
+                        st.error(f'Failed to run feature selection script: {e}')
+
+            # Show outputs if available
+            out_dir = os.path.join('scripts', 'output')
+            if os.path.exists(out_dir):
+                if os.path.exists(os.path.join(out_dir, 'boruta_selected.txt')):
+                    st.subheader('Boruta Selected Features')
+                    try:
+                        with open(os.path.join(out_dir, 'boruta_selected.txt'), 'r', encoding='utf-8') as f:
+                            boruta_lines = [l.strip() for l in f.readlines() if l.strip()]
+                        st.write(boruta_lines[:100])
+                        with open(os.path.join(out_dir, 'boruta_selected.txt'), 'rb') as fbin:
+                            st.download_button('Download Boruta list', fbin, file_name='boruta_selected.txt')
+                    except Exception:
+                        st.write('Could not read boruta_selected.txt')
+
+                if os.path.exists(os.path.join(out_dir, 'shap_ranking.txt')):
+                    st.subheader('SHAP Ranking (top 20)')
+                    try:
+                        # Prefer CSV-style read, but fall back to parsing plain text
+                        shp_path = os.path.join(out_dir, 'shap_ranking.txt')
+                        try:
+                            # Try to auto-detect separator (handles CSV or tab-delimited)
+                            try:
+                                df_shap = pd.read_csv(shp_path, sep=None, engine='python')
+                            except Exception:
+                                df_shap = pd.read_csv(shp_path)
+                        except Exception:
+                            # Fallback: parse as plain text lines into Feature / SHAP value
+                            def _is_number(x):
+                                try:
+                                    float(x)
+                                    return True
+                                except Exception:
+                                    return False
+
+                            rows = []
+                            with open(shp_path, 'r', encoding='utf-8', errors='ignore') as f:
+                                for raw in f:
+                                    s = raw.strip()
+                                    if not s:
+                                        continue
+                                    # Try common separators first
+                                    if ',' in s:
+                                        parts = [p.strip() for p in s.split(',') if p.strip()]
+                                    elif '\t' in s:
+                                        parts = [p.strip() for p in s.split('\t') if p.strip()]
+                                    elif ' - ' in s:
+                                        parts = [p.strip() for p in s.split(' - ') if p.strip()]
+                                    elif ':' in s and s.count(':') == 1:
+                                        parts = [p.strip() for p in s.split(':') if p.strip()]
+                                    else:
+                                        parts = s.split()
+
+                                    if len(parts) >= 2 and _is_number(parts[-1]):
+                                        feature = ' '.join(parts[:-1]).strip()
+                                        val = parts[-1]
+                                    elif len(parts) >= 2:
+                                        # Last part may be the value, even if not numeric
+                                        feature = ' '.join(parts[:-1]).strip()
+                                        val = parts[-1]
+                                    else:
+                                        # Can't split confidently; put whole line in Feature
+                                        feature = s
+                                        val = ''
+
+                                    rows.append({'Feature': feature, 'SHAP': val})
+
+                            df_shap = pd.DataFrame(rows)
+                            # Attempt to coerce SHAP values to numeric where possible
+                            if 'SHAP' in df_shap.columns:
+                                df_shap['SHAP'] = pd.to_numeric(df_shap['SHAP'], errors='coerce')
+
+                        # Normalize common column names to nice display names
+                        if isinstance(df_shap, pd.DataFrame):
+                            cols_lower = [c.lower() for c in df_shap.columns]
+                            if 'feature' in cols_lower and 'mean_abs_shap' in cols_lower:
+                                # map to consistent names
+                                mapping = {df_shap.columns[cols_lower.index('feature')]: 'Feature',
+                                           df_shap.columns[cols_lower.index('mean_abs_shap')]: 'SHAP'}
+                                df_shap = df_shap.rename(columns=mapping)[['Feature', 'SHAP']]
+                            elif len(df_shap.columns) >= 2:
+                                # Prefer first two columns
+                                df_shap = df_shap.iloc[:, :2]
+                                df_shap.columns = ['Feature', 'SHAP']
+                        # Display top 20 rows (if available). Guard height calculation.
+                        height = get_dataframe_height(df_shap)
+                        try:
+                            st.dataframe(df_shap.head(20), height=height, hide_index=True, width=600)
+                        except Exception:
+                            st.dataframe(df_shap.head(20), hide_index=True, width=600, height=height)
+                        with open(shp_path, 'rb') as fbin:
+                            st.download_button('Download SHAP ranking', fbin, file_name='shap_ranking.txt')
+                    except Exception as e:
+                        st.write('Could not read shap_ranking.txt')
+                        try:
+                            st.write('Error:', str(e))
+                            # Show a small preview of the file to help debugging
+                            preview_path = os.path.abspath(shp_path)
+                            with open(preview_path, 'r', encoding='utf-8', errors='ignore') as pf:
+                                lines = pf.readlines()[:50]
+                            with st.expander('Preview of shap_ranking.txt (first 50 lines)'):
+                                for l in lines:
+                                    st.text(l.rstrip())
+                        except Exception as e2:
+                            st.write('Also could not read file preview:', str(e2))
+
+                if os.path.exists(os.path.join(out_dir, 'correlated_pairs.csv')):
+                    st.subheader('Highly Correlated Pairs (>0.95)')
+                    try:
+                        df_corr = pd.read_csv(os.path.join(out_dir, 'correlated_pairs.csv'))
+                        height = get_dataframe_height(df_corr)
+                        st.dataframe(df_corr.head(50), hide_index=True, width=800, height=height)
+                        with open(os.path.join(out_dir, 'correlated_pairs.csv'), 'rb') as fbin:
+                            st.download_button('Download correlated pairs', fbin, file_name='correlated_pairs.csv')
+                    except Exception:
+                        st.write('Could not read correlated_pairs.csv')
+
+                # Exporter outputs (CSV summary and HTML report)
+                summary_csv = os.path.join(out_dir, 'feature_selection_summary.csv')
+                summary_html = os.path.join(out_dir, 'feature_selection_report.html')
+                st.write('### Exported Summaries')
+                if os.path.exists(summary_csv):
+                    try:
+                        with open(summary_csv, 'rb') as fbin:
+                            st.download_button('Download summary (CSV)', fbin, file_name='feature_selection_summary.csv')
+                        st.write(f"Summary CSV: {os.path.basename(summary_csv)}")
+                    except Exception:
+                        st.write('Could not read feature_selection_summary.csv')
+                if os.path.exists(summary_html):
+                    try:
+                        st.write(f"HTML report available: {os.path.basename(summary_html)}")
+                        with open(summary_html, 'rb') as fbin:
+                            st.download_button('Download report (HTML)', fbin, file_name='feature_selection_report.html')
+                    except Exception:
+                        st.write('Could not read feature_selection_report.html')
+
+                # Regenerate exporters on demand
+                if st.button('Regenerate CSV/HTML exporters'):
+                    with st.spinner('Generating CSV summary and HTML report...'):
+                        script_path = os.path.join('scripts', 'export_feature_selection.py')
+                        try:
+                            proc = subprocess.run([sys.executable, script_path], check=False, capture_output=True, text=True)
+                            if proc.returncode == 0:
+                                st.success('Exporters generated successfully.')
+                                if proc.stdout:
+                                    st.text(proc.stdout)
+                            else:
+                                st.error(f'Exporter exited with code {proc.returncode}')
+                                if proc.stdout:
+                                    st.text(proc.stdout)
+                                if proc.stderr:
+                                    st.text(proc.stderr)
+                        except Exception as e:
+                            st.error(f'Failed to run exporter: {e}')
+
+                # Prefer a nicely-formatted Markdown report if available
+                md_report = os.path.join(out_dir, 'feature_selection_report.md')
+                txt_report = os.path.join(out_dir, 'feature_selection_report.txt')
+                if os.path.exists(md_report):
+                    st.subheader('Feature Selection Report')
+                    try:
+                        rpt_md = open(md_report, 'r', encoding='utf-8').read()
+                        st.markdown(rpt_md)
+                        with open(md_report, 'rb') as fbin:
+                            st.download_button('Download report (MD)', fbin, file_name='feature_selection_report.md')
+                    except Exception:
+                        st.write('Could not read feature_selection_report.md')
+                elif os.path.exists(txt_report):
+                    st.subheader('Feature Selection Report')
+                    try:
+                        rpt = open(txt_report, 'r', encoding='utf-8').read()
+                        st.code(rpt)
+                        with open(txt_report, 'rb') as fbin:
+                            st.download_button('Download report', fbin, file_name='feature_selection_report.txt')
+                    except Exception:
+                        st.write('Could not read feature_selection_report.txt')
         
         with tab_hyper:
             st.subheader("Hyperparameter Tuning")
