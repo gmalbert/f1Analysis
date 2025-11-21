@@ -353,6 +353,19 @@ Besides filtering, you can also look at the upcoming race which shows historical
 
 [↑ Back to top](#table-of-contents)
 
+## Feature Selection Exporter
+The repository includes a small exporter that consolidates feature-selection artifacts into easy-to-share outputs.
+
+- Location: `scripts/export_feature_selection.py`
+- Inputs: `scripts/output/shap_ranking.txt`, `scripts/output/boruta_selected.txt`, `scripts/output/correlated_pairs.csv`
+- Outputs (generated into `scripts/output/`):
+   - `feature_selection_summary.csv` — tabular CSV summary with SHAP, Boruta selection, and correlation info
+   - `feature_selection_report.html` — a simple HTML report with top SHAP features and correlation summaries
+
+The Streamlit UI (`raceAnalysis.py`) has been wired to surface these artifacts under the Feature Selection tab: users can download the CSV and the HTML report directly from the app and run a one-click "Regenerate CSV/HTML exporters" action to recreate them from the latest artifacts. The SHAP reader in the app is robust to minor format changes and will fall back to a safe plain-text parse if a structured read fails.
+
+Note: PDF export is intentionally not included to avoid introducing native binary dependencies into the repo; the HTML and CSV files are intended as portable, reviewable artifacts.
+
 ## Weather
 The weather is pulled from [Open-Meteo's free API](https://open-meteo.com/) which allows you to search historical weather data by hour going back to the 1940s. The hourly reports are pulled per race and then averaged to show a daily weather report on race day.
 
