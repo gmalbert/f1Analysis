@@ -171,7 +171,9 @@ if qualifying_results_list:
                     out[c] = s.iloc[-1]
             return pd.Series(out)
 
-        combined_df = combined_df.groupby(group_keys, as_index=False).apply(_pick_first_non_null)
+        # Use include_groups=False to avoid future pandas behavior where grouping columns
+        # are excluded from the operation by default. This silences FutureWarning.
+        combined_df = combined_df.groupby(group_keys, as_index=False).apply(_pick_first_non_null, include_groups=False)
         # groupby+apply produces a hierarchical index; reset it to a clean numeric index
         combined_df = combined_df.reset_index(drop=True)
     else:
@@ -347,7 +349,8 @@ for q in ['q1_sec', 'q2_sec', 'q3_sec']:
             qualifying_with_driverId[pos_col] = ranked
         except Exception:
             # Fallback: use the earlier robust approach if selecting the column behaves unexpectedly
-            ranked = qualifying_with_driverId.groupby(['Year', 'Round']).apply(_rank_for_group)
+            # Use include_groups=False to avoid applying on the grouping columns in future pandas versions
+            ranked = qualifying_with_driverId.groupby(['Year', 'Round']).apply(_rank_for_group, include_groups=False)
             if isinstance(ranked, pd.DataFrame):
                 ranked = ranked.iloc[:, 0]
             ranked = ranked.reset_index(level=[0, 1], drop=True)
