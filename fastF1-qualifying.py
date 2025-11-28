@@ -343,13 +343,13 @@ for q in ['q1_sec', 'q2_sec', 'q3_sec']:
         # Use groupby on the specific column to avoid applying on grouping columns
         # This prevents the FutureWarning about DataFrameGroupBy.apply operating on grouping cols.
         try:
-            ranked = qualifying_with_driverId.groupby(['Year', 'Round'])[q].apply(lambda s: s.rank(method='min', ascending=True))
-            # Align to original index by dropping the group index levels
-            ranked = ranked.reset_index(level=[0, 1], drop=True)
+            # Use transform to compute per-group ranks without invoking GroupBy.apply on the
+            # grouping columns. transform returns a Series aligned to the original index.
+            ranked = qualifying_with_driverId.groupby(['Year', 'Round'])[q].transform(lambda s: s.rank(method='min', ascending=True))
             qualifying_with_driverId[pos_col] = ranked
         except Exception:
-            # Fallback: use the earlier robust approach if selecting the column behaves unexpectedly
-            # Use include_groups=False to avoid applying on the grouping columns in future pandas versions
+            # Fallback: use groupby.apply on the full DataFrame but explicitly request
+            # include_groups=False to avoid the FutureWarning about grouping columns.
             ranked = qualifying_with_driverId.groupby(['Year', 'Round']).apply(_rank_for_group, include_groups=False)
             if isinstance(ranked, pd.DataFrame):
                 ranked = ranked.iloc[:, 0]
