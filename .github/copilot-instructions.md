@@ -41,6 +41,10 @@ Short, actionable guidance for AI coding agents working on the Formula 1 Analysi
   - `f1WeatherData_Grouped.csv` — weather by race (grouped from hourly data)
   - `f1WeatherData_AllData.csv` — hourly weather records (raw Open-Meteo API responses)
   - `f1PitStopsData_Grouped.csv` — pit stop analysis
+  - `position_group_analysis` artifacts (in `scripts/output/`) — position-group diagnostics, see `scripts/position_group_analysis.py` for details
+    - `mae_by_season.csv`, `mae_trends.png`
+    - `confid_int_by_driver_track.csv`, `confid_int_by_driver.csv`, `confid_int_by_constructor.csv`
+    - heatmap PNGs and `position_group_analysis_report.html`
   - `f1SafetyCarFeatures.csv` — safety car prediction features (leakage-free subset)
   - `f1PositionCorrelation.csv` — Pearson correlation matrix for key position features
   - `all_race_control_messages.csv` — safety car/flag data from FastF1 (2018-present)
@@ -67,6 +71,7 @@ Additional preferred practice-best filenames:
 - **Prediction-centric approach**: Features target race winners, DNFs, and pit stop times. Monte Carlo simulation (1000 iterations) and feature selection (RFE, Boruta) are used to optimize MAE.
 - **Tab-separated CSVs**: All CSVs use `sep='\t'` not commas. When reading/writing, always specify `sep='\t'`.
 - **Precompute-first**: The generator intentionally separates heavy computation from the UI. Any change to column names in the generator must be propagated to the UI and vice-versa.
+  - Note: the position-group analysis script writes diagnostic CSVs into `scripts/output/` and the Streamlit UI reads those outputs. Filenames were recently updated from `ci_by_*` to `confid_int_by_*` to make the naming clearer; update the UI if you change the names again.
 - **CSV contract**: The UI expects specific columns. Key MAE-critical ones include:
   - Pit stops: `['raceId', 'driverId', 'constructorId', 'numberOfStops', 'averageStopTime', 'totalStopTime']`
   - Weather: `['grandPrixId', 'short_date', 'average_temp', 'total_precipitation', 'average_humidity', 'average_wind_speed']`

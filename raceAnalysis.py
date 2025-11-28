@@ -3452,10 +3452,11 @@ with tab5:
     
     # Single expander with 6 tabs inside
     with st.expander("🔧 Advanced Options", expanded=True):
-        tab_perf, tab_feat, tab_select, tab_hyper, tab_hist, tab_debug = st.tabs([
+        tab_perf, tab_feat, tab_select, tab_position, tab_hyper, tab_hist, tab_debug = st.tabs([
             "📊 Model Performance",
             "🔍 Feature Analysis", 
             "🎯 Feature Selection",
+            "🏎️ Position-Specific Analysis",
             "⚙️ Hyperparameters",
             "📈 Historical Validation",
             "🛠️ Debug & Experiments"
@@ -4137,7 +4138,7 @@ with tab5:
                     try:
                         with open(summary_csv, 'rb') as fbin:
                             st.download_button('Download summary (CSV)', fbin, file_name='feature_selection_summary.csv')
-                        st.write(f"Summary CSV: {os.path.basename(summary_csv)}")
+                        # st.write(f"Summary CSV: {os.path.basename(summary_csv)}")
                     except Exception:
                         st.write('Could not read feature_selection_summary.csv')
                 if os.path.exists(summary_html):
@@ -4188,6 +4189,76 @@ with tab5:
                             st.download_button('Download report', fbin, file_name='feature_selection_report.txt')
                     except Exception:
                         st.write('Could not read feature_selection_report.txt')
+        
+        with tab_position:
+            from pathlib import Path
+            import re, datetime
+
+            OUT_DIR = Path('scripts') / 'output'
+            report_path = OUT_DIR / 'position_group_analysis_report.html'
+
+            if report_path.exists():
+                # Try to extract the generated timestamp from the HTML; fallback to file mtime
+                try:
+                    html = report_path.read_text(encoding='utf-8')
+                    m = re.search(r'Generated:\s*([^<]+)</p>', html)
+                    if m:
+                        ts = m.group(1).strip()
+                    else:
+                        ts = datetime.datetime.fromtimestamp(report_path.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')
+                except Exception:
+                    ts = datetime.datetime.fromtimestamp(report_path.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')
+
+                st.header('Position Group Analysis')
+                st.write(f'Generated: {ts}')
+
+                # MAE by season: only show when multiple seasons are present
+                mae_csv = OUT_DIR / 'mae_by_season.csv'
+                if mae_csv.exists():
+                    try:
+                        mae_df = pd.read_csv(mae_csv)
+                        if 'season' in mae_df.columns and mae_df['season'].nunique() > 1:
+                            mae_img = OUT_DIR / 'mae_trends.png'
+                            if mae_img.exists():
+                                st.subheader('MAE by Season')
+                                st.image(str(mae_img), use_container_width=True)
+                    except Exception:
+                        pass
+
+                # Notes (render in a shaded info box)
+                st.info(
+                    """
+                    **Color scale**: darker/warmer colors indicate larger average absolute error.
+
+                    **Rows**: drivers (top 20 by race count) or constructors.
+
+                    **Columns**: circuits (circuit names).
+
+                    **Missing cells**: blank or neutral color means insufficient data (no races for that pair).
+
+                    **Sample size**: confidence intervals are empirical percentiles computed only when a group has at least 5 residuals.
+                    
+                    **Interpretation**: cells with darker colors indicate that the model has higher prediction errors for that driver/constructor at that circuit, suggesting potential areas for model improvement or unique performance characteristics.
+                    """
+                )
+
+                # Heatmaps
+                for img_name, title in [('heatmap_driver_by_circuit.png', 'Driver x Circuit heatmap'),
+                                        ('heatmap_constructor_by_circuit.png', 'Constructor x Circuit heatmap')]:
+                    img_path = OUT_DIR / img_name
+                    if img_path.exists():
+                        st.subheader(title)
+                        st.image(str(img_path), width=1000)
+
+                # CSV download buttons
+                csv_files = ['mae_by_season.csv', 'confid_int_by_driver_track.csv', 'confid_int_by_driver.csv', 'confid_int_by_constructor.csv']
+                for fname in csv_files:
+                    p = OUT_DIR / fname
+                    if p.exists():
+                        with open(p, 'rb') as fh:
+                            st.download_button(f"Download {fname}", fh.read(), file_name=fname)
+            else:
+                st.info("Position analysis report not found. Run `python scripts/position_group_analysis.py` to generate outputs.")
         
         with tab_hyper:
             st.subheader("Hyperparameter Tuning")
@@ -4533,8 +4604,8 @@ def leakage_audit_ui():
 with tab6:
 
     st.header("Data & Debug Tools")
-    # Split Data & Debug into three subtabs: Raw Data, Temporal Leakage Audit, Hyperparameter Tuning
-    raw_tab, audit_tab, tuning_tab = st.tabs(["Raw Data", "Temporal Leakage Audit", "Hyperparameter Tuning"])
+    # Split Data & Debug into subtabs: Raw Data, Temporal Leakage Audit, Hyperparameter Tuning
+    raw_tab, audit_tab, tuning_tab = st.tabs(["Raw Data", "Temporal Leakage Audit", "Hyperparameter Tuning"])#, "Position Analysis"])
 
     with raw_tab:
         st.write("View the complete unfiltered dataset.")
@@ -4574,4 +4645,74 @@ with tab6:
             X_clean, y_clean = X[mask], y[mask]
             grid_search.fit(X_clean, y_clean)
             st.write("Best params:", grid_search.best_params_)
+    
+    # with pos_tab:
+    #     st.header("Position Group Analysis")
+    #     st.write("Report generated by `scripts/position_group_analysis.py`. Displays MAE trends, confidence intervals, and heatmaps.")
+    #     from pathlib import Path
+    #     import streamlit.components.v1 as components
+
+    #     OUT_DIR = Path('scripts') / 'output'
+    #     report_path = OUT_DIR / 'position_group_analysis_report.html'
+
+    #     if report_path.exists():
+    #         inlined_count = 0
+    #         try:
+    #             html = report_path.read_text(encoding='utf-8')
+
+    #             # Inject a simple CSS reset to use a neutral sans-serif font
+    #             css = """
+    #             <style>
+    #             body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
+    #             h1, h2, h3 { font-family: inherit; }
+    #             img { max-width:100%; height:auto; }
+    #             </style>
+    #             """
+
+    #             # Inline local PNG images referenced in the HTML as data URIs so they render
+    #             # inside the Streamlit components iframe (which can't access local relative paths).
+    #             import re, base64
+
+    #             def _embed_images(html_text):
+    #                 inlined = {'count': 0}
+    #                 def _repl(m):
+    #                     src = m.group(1)
+    #                     # Only handle png/jpeg files
+    #                     if src.lower().endswith(('.png', '.jpg', '.jpeg')):
+    #                         img_path = OUT_DIR / src
+    #                         if img_path.exists():
+    #                             data = img_path.read_bytes()
+    #                             b64 = base64.b64encode(data).decode('ascii')
+    #                             mime = 'image/png' if src.lower().endswith('.png') else 'image/jpeg'
+    #                             inlined['count'] += 1
+    #                             return f'src="data:{mime};base64,{b64}"'
+    #                     # fallback: leave original
+    #                     return m.group(0)
+
+    #                 new_html = re.sub(r'src\s*=\s*"([^"]+\.(?:png|jpg|jpeg))"', _repl, html_text, flags=re.IGNORECASE)
+    #                 return new_html, inlined['count']
+
+    #             html_inlined, inlined_count = _embed_images(html)
+    #             html = css + html_inlined
+    #             components.html(html, height=700, scrolling=True)
+    #         except Exception as e:
+    #             st.error(f"Could not render HTML report: {e}")
+
+    #         # Show individual plots (if present) below the embedded HTML as a fallback
+    #         # Only show fallback images when none were inlined to avoid duplicates.
+    #         if inlined_count == 0:
+    #             for img_name in ['mae_trends.png', 'heatmap_driver_by_circuit.png', 'heatmap_constructor_by_circuit.png']:
+    #                 img_path = OUT_DIR / img_name
+    #                 if img_path.exists():
+    #                     st.image(str(img_path), caption=img_name, use_container_width=True)
+
+    #         # Provide CSV downloads
+    #         csv_files = ['mae_by_season.csv', 'ci_by_driver_track.csv', 'ci_by_driver.csv', 'ci_by_constructor.csv']
+    #         for fname in csv_files:
+    #             p = OUT_DIR / fname
+    #             if p.exists():
+    #                 with open(p, 'rb') as fh:
+    #                     st.download_button(f"Download {fname}", fh.read(), file_name=fname)
+    #     else:
+    #         st.info("Position analysis report not found. Run `python scripts/position_group_analysis.py` to generate outputs.")
                 

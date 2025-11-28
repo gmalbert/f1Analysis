@@ -366,6 +366,27 @@ The Streamlit UI (`raceAnalysis.py`) has been wired to surface these artifacts u
 
 Note: PDF export is intentionally not included to avoid introducing native binary dependencies into the repo; the HTML and CSV files are intended as portable, reviewable artifacts.
 
+## Position Group Analysis (new)
+
+There is a position-group analysis utility that produces diagnostic CSVs, plots, and a small HTML report in `scripts/output/`.
+
+- Run it manually:
+
+```pwsh
+python .\scripts\position_group_analysis.py
+```
+
+- Outputs written to `scripts/output/` include (current names):
+   - `mae_by_season.csv` and `mae_trends.png`
+   - `confid_int_by_driver_track.csv`, `confid_int_by_driver.csv`, `confid_int_by_constructor.csv` (95% empirical residual intervals)
+   - `heatmap_driver_by_circuit.png`, `heatmap_constructor_by_circuit.png`
+   - `position_group_analysis_report.html`
+
+- Notes:
+   - The Streamlit UI now renders the Position Analysis natively (no iframe), showing plots and an informational shaded box explaining how to read the heatmaps.
+   - The confidence-interval CSV files use an empirical percentile method (2.5th/97.5th percentiles) and are computed only for groups with at least 5 residuals; groups with fewer samples will contain NaNs.
+
+
 ## Weather
 The weather is pulled from [Open-Meteo's free API](https://open-meteo.com/) which allows you to search historical weather data by hour going back to the 1940s. The hourly reports are pulled per race and then averaged to show a daily weather report on race day.
 

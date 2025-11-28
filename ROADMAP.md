@@ -94,15 +94,19 @@ Minimize MAE (Mean Absolute Error) for Formula 1 race predictions with a target 
   - [x] Weather data gaps filling methodology
   - Note: the generator treats future (scheduled) races as "not-yet-processed" — the pipeline does not invent practice/qualifying data for races that haven't happened. Smoke tests compare processed-data dates (from generated CSVs) with the schedule and will warn when the schedule extends beyond processed coverage. To change this behavior, either relax the smoke-test tolerance or add generator options to include scheduled placeholders or forecast-based backfills.
 
+  ---
+
+  ## Recent changes (developer notes)
+
+  - The position-group analysis was enhanced and now writes diagnostic artifacts to `scripts/output/`. The Streamlit UI renders this analysis natively (no iframe). Files produced include `mae_by_season.csv`, `mae_trends.png`, `heatmap_driver_by_circuit.png`, `heatmap_constructor_by_circuit.png`, and `position_group_analysis_report.html`.
+  - Confidence-interval CSV filenames were standardized to the `confid_int_by_*` pattern.
+  - The HTML report was simplified and no longer presents raw CSV text links; the UI exposes downloads via `st.download_button()`.
+
 ---
 
 ## Phase 2: Prediction Capabilities Expansion (Priority: MEDIUM)
 
 ### 2.1 New Prediction Types
-- [ ] **DNF probability predictions**
-  - Binary classification for finish/DNF
-  - Multi-class classification for DNF reason (mechanical, accident, disqualification)
-  - Lap-by-lap DNF risk scoring
 
 - [ ] **Pit stop timing predictions**
   - Optimal pit window prediction
