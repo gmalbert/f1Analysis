@@ -4023,8 +4023,39 @@ with tab5:
                         with open(os.path.join(out_dir, 'boruta_selected.txt'), 'r', encoding='utf-8') as f:
                             boruta_lines = [l.strip() for l in f.readlines() if l.strip()]
                         st.write(boruta_lines[:100])
-                        with open(os.path.join(out_dir, 'boruta_selected.txt'), 'rb') as fbin:
-                            st.download_button('Download Boruta list', fbin, file_name='boruta_selected.txt')
+                        try:
+                            # Render clickable icon + download link (small text file)
+                            import base64
+                            bpath = os.path.join(out_dir, 'boruta_selected.txt')
+                            with open(bpath, 'rb') as bf:
+                                bdata = bf.read()
+                            file_uri = 'data:text/plain;base64,' + base64.b64encode(bdata).decode('ascii')
+                            icon_path_local = os.path.join('data_files', 'csv_icon.png')
+                            fallback_icon = os.path.join('data_files', 'favicon.png')
+                            chosen_icon = icon_path_local if os.path.exists(icon_path_local) else (fallback_icon if os.path.exists(fallback_icon) else None)
+                            img_tag = ''
+                            if chosen_icon is not None:
+                                try:
+                                    with open(chosen_icon, 'rb') as ifh:
+                                        img_b64 = base64.b64encode(ifh.read()).decode('ascii')
+                                    img_tag = f'<img src="data:image/png;base64,{img_b64}" style="width:36px;height:36px;margin-right:10px;vertical-align:middle;border-radius:6px;">'
+                                except Exception:
+                                    img_tag = ''
+                            html = (
+                                f'<div style="display:flex;align-items:center;margin:6px 0;">'
+                                f'<a download="boruta_selected.txt" href="{file_uri}" '
+                                f'style="display:flex;align-items:center;padding:6px 12px;background:#1976d2;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">'
+                                f'{img_tag}'
+                                f'<span style="color:#fff;">Download boruta_selected.txt</span>'
+                                f'</a></div>'
+                            )
+                            st.markdown(html, unsafe_allow_html=True)
+                        except Exception:
+                            try:
+                                with open(os.path.join(out_dir, 'boruta_selected.txt'), 'rb') as fbin:
+                                    st.download_button('Download Boruta list', fbin, file_name='boruta_selected.txt')
+                            except Exception:
+                                st.write('Could not read boruta_selected.txt')
                     except Exception:
                         st.write('Could not read boruta_selected.txt')
 
@@ -4103,8 +4134,37 @@ with tab5:
                             st.dataframe(df_shap.head(20), height=height, hide_index=True, width=600)
                         except Exception:
                             st.dataframe(df_shap.head(20), hide_index=True, width=600, height=height)
-                        with open(shp_path, 'rb') as fbin:
-                            st.download_button('Download SHAP ranking', fbin, file_name='shap_ranking.txt')
+                        try:
+                            import base64
+                            with open(shp_path, 'rb') as sf:
+                                sdata = sf.read()
+                            file_uri = 'data:text/plain;base64,' + base64.b64encode(sdata).decode('ascii')
+                            icon_path_local = os.path.join('data_files', 'csv_icon.png')
+                            fallback_icon = os.path.join('data_files', 'favicon.png')
+                            chosen_icon = icon_path_local if os.path.exists(icon_path_local) else (fallback_icon if os.path.exists(fallback_icon) else None)
+                            img_tag = ''
+                            if chosen_icon is not None:
+                                try:
+                                    with open(chosen_icon, 'rb') as ifh:
+                                        img_b64 = base64.b64encode(ifh.read()).decode('ascii')
+                                    img_tag = f'<img src="data:image/png;base64,{img_b64}" style="width:36px;height:36px;margin-right:10px;vertical-align:middle;border-radius:6px;">'
+                                except Exception:
+                                    img_tag = ''
+                            html = (
+                                f'<div style="display:flex;align-items:center;margin:6px 0;">'
+                                f'<a download="shap_ranking.txt" href="{file_uri}" '
+                                f'style="display:flex;align-items:center;padding:6px 12px;background:#1976d2;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">'
+                                f'{img_tag}'
+                                f'<span style="color:#fff;">Download SHAP ranking</span>'
+                                f'</a></div>'
+                            )
+                            st.markdown(html, unsafe_allow_html=True)
+                        except Exception:
+                            try:
+                                with open(shp_path, 'rb') as fbin:
+                                    st.download_button('Download SHAP ranking', fbin, file_name='shap_ranking.txt')
+                            except Exception:
+                                st.write('Could not read shap_ranking.txt')
                     except Exception as e:
                         st.write('Could not read shap_ranking.txt')
                         try:
@@ -4125,8 +4185,39 @@ with tab5:
                         df_corr = pd.read_csv(os.path.join(out_dir, 'correlated_pairs.csv'))
                         height = get_dataframe_height(df_corr)
                         st.dataframe(df_corr.head(50), hide_index=True, width=800, height=height)
-                        with open(os.path.join(out_dir, 'correlated_pairs.csv'), 'rb') as fbin:
-                            st.download_button('Download correlated pairs', fbin, file_name='correlated_pairs.csv')
+                        # Render clickable icon + HTML download (data-URI) for correlated_pairs.csv
+                        try:
+                            import base64
+                            csv_path = os.path.join(out_dir, 'correlated_pairs.csv')
+                            with open(csv_path, 'rb') as fbin:
+                                data_bytes = fbin.read()
+                            file_uri = 'data:text/csv;base64,' + base64.b64encode(data_bytes).decode('ascii')
+                            icon_path_local = os.path.join('data_files', 'csv_icon.png')
+                            fallback_icon = os.path.join('data_files', 'favicon.png')
+                            chosen_icon = icon_path_local if os.path.exists(icon_path_local) else (fallback_icon if os.path.exists(fallback_icon) else None)
+                            img_tag = ''
+                            if chosen_icon is not None:
+                                try:
+                                    with open(chosen_icon, 'rb') as ifh:
+                                        img_b64 = base64.b64encode(ifh.read()).decode('ascii')
+                                    img_tag = f'<img src="data:image/png;base64,{img_b64}" style="width:36px;height:36px;margin-right:10px;vertical-align:middle;border-radius:6px;">'
+                                except Exception:
+                                    img_tag = ''
+                            html = (
+                                f'<div style="display:flex;align-items:center;margin:6px 0;">'
+                                f'<a download="correlated_pairs.csv" href="{file_uri}" '
+                                f'style="display:flex;align-items:center;padding:6px 12px;background:#1976d2;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">'
+                                f'{img_tag}'
+                                f'<span style="color:#fff;">Download correlated_pairs.csv</span>'
+                                f'</a></div>'
+                            )
+                            st.markdown(html, unsafe_allow_html=True)
+                        except Exception:
+                            try:
+                                with open(os.path.join(out_dir, 'correlated_pairs.csv'), 'rb') as fbin:
+                                    st.download_button('Download correlated pairs', fbin, file_name='correlated_pairs.csv')
+                            except Exception:
+                                st.write('Could not read correlated_pairs.csv')
                     except Exception:
                         st.write('Could not read correlated_pairs.csv')
 
@@ -4136,16 +4227,69 @@ with tab5:
                 st.write('### Exported Summaries')
                 if os.path.exists(summary_csv):
                     try:
-                        with open(summary_csv, 'rb') as fbin:
-                            st.download_button('Download summary (CSV)', fbin, file_name='feature_selection_summary.csv')
-                        # st.write(f"Summary CSV: {os.path.basename(summary_csv)}")
+                        # Render HTML clickable icon + data-URI for the summary CSV
+                        import base64
+                        csv_path_local = summary_csv
+                        with open(csv_path_local, 'rb') as fbin:
+                            data_bytes = fbin.read()
+                        file_uri = 'data:text/csv;base64,' + base64.b64encode(data_bytes).decode('ascii')
+                        icon_path_local = os.path.join('data_files', 'csv_icon.png')
+                        fallback_icon = os.path.join('data_files', 'favicon.png')
+                        chosen_icon = icon_path_local if os.path.exists(icon_path_local) else (fallback_icon if os.path.exists(fallback_icon) else None)
+                        img_tag = ''
+                        if chosen_icon is not None:
+                            try:
+                                with open(chosen_icon, 'rb') as ifh:
+                                    img_b64 = base64.b64encode(ifh.read()).decode('ascii')
+                                img_tag = f'<img src="data:image/png;base64,{img_b64}" style="width:36px;height:36px;margin-right:10px;vertical-align:middle;border-radius:6px;">'
+                            except Exception:
+                                img_tag = ''
+                        html = (
+                            f'<div style="display:flex;align-items:center;margin:6px 0;">'
+                            f'<a download="feature_selection_summary.csv" href="{file_uri}" '
+                            f'style="display:flex;align-items:center;padding:6px 12px;background:#1976d2;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">'
+                            f'{img_tag}'
+                            f'<span style="color:#fff;">Download summary (CSV)</span>'
+                            f'</a></div>'
+                        )
+                        st.markdown(html, unsafe_allow_html=True)
                     except Exception:
-                        st.write('Could not read feature_selection_summary.csv')
+                        try:
+                            with open(summary_csv, 'rb') as fbin:
+                                st.download_button('Download summary (CSV)', fbin, file_name='feature_selection_summary.csv')
+                        except Exception:
+                            st.write('Could not read feature_selection_summary.csv')
                 if os.path.exists(summary_html):
                     try:
                         st.write(f"HTML report available: {os.path.basename(summary_html)}")
-                        with open(summary_html, 'rb') as fbin:
-                            st.download_button('Download report (HTML)', fbin, file_name='feature_selection_report.html')
+                        try:
+                            import base64
+                            with open(summary_html, 'rb') as rh:
+                                rdata = rh.read()
+                            file_uri = 'data:text/html;base64,' + base64.b64encode(rdata).decode('ascii')
+                            icon_path_local = os.path.join('data_files', 'csv_icon.png')
+                            fallback_icon = os.path.join('data_files', 'favicon.png')
+                            chosen_icon = icon_path_local if os.path.exists(icon_path_local) else (fallback_icon if os.path.exists(fallback_icon) else None)
+                            img_tag = ''
+                            if chosen_icon is not None:
+                                try:
+                                    with open(chosen_icon, 'rb') as ifh:
+                                        img_b64 = base64.b64encode(ifh.read()).decode('ascii')
+                                    img_tag = f'<img src="data:image/png;base64,{img_b64}" style="width:36px;height:36px;margin-right:10px;vertical-align:middle;border-radius:6px;">'
+                                except Exception:
+                                    img_tag = ''
+                            html = (
+                                f'<div style="display:flex;align-items:center;margin:6px 0;">'
+                                f'<a download="{os.path.basename(summary_html)}" href="{file_uri}" '
+                                f'style="display:flex;align-items:center;padding:6px 12px;background:#1976d2;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">'
+                                f'{img_tag}'
+                                f'<span style="color:#fff;">Download report (HTML)</span>'
+                                f'</a></div>'
+                            )
+                            st.markdown(html, unsafe_allow_html=True)
+                        except Exception:
+                            with open(summary_html, 'rb') as fbin:
+                                st.download_button('Download report (HTML)', fbin, file_name='feature_selection_report.html')
                     except Exception:
                         st.write('Could not read feature_selection_report.html')
 
@@ -4176,8 +4320,34 @@ with tab5:
                     try:
                         rpt_md = open(md_report, 'r', encoding='utf-8').read()
                         st.markdown(rpt_md)
-                        with open(md_report, 'rb') as fbin:
-                            st.download_button('Download report (MD)', fbin, file_name='feature_selection_report.md')
+                        try:
+                            import base64
+                            with open(md_report, 'rb') as mf:
+                                mdata = mf.read()
+                            file_uri = 'data:text/markdown;base64,' + base64.b64encode(mdata).decode('ascii')
+                            icon_path_local = os.path.join('data_files', 'csv_icon.png')
+                            fallback_icon = os.path.join('data_files', 'favicon.png')
+                            chosen_icon = icon_path_local if os.path.exists(icon_path_local) else (fallback_icon if os.path.exists(fallback_icon) else None)
+                            img_tag = ''
+                            if chosen_icon is not None:
+                                try:
+                                    with open(chosen_icon, 'rb') as ifh:
+                                        img_b64 = base64.b64encode(ifh.read()).decode('ascii')
+                                    img_tag = f'<img src="data:image/png;base64,{img_b64}" style="width:36px;height:36px;margin-right:10px;vertical-align:middle;border-radius:6px;">'
+                                except Exception:
+                                    img_tag = ''
+                            html = (
+                                f'<div style="display:flex;align-items:center;margin:6px 0;">'
+                                f'<a download="{os.path.basename(md_report)}" href="{file_uri}" '
+                                f'style="display:flex;align-items:center;padding:6px 12px;background:#1976d2;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">'
+                                f'{img_tag}'
+                                f'<span style="color:#fff;">Download report (MD)</span>'
+                                f'</a></div>'
+                            )
+                            st.markdown(html, unsafe_allow_html=True)
+                        except Exception:
+                            with open(md_report, 'rb') as fbin:
+                                st.download_button('Download report (MD)', fbin, file_name='feature_selection_report.md')
                     except Exception:
                         st.write('Could not read feature_selection_report.md')
                 elif os.path.exists(txt_report):
@@ -4185,8 +4355,34 @@ with tab5:
                     try:
                         rpt = open(txt_report, 'r', encoding='utf-8').read()
                         st.code(rpt)
-                        with open(txt_report, 'rb') as fbin:
-                            st.download_button('Download report', fbin, file_name='feature_selection_report.txt')
+                        try:
+                            import base64
+                            with open(txt_report, 'rb') as tf:
+                                tdata = tf.read()
+                            file_uri = 'data:text/plain;base64,' + base64.b64encode(tdata).decode('ascii')
+                            icon_path_local = os.path.join('data_files', 'csv_icon.png')
+                            fallback_icon = os.path.join('data_files', 'favicon.png')
+                            chosen_icon = icon_path_local if os.path.exists(icon_path_local) else (fallback_icon if os.path.exists(fallback_icon) else None)
+                            img_tag = ''
+                            if chosen_icon is not None:
+                                try:
+                                    with open(chosen_icon, 'rb') as ifh:
+                                        img_b64 = base64.b64encode(ifh.read()).decode('ascii')
+                                    img_tag = f'<img src="data:image/png;base64,{img_b64}" style="width:36px;height:36px;margin-right:10px;vertical-align:middle;border-radius:6px;">'
+                                except Exception:
+                                    img_tag = ''
+                            html = (
+                                f'<div style="display:flex;align-items:center;margin:6px 0;">'
+                                f'<a download="{os.path.basename(txt_report)}" href="{file_uri}" '
+                                f'style="display:flex;align-items:center;padding:6px 12px;background:#1976d2;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">'
+                                f'{img_tag}'
+                                f'<span style="color:#fff;">Download report</span>'
+                                f'</a></div>'
+                            )
+                            st.markdown(html, unsafe_allow_html=True)
+                        except Exception:
+                            with open(txt_report, 'rb') as fbin:
+                                st.download_button('Download report', fbin, file_name='feature_selection_report.txt')
                     except Exception:
                         st.write('Could not read feature_selection_report.txt')
         
@@ -4230,10 +4426,6 @@ with tab5:
                     """
                     **Color scale**: darker/warmer colors indicate larger average absolute error.
 
-                    **Rows**: drivers (top 20 by race count) or constructors.
-
-                    **Columns**: circuits (circuit names).
-
                     **Missing cells**: blank or neutral color means insufficient data (no races for that pair).
 
                     **Sample size**: confidence intervals are empirical percentiles computed only when a group has at least 5 residuals.
@@ -4250,13 +4442,66 @@ with tab5:
                         st.subheader(title)
                         st.image(str(img_path), width=1000)
 
-                # CSV download buttons
+                # CSV download buttons (show small icon from `data_files/` if available)
                 csv_files = ['mae_by_season.csv', 'confid_int_by_driver_track.csv', 'confid_int_by_driver.csv', 'confid_int_by_constructor.csv']
+                icons_dir = Path('data_files')
+                csv_icon = icons_dir / 'csv_icon.png'
+                pdf_icon = icons_dir / 'pdf_icon.png'
+                fallback_icon = icons_dir / 'favicon.png'
+
+                # Render HTML-based download buttons with embedded icons (base64 data-URIs).
+                # Fallback to the existing Streamlit download button if something goes wrong.
+                import base64
                 for fname in csv_files:
                     p = OUT_DIR / fname
-                    if p.exists():
+                    if not p.exists():
+                        continue
+                    try:
                         with open(p, 'rb') as fh:
-                            st.download_button(f"Download {fname}", fh.read(), file_name=fname)
+                            data_bytes = fh.read()
+
+                        # Prepare data URI for download link
+                        b64_file = base64.b64encode(data_bytes).decode('ascii')
+                        file_data_uri = f"data:text/csv;base64,{b64_file}"
+
+                        # Choose icon (csv_icon preferred, fallback to favicon)
+                        chosen_icon_path = None
+                        if p.suffix.lower() == '.csv' and csv_icon.exists():
+                            chosen_icon_path = csv_icon
+                        elif p.suffix.lower() == '.pdf' and pdf_icon.exists():
+                            chosen_icon_path = pdf_icon
+                        elif fallback_icon.exists():
+                            chosen_icon_path = fallback_icon
+
+                        img_tag = ''
+                        if chosen_icon_path is not None:
+                            try:
+                                with open(chosen_icon_path, 'rb') as ifh:
+                                    img_b64 = base64.b64encode(ifh.read()).decode('ascii')
+                                # Larger icon and rounded corners for nicer appearance
+                                img_tag = f'<img src="data:image/png;base64,{img_b64}" style="width:36px;height:36px;margin-right:10px;vertical-align:middle;border-radius:6px;">'
+                            except Exception:
+                                img_tag = ''
+
+                        # HTML for a compact icon + button-like link; wrap the image inside the anchor so it's clickable
+                        html = (
+                            f'<div style="display:flex;align-items:center;margin:6px 0;">'
+                            f'<a download="{fname}" href="{file_data_uri}" '
+                            f'style="display:flex;align-items:center;padding:6px 12px;background:#1976d2;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">'
+                            f'{img_tag}'
+                            f'<span style="color:#fff;">Download {fname}</span>'
+                            f'</a></div>'
+                        )
+
+                        st.markdown(html, unsafe_allow_html=True)
+                    except Exception:
+                        # fallback to Streamlit native button
+                        try:
+                            with open(p, 'rb') as fh:
+                                data_bytes = fh.read()
+                            st.download_button(f"Download {fname}", data_bytes, file_name=fname)
+                        except Exception:
+                            st.write(f'Could not prepare download for {fname}')
             else:
                 st.info("Position analysis report not found. Run `python scripts/position_group_analysis.py` to generate outputs.")
         
@@ -4594,7 +4839,34 @@ def leakage_audit_ui():
                                 'extra_info': 'note'
                             })
                             csv = csv_df.to_csv(index=False)
-                            st.download_button("Download CSV", csv, file_name='leakage_audit_report.csv')
+                            try:
+                                # Use HTML clickable icon + download for leakage audit CSV
+                                import base64
+                                tdata = csv.encode('utf-8') if isinstance(csv, str) else csv
+                                file_uri = 'data:text/csv;base64,' + base64.b64encode(tdata).decode('ascii')
+                                icon_path_local = os.path.join('data_files', 'csv_icon.png')
+                                fallback_icon = os.path.join('data_files', 'favicon.png')
+                                chosen_icon = icon_path_local if os.path.exists(icon_path_local) else (fallback_icon if os.path.exists(fallback_icon) else None)
+                                img_tag = ''
+                                if chosen_icon is not None:
+                                    try:
+                                        with open(chosen_icon, 'rb') as ifh:
+                                            img_b64 = base64.b64encode(ifh.read()).decode('ascii')
+                                        img_tag = f'<img src="data:image/png;base64,{img_b64}" style="width:36px;height:36px;margin-right:10px;vertical-align:middle;border-radius:6px;">'
+                                    except Exception:
+                                        img_tag = ''
+                                html = (
+                                    f'<div style="display:flex;align-items:center;margin:6px 0;">'
+                                    f'<a download="leakage_audit_report.csv" href="{file_uri}" '
+                                    f'style="display:flex;align-items:center;padding:6px 12px;background:#1976d2;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">'
+                                    f'{img_tag}'
+                                    f'<span style="color:#fff;">Download CSV</span>'
+                                    f'</a></div>'
+                                )
+                                st.markdown(html, unsafe_allow_html=True)
+                            except Exception:
+                                # Fallback to plain download button
+                                st.download_button("Download CSV", csv, file_name='leakage_audit_report.csv')
                     except Exception as e:
                         st.error(f"Audit failed: {e}")
     except Exception:

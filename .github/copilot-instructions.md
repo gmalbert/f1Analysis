@@ -27,7 +27,6 @@ Short, actionable guidance for AI coding agents working on the Formula 1 Analysi
   - Weather fetching logic updated to pull data for all missing races, not just the most recent one.
   - Optional post-run smoke checks: pass `--check-smoke` to run `scripts/check_generation_smoke.py` (see helper scripts). Forward `--smoke-strict`, `--smoke-qual-threshold`, and `--smoke-tolerance-days` to control behavior.
   - Recent fixes batch high-cardinality bin creation to reduce DataFrame fragmentation and silence PerformanceWarnings.
-- `raceAnalysis.py` — Streamlit UI that consumes the outputs in `data_files/` (4973 lines).
   - All data loading functions use `@st.cache_data` decorator for performance.
   - Uses CACHE_VERSION="v2.3" for version-based cache invalidation to prevent stale cached models on Streamlit Cloud.
   - Four prediction models: XGBoost, LightGBM, CatBoost, and Ensemble stacking (XGBoost + LightGBM + CatBoost).
@@ -36,6 +35,7 @@ Short, actionable guidance for AI coding agents working on the Formula 1 Analysi
   - Model-specific feature importance extraction and prediction handling.
   - Rookie simulation functions at lines 231+ and 309+ for handling drivers without historical data.
   - Includes warning suppression for numpy RuntimeWarnings and pandas deprecation warnings.
+  - **Download UI & icons**: The Streamlit UI now renders small clickable icons adjacent to downloads. Preferred icon filenames: `data_files/csv_icon.png`, `data_files/pdf_icon.png`. If those files are missing the UI falls back to `data_files/favicon.png`. For small summary files the app uses HTML links with base64 data-URIs (compact and self-contained). For larger files the UI should use `st.download_button` to stream content to the browser — prefer that for multi-megabyte artifacts.
 - `data_files/` — contains generated CSVs, F1DB JSONs, and FastF1 cache. Key outputs:
   - `f1ForAnalysis.csv` — main dataset (tab-separated), ~2200+ columns including all engineered features
   - `f1WeatherData_Grouped.csv` — weather by race (grouped from hourly data)
