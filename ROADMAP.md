@@ -102,6 +102,11 @@ Minimize MAE (Mean Absolute Error) for Formula 1 race predictions with a target 
   - Confidence-interval CSV filenames were standardized to the `confid_int_by_*` pattern.
   - The HTML report was simplified and no longer presents raw CSV text links; the UI exposes downloads via `st.download_button()`.
 
+  - Dev note — Inline downloads vs streaming:
+    - The inline, base64 data-URI downloads and clickable icons are implemented in `raceAnalysis.py` (Position Analysis and Feature Selection sections). For small summary files the UI embeds the file as a `data:` URI and renders an HTML-styled clickable icon/button. For larger artifacts you should prefer `st.download_button()` which streams the file from the server instead of inlining it into the page.
+    - To change behavior: edit `raceAnalysis.py` and search for `data:text/` or `data:image/png;base64` (these mark the data-URI-based downloads). Replace the HTML/data-URI block with a `st.download_button(...)` call to restore streaming, or conversely wrap a small-file `st.download_button` with a small HTML icon block if you want the visual style but need streaming.
+    - Icons: the UI prefers `data_files/csv_icon.png` / `data_files/pdf_icon.png` and falls back to `data_files/favicon.png` when icons are missing.
+
 ---
 
 ## Phase 2: Prediction Capabilities Expansion (Priority: MEDIUM)

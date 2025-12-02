@@ -96,6 +96,12 @@ The CSV files and any associated .json files are included in the ```data_files``
 
 [↑ Back to top](#table-of-contents)
 
+## Download UI & Icons
+
+- **Download icons**: The Streamlit UI now displays a small clickable icon next to many download actions. The app prefers `data_files/csv_icon.png` and `data_files/pdf_icon.png` and falls back to `data_files/favicon.png` when those are missing.
+- **Position Analysis**: The Position Group Analysis tab uses HTML-rendered, clickable icon buttons (icon + label). For small summary files the app embeds the file using a base64 data-URI so the download link is compact and self-contained; for larger artifacts the UI falls back to Streamlit's native `st.download_button` to stream files without inlining them into the page.
+- **If you add assets**: Place your icons in `data_files/` with the names above; no code change is required.
+
 ## Filtering
 There are currently more than 30 ways to filter the F1 data which spans from 2015 to present. You can filter by one or all of the data fields on the left side of the page. The data dynamically updates and gives you a new total record count.
 
