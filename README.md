@@ -107,6 +107,13 @@ There are currently more than 30 ways to filter the F1 data which spans from 201
 
 [↑ Back to top](#table-of-contents)
 
+## Developer notes (local)
+
+- The Streamlit sidebar now displays friendly labels for fields by default (from `column_rename_for_filter`). The raw field names used for debugging were previously shown in parentheses; that debug label has been commented out in `raceAnalysis.py` to keep the UI cleaner.
+- A temporary debug artifact `data_files/sidebar_exclusion_debug.json` (used to diagnose why some fields appeared in the sidebar) was removed from the repository after the issue was fixed.
+- To re-enable raw-field debug labels, edit `raceAnalysis.py` and restore the commented `display_label = f"{column_friendly_name} ({column})"` line and optionally populate the `debug_fields` list near the sidebar code.
+
+
 ## Linear regression
 In addition to correlation coefficients, I have added several linear regressions to help predict the results of the next race.
 
