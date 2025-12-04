@@ -94,6 +94,61 @@ def debug_log(msg, obj=None):
 # Suppress numpy warnings about empty slices during calculations
 warnings.filterwarnings('ignore', message='Mean of empty slice', category=RuntimeWarning, module='numpy')
 warnings.filterwarnings('ignore', message='All-NaN slice encountered', category=RuntimeWarning, module='numpy')
+# Suppress noisy numpy divide/invalid value RuntimeWarnings caused by correlation/stddev ops
+warnings.filterwarnings('ignore', message='invalid value encountered in divide', category=RuntimeWarning, module='numpy')
+# Also set numpy to ignore invalid operations to avoid repetitive RuntimeWarnings during UI calculations
+np.seterr(invalid='ignore')
+
+
+def compute_safe_correlation(full_df, cols, method='pearson'):
+    """Compute correlation for `cols` from `full_df`, dropping constant or all-NaN columns.
+
+    Returns a square DataFrame indexed/columned by `cols`. Columns that were constant
+    or all-NaN will be present but filled with NaN so downstream code that expects
+    a fixed shape can still rename rows/columns safely.
+    """
+    # Defensive: ensure cols exist and deduplicate while preserving order
+    cols = [c for c in cols if c in full_df.columns]
+    if not cols:
+        return pd.DataFrame()
+
+    seen = set()
+    cols_unique = []
+    for c in cols:
+        if c not in seen:
+            cols_unique.append(c)
+            seen.add(c)
+    # use the deduplicated ordered list for downstream operations
+    cols = cols_unique
+
+    sub = full_df[cols]
+    # select numeric columns for correlation
+    num = sub.select_dtypes(include=[np.number])
+
+    # columns with more than one unique non-null value
+    # Use pd.unique on the dropped-NA values to ensure we get a concrete length
+    # (avoids ambiguous truth values if nunique ever returns a non-scalar)
+    keep_cols = [
+        c for c in num.columns
+        if len(pd.unique(num[c].dropna())) > 1
+    ]
+
+    # compute correlation only on keep_cols
+    if keep_cols:
+        with np.errstate(invalid='ignore', divide='ignore'):
+            corr_partial = num[keep_cols].corr(method=method)
+    else:
+        corr_partial = pd.DataFrame()
+
+    # build a full square matrix with original cols, fill with NaN
+    full_corr = pd.DataFrame(index=cols, columns=cols, dtype=float)
+    if not corr_partial.empty:
+        # place partial results into full matrix for the kept cols
+        for r in corr_partial.index:
+            for c in corr_partial.columns:
+                full_corr.at[r, c] = corr_partial.at[r, c]
+
+    return full_corr
 
 def create_constructor_adjusted_driver_features(data):
     """
@@ -514,7 +569,7 @@ column_rename_for_filter = {
     'grandPrixLaps': 'Laps (Race)', 
     'constructorTotalRaceStarts': 'Constructor Total Starts',
     'constructorTotalRaceWins': 'Constructor Total Wins',
-    'constructorTotalPolePositions': 'Total Pole Positions',
+    'constructorTotalPolePositions': 'Total Pole Positions (Constructor)',
     'turns': 'Turns (Race)',
     'driverBestStartingGridPosition': 'Best Starting Grid Position (Driver)',
     'driverBestRaceResult': 'Best Result (Driver)',
@@ -529,7 +584,7 @@ column_rename_for_filter = {
     'yearsActive': 'Years Active',
     'streetRace' : 'Street',
     'trackRace': 'Track', 
-    'Points': 'Points (Driver)',
+    'Points': 'Current Year Points (Driver)',
     'constructorRank': 'Constructor Rank',
     'driverRank': 'Driver Rank',
     'bestChampionshipPosition': 'Best Champ Pos.',
@@ -540,20 +595,25 @@ column_rename_for_filter = {
     'totalRaceStarts': 'Total Race Starts',
     'totalRaceWins': 'Total Race Wins',
     'total1And2Finishes': 'Total 1st and 2nd',
-    'totalRaceLaps': 'Total Race Laps (Construtor)',
-    'totalPodiums': 'Total Podiums (Construtor)',
-    'totalPodiumRaces': 'Total Podium Races (Construtor)',
+    'totalRaceLaps': 'Total Race Laps (Constructor)',
+    'totalPodiums': 'Total Podiums (Constructor)',
+    'totalPodiumRaces': 'Total Podium Races (Constructor)',
     'totalPoints' : 'Total Points (Lifetime)',
     'totalChampionshipPoints': 'Total Champ Points',
-    'totalPolePositions' : 'Total Pole Positions',
+    # 'totalPolePositions' : 'Total Pole Positions',
     'totalFastestLaps': 'Total Fastest Laps',
-    'bestQualifyingTime_sec': 'Best Qualifying Time (s)',
-    'delta_from_race_avg': 'Delta from Race Avg. (s)',
+    # 'bestQualifyingTime_sec': 'Best Qualifying Time (s)',
+    # 'delta_from_race_avg': 'Delta from Race Avg. (s)',
     'driverAge': 'Driver Age',
     'currentRookie': 'Current Rookie',
-    'championship_position': 'Championship Position',
+    'championship_position': 'Current Championship Position',
     # 'totalPoints': 'Current Year Points'
-    }         
+    'practice_x_safetycar_bin': 'Practice x Safety Car %', 
+    'positions_gained_first_lap_pct_bin': 'Positions Gained First Lap %', 
+    'is_first_season_with_constructor': 'First Season with Constructor', 
+    'grid_penalty_x_constructor_bin': 'Grid Penalty x Constructor', 
+    'SafetyCarStatus': 'Safety Car Status',
+    }        
 
 individual_race_grouped_columns_to_display = {
     'resultsDriverName': st.column_config.TextColumn("Driver"),
@@ -1120,12 +1180,12 @@ data['totalStopTime'] = data['totalStopTime'].astype('Float64')
 data['driverBestStartingGridPosition'] = data['driverBestStartingGridPosition'].astype('Int64')
 data['driverBestRaceResult'] = data['driverBestRaceResult'].astype('Int64')
 data['constructorRank'] = data['constructorRank'].astype('Int64')
-# data['Points'] = data['Points_results_with_qualifying'].astype('Int64')
+data['Points'] = data['Points'].astype('Int64')
 data['driverRank'] = data['driverRank'].astype('Int64')
-if 'bestQualifyingTime_sec' in data.columns:
-    data['bestQualifyingTime_sec'] = data['bestQualifyingTime_sec'].astype('Float64')
-else:
-    st.warning("'bestQualifyingTime_sec' column not found in data.")
+# if 'bestQualifyingTime_sec' in data.columns:
+#     data['bestQualifyingTime_sec'] = data['bestQualifyingTime_sec'].astype('Float64')
+# else:
+#     st.warning("'bestQualifyingTime_sec' column not found in data.")
 data['driverTotalChampionshipWins'] = data['driverTotalChampionshipWins'].astype('Int64')
 data['driverTotalRaceEntries'] = data['driverTotalRaceEntries'].astype('Int64')
 data['bestChampionshipPosition'] = data['bestChampionshipPosition_results_with_qualifying'].astype('Int64')
@@ -1140,15 +1200,19 @@ data['totalPodiums'] = data['totalPodiums_results_with_qualifying'].astype('Int6
 data['totalPodiumRaces'] = data['totalPodiumRaces'].astype('Int64')
 data['totalPoints'] = data['totalPoints_results_with_qualifying'].astype('Float64')
 data['totalChampionshipPoints'] = data['totalChampionshipPoints_results_with_qualifying'].astype('Float64')
-data['totalPolePositions'] = data['totalPolePositions_results_with_qualifying'].astype('Int64')
+# data['totalPolePositions'] = data['totalPolePositions_results_with_qualifying'].astype('Int64')
 data['totalFastestLaps'] = data['totalFastestLaps_results_with_qualifying'].astype('Int64')
 data['totalRaceEntries'] = data['totalRaceEntries_results_with_qualifying'].astype('Int64')
 data['driverAge'] = data['driverAge'].astype('Int64')
-data['delta_from_race_avg'] = data['delta_from_race_avg'].astype('Float64')
+# data['delta_from_race_avg'] = data['delta_from_race_avg'].astype('Float64')
 data['driverAge'] = data['driverAge'].astype('Int64')
 data['DNF'] = data['DNF'].astype('boolean')
 data['championship_position'] = data['championship_position'].astype('Float64')
-
+data['practice_x_safetycar_bin'] = data['practice_x_safetycar_bin'].astype('Float64')
+data['positions_gained_first_lap_pct_bin'] = data['positions_gained_first_lap_pct_bin'].astype('Float64')
+data['is_first_season_with_constructor'] = data['is_first_season_with_constructor'].astype('boolean')
+data['grid_penalty_x_constructor_bin'] = data['grid_penalty_x_constructor_bin'].astype('Float64')
+data['SafetyCarStatus'] = data['SafetyCarStatus'].astype('Float64')
 
 column_names = data.columns.tolist()
 
@@ -1163,7 +1227,7 @@ exclusionList = ['grandPrixRaceId', 'raceId_results',  'constructorId', 'driverI
                  'DriverNumber', 'FirstName', 'LastName', 'FullName', 'CountryCode', 'Position', 'ClassifiedPosition', 'GridPosition', 'Status', 'driverDNFCount', 'driverDNFAvg', 'recent_form',
                  'driverNumber', 'Round', 'Year', 'Event', 'totalDriverOfTheDay', 'totalGrandSlams', 'finishingTime', 'average_temp', 'average_humidity', 'average_wind_speed', 'total_precipitation',
                   'recent_form_3_races', 'recent_form_5_races', 'constructor_recent_form_3_races', 'constructor_recent_form_5_races','CleanAirAvg_FP1', 'DirtyAirAvg_FP1', 'Delta_FP1', 
-                  'CleanAirAvg_FP2', 'DirtyAirAvg_FP2', 'Delta_FP2', 'CleanAirAvg_FP3', 'DirtyAirAvg_FP3','Delta_FP3', 'SafetyCarStatus', 'finishing_position_std_driver', 'finishing_position_std_constructor'
+                  'CleanAirAvg_FP2', 'DirtyAirAvg_FP2', 'Delta_FP2', 'CleanAirAvg_FP3', 'DirtyAirAvg_FP3','Delta_FP3', 'SafetyCarStatus', 'finishing_position_std_driver', 'finishing_position_std_constructor',
                   'numberOfStops', 'averageStopTime', 'totalStopTime', 'pit_lane_time_constant', 'pit_stop_delta', 'engineManufacturerId',
                   'avg_final_position_per_track', 'last_final_position_per_track', 'avg_final_position_per_track_constructor', 'last_final_position_per_track_constructor',
         'qualifying_gap_to_pole', 'practice_position_improvement_1P_2P',  'practice_position_improvement_1P_3P', 'practice_time_improvement_1T_2T', 'practice_time_improvement_time_time',
@@ -1215,7 +1279,9 @@ exclusionList = ['grandPrixRaceId', 'raceId_results',  'constructorId', 'driverI
                                         'championship_position_pressure_factor', 'constructor_recent_mechanical_dnf_rate', 'driver_performance_at_circuit_type', 'weather_pattern_analysis_by_location', 
                                         'overtaking_difficulty_index', 'q1_q2_q3_sector_consistency', 'qualifying_position_vs_race_pace_delta_by_track', 'numberOfStops', 
                                         'driverCareerAvgPosition', 'driverCareerAvgPoints', 'driverCareerPodiumRate', 'driver_constructor_id', 'qualifying_position_vs_teammate_historical', 
-                                        'podium_form_3_races', 'wins_last_5_races', 'constructorAvgPosition', 'constructorAvgPoints', 'constructorPodiumRate', 
+                                        'podium_form_3_races', 'wins_last_5_races', 'constructorAvgPosition', 'constructorAvgPoints', 'constructorPodiumRate', 'totalPoints', 'totalFastestLaps', 'totalPolePositions',
+                                        
+
         ]
 
 suffixes_to_exclude = ('_x', '_y', '_qualifying', '_results_with_qualifying', '_drivers', '_mph', '_sec', '.1', '.2', '.3', '_bin')
@@ -1229,7 +1295,7 @@ exclusionList = exclusionList + auto_exclusions
 # remaining_columns = [col for col in column_names if col not in exclusionList]
 # st.write(f"Remaining Columns: {remaining_columns}")
 
-# column_names.sort()
+column_names.sort()
 
 # all of the non-leaky fields from the fullResults dataset (9/19/2025)
 def get_features_and_target(data):
@@ -2017,11 +2083,18 @@ with tab1:
         # Iterate over the columns to display and create a filter for each
         st.sidebar.header("Select filters to apply:")
         for column in column_names:
+            # derive a friendly name (if present) and a display label that
+            # includes the raw field name in parentheses to help debugging
+            column_friendly_name = column_rename_for_filter.get(column, column)
+            # Historically we showed the raw field name for debugging:
+            # display_label = f"{column_friendly_name} ({column})"
+            # Only show the friendly label in the UI by default.
+            display_label = column_friendly_name
             
-            for old_column, new_column in column_rename_for_filter.items():
-                if column == old_column: 
-                    column_friendly_name = new_column
-            
+            # Skip any columns explicitly in the exclusion list
+            if column in exclusionList:
+                continue
+
             # Detect if the column is boolean-like (actual boolean or 0/1 integer-like)
             is_bool_like = is_bool_dtype(data[column]) or (
                 data[column].dropna().nunique() == 2 and set(data[column].dropna().unique()) <= {0, 1}
@@ -2035,7 +2108,7 @@ with tab1:
                     min_val, max_val = int(data[column].min()), int(data[column].max())           
                                     
                     selected_range = st.sidebar.slider(
-                        column_friendly_name,
+                        display_label,
                         min_value=min_val,
                         max_value=max_val,
                         value=(min_val, max_val),
@@ -2066,7 +2139,7 @@ with tab1:
                 max_val = formatted_max_val
 
                 selected_range = st.sidebar.slider(
-                    column_friendly_name,
+                    display_label,
                     min_value=min_val,
                     max_value=max_val,
                     value=(min_val, max_val),
@@ -2090,7 +2163,7 @@ with tab1:
                 data[column].dropna().nunique() == 2 and set(data[column].dropna().unique()) <= {0, 1}
             ):
                 selected_value = st.sidebar.checkbox(
-                    column_friendly_name,
+                    display_label,
                     value=False,
                     key=f"checkbox_filter_{column}"
                 )
@@ -2117,7 +2190,7 @@ with tab1:
 
                 if column not in (exclusionList):
                     selected_value = st.sidebar.selectbox(
-                        column_friendly_name,
+                        display_label,
                         unique_values,
                         key=f"filter_{column}"
                 )
@@ -2125,9 +2198,7 @@ with tab1:
                     filters_for_reset[column] = {
                         'key': f"filter_{column}",
                         'column': column,
-                        'dtype': data[column].dtype,
-                        'min': min_val,
-                        'max': max_val,
+                        'dtype': str(data[column].dtype),
                         'selected_range': selected_value
                     }
 
@@ -2162,18 +2233,56 @@ with tab1:
         filtered_data = filtered_data.sort_values(by=['grandPrixYear', 'resultsFinalPositionNumber'], ascending=[False, True])
         filtered_data = filtered_data.drop_duplicates()
         # Compute correlation matrix for selected numeric fields (used elsewhere)
-        positionCorrelation = filtered_data[[
+        positionCorrelation = compute_safe_correlation(filtered_data, [
             'lastFPPositionNumber', 'resultsFinalPositionNumber', 'resultsStartingGridPositionNumber','grandPrixLaps', 'averagePracticePosition', 'DNF', 'resultsTop10', 'resultsTop5', 'resultsPodium', 'streetRace', 'trackRace',
             'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 'positionsGained', 'q1End', 'q2End', 'q3Top10',  'driverBestStartingGridPosition', 'yearsActive',
             'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'driverTotalRaceEntries', 'driverTotalRaceStarts', 'driverTotalRaceWins', 'driverTotalRaceLaps', 'driverTotalPodiums', 'positionsGained',
-            'avgLapPace', 'finishingTime']].corr(method='pearson')
+            'avgLapPace', 'finishingTime'
+        ])
 
-        ## Rename Correlation Rows
-        positionCorrelation.index=['Last FP.', 'Final Pos.' ,'Starting Grid Pos.', 'Laps', 'Avg Practice Pos.', 
-         'DNF', 'Top 10', 'Top 5', 'Podium', 'Street', 'Track', 'Constructor Race Starts', 'Constructor Total Race Wins', 'Constructor Pole Pos.',
-         'Turns', 'Positions Gained', 'Out at Q1', 'Out at Q2', 'Q3 Top 10', 'Best Starting Grid Pos.', 'Years Active',
-         'Best Result', 'Total Championship Wins', 'Total Pole Positions', 'Race Entries', 'Race Starts', 'Race Wins',
-        'Race Laps', 'Total Podiums', 'Positions Gained', 'Avg. Lap Pace', 'Finishing Time']
+        ## Rename Correlation Rows safely to avoid length mismatches
+        # Map original dataframe column names to friendly labels and apply only
+        # to the actual returned index (which may have had duplicates removed).
+        friendly_map = {
+            'lastFPPositionNumber': 'Last FP.',
+            'resultsFinalPositionNumber': 'Final Pos.',
+            'resultsStartingGridPositionNumber': 'Starting Grid Pos.',
+            'grandPrixLaps': 'Laps',
+            'averagePracticePosition': 'Avg Practice Pos.',
+            'DNF': 'DNF',
+            'resultsTop10': 'Top 10',
+            'resultsTop5': 'Top 5',
+            'resultsPodium': 'Podium',
+            'streetRace': 'Street',
+            'trackRace': 'Track',
+            'constructorTotalRaceStarts': 'Constructor Race Starts',
+            'constructorTotalRaceWins': 'Constructor Total Race Wins',
+            'constructorTotalPolePositions': 'Constructor Pole Pos.',
+            'turns': 'Turns',
+            'positionsGained': 'Positions Gained',
+            'q1End': 'Out at Q1',
+            'q2End': 'Out at Q2',
+            'q3Top10': 'Q3 Top 10',
+            'driverBestStartingGridPosition': 'Best Starting Grid Pos.',
+            'yearsActive': 'Years Active',
+            'driverBestRaceResult': 'Best Result',
+            'driverTotalChampionshipWins': 'Total Championship Wins',
+            'driverTotalPolePositions': 'Total Pole Positions',
+            'driverTotalRaceEntries': 'Race Entries',
+            'driverTotalRaceStarts': 'Race Starts',
+            'driverTotalRaceWins': 'Race Wins',
+            'driverTotalRaceLaps': 'Race Laps',
+            'driverTotalPodiums': 'Total Podiums',
+            'avgLapPace': 'Avg. Lap Pace',
+            'finishingTime': 'Finishing Time'
+        }
+
+        if not positionCorrelation.empty:
+            actual_cols = list(positionCorrelation.index)
+            new_labels = [friendly_map.get(c, c) for c in actual_cols]
+            # Apply to both index and columns to keep matrix symmetric
+            positionCorrelation.index = new_labels
+            positionCorrelation.columns = new_labels
 
         # Create inner tabs so users can view the filtered data or the Data & Debug tools (including the leakage audit)
         data_tab, data_debug_tab = st.tabs(["Data", "Data & Debug"])
@@ -2416,8 +2525,9 @@ with tab2:
         st.subheader("DNF by Race")
         race_dnf_stats = race_dnf_stats.sort_values(by='dnf_pct', ascending=False)
 
+        height = get_dataframe_height(race_dnf_stats)
         st.dataframe(race_dnf_stats, hide_index=True, width=800,
-        height=600, column_order=['grandPrixName', 'race_entry_count', 'dnf_count', 'dnf_pct'],
+        height=height, column_order=['grandPrixName', 'race_entry_count', 'dnf_count', 'dnf_pct'],
         column_config={
             'grandPrixName': st.column_config.TextColumn("Grand Prix"),
             'race_entry_count': st.column_config.NumberColumn("Total # of Entrants", format="%d"),
@@ -2450,8 +2560,9 @@ with tab2:
         st.subheader("DNF by Constructor")
         constructor_dnf_stats = constructor_dnf_stats.sort_values(by='dnf_pct', ascending=False)
 
+        height = get_dataframe_height(constructor_dnf_stats)
         st.dataframe(constructor_dnf_stats, hide_index=True, width=800,
-        height=600, column_order=['constructorName', 'constructor_entry_count', 'dnf_count', 'dnf_pct'],
+        height=height, column_order=['constructorName', 'constructor_entry_count', 'dnf_count', 'dnf_pct'],
         column_config={
             'constructorName': st.column_config.TextColumn("Constructor"),
             'constructor_entry_count': st.column_config.NumberColumn("# of Drivers Entered", format="%d"),
@@ -2480,8 +2591,9 @@ with tab2:
         ).reset_index()
         
         st.subheader(f"{current_year} Season Summary")
+        height = get_dataframe_height(season_summary)
         st.dataframe(season_summary, hide_index=True, column_config=season_summary_columns_to_display, width=800,
-        height=600,)
+        height=height,)
 
         driver_consistency = filtered_data.groupby('resultsDriverName').agg(
         finishing_position_std=('resultsFinalPositionNumber', 'std')
@@ -2698,8 +2810,10 @@ with tab4:
     # Convert all Int64 columns to Float64 before filling NaN with mean
     for col in input_data_next_race.select_dtypes(include='Int64').columns:
         input_data_next_race[col] = input_data_next_race[col].astype('Float64')
-    # Fill missing values with mean (or other default)
-    input_data_next_race = input_data_next_race.fillna(input_data_next_race.mean(numeric_only=True))
+    # Compute means only for numeric columns (avoid assigning floats into boolean columns)
+    numeric_means = input_data_next_race.select_dtypes(include='number').mean()
+    # Fill missing values for numeric columns only using the computed means
+    input_data_next_race = input_data_next_race.fillna(numeric_means)
 
     input_data_next_race = input_data_next_race.drop(columns=['firstName', 'lastName'], errors='ignore')
     # Fill missing driver and constructor names from reference tables

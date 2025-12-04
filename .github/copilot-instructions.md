@@ -117,6 +117,128 @@ streamlit run raceAnalysis.py
 - **Column name changes**: The UI has ~30 filter controls. Changing column names breaks filters silently. Search for the column name in `raceAnalysis.py` before renaming.
 - **Data types**: The UI uses pandas type checking (`is_numeric_dtype`, `is_object_dtype`, etc.) for dynamic filtering. Ensure consistent dtypes.
 
+### Sidebar Filters — Ordering & Customization
+
+- **How controls are discovered:** The UI builds filters from `data.columns` after deduplication and an exclusion pass. It collects `column_names = data.columns.tolist()` (duplicates are removed earlier) and then sorts that list before rendering the sidebar controls.
+- **Sorting behaviour:** Controls are rendered in lexicographic (alphabetical) order by the raw column name. Friendly labels (from `column_rename_for_filter`) only change the displayed label, not ordering.
+- **Exclusions and suffix-based filtering:** Columns in the `exclusionList` or that match `suffixes_to_exclude` are removed before rendering; this affects which columns appear but not the sort algorithm.
+- **Type coercion matters:** The script coerces many columns to specific pandas dtypes (e.g., `Float64`, `Int64`, `boolean`, `datetime`) earlier in the file — those dtypes determine whether a column is rendered as a slider, checkbox, or selectbox. Change dtype earlier in the file if you want a column to be treated differently.
+- **How to prioritize controls:** If you want certain controls shown at the top of the sidebar, render them separately first and then render the sorted remaining columns. Example pattern used in the UI:
+
+```python
+# desired priority order (raw column names)
+priority = ['grandPrixYear', 'grandPrixName', 'constructorName', 'resultsDriverName', 'resultsFinalPositionNumber']
+
+# build ordered list: priority first (if present), then the rest sorted
+remaining = [c for c in column_names if c not in priority and c not in exclusionList]
+ordered_columns = [c for c in priority if c in column_names and c not in exclusionList] + sorted(remaining)
+
+# iterate over ordered_columns instead of column_names
+for column in ordered_columns:
+  ...
+```
+
+- **Case-insensitive sorting:** For case-insensitive alphabetical order use `column_names.sort(key=str.lower)`.
+- **Debugging which controls will render:** Add a temporary UI line to print the final list of controls:
+
+```python
+st.write('Sidebar filters order:', [c for c in ordered_columns])
+```
+
+This section answers a common question about why sidebar items appear in a particular order and how to change that ordering safely.
+
+Developer sidebar debug notes:
+
+- The app now shows only friendly labels in the sidebar by default (the raw field name used for debugging was previously shown in parentheses). If you need to re-enable raw-field labels for troubleshooting, edit `raceAnalysis.py` and restore the commented `display_label = f"{column_friendly_name} ({column})"` line in the sidebar loop.
+- A short-lived debug file `data_files/sidebar_exclusion_debug.json` was used during development to capture exclusion membership; it has been removed after resolving the issue. If you need the same information again, re-enable the debug block near the top of the sidebar code and it will re-create the JSON for inspection.
+
+### Detailed Sidebar Controls: discovery, classification, rendering
+
+I'll explain how the sidebar filter columns are discovered, classified and rendered in `raceAnalysis.py`, and where to change their order/behavior.
+
+How columns are discovered
+
+- **Data load & dedupe:** The script loads `data` and immediately removes duplicate column names:
+  - `dupes = [col for col in data.columns if data.columns.tolist().count(col) > 1]`
+  - `data = data.loc[:, ~data.columns.duplicated()]`
+- **Column list:** The code builds `column_names = data.columns.tolist()` and later calls `column_names.sort()` before iterating to create sidebar controls.
+
+Which columns are skipped
+
+- **Hard exclusion list:** The top-level `exclusionList` contains many columns that should not become filters (IDs, large text, auxiliary fields).
+- **Auto exclusions:** The code appends any columns whose name ends with any suffix in `suffixes_to_exclude` (e.g., `'_x'`, `'_y'`, `'_sec'`, `'_bin'`), via:
+  - `auto_exclusions = [col for col in column_names if col.endswith(suffixes_to_exclude)]`
+  - `exclusionList = exclusionList + auto_exclusions`
+- These combined exclusions are used to skip filter creation for those columns.
+
+Friendly names / label mapping
+
+- `column_rename_for_filter` maps raw column names to human-friendly labels (e.g., `'constructorName': 'Constructor'`). Before rendering a control, the code replaces the label if present in that dict.
+
+Type-based widget selection (how each column becomes a control)
+When building the sidebar, each column is inspected and classified; the widget chosen depends on dtype:
+
+Numeric ranges → slider
+
+- Criteria: `is_numeric_dtype(data[column])` and not boolean-like.
+- Renders `st.sidebar.slider` with `min_val`, `max_val` and a `(min,max)` tuple value.
+- Slider key: `range_filter_{column}`.
+- The selected tuple is stored into `filters[column]` for later filtering.
+
+Datetime ranges → date-range slider
+
+- Criteria: `is_datetime64_any_dtype(data[column])`.
+- Converts timestamps to `date` objects and uses `st.sidebar.slider` with `format="YYYY-MM-DD"`.
+- Key is `range_filter_{column}` and selected tuple stored in `filters`.
+
+Boolean-like → checkbox
+
+- Criteria: `is_bool_dtype(data[column])` OR a 0/1 numeric column with exactly two values {0,1}.
+- Renders `st.sidebar.checkbox`.
+- Checkbox key: `checkbox_filter_{column}`.
+- If checked, the filter sets `filters[column] = True` (for 0/1 fields this filters for 1).
+
+Categorical / other → selectbox
+
+- Default fallback: unique values are collected, sorted, and `' All'` is inserted at the front.
+- Renders `st.sidebar.selectbox` with key `filter_{column}`.
+- If user picks anything but `' All'`, the selection is added to `filters[column]`.
+
+Filter bookkeeping
+
+- `filters` : used to apply the actual pandas filtering later (exact matches or tuple ranges).
+- `filters_for_reset` : stores information about each control (key, column, dtype, and `selected_range`) so UI reset functionality can re-initialize controls. The structure varies slightly by widget type (numeric/date sliders include `min`/`max`, selectboxes do not).
+
+Filtering application
+
+After building `filters`, the code applies all filters to `filtered_data`:
+- Range filters: `((col >= min) & (col <= max)) | col.isna()`
+- Exact match / checkbox: `(col == value) | col.isna()`
+- The script then sorts and deduplicates `filtered_data`.
+
+Where to change order / visibility / labels
+
+- Change label text: edit `column_rename_for_filter`.
+- Remove/add a column from sidebar: add/remove names from `exclusionList` (or `auto_exclusions` suffixes).
+- Control column ordering:
+  - The script calls `column_names.sort()` before creating controls; to force a custom order, modify `column_names` (e.g., insert a prioritized list before the sort or replace the sorting with a custom ordered list).
+- Change which columns appear in the table display (not sidebar) via `columns_to_display` and related display dicts.
+
+Type coercion that affects widget choice
+
+- Earlier in the script many columns are cast into specific pandas dtypes (e.g., `astype('Float64')`, `pd.to_datetime(...)`, `astype('boolean')`). These casts determine which widget path a column follows (slider vs checkbox vs selectbox). If you want a column to be treated differently, change its dtype earlier in the script.
+
+Practical tips / QC checks
+
+- To see which columns will become sidebar controls, temporarily add a debug line after exclusions:
+  - `st.write("Sidebar filters:", [c for c in column_names if c not in exclusionList])`
+- If you want `filters_for_reset` to have a consistent schema, I can:
+  - make every entry include `'min'` and `'max'` keys (set to `None` when not applicable), or
+  - centralize the structure creation into a helper to avoid missing keys.
+- To change the order users see in the sidebar while keeping a sorted master list, build a `priority_columns` list and render those first, then render the rest. (See the Sidebar Filters section for a code example.)
+
+(End of detailed sidebar controls guidance)
+
 - **Creating checks and repair helpers**: When you add diagnostic, smoke-test, or repair logic, prefer creating a new script under the `scripts/` directory (e.g., `scripts/my_check.py`) instead of editing existing production scripts. This keeps the generator and UI code stable and makes CI smoke tests easier to review and run.
   The new `scripts/run_all_smoke_checks.py` script is intended to be the one-stop command for running these scripts locally or in CI. It will list discovered checks with `--list-only`, and supports `--continue-on-fail` for non-fatal runs.
  - **Feature-selection artifacts & exporter**: The feature-selection pipeline emits lightweight artifacts into `scripts/output/` (SHAP ranking, Boruta selected, correlated pairs). Use `scripts/export_feature_selection.py` to create a CSV summary and an HTML report. The Streamlit UI includes download buttons and an on-demand "Regenerate CSV/HTML exporters" action in the Feature Selection tab.
