@@ -27,6 +27,48 @@ python f1-generate-analysis.py
 streamlit run raceAnalysis.py
 ```
 
+## Email notifications
+
+This repository includes a small email-notification pipeline that can embed a compact prediction table inline in the message and attach the full predictions CSV/TSV for the upcoming race.
+
+Key scripts:
+
+- `scripts/export_email_context.py` — builds an inline HTML snippet and a TSV attachment from a predictions CSV. If `--input` is not provided it will attempt to select the next race prediction (calendar-aware), then newest `predictions_*.csv`, and finally fall back to `scripts/headless_predict_and_write.py`.
+- `scripts/send_rich_email_now.py` — sends the email via SMTP. It always calls the exporter before sending so the inline snippet/attachment are regenerated on each run. Credentials and SMTP config are read from a `.env` file in the repo root.
+- `scripts/headless_predict_and_write.py` — lightweight fallback generator that writes `data_files/predictions_headless_next-race_<year>.csv` when no per-GP predictions are available.
+- `scripts/generate_driver_constructor_map.py` — helper to generate `data_files/driver_to_constructor.csv` to help populate missing constructor names in headless outputs.
+
+Environment variables (put in `.env`):
+
+```
+EMAIL_FROM=you@domain.tld
+EMAIL_TO=recipient@example.com
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+EMAIL_PASSWORD=yourpassword
+USE_TLS=true
+```
+
+Quick commands:
+
+```pwsh
+# Preview what would be embedded/attached (no email sent)
+python .\scripts\email_preview_for_sender.py
+
+# Send now (exporter will be called first to regenerate snippet/TSV)
+python .\scripts\send_rich_email_now.py
+
+# Force export from a specific predictions file
+python .\scripts\export_email_context.py --input data_files\predictions_abu-dhabi_2025.csv
+```
+
+Notes & recommendations:
+
+- The sender regenerates the snippet and TSV on every run so scheduled tasks will always include the latest predictions. For scheduling on Windows use Task Scheduler to call `python .\scripts\send_rich_email_now.py` at the desired cadence.
+- Add persistent send logging for auditability (suggested: append timestamp, recipient, exported file path, exporter exit code and SMTP response to `logs/email_sends.log`).
+- The exporter will include MAE in inline/attachment when present in the predictions file.
+- To change the email layout edit `notifications/templates/race_results.html.j2`.
+
 ### Optional post-generation smoke check
 After generating data you can run a small smoke test that verifies the analysis CSV covers the races present in `f1db-races.json` and that qualifying data is reasonably complete. Run the generator with the optional `--check-smoke` flag to execute the smoke test automatically:
 
