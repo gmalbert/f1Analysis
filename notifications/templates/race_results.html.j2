@@ -1,0 +1,87 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+      <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; color:#111 }
+      .row { padding:6px 0; border-bottom:1px solid #eee }
+      .muted { color:#666; font-size:12px }
+      .header { margin-bottom:8px; text-align: left }
+      table { width:100%; border-collapse:collapse }
+      td, th { padding:6px 8px; vertical-align:middle; text-align:left }
+      thead th { font-weight:700; border-bottom:2px solid #e6e6e6; }
+      tbody tr { border-bottom:1px solid #f4f4f4; }
+      tbody tr:last-child { border-bottom: none; }
+      td { padding-top:8px; padding-bottom:8px }
+    </style>
+  </head>
+  <body>
+    <div>
+      <h3 class="header">{{ title or 'Race Predictions' }}</h3>
+      <p class="muted">Generated: {{ generated_at }}</p>
+
+      {# Show race/date only when we don't have a pre-rendered inline snippet (avoid duplication) #}
+      {% if not inline_table_html %}
+        {% if race_name is defined and race_name %}
+          <p><strong>Race:</strong> {{ race_name }}</p>
+        {% endif %}
+        {% if race_date is defined and race_date %}
+          <p><strong>Date:</strong> {{ race_date }}</p>
+        {% endif %}
+      {% endif %}
+
+      {% if inline_table_html %}
+      {{ inline_table_html | safe }}
+      {% elif predictions_mode %}
+      <table>
+        <thead>
+          <tr>
+            <th>Driver</th>
+            <th>Constructor</th>
+            <th>Predicted Pos</th>
+            <th>MAE</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for r in rows %}
+          <tr>
+            <td>{{ r.resultsDriverName }}</td>
+            <td>{{ r.constructorName if r.constructorName is defined else '' }}</td>
+            <td>{{ r.PredictedFinalPositionFmt if r.PredictedFinalPositionFmt is defined else (r.PredictedFinalPosition if r.PredictedFinalPosition is defined else '') }}</td>
+            <td>{{ r.PredictedPositionMAEFmt if r.PredictedPositionMAEFmt is defined else (r.PredictedPositionMAE if r.PredictedPositionMAE is defined else '') }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <table>
+        <thead>
+          <tr>
+            <th>Driver</th>
+            <th>Constructor</th>
+            {% if include_prediction %}<th>Predicted Pos</th>{% endif %}
+            {% if include_mae %}<th>MAE</th>{% endif %}
+          </tr>
+        </thead>
+        <tbody>
+        {% for r in rows %}
+          <tr>
+            <td>{{ r.resultsDriverName }}</td>
+            <td>{{ r.constructorName if r.constructorName is defined else '' }}</td>
+            {% if include_prediction %}<td>{{ r.PredictedFinalPositionFmt }}</td>{% endif %}
+            {% if include_mae %}<td>{{ r.PredictedPositionMAEFmt }}</td>{% endif %}
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+
+      {% if not include_prediction and not include_mae %}
+      <p class="muted"><em>No prediction values (PredictedPos/MAE) were available for this race — see attached CSV for full details.</em></p>
+      {% endif %}
+      {% endif %}
+
+      <p class="muted">This is an automated report from the Gridlocked F1 analysis app.</p>
+    </div>
+  </body>
+</html>
