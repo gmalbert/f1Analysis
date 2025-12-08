@@ -475,3 +475,31 @@ python .\scripts\check_points_leader_gap.py
 ```
 
 Note: The generator was updated to compute `points_leader_gap` using a per-race snapshot (grouped by `grandPrixYear` + `round`/`raceId`/`short_date`) to avoid leaking future race information into earlier rows.
+ 
+## Dec 2025: Repair utilities & smoke test
+
+Recent work added a small set of diagnostics and repair helpers to stabilize the race-control message pipeline and provide a lightweight smoke test for local validation:
+
+- `scripts/check_unmapped_racemessages.py`: Detect rows in `data_files/all_race_control_messages.csv` that are missing canonical identifiers (for example when a prior ad-hoc merge produced `raceId_x` / `raceId_y`). Writes a small sample for inspection.
+- `scripts/repair_unmapped_racemessages.py`: Backups the original combined CSV (timestamped backup) and coalesces suffixed identifier columns into canonical single columns suitable for grouping.
+- `scripts/sanity_check_race_control_grouped.py`: Quick sanity check for the grouped `data_files/race_control_messages_grouped_with_dnf.csv` (row counts, missing ids, DNF stats).
+- `scripts/smoke_run_core.py`: Lightweight import-safe smoke test that runs `headless_predict_and_write` helpers, validates repaired message files, writes a headless predictions TSV, and reads it back.
+
+How to run the new smoke test (from repo root):
+
+```pwsh
+python .\scripts\smoke_run_core.py
+```
+
+If your `data_files/all_race_control_messages.csv` was previously merged and contains suffixed columns, run the repair helper first:
+
+```pwsh
+# backup will be written automatically by the script (timestamped filename)
+python .\scripts\repair_unmapped_racemessages.py
+# quick diagnostic
+python .\scripts\check_unmapped_racemessages.py
+# sanity-check grouped output
+python .\scripts\sanity_check_race_control_grouped.py
+```
+
+After repair, `f1-raceMessages.py` will produce `data_files/race_control_messages_grouped_with_dnf.csv` for downstream analytics.
