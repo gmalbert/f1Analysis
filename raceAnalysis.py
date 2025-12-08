@@ -2778,14 +2778,23 @@ with tab4:
         column_order=['date', 'time', 'fullName', 'courseLength', 'turns', 'laps'])
     
     # Limit detailsOfNextRace by the grandPrixId of the next race
-    next_race_id = nextRace['grandPrixId'].head(1).values[0]
-    upcoming_race = pd.merge(nextRace, raceSchedule, left_on='grandPrixId', right_on='grandPrixId', how='inner', suffixes=('_nextrace', '_races'))
-
-    upcoming_race = upcoming_race.sort_values(by='date_nextrace', ascending = False).head(1)
-    upcoming_race_id = upcoming_race['id_grandPrix_nextrace'].unique()
+    if nextRace.empty:
+        st.warning('No upcoming race found in the schedule.')
+        next_race_id = None
+        upcoming_race = pd.DataFrame()
+        upcoming_race_id = []
+    else:
+        # safer scalar access
+        next_race_id = nextRace['grandPrixId'].iat[0]
+        upcoming_race = pd.merge(nextRace, raceSchedule, left_on='grandPrixId', right_on='grandPrixId', how='inner', suffixes=('_nextrace', '_races'))
+        upcoming_race = upcoming_race.sort_values(by='date_nextrace', ascending = False).head(1)
+        upcoming_race_id = upcoming_race['id_grandPrix_nextrace'].unique()
 
     st.subheader("Past Results:")
-    detailsOfNextRace = data[data['grandPrixRaceId'] == next_race_id]
+    if next_race_id is None:
+        detailsOfNextRace = pd.DataFrame(columns=data.columns)
+    else:
+        detailsOfNextRace = data[data['grandPrixRaceId'] == next_race_id]
 
     # Sort detailsOfNextRace by grandPrixYear descending and resultsFinalPositionNumber ascending
     detailsOfNextRace = detailsOfNextRace.sort_values(by=['grandPrixYear', 'resultsFinalPositionNumber'], ascending=[False, True])
@@ -2795,7 +2804,13 @@ with tab4:
     detailsOfNextRace = detailsOfNextRace.drop_duplicates(subset=['resultsDriverName', 'grandPrixYear'])
     st.dataframe(detailsOfNextRace, column_config=columns_to_display, hide_index=True)
     
-    last_race = detailsOfNextRace.iloc[1]
+    # Safely pick a reference past race row if available
+    if len(detailsOfNextRace) > 1:
+        last_race = detailsOfNextRace.iloc[1]
+    elif len(detailsOfNextRace) == 1:
+        last_race = detailsOfNextRace.iloc[0]
+    else:
+        last_race = None
 
     active_driver_ids = data[data['activeDriver'] == True]['resultsDriverId'].unique()
     all_drivers_df = pd.DataFrame({'resultsDriverId': active_driver_ids})
@@ -2848,19 +2863,37 @@ with tab4:
     # Get MAE by position from Tab 5's session state
     position_mae_dict = st.session_state.get('position_mae_dict', {})
 
-    if next_race_id not in practices['raceId'].values:
-        # The upcoming race is NOT in the practices dataset
-        practices = practices[practices['raceId'] == last_race['raceId_results']]
-        qualifying = qualifying[qualifying['raceId'] == last_race['raceId_results']]
-    else:    
-        # The upcoming race IS in the practices dataset
-        practices = practices[practices['raceId'] == upcoming_race_id[0]]
-        qualifying = qualifying[qualifying['raceId'] == upcoming_race_id[0]]
-
-    if nextRace['freePractice2Date'].isnull().all():
-        practices = practices[practices['Session'] =='FP1']
+    # Narrow practices/qualifying to the relevant race.
+    # Be defensive: `next_race_id` or `last_race` may be None or missing.
+    if next_race_id is None:
+        practices = practices.iloc[0:0]
+        qualifying = qualifying.iloc[0:0]
     else:
-        practices = practices[practices['Session'] =='FP2']    
+        try:
+            # If next race appears in practices dataset, use upcoming_race_id if available
+            if 'raceId' in practices.columns and next_race_id in practices['raceId'].values:
+                race_key = upcoming_race_id[0] if (isinstance(upcoming_race_id, (list, tuple)) and len(upcoming_race_id) > 0) else next_race_id
+                practices = practices[practices['raceId'] == race_key]
+                qualifying = qualifying[qualifying['raceId'] == race_key]
+            else:
+                # Fall back to last_race if available
+                if last_race is not None and 'raceId_results' in last_race and pd.notna(last_race['raceId_results']):
+                    lr = last_race['raceId_results']
+                    practices = practices[practices['raceId'] == lr]
+                    qualifying = qualifying[qualifying['raceId'] == lr]
+                else:
+                    practices = practices.iloc[0:0]
+                    qualifying = qualifying.iloc[0:0]
+        except Exception:
+            practices = practices.iloc[0:0]
+            qualifying = qualifying.iloc[0:0]
+
+    # Choose which FP session to use. If `nextRace` is empty, keep practices empty.
+    if not nextRace.empty:
+        if nextRace.get('freePractice2Date', pd.Series()).isnull().all():
+            practices = practices[practices['Session'] == 'FP1']
+        else:
+            practices = practices[practices['Session'] == 'FP2']
 
     all_active_driver_inputs = input_data_next_race[feature_names + ['resultsDriverId', 'Abbreviation']]
 
@@ -3136,20 +3169,32 @@ with tab4:
 
     synthetic_row = {col: np.nan for col in safetycar_feature_columns}
 
-    synthetic_row['grandPrixYear'] = nextRace['year'].values[0]
-    synthetic_row['grandPrixName'] = nextRace['fullName'].values[0]
+    # Populate synthetic row from `nextRace` when available; otherwise keep NaN
+    if not nextRace.empty:
+        # use .iat for scalar access
+        if 'year' in nextRace.columns:
+            synthetic_row['grandPrixYear'] = nextRace['year'].iat[0]
+        if 'fullName' in nextRace.columns:
+            synthetic_row['grandPrixName'] = nextRace['fullName'].iat[0]
+    else:
+        synthetic_row['grandPrixYear'] = np.nan
+        synthetic_row['grandPrixName'] = np.nan
     
     # Fill with available info from nextRace, schedule, weather, etc.
     for col in ['circuitId', 'grandPrixLaps', 'turns', 'streetRace', 'trackRace']:
-        if col in nextRace.columns:
-            synthetic_row[col] = nextRace[col].values[0]
+        if not nextRace.empty and col in nextRace.columns:
+            synthetic_row[col] = nextRace[col].iat[0]
 
     # Fill weather features if available
     weather_row = weatherData[weatherData['grandPrixId'] == next_race_id]
     if not weather_row.empty:
         for col in ['average_temp', 'average_humidity', 'average_wind_speed', 'total_precipitation']:
             if col in weather_row.columns:
-                synthetic_row[col] = weather_row[col].values[0]
+                # safe scalar access
+                try:
+                    synthetic_row[col] = weather_row[col].iat[0]
+                except Exception:
+                    synthetic_row[col] = weather_row[col].values[0]
 
     
     safety_cars['SafetyCarStatus'] = (safety_cars['SafetyCarStatus'] > 0).astype(int)
@@ -3331,8 +3376,12 @@ with tab4:
     synthetic_df['Type'] = 'Next Race'
 
     # Only show historical and synthetic predictions for the current Grand Prix
-    current_gp_name = synthetic_df['grandPrixName'].values[0]
-    current_gp_year = synthetic_df['grandPrixYear'].values[0]
+    if not synthetic_df.empty:
+        current_gp_name = synthetic_df['grandPrixName'].iat[0] if 'grandPrixName' in synthetic_df.columns else None
+        current_gp_year = synthetic_df['grandPrixYear'].iat[0] if 'grandPrixYear' in synthetic_df.columns else None
+    else:
+        current_gp_name = None
+        current_gp_year = None
 
     # Filter and deduplicate historical predictions for this Grand Prix
     historical_this_gp = historical_display[historical_display['grandPrixName'] == current_gp_name].copy()
@@ -3367,11 +3416,21 @@ with tab4:
         'Rank', 'resultsDriverName', 'constructorName', 'PredictedFinalPosition', 'PredictedDNFProbability', 'PredictedDNFProbabilityPercentage'
     ]].copy()
     predicted_results['raceId'] = next_race_id
-    predicted_results['grandPrixName'] = nextRace['fullName'].values[0]
-    predicted_results['grandPrixYear'] = nextRace['year'].values[0]
+    if not nextRace.empty:
+        predicted_results['grandPrixName'] = nextRace['fullName'].iat[0] if 'fullName' in nextRace.columns else pd.NA
+        predicted_results['grandPrixYear'] = nextRace['year'].iat[0] if 'year' in nextRace.columns else pd.NA
+        year_for_fname = str(nextRace['year'].iat[0]) if 'year' in nextRace.columns and not nextRace['year'].isnull().all() else 'unknown'
+    else:
+        predicted_results['grandPrixName'] = pd.NA
+        predicted_results['grandPrixYear'] = pd.NA
+        year_for_fname = 'unknown'
 
-    # Save to CSV for later comparison
-    predicted_results.to_csv(path.join(DATA_DIR, f"predictions_{next_race_id}_{nextRace['year'].values[0]}.csv"), index=False)
+    # Save to CSV for later comparison; guard filename construction
+    fname = path.join(DATA_DIR, f"predictions_{next_race_id if next_race_id is not None else 'unknown'}_{year_for_fname}.csv")
+    try:
+        predicted_results.to_csv(fname, index=False)
+    except Exception as _e:
+        print(f"Could not write predictions file {fname}: {_e}")
 
     individual_race_grouped = detailsOfNextRace.groupby(['resultsDriverName']).agg(
         #activeDriver = ('activeDriver', 'first'),
@@ -3396,7 +3455,8 @@ with tab4:
     # Rename the columns for better readability
     individual_race_grouped_constructor = individual_race_grouped_constructor.sort_values(by=['average_ending_position'], ascending=[True])
 
-    st.subheader(f"Flags and Safety Cars from {nextRace['fullName'].head(1).values[0]}:")
+    next_race_name = nextRace['fullName'].iat[0] if (not nextRace.empty and 'fullName' in nextRace.columns) else 'Unknown Grand Prix'
+    st.subheader(f"Flags and Safety Cars from {next_race_name}:")
     st.caption("Race messages, including flags, are only available going back to 2018.")
     # race_control_messages_grouped_with_dnf.csv
     raceMessagesOfNextRace = race_messages[race_messages['grandPrixId'] == next_race_id]
@@ -3406,13 +3466,13 @@ with tab4:
     st.dataframe(raceMessagesOfNextRace, hide_index=True, width=800,column_config=flags_safety_cars_columns_to_display, 
                  column_order=['Year', 'Round', 'SafetyCarStatus', 'redFlag', 'yellowFlag', 'doubleYellowFlag', 'dnf_count'])
 
-    st.subheader(f"Driver Performance in {nextRace['fullName'].head(1).values[0]}:")
+    st.subheader(f"Driver Performance in {next_race_name}:")
     st.write(f"Total number of results: {len(individual_race_grouped)}")
     
     # Display the grouped data without index
     st.dataframe(individual_race_grouped, hide_index=True, width=800, height=600, column_config=individual_race_grouped_columns_to_display)
 
-    st.subheader(f"Constructor Performance in {nextRace['fullName'].head(1).values[0]}:")
+    st.subheader(f"Constructor Performance in {next_race_name}:")
     height = get_dataframe_height(individual_race_grouped_constructor)
     st.dataframe(individual_race_grouped_constructor, hide_index=True, width=800, height=height, column_config=individual_race_grouped_columns_to_display)
 
@@ -3471,7 +3531,16 @@ with tab4:
 
         st.subheader("Fastest Individual Pit Stop per Constructor")
         st.write(f"Total number of fastest pit stops: {len(fastest_pitstops)}")
-        st.write(f"Pit Time Constant:" , fastest_pitstops['pit_lane_time_constant'].head(1).values[0] if not fastest_pitstops['pit_lane_time_constant'].isnull().all() else "N/A")
+        # Safely display pit lane time constant
+        pit_lane_const = "N/A"
+        try:
+            if len(fastest_pitstops) > 0:
+                val = fastest_pitstops['pit_lane_time_constant'].dropna()
+                if not val.empty:
+                    pit_lane_const = val.iat[0]
+        except Exception:
+            pit_lane_const = "N/A"
+        st.write(f"Pit Time Constant:", pit_lane_const)
         fastest_pitstops = fastest_pitstops.sort_values(by=['year', 'pitStopSeconds'], ascending=[False, True])
         height = get_dataframe_height(fastest_pitstops)
         st.dataframe(
@@ -3495,7 +3564,8 @@ with tab4:
 
     weather_with_grandprix = weatherData[weatherData['grandPrixId'] == next_race_id]
     
-    st.subheader(f"Weather Data for {weather_with_grandprix['fullName'].head(1).values[0]}:")
+    weather_name = weather_with_grandprix['fullName'].iat[0] if (not weather_with_grandprix.empty and 'fullName' in weather_with_grandprix.columns) else 'Unknown Grand Prix'
+    st.subheader(f"Weather Data for {weather_name}:")
     st.write(f"Total number of weather records: {len(weather_with_grandprix)}")
 
     weather_with_grandprix = weather_with_grandprix.sort_values(by='short_date', ascending = False)
@@ -3628,51 +3698,6 @@ with tab5:
             winners_actual = results_df_analysis[results_df_analysis['Actual'] == 1]
             bottom_10_actual = results_df_analysis[results_df_analysis['Actual'] >= 11]
             
-        #     # GARBAGE BELOW - REMOVE
-        #     # st.subheader("Predictive Data Model Metrics")("� Advanced Options", expanded=True):
-        # tab_perf, tab_feat, tab_select, tab_hyper, tab_hist, tab_debug = st.tabs([
-        #     "�📊 Model Performance",
-        #     "🔍 Feature Analysis", 
-        #     "🎯 Feature Selection",
-        #     "⚙️ Hyperparameters",
-        #     "📈 Historical Validation",
-        #     "🛠️ Debug & Experiments"
-        # ])
-        
-        # with tab_perf:
-        #     st.subheader("Predictive Data Model Metrics")
-            
-        #     st.write(f"Mean Squared Error: {mse:.3f}")
-        #     st.write(f"R^2 Score: {r2:.3f}")
-        #     st.write(f"Mean Absolute Error: {mae:.2f}")
-        #     st.write(f"Mean Error: {mean_err:.2f}")
-        #     st.write(f"Boosting rounds used: {model.best_iteration + 1}")
-
-        #     # Combine predictions and actuals for comparison
-        #     X, y = get_features_and_target(data)
-        #     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-        #     preprocessor = get_preprocessor_position()
-        #     preprocessor.fit(X_train)
-        #     X_test_prep = preprocessor.transform(X_test)
-        #     y_pred = model.predict(xgb.DMatrix(X_test_prep))
-
-        #     results_df = X_test.copy()
-        #     results_df['Actual'] = y_test.values
-        #     results_df['Predicted'] = y_pred
-        #     results_df['Error'] = results_df['Actual'] - results_df['Predicted']
-
-        #     # Position-specific MAE analysis
-        #     results_df_analysis = pd.DataFrame({
-        #         'Actual': y_test.values,
-        #         'Predicted': y_pred
-        #     })
-
-        #     podium_actual = results_df_analysis[results_df_analysis['Actual'] <= 3]
-        #     points_actual = results_df_analysis[results_df_analysis['Actual'] <= 10]
-        #     winners_actual = results_df_analysis[results_df_analysis['Actual'] == 1]
-        #     bottom_10_actual = results_df_analysis[results_df_analysis['Actual'] >= 11]
-
             if len(podium_actual) > 0:
                 podium_mae = mean_absolute_error(podium_actual['Actual'], podium_actual['Predicted'])
                 st.write(f"MAE for Podium Finishers (1-3): {podium_mae:.3f}")
@@ -4849,8 +4874,7 @@ with tab5:
         
         with tab_debug:
             st.subheader("Debug & Experiments")
-            st.info("Temporal leakage audit moved to the Data Explorer tab under 'Data & Debug'.")
-            
+                        
             # Bin Count Comparison
             st.write("### Compare Different Bin Counts (q)")
             from feature_lists import high_cardinality_features
@@ -5033,74 +5057,3 @@ with tab6:
             X_clean, y_clean = X[mask], y[mask]
             grid_search.fit(X_clean, y_clean)
             st.write("Best params:", grid_search.best_params_)
-    
-    # with pos_tab:
-    #     st.header("Position Group Analysis")
-    #     st.write("Report generated by `scripts/position_group_analysis.py`. Displays MAE trends, confidence intervals, and heatmaps.")
-    #     from pathlib import Path
-    #     import streamlit.components.v1 as components
-
-    #     OUT_DIR = Path('scripts') / 'output'
-    #     report_path = OUT_DIR / 'position_group_analysis_report.html'
-
-    #     if report_path.exists():
-    #         inlined_count = 0
-    #         try:
-    #             html = report_path.read_text(encoding='utf-8')
-
-    #             # Inject a simple CSS reset to use a neutral sans-serif font
-    #             css = """
-    #             <style>
-    #             body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
-    #             h1, h2, h3 { font-family: inherit; }
-    #             img { max-width:100%; height:auto; }
-    #             </style>
-    #             """
-
-    #             # Inline local PNG images referenced in the HTML as data URIs so they render
-    #             # inside the Streamlit components iframe (which can't access local relative paths).
-    #             import re, base64
-
-    #             def _embed_images(html_text):
-    #                 inlined = {'count': 0}
-    #                 def _repl(m):
-    #                     src = m.group(1)
-    #                     # Only handle png/jpeg files
-    #                     if src.lower().endswith(('.png', '.jpg', '.jpeg')):
-    #                         img_path = OUT_DIR / src
-    #                         if img_path.exists():
-    #                             data = img_path.read_bytes()
-    #                             b64 = base64.b64encode(data).decode('ascii')
-    #                             mime = 'image/png' if src.lower().endswith('.png') else 'image/jpeg'
-    #                             inlined['count'] += 1
-    #                             return f'src="data:{mime};base64,{b64}"'
-    #                     # fallback: leave original
-    #                     return m.group(0)
-
-    #                 new_html = re.sub(r'src\s*=\s*"([^"]+\.(?:png|jpg|jpeg))"', _repl, html_text, flags=re.IGNORECASE)
-    #                 return new_html, inlined['count']
-
-    #             html_inlined, inlined_count = _embed_images(html)
-    #             html = css + html_inlined
-    #             components.html(html, height=700, scrolling=True)
-    #         except Exception as e:
-    #             st.error(f"Could not render HTML report: {e}")
-
-    #         # Show individual plots (if present) below the embedded HTML as a fallback
-    #         # Only show fallback images when none were inlined to avoid duplicates.
-    #         if inlined_count == 0:
-    #             for img_name in ['mae_trends.png', 'heatmap_driver_by_circuit.png', 'heatmap_constructor_by_circuit.png']:
-    #                 img_path = OUT_DIR / img_name
-    #                 if img_path.exists():
-    #                     st.image(str(img_path), caption=img_name, use_container_width=True)
-
-    #         # Provide CSV downloads
-    #         csv_files = ['mae_by_season.csv', 'ci_by_driver_track.csv', 'ci_by_driver.csv', 'ci_by_constructor.csv']
-    #         for fname in csv_files:
-    #             p = OUT_DIR / fname
-    #             if p.exists():
-    #                 with open(p, 'rb') as fh:
-    #                     st.download_button(f"Download {fname}", fh.read(), file_name=fname)
-    #     else:
-    #         st.info("Position analysis report not found. Run `python scripts/position_group_analysis.py` to generate outputs.")
-                

@@ -403,3 +403,20 @@ Utils: `requests_cache`, `retry_requests`
 - **Data quality**: Active driver NaN values are filled with baseline values before CSV export. Weather data is fetched for all missing races, not just recent ones.
 - **Model compatibility**: All new code must handle XGBoost, LightGBM, CatBoost, and Ensemble models. Use isinstance() and hasattr() checks for API differences.
 - **Cache invalidation**: Streamlit Cloud requires explicit cache invalidation for all cached objects. Use CACHE_VERSION system to prevent feature mismatch errors on deployment.
+
+## Recent fixes & utilities (Dec 2025)
+
+- **Race-messages repair & coalesce:** A set of diagnostics and repair helpers were added to address malformed `all_race_control_messages.csv` files that contain suffixed/duplicate identifier columns (for example `raceId_x`, `raceId_y`) which can cause pandas grouping errors such as "Grouper for 'raceId' not 1-dimensional". Relevant scripts:
+  - `scripts/check_unmapped_racemessages.py` — detect rows missing canonical ids and emit a small sample for inspection.
+  - `scripts/repair_unmapped_racemessages.py` — backup the original `all_race_control_messages.csv` and coalesce suffixed id/round/year columns into canonical single columns suitable for grouping.
+  - `scripts/sanity_check_race_control_grouped.py` — quick sanity/statistics checks for the grouped output including DNF stats.
+
+- **f1-raceMessages.py hardening:** `f1-raceMessages.py` was updated to dedupe and coalesce identifier columns after merges so downstream groupby operations are safe. The grouping step now writes `data_files/race_control_messages_grouped_with_dnf.csv`. Backups of repaired combined CSVs use timestamped suffixes (for example: `all_race_control_messages_backup_20251207_175359.csv`).
+
+- **Smoke test helper:** `scripts/smoke_run_core.py` is a small import-safe smoke test that exercises headless predictions, checks repaired message files, writes a headless predictions TSV, and reads it back. Run it from the repo root:
+
+  ```pwsh
+  python .\scripts\smoke_run_core.py
+  ```
+
+These additions are intended to stabilize the message grouping and to provide a lightweight, repeatable validation step for local development and CI.
