@@ -2923,7 +2923,13 @@ with tab4:
                 mask = ~all_active_driver_inputs[latest_col].isnull()
                 if mask.any():  # Only proceed if there are non-null values to combine
                     # Use fillna instead of combine_first to avoid the deprecated behavior
-                    all_active_driver_inputs.loc[mask, col] = all_active_driver_inputs.loc[mask, col].fillna(all_active_driver_inputs.loc[mask, latest_col])
+                    tmp_series = all_active_driver_inputs.loc[mask, col].fillna(all_active_driver_inputs.loc[mask, latest_col])
+                    # Avoid FutureWarning about silent downcasting by inferring objects explicitly
+                    try:
+                        tmp_series = tmp_series.infer_objects(copy=False)
+                    except Exception:
+                        pass
+                    all_active_driver_inputs.loc[mask, col] = tmp_series
             all_active_driver_inputs = all_active_driver_inputs.drop(columns=[latest_col], errors='ignore')
  
     
@@ -3004,7 +3010,12 @@ with tab4:
         # Fill any all-NaN columns expected by the preprocessor
         for col in all_preprocessor_columns:
             if col in X_predict.columns and X_predict[col].isnull().all():
-                X_predict.loc[:, col] = X_predict[col].fillna(0)
+                tmp_series = X_predict[col].fillna(0)
+                try:
+                    tmp_series = tmp_series.infer_objects(copy=False)
+                except Exception:
+                    pass
+                X_predict.loc[:, col] = tmp_series
 
         X_predict_prep = preprocessor.transform(X_predict)
     else:
@@ -3020,7 +3031,12 @@ with tab4:
         # Fill all-NaN features with 0 to avoid imputer warning
         for col in X_predict.columns:
             if X_predict[col].isnull().all():
-                X_predict.loc[:, col] = X_predict[col].fillna(0)
+                tmp_series = X_predict[col].fillna(0)
+                try:
+                    tmp_series = tmp_series.infer_objects(copy=False)
+                except Exception:
+                    pass
+                X_predict.loc[:, col] = tmp_series
 
         preprocessor.fit(X_predict)  # Fit if not already fitted, or reuse fitted preprocessor
         X_predict_prep = preprocessor.transform(X_predict)
