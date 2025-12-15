@@ -51,4 +51,7 @@ jobs:
           SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
         run: |
+          # First, test SMTP connectivity and authentication (fast-fail with clear logs)
+          python scripts/send_rich_email_now.py --test-auth
+          # If the auth test passed, proceed to send the email
           python scripts/send_rich_email_now.py

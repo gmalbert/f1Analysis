@@ -30,6 +30,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 def ensure_output_dir(p: Path):
     p.mkdir(parents=True, exist_ok=True)
 
@@ -149,7 +150,7 @@ def main():
                 report_lines.append('lightgbm not installed — attempting SHAP on XGBoost model (may fail)')
                 try:
                     import shap as _shap
-                        logger.info('Computing SHAP values with XGBoost TreeExplainer (may fail)...')
+                    logger.info('Computing SHAP values with XGBoost TreeExplainer (may fail)...')
                     explainer = _shap.TreeExplainer(model)
                     X_shap = X_train.sample(n=min(500, len(X_train)), random_state=1)
                     shap_values = explainer.shap_values(X_shap)
@@ -218,8 +219,3 @@ def main():
             f.write(r + '\n')
 
     print('\n'.join(report_lines))
-    print('\nReport written to', rpt)
-
-
-if __name__ == '__main__':
-    main()
