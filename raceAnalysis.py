@@ -47,7 +47,26 @@ from sklearn.metrics import roc_auc_score
 import xgboost as xgb
 from lightgbm import LGBMRegressor
 from catboost import CatBoostRegressor
-import audit_temporal_leakage
+
+# Import the temporal leakage audit helper. The helper lives in `scripts/`.
+# Try multiple import strategies to be robust when Streamlit changes sys.path.
+try:
+    import audit_temporal_leakage
+except ModuleNotFoundError:
+    try:
+        # Add repository scripts directory to sys.path and retry
+        SCRIPTS_DIR = os.path.join(os.path.dirname(__file__), 'scripts')
+        if SCRIPTS_DIR not in sys.path:
+            sys.path.insert(0, SCRIPTS_DIR)
+        import audit_temporal_leakage
+    except Exception:
+        try:
+            # Try module-style import if repo root is on sys.path
+            import scripts.audit_temporal_leakage as audit_temporal_leakage
+        except Exception:
+            audit_temporal_leakage = None
+            if DEBUG:
+                logger.debug('audit_temporal_leakage module not found; continuing without audit helpers')
 
 EarlyStopping = xgb.callback.EarlyStopping
 

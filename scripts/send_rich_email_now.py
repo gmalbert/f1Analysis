@@ -25,6 +25,7 @@ try:
     import pandas as pd
     from jinja2 import Environment, FileSystemLoader
     from notifications.emailer import send_email
+    import smtplib
 except Exception as e:
     print('Missing dependency or import error:', e)
     sys.exit(2)
@@ -40,6 +41,28 @@ missing = [k for k in ('EMAIL_FROM', 'EMAIL_TO', 'EMAIL_PASSWORD') if not os.get
 if missing:
     print('Missing required environment variables:', ', '.join(missing))
     sys.exit(2)
+
+# CLI helper: allow testing SMTP auth without sending the email
+test_auth = '--test-auth' in sys.argv
+if test_auth:
+    try:
+        print('Testing SMTP connectivity and authentication (no email will be sent)...')
+        with smtplib.SMTP(smtp_server, smtp_port, timeout=30) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            if email_from and email_pass:
+                server.login(email_from, email_pass)
+        print('SMTP authentication succeeded.')
+        sys.exit(0)
+    except smtplib.SMTPAuthenticationError as ex:
+        print('SMTP authentication failed:', ex)
+        print('\nHint: If you are using Gmail with 2FA enabled, create an App Password and store it as the secret `EMAIL_PASSWORD`.')
+        print('See: https://support.google.com/accounts/answer/185833')
+        sys.exit(3)
+    except Exception as ex:
+        print('SMTP connectivity/auth test failed:', ex)
+        sys.exit(3)
 
 # Load a small subset of the analysis CSV
 csv_path = os.path.join(ROOT, 'data_files', 'f1ForAnalysis.csv')
@@ -518,6 +541,19 @@ try:
     )
     print('Rich email sent successfully to:', ', '.join(recipients))
     sys.exit(0)
+except smtplib.SMTPAuthenticationError as e:
+    # Authentication failures are common when secrets are wrong or provider blocks the login
+    print('Error sending rich email: SMTP authentication failed.')
+    print('Server response:', e)
+    print('\nSuggested actions:')
+    print('- Verify GitHub Actions secrets: EMAIL_FROM, EMAIL_PASSWORD, SMTP_SERVER, SMTP_PORT.')
+    print("- If using Gmail with 2FA, create an App Password and store it as `EMAIL_PASSWORD`.")
+    print('  See: https://support.google.com/accounts/answer/185833')
+    print('- Re-run the workflow after updating secrets.')
+    sys.exit(3)
+except smtplib.SMTPException as e:
+    print('SMTP error while sending rich email:', e)
+    sys.exit(3)
 except Exception as e:
     print('Error sending rich email:', e)
     sys.exit(3)
