@@ -10,6 +10,13 @@ import subprocess
 import streamlit as st
 import numpy as np
 import warnings
+# suppress pandas FutureWarning about silent downcasting on fillna; prefer
+# explicit infer_objects where possible, otherwise silence the noisy warning
+warnings.filterwarnings(
+    "ignore",
+    message="Downcasting object dtype arrays on \.fillna, \.ffill, \.bfill is deprecated",
+    category=FutureWarning,
+)
 from pandas.api.types import (
     is_categorical_dtype,
     is_datetime64_any_dtype,
@@ -50,19 +57,29 @@ from catboost import CatBoostRegressor
 
 # Import the temporal leakage audit helper. The helper lives in `scripts/`.
 # Try multiple import strategies to be robust when Streamlit changes sys.path.
+import logging
+# Debugging toggle: set environment variable F1_DEBUG=1 to enable detailed
+# runtime diagnostics (prints shapes, feature lists, and model-reported feature counts).
+DEBUG = os.environ.get('F1_DEBUG', '0') == '1'
+logger = logging.getLogger('f1analysis')
+if DEBUG:
+    logging.basicConfig(level=logging.DEBUG)
+
+# Attempt to import audit_temporal_leakage with fallbacks
+audit_temporal_leakage = None  # type: ignore
 try:
-    import audit_temporal_leakage
+    import audit_temporal_leakage  # type: ignore
 except ModuleNotFoundError:
     try:
         # Add repository scripts directory to sys.path and retry
         SCRIPTS_DIR = os.path.join(os.path.dirname(__file__), 'scripts')
         if SCRIPTS_DIR not in sys.path:
             sys.path.insert(0, SCRIPTS_DIR)
-        import audit_temporal_leakage
+        import audit_temporal_leakage  # type: ignore
     except Exception:
         try:
             # Try module-style import if repo root is on sys.path
-            import scripts.audit_temporal_leakage as audit_temporal_leakage
+            import scripts.audit_temporal_leakage as audit_temporal_leakage  # type: ignore
         except Exception:
             audit_temporal_leakage = None
             if DEBUG:
@@ -81,14 +98,6 @@ CACHE_VERSION = "v2.3"
 # prediction uses the exact same feature ordering and transforms (prevents
 # feature-shape mismatches between training and prediction environments).
 TRAINING_PREPROCESSOR = None
-
-# Debugging toggle: set environment variable F1_DEBUG=1 to enable detailed
-# runtime diagnostics (prints shapes, feature lists, and model-reported feature counts).
-import logging
-DEBUG = os.environ.get('F1_DEBUG', '0') == '1'
-logger = logging.getLogger('f1analysis')
-if DEBUG:
-    logging.basicConfig(level=logging.DEBUG)
 
 def debug_log(msg, obj=None):
     """Helper to emit diagnostics both to Streamlit UI and logs when DEBUG is enabled."""
@@ -2942,12 +2951,15 @@ with tab4:
                 mask = ~all_active_driver_inputs[latest_col].isnull()
                 if mask.any():  # Only proceed if there are non-null values to combine
                     # Use fillna instead of combine_first to avoid the deprecated behavior
-                    tmp_series = all_active_driver_inputs.loc[mask, col].fillna(all_active_driver_inputs.loc[mask, latest_col])
-                    # Avoid FutureWarning about silent downcasting by inferring objects explicitly
+                    # Use infer_objects immediately after fillna to avoid pandas'
+                    # silent downcasting FutureWarning (call on the result).
                     try:
-                        tmp_series = tmp_series.infer_objects(copy=False)
+                        tmp_series = all_active_driver_inputs.loc[mask, col].fillna(
+                            all_active_driver_inputs.loc[mask, latest_col]
+                        ).infer_objects(copy=False)
                     except Exception:
-                        pass
+                        # Fall back to the original fillna result if infer_objects fails
+                        tmp_series = all_active_driver_inputs.loc[mask, col].fillna(all_active_driver_inputs.loc[mask, latest_col])
                     all_active_driver_inputs.loc[mask, col] = tmp_series
             all_active_driver_inputs = all_active_driver_inputs.drop(columns=[latest_col], errors='ignore')
  
@@ -3029,11 +3041,10 @@ with tab4:
         # Fill any all-NaN columns expected by the preprocessor
         for col in all_preprocessor_columns:
             if col in X_predict.columns and X_predict[col].isnull().all():
-                tmp_series = X_predict[col].fillna(0)
                 try:
-                    tmp_series = tmp_series.infer_objects(copy=False)
+                    tmp_series = X_predict[col].fillna(0).infer_objects(copy=False)
                 except Exception:
-                    pass
+                    tmp_series = X_predict[col].fillna(0)
                 X_predict.loc[:, col] = tmp_series
 
         X_predict_prep = preprocessor.transform(X_predict)
@@ -3050,11 +3061,10 @@ with tab4:
         # Fill all-NaN features with 0 to avoid imputer warning
         for col in X_predict.columns:
             if X_predict[col].isnull().all():
-                tmp_series = X_predict[col].fillna(0)
                 try:
-                    tmp_series = tmp_series.infer_objects(copy=False)
+                    tmp_series = X_predict[col].fillna(0).infer_objects(copy=False)
                 except Exception:
-                    pass
+                    tmp_series = X_predict[col].fillna(0)
                 X_predict.loc[:, col] = tmp_series
 
         preprocessor.fit(X_predict)  # Fit if not already fitted, or reuse fitted preprocessor
