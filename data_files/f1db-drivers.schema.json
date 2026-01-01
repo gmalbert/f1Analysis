@@ -1,5 +1,5 @@
 {
-  "$id": "https://www.f1db.com/schema/v6.2.0/splitted/f1db-drivers.schema.json",
+  "$id": "https://www.f1db.com/schema/v6.3.0/splitted/f1db-drivers.schema.json",
   "$schema": "http://json-schema.org/draft-07/schema",
   "title": "F1DB",
   "description": "F1DB Drivers JSON Schema",
@@ -92,6 +92,11 @@
           "minimum": 1,
           "description": "The best finishing position achieved by the driver in a race."
         },
+        "bestSprintRaceResult": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "description": "The best finishing position achieved by the driver in a sprint race."
+        },
         "totalChampionshipWins": {
           "type": "integer",
           "minimum": 0,
@@ -144,6 +149,16 @@
           "minimum": 0,
           "description": "The total number of fastest laps set by the driver."
         },
+        "totalSprintRaceStarts": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The total number of sprint races started by the driver."
+        },
+        "totalSprintRaceWins": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The total number of sprint races won by the driver."
+        },
         "totalDriverOfTheDay": {
           "type": "integer",
           "minimum": 0,
@@ -173,6 +188,7 @@
         "bestChampionshipPosition",
         "bestStartingGridPosition",
         "bestRaceResult",
+        "bestSprintRaceResult",
         "totalChampionshipWins",
         "totalRaceEntries",
         "totalRaceStarts",
@@ -183,6 +199,8 @@
         "totalChampionshipPoints",
         "totalPolePositions",
         "totalFastestLaps",
+        "totalSprintRaceStarts",
+        "totalSprintRaceWins",
         "totalDriverOfTheDay",
         "totalGrandSlams"
       ]

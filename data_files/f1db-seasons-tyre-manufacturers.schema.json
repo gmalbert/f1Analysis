@@ -1,5 +1,5 @@
 {
-  "$id": "https://www.f1db.com/schema/v6.2.0/splitted/f1db-seasons-tyre-manufacturers.schema.json",
+  "$id": "https://www.f1db.com/schema/v6.3.0/splitted/f1db-seasons-tyre-manufacturers.schema.json",
   "$schema": "http://json-schema.org/draft-07/schema",
   "title": "F1DB",
   "description": "F1DB Seasons Tyre Manufacturers JSON Schema",
@@ -30,6 +30,11 @@
           "type": ["integer", "null"],
           "minimum": 1,
           "description": "The best finishing position achieved by the tyre manufacturer during the season."
+        },
+        "bestSprintRaceResult": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "description": "The best sprint race finishing position achieved by the tyre manufacturer during the season."
         },
         "totalRaceEntries": {
           "type": "integer",
@@ -70,6 +75,16 @@
           "type": "integer",
           "minimum": 0,
           "description": "The total number of fastest laps set by the tyre manufacturer during the season."
+        },
+        "totalSprintRaceStarts": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The total number of sprint races started by the tyre manufacturer during the season."
+        },
+        "totalSprintRaceWins": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The total number of sprint races won by the tyre manufacturer during the season."
         }
       },
       "required": [
@@ -77,6 +92,7 @@
         "tyreManufacturerId",
         "bestStartingGridPosition",
         "bestRaceResult",
+        "bestSprintRaceResult",
         "totalRaceEntries",
         "totalRaceStarts",
         "totalRaceWins",
@@ -84,7 +100,9 @@
         "totalPodiums",
         "totalPodiumRaces",
         "totalPolePositions",
-        "totalFastestLaps"
+        "totalFastestLaps",
+        "totalSprintRaceStarts",
+        "totalSprintRaceWins"
       ]
     }
   }

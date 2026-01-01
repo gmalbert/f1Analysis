@@ -100,6 +100,20 @@ try:
         if candidates:
             candidates.sort(key=lambda x: x[0])
             next_race_date, next_race_name = candidates[0]
+            # CHECK: Is the next race more than 3 days away? If so, exit early unless --force is passed.
+            force_send = '--force' in sys.argv
+            days_until_race = (next_race_date - now).total_seconds() / 86400.0
+            if days_until_race > 3 and not force_send:
+                print(f"Next race ({next_race_name}) at {next_race_date.date()} is {days_until_race:.1f} days away (>3 days). Skipping send.")
+                print("Use --force to send anyway.")
+                sys.exit(0)
+        else:
+            # No upcoming races found in the calendar
+            force_send = '--force' in sys.argv
+            if not force_send:
+                print("No upcoming races found in the F1 calendar. Season may be over. Skipping send.")
+                print("Use --force to send the most recent predictions anyway.")
+                sys.exit(0)
     else:
         # fallback: derive next race from analysis CSV (older behavior)
         if 'short_date' in df.columns:
