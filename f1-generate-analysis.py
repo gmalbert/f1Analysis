@@ -2770,6 +2770,76 @@ print("All active drivers saved to active_drivers.csv")
 
 print("Successfully generated F1 analysis data files.")
 
+# --- UPDATE CURRENT YEAR DRIVER TEAM ASSIGNMENTS ---
+# Fix drivers showing old team information by pulling latest team assignments from race results
+print(f"\nUpdating driver team assignments for {current_year}...")
+try:
+    # Load the main analysis CSV
+    main_df = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t', low_memory=False)
+    
+    # Load current year race results to get latest driver-constructor mappings
+    current_results = race_results[race_results['year'] == current_year].copy()
+    
+    if len(current_results) > 0:
+        # For each driver in current year, get their MOST RECENT constructor assignment
+        # Sort by raceId descending to get latest race first
+        current_results_sorted = current_results.sort_values('raceId', ascending=False)
+        latest_driver_teams = current_results_sorted.drop_duplicates(subset=['driverId'], keep='first')[['driverId', 'constructorId']]
+        
+        # Merge with constructors to get constructor names
+        latest_driver_teams = pd.merge(
+            latest_driver_teams,
+            constructors[['id', 'name']],
+            left_on='constructorId',
+            right_on='id',
+            how='left'
+        )
+        latest_driver_teams = latest_driver_teams.rename(columns={'name': 'new_constructorName'})
+        
+        # Update main DataFrame for current year rows only
+        rows_to_update = main_df['grandPrixYear'] == current_year
+        
+        if rows_to_update.sum() > 0:
+            # Create temporary merge to get new constructor info
+            main_df_current = main_df[rows_to_update].copy()
+            main_df_current = pd.merge(
+                main_df_current,
+                latest_driver_teams[['driverId', 'constructorId', 'new_constructorName']],
+                left_on='resultsDriverId',
+                right_on='driverId',
+                how='left',
+                suffixes=('', '_new')
+            )
+            
+            # Update constructorId and constructorName where we have new data
+            update_mask = main_df_current['new_constructorName'].notna()
+            if update_mask.sum() > 0:
+                main_df.loc[rows_to_update & main_df.index.isin(main_df_current[update_mask].index), 'constructorId'] = \
+                    main_df_current.loc[update_mask, 'constructorId_new']
+                main_df.loc[rows_to_update & main_df.index.isin(main_df_current[update_mask].index), 'constructorName'] = \
+                    main_df_current.loc[update_mask, 'new_constructorName']
+                
+                print(f"  ✓ Updated {update_mask.sum()} rows with latest team assignments for {current_year}")
+                print(f"  ✓ Affected drivers: {main_df_current[update_mask]['resultsDriverName'].unique().tolist()}")
+            else:
+                print(f"  ℹ No team updates needed for {current_year} data")
+            
+            # Write updated DataFrame back to CSV
+            main_df.to_csv(
+                path.join(DATA_DIR, 'f1ForAnalysis.csv'),
+                sep='\t',
+                index=False
+            )
+            print(f"  ✓ Updated f1ForAnalysis.csv saved")
+        else:
+            print(f"  ℹ No {current_year} data found in f1ForAnalysis.csv to update")
+    else:
+        print(f"  ℹ No {current_year} race results found in f1db-races-race-results.json")
+        
+except Exception as e:
+    print(f"  ⚠ Warning: Could not update team assignments: {e}")
+    print(f"  Continuing with existing data...")
+
 # Optional smoke check: run post-generation smoke tests when --check-smoke is provided
 def parse_args_for_smoke():
     p = argparse.ArgumentParser(add_help=False)
