@@ -118,6 +118,24 @@ When adding smoke tests, diagnostics, or repair utilities, prefer creating a new
 **DNF Counting Fix (Dec 2025)**: The DNF summary logic was corrected to:
 - Exclude "0" as a retirement reason ("0" means "Finished", not DNF)
 - Deduplicate by race and driver to avoid counting practice session duplicates
+
+### Practice File Delimiter Standardization
+
+**Delimiter Fix (Dec 2025)**: Fixed "practice_best is missing 'raceId' and/or 'driverId'" warning by standardizing practice file delimiters:
+- Converted all `practice_best_by_session*.csv` files from comma to tab delimiters
+- All CSVs in workspace now consistently use tab (`\t`) as separator
+- Matches workspace standard used throughout the project
+
+### Driver Team Assignment Updates
+
+**Automatic Team Updates (Dec 2025)**: The generator now automatically updates driver constructor assignments for the current year after the main CSV is written. This happens in `f1-generate-analysis.py` (lines 2773-2832) and:
+- Reads the latest race results from `f1db-races-race-results.json` for the current year
+- Identifies each driver's most recent constructor assignment (sorted by raceId descending)
+- Updates `f1ForAnalysis.csv` rows where `grandPrixYear == current_year` with latest team information
+- Logs affected drivers and row counts to the console
+- Runs automatically before smoke checks (no manual intervention needed)
+
+This prevents drivers from showing outdated team information due to mid-season transfers or data staleness. Historical data (previous years) is not modified to preserve integrity.
 - Count only actual retirements (Accident, mechanical failures, etc.)
 
 This fix resolves inflated DNF counts (e.g., Australian GP 2025 showed 57 instead of the correct 6).

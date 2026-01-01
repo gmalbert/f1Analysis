@@ -458,6 +458,19 @@ Utils: `requests_cache`, `retry_requests`
 
 ## Recent fixes & utilities (Dec 2025)
 
+- **Practice file delimiter auto-detection (Dec 31, 2025):** Fixed warning "practice_best is missing 'raceId' and/or 'driverId'" caused by incorrect delimiter in practice_best_by_session files. The fix:
+  - Converted all `practice_best_by_session*.csv` files from comma to tab delimiters to match workspace standard
+  - All CSVs in this workspace use `sep='\t'` consistently
+  - No code changes needed - standardized data files instead
+
+- **Driver team assignment fix (Dec 31, 2025):** Added automatic update of driver constructor assignments for current year in `f1-generate-analysis.py` (lines 2773-2832). The generator now:
+  - Reads latest race results for current year from `f1db-races-race-results.json`
+  - Creates driver-to-constructor mapping using most recent race for each driver
+  - Updates `f1ForAnalysis.csv` rows where `grandPrixYear == current_year` with latest team assignments
+  - Logs affected drivers and number of rows updated
+  - Runs automatically after main data generation, before smoke checks
+  - Fixes issue where drivers showed old team information due to mid-season transfers or data staleness
+
 - **Email notification race checking (Dec 30, 2025):** Fixed `scripts/send_rich_email_now.py` to check for upcoming races BEFORE attempting to send, preventing emails during off-season. The script now:
   - Checks `f1db-races.json` for upcoming races first
   - Exits with message if no upcoming races found (season is over) or next race is >3 days away
