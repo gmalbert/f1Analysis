@@ -64,6 +64,7 @@ python .\scripts\export_email_context.py --input data_files\predictions_abu-dhab
 
 Notes & recommendations:
 
+- **Automatic race checking**: The sender checks `f1db-races.json` for upcoming races and will exit (no send) if no upcoming races are found (season is over) or if the next race is more than 3 days away. Use `--force` flag to bypass: `python .\scripts\send_rich_email_now.py --force`
 - The sender regenerates the snippet and TSV on every run so scheduled tasks will always include the latest predictions. For scheduling on Windows use Task Scheduler to call `python .\scripts\send_rich_email_now.py` at the desired cadence.
 - Add persistent send logging for auditability (suggested: append timestamp, recipient, exported file path, exporter exit code and SMTP response to `logs/email_sends.log`).
 - The exporter will include MAE in inline/attachment when present in the predictions file.
@@ -109,6 +110,17 @@ python f1-generate-analysis.py --check-smoke
 
 ### Adding checks and repair scripts
 When adding smoke tests, diagnostics, or repair utilities, prefer creating a new script under the `scripts/` directory (for example `scripts/check_my_fix.py`) rather than modifying production generator files. This keeps the main generator stable and makes CI reviews simpler.
+
+### Race Control Messages and DNF Counting
+
+**Data Pull**: `f1-raceMessages.py` incrementally pulls race control messages from FastF1 API (2018-present) and tracks previously processed sessions by (Year, Round) to avoid redundant API calls.
+
+**DNF Counting Fix (Dec 2025)**: The DNF summary logic was corrected to:
+- Exclude "0" as a retirement reason ("0" means "Finished", not DNF)
+- Deduplicate by race and driver to avoid counting practice session duplicates
+- Count only actual retirements (Accident, mechanical failures, etc.)
+
+This fix resolves inflated DNF counts (e.g., Australian GP 2025 showed 57 instead of the correct 6).
 
 ## Deployment and caching
 The app is deployed on [Streamlit Cloud](https://f1analysis-app.streamlit.app/) and uses aggressive caching with `@st.cache_data` decorators to improve performance. 

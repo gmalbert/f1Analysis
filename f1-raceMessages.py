@@ -280,10 +280,15 @@ if all_race_control_messages:
     ).reset_index()
     #print(race_control_messages_with_grandprix_grouped.shape)
 
-    # DNF summary (move this inside the block)
-    dnf_summary = results[
-        results['resultsReasonRetired'].notnull() & (results['resultsReasonRetired'] != '')
-    ].groupby('raceId_results').size().reset_index(name='dnf_count')
+    # DNF summary: count actual retirements (exclude "0" which means finished, and dedupe by driver)
+    dnf_data = results[
+        results['resultsReasonRetired'].notnull() & 
+        (results['resultsReasonRetired'] != '') & 
+        (results['resultsReasonRetired'] != '0')
+    ].copy()
+    # Deduplicate by race and driver to avoid counting practice session duplicates
+    dnf_data = dnf_data.drop_duplicates(subset=['raceId_results', 'resultsDriverName'])
+    dnf_summary = dnf_data.groupby('raceId_results').size().reset_index(name='dnf_count')
 
     race_control_with_dnf = pd.merge(race_control_messages_with_grandprix_grouped, dnf_summary, left_on='raceId', right_on='raceId_results', how='left')
     #print(race_control_with_dnf.shape)
@@ -347,10 +352,15 @@ else:
             doubleYellowFlag=('Flag', lambda x: (x == 'DOUBLE YELLOW').sum()),
         ).reset_index()
 
-        # DNF summary (move this inside the block)
-        dnf_summary = results[
-            results['resultsReasonRetired'].notnull() & (results['resultsReasonRetired'] != '')
-        ].groupby('raceId_results').size().reset_index(name='dnf_count')
+        # DNF summary: count actual retirements (exclude "0" which means finished, and dedupe by driver)
+        dnf_data = results[
+            results['resultsReasonRetired'].notnull() & 
+            (results['resultsReasonRetired'] != '') & 
+            (results['resultsReasonRetired'] != '0')
+        ].copy()
+        # Deduplicate by race and driver to avoid counting practice session duplicates
+        dnf_data = dnf_data.drop_duplicates(subset=['raceId_results', 'resultsDriverName'])
+        dnf_summary = dnf_data.groupby('raceId_results').size().reset_index(name='dnf_count')
 
         race_control_with_dnf = pd.merge(race_control_messages_with_grandprix_grouped, dnf_summary, left_on='raceId', right_on='raceId_results', how='left')
         race_control_with_dnf.to_csv(path.join(DATA_DIR, 'race_control_messages_grouped_with_dnf.csv'), sep='\t', index=False)

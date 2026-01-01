@@ -1052,7 +1052,7 @@ next_race_columns_to_display = {
     'date': st.column_config.DateColumn("Date", format="YYYY-MM-DD"),
     'time': st.column_config.TimeColumn("Time", format="localized"),
     'fullName': st.column_config.TextColumn("Grand Prix"),
-    'courseLength': st.column_config.TextColumn("Lap Length (km)"),
+    'courseLength': st.column_config.NumberColumn("Lap Length (km)", format="%.2f"),
     'turns': st.column_config.TextColumn("Number of Turns"),
     'laps': st.column_config.TextColumn("Number of Laps")    
 

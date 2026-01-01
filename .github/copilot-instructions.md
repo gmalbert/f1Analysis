@@ -3,12 +3,11 @@ Short, actionable guidance for AI coding agents working on the Formula 1 Analysi
 
 ## Top-level summary
 - **Prediction-focused F1 analysis app**: The primary goal is predicting race winners, DNFs, and pit stop times. All data processing, feature engineering, and UI filters serve these prediction objectives.
-- **Success metric: MAE minimization**: Mean Absolute Error (MAE) is the key performance indicator. Current target is MAE ≤1.5 for final position predictions. All feature engineering and model improvements should focus on reducing MAE.
+- **Success metric: MAE minimization**: Mean Absolute Error (MAE) is the key performance indicator. Current target is MAE ≤1.5 for final position predictions. Current best MAE is ~1.94. All feature engineering and model improvements should focus on reducing MAE.
 - **Multiple Model Support**: Now supports XGBoost, LightGBM, CatBoost, and Ensemble stacking for maximum prediction accuracy and flexibility.
-- **Multiple Model Support**: Now supports XGBoost, LightGBM, CatBoost, and Ensemble stacking for maximum prediction accuracy and flexibility.
-- This is a Streamlit-based data analysis app. The canonical runtime flow is:
-  1. Run `f1-generate-analysis.py` to precompute data and write CSVs into `data_files/`.
-  2. Run the Streamlit app `raceAnalysis.py` which reads those CSVs and displays the UI.
+- **Two-phase architecture**: This is a Streamlit-based data analysis app with a precompute-then-display pattern:
+  1. **Data Generation Phase**: Run `f1-generate-analysis.py` to precompute data and write CSVs into `data_files/` (~10-30 min depending on incremental updates)
+  2. **UI Phase**: Run the Streamlit app `raceAnalysis.py` which reads those CSVs and displays the UI
 - Heavy computations live in the generator step so the UI remains responsive. Don't modify UI behavior without checking how CSVs are produced.
 
 ## Model Architecture & Selection
@@ -55,15 +54,41 @@ Additional preferred practice-best filenames:
   - `data_files/practice_best_by_session.imputed.round_filled.csv` — preferred by the generator when present (produced by `scripts/impute_missing_practice.py` + `scripts/aggregate_practice_laps.py` and a small `round` fill).
   - Fallbacks: `data_files/practice_best_by_session.imputed.csv`, `data_files/practice_best_by_session.csv`, then legacy `practice_best_fp1_fp2.csv` via `get_preferred_file()`.
 - `pit_constants.py` — track-specific pit lane times (entry to exit) as a dictionary. Used for pit stop calculations.
- - Helper scripts (mostly utility/exploration, not part of main workflow):
-  - `scripts/export_feature_selection.py` — consolidates SHAP, Boruta, and correlation artifacts into `scripts/output/feature_selection_summary.csv` and `scripts/output/feature_selection_report.html` (CSV/HTML-first, intended for sharing and quick review).
+- `scripts/` — utility/diagnostic scripts (see `scripts/README.md` for details):
+  - **Data quality & validation**:
+    - `check_generation_smoke.py` — validates `f1ForAnalysis.csv` coverage vs `f1db-races.json` and checks qualifying completeness (use `--strict` to fail CI)
+    - `run_all_smoke_checks.py` — discovers and executes all smoke/check scripts with summarized pass/fail report
+    - `audit_temporal_leakage.py` — conservative audit for temporal leakage (integrated into smoke checks)
+    - `check_points_leader_gap.py` — validates `points_leader_gap` and `round` population per race snapshot
+    - `sanity_check_race_control_grouped.py` — statistics checks for race control messages including DNF stats
+  - **Data repair & preprocessing**:
+    - `impute_missing_practice.py` — imputes numeric practice/session fields (methods: season_mean, median_by_driver, last_race)
+    - `handle_sprint_weekends.py` — tags sprint weekends and normalizes qualifying type
+    - `fill_weather_gaps.py` — interpolates hourly weather and fills gaps
+    - `repair_qualifying.py` — repair helpers for `all_qualifying_races.csv`
+    - `repair_unmapped_racemessages.py` — backup and coalesce suffixed id/round/year columns in race control messages
+    - `aggregate_practice_laps.py` — aggregates practice lap data
+  - **Feature engineering & analysis**:
+    - `export_feature_selection.py` — consolidates SHAP, Boruta, and correlation artifacts into CSV summary and HTML report
+    - `feature_selection_refinement.py` — refines feature selection based on SHAP values
+    - `position_group_analysis.py` — generates position-group diagnostics (MAE by season, confidence intervals)
+  - **Email notifications** (see Email notifications section below for details):
+    - `generate_driver_constructor_map.py` — creates canonical `driver_to_constructor.csv` mapping
+    - `headless_predict_and_write.py` — lightweight headless prediction generator fallback
+    - `export_email_context.py` — builds inline HTML snippet and TSV attachment for email
+    - `send_rich_email_now.py` — SMTP sender wrapper (calls exporter before each send)
+    - `email_preview_for_sender.py` — preview what would be embedded/attached without sending
+  - **Inspection & debugging**:
+    - `inspect_predictions.py`, `inspect_qual.py`, `inspect_qual_details.py` — data inspection utilities
+    - `trace_generator_merges.py` — traces merge operations in the generator
+    - `check_unmapped_racemessages.py` — detects rows missing canonical ids in race messages
+  - **One-off utilities**:
+    - `smoke_run_core.py` — import-safe smoke test for headless predictions and message files
+    - `make_predictions_for_race.py` — creates predictions for a specific race
+- **Root-level data pull scripts** (occasionally used for manual data updates):
   - `f1-raceMessages.py` — pulls race control messages from FastF1 API (skips existing sessions)
   - `f1-pit-stop-loss.py` — calculates pit stop time loss using constants from `pit_constants.py`
-  - `scripts/check_generation_smoke.py` — smoke test that validates `f1ForAnalysis.csv` coverage vs `f1db-races.json` and checks qualifying completeness (use `--strict` to fail CI).
-    - `scripts/run_all_smoke_checks.py` — new convenience runner that discovers and executes smoke/check scripts in `scripts/` and prints a summarized pass/fail report. Use it from the repo root to run the full battery of checks (see script header for usage examples).
-  - `scripts/repair_qualifying.py` — repair helpers for `all_qualifying_races.csv` used during the recent data-repair workflow.
-  - `fastF1-qualifying.py` — fetches qualifying sessions (FastF1), merges with active drivers, and writes `data_files/all_qualifying_races.csv`.
-    - New behavior: the qualifying script now computes `teammate_qual_delta` vectorially and will infer missing `constructorId`/`constructorName` from `f1db-races-race-results.json` when possible (this prevents missing constructor metadata from blocking teammate-delta computation).
+  - `fastF1-qualifying.py` — fetches qualifying sessions (FastF1), writes `all_qualifying_races.csv`, computes `teammate_qual_delta`
   - `f1-analysis-weather.py`, `f1-constructorStandings.py`, etc. — older data pull scripts
 
   Email notification subsystem:
@@ -80,10 +105,14 @@ Additional preferred practice-best filenames:
     - The sender always regenerates the inline snippet and TSV before sending to ensure emails reflect the latest prediction artifact.
     - The exporter prefers an exact per-GP predictions file, falls back to calendar-based next-race selection, then to the newest `predictions_*.csv`, and finally to the headless generator if nothing is found.
     - Attachments and inline snippets include MAE when the predictions file contains MAE metadata.
+    - **Automatic race checking**: The sender checks `f1db-races.json` for upcoming races and will EXIT (no send) if:
+      - No upcoming races are found (season is over)
+      - Next race is more than 3 days away
+      - Use `--force` flag to bypass these checks and send anyway: `python .\scripts\send_rich_email_now.py --force`
     - For scheduled runs, use OS task scheduler (Windows Task Scheduler on Windows) to call `python .\scripts\send_rich_email_now.py` on your desired cadence. Consider adding a persistent send log (suggested file: `logs/email_sends.log`) to maintain an audit trail of sends (timestamp, recipient, attached file, exporter exit code, SMTP response).
 
 ## Important project-specific patterns
-- **MAE-driven feature engineering**: All features are designed to minimize Mean Absolute Error when predicting final race positions. When adding features, evaluate their impact on MAE reduction. Current best MAE is ~1.5.
+- **MAE-driven feature engineering**: All features are designed to minimize Mean Absolute Error when predicting final race positions. When adding features, evaluate their impact on MAE reduction. Current MAE is ~1.94; target is ≤1.5.
 - **Prediction-centric approach**: Features target race winners, DNFs, and pit stop times. Monte Carlo simulation (1000 iterations) and feature selection (RFE, Boruta) are used to optimize MAE.
 - **Tab-separated CSVs**: All CSVs use `sep='\t'` not commas. When reading/writing, always specify `sep='\t'`.
 - **Precompute-first**: The generator intentionally separates heavy computation from the UI. Any change to column names in the generator must be propagated to the UI and vice-versa.
@@ -121,9 +150,28 @@ Additional preferred practice-best filenames:
 # Generate the data (required first step, ~10-30 min depending on incremental updates)
 python f1-generate-analysis.py
 
+# Optional: Run smoke tests after generation to validate data quality
+python f1-generate-analysis.py --check-smoke
+# or run all smoke checks manually
+python .\scripts\run_all_smoke_checks.py
+
 # Run the Streamlit app (opens in browser at localhost:8501)
 streamlit run raceAnalysis.py
 ```
+
+### Git Workflow
+For safe feature development, follow the branching pattern documented in `GIT_WORKFLOW_TIPS.md`:
+```powershell
+# Always start from updated main
+git checkout main && git pull --ff-only
+
+# Create feature branch
+git checkout -b my/feature-branch
+
+# Make changes, commit, and push
+git add . && git commit -m "description" && git push origin my/feature-branch
+```
+This prevents "your changes would be overwritten" errors and keeps work isolated. See `GIT_WORKFLOW_TIPS.md` for detailed explanations of Git terminology and conflict resolution.
 
 ## What to watch for when editing
 - **Compile and test after fixes**: Every time you claim to have fixed a bug or made a change, immediately use `py_compile.compile()` on the affected script (e.g., `python -c "import py_compile; py_compile.compile('f1-generate-analysis.py')"` or `python -c "import py_compile; py_compile.compile('raceAnalysis.py')"` ) to verify it compiles without syntax errors. Don't assume the fix works—validate it.
@@ -395,16 +443,33 @@ Viz: `altair`, `matplotlib`, `seaborn`, `plotly`
 Utils: `requests_cache`, `retry_requests`
 
 ## Notes for AI agents
-- **Root directory structure**: All Python scripts are in the project root. The `.venv/` directory contains the virtual environment (ignored by git).
-- **No formal tests**: Testing is manual via Streamlit UI and MAE evaluation. Use `xgb_test.py` as a reference for XGBoost early stopping.
+- **Root directory structure**: All Python scripts are in the project root. The `.venv/` directory contains the virtual environment (ignored by git). Helper scripts live in `scripts/` directory.
+- **Current Git branch**: Working on `data/f1db-v2026.0.0.beta2` branch (main branch is `main`).
+- **No formal tests**: Testing is manual via Streamlit UI and MAE evaluation. Smoke tests in `scripts/` provide basic data quality validation. Use `scripts/run_all_smoke_checks.py` to run all checks.
 - **Version control**: `.gitignore` excludes `.venv/`, `data_files/f1_cache/`, and many backup/intermediate files. Only track core scripts and final CSVs.
-- **Naming conventions**: Files prefixed with `f1-` are data generation scripts. Files suffixed with `_bkup`, `_with_commented_out_code`, or dates are backups (not actively maintained).
+- **Naming conventions**: 
+  - Files prefixed with `f1-` are data generation scripts
+  - Files suffixed with `_bkup`, `_with_commented_out_code`, or dates are backups (not actively maintained)
+  - Scripts in `scripts/` are utility/diagnostic tools (see `scripts/README.md` for details)
 - **Warning fixes**: Recent updates resolved imputation warnings, numpy RuntimeWarnings, pandas deprecation warnings (including combine_first FutureWarning), and scikit-learn warnings. Always ensure virtual environment is activated to avoid module import issues.
 - **Data quality**: Active driver NaN values are filled with baseline values before CSV export. Weather data is fetched for all missing races, not just recent ones.
 - **Model compatibility**: All new code must handle XGBoost, LightGBM, CatBoost, and Ensemble models. Use isinstance() and hasattr() checks for API differences.
-- **Cache invalidation**: Streamlit Cloud requires explicit cache invalidation for all cached objects. Use CACHE_VERSION system to prevent feature mismatch errors on deployment.
+- **Cache invalidation**: Streamlit Cloud requires explicit cache invalidation for all cached objects. Use CACHE_VERSION system (currently "v2.3") to prevent feature mismatch errors on deployment.
 
 ## Recent fixes & utilities (Dec 2025)
+
+- **Email notification race checking (Dec 30, 2025):** Fixed `scripts/send_rich_email_now.py` to check for upcoming races BEFORE attempting to send, preventing emails during off-season. The script now:
+  - Checks `f1db-races.json` for upcoming races first
+  - Exits with message if no upcoming races found (season is over) or next race is >3 days away
+  - Supports `--force` flag to override and send anyway
+  - This prevents unnecessary emails when predictions files exist but the season has ended
+
+- **DNF counting fix (Dec 30, 2025):** Fixed inflated DNF counts in `f1-raceMessages.py` that occurred due to:
+  - "0" being treated as a retirement reason (it means "Finished")
+  - Multiple rows per driver from practice sessions not being deduplicated
+  - Example: Australian GP 2025 showed 57 DNFs instead of actual 6
+  - Fix: Exclude "0" from retirement reasons and deduplicate by (raceId, driver) before counting
+  - Applied to both code paths (new messages and existing file processing)
 
 - **Race-messages repair & coalesce:** A set of diagnostics and repair helpers were added to address malformed `all_race_control_messages.csv` files that contain suffixed/duplicate identifier columns (for example `raceId_x`, `raceId_y`) which can cause pandas grouping errors such as "Grouper for 'raceId' not 1-dimensional". Relevant scripts:
   - `scripts/check_unmapped_racemessages.py` — detect rows missing canonical ids and emit a small sample for inspection.
@@ -412,6 +477,9 @@ Utils: `requests_cache`, `retry_requests`
   - `scripts/sanity_check_race_control_grouped.py` — quick sanity/statistics checks for the grouped output including DNF stats.
 
 - **f1-raceMessages.py hardening:** `f1-raceMessages.py` was updated to dedupe and coalesce identifier columns after merges so downstream groupby operations are safe. The grouping step now writes `data_files/race_control_messages_grouped_with_dnf.csv`. Backups of repaired combined CSVs use timestamped suffixes (for example: `all_race_control_messages_backup_20251207_175359.csv`).
+  - **Incremental behavior**: Script tracks previously processed sessions by (Year, Round) and only pulls new races from FastF1 API to avoid redundant calls and save time.
+
+- **UI improvements (Dec 30, 2025):** Next Race tab lap length now displays with 2 decimal places instead of 3 for better readability.
 
 - **Smoke test helper:** `scripts/smoke_run_core.py` is a small import-safe smoke test that exercises headless predictions, checks repaired message files, writes a headless predictions TSV, and reads it back. Run it from the repo root:
 

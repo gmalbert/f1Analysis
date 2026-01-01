@@ -1,5 +1,5 @@
 {
-  "$id": "https://www.f1db.com/schema/v6.2.0/splitted/f1db-races-constructor-standings.schema.json",
+  "$id": "https://www.f1db.com/schema/v6.3.0/splitted/f1db-races-constructor-standings.schema.json",
   "$schema": "http://json-schema.org/draft-07/schema",
   "title": "F1DB",
   "description": "F1DB Races Constructor Standings JSON Schema",
@@ -58,6 +58,11 @@
         "positionsGained": {
           "type": ["integer", "null"],
           "description": "The positions gained in the standings since the previous race."
+        },
+        "championshipWon": {
+          "type": "boolean",
+          "default": "false",
+          "description": "Whether the constructor has won the World Constructors' Championship."
         }
       },
       "required": [
@@ -70,7 +75,8 @@
         "constructorId",
         "engineManufacturerId",
         "points",
-        "positionsGained"
+        "positionsGained",
+        "championshipWon"
       ]
     }
   }

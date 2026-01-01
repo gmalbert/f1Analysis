@@ -1,5 +1,5 @@
 {
-  "$id": "https://www.f1db.com/schema/v6.2.0/splitted/f1db-seasons-driver-standings.schema.json",
+  "$id": "https://www.f1db.com/schema/v6.3.0/splitted/f1db-seasons-driver-standings.schema.json",
   "$schema": "http://json-schema.org/draft-07/schema",
   "title": "F1DB",
   "description": "F1DB Seasons Driver Standings JSON Schema",
@@ -41,6 +41,11 @@
           "minimum": 0,
           "multipleOf": 0.01,
           "description": "The total number of points determining the driver's position in the standings."
+        },
+        "championshipWon": {
+          "type": "boolean",
+          "default": "false",
+          "description": "Whether the driver has won the World Drivers' Championship."
         }
       },
       "required": [
@@ -49,7 +54,8 @@
         "positionNumber",
         "positionText",
         "driverId",
-        "points"
+        "points",
+        "championshipWon"
       ]
     }
   }
