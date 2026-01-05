@@ -1964,11 +1964,15 @@ from sklearn.linear_model import LogisticRegression
 X_dnf, y_dnf = get_features_and_target_dnf(data)
 mask = y_dnf.notnull() & np.isfinite(y_dnf)
 X_dnf, y_dnf = X_dnf[mask], y_dnf[mask]
-preprocessor = get_preprocessor_dnf()
-X_dnf_prep = preprocessor.fit_transform(X_dnf)
-clf = LogisticRegression(max_iter=1000)
-clf.fit(X_dnf_prep, y_dnf)
-probs = clf.predict_proba(X_dnf_prep)[:, 1]
+if X_dnf.shape[0] == 0:
+    st.warning("No data available for DNF diagnostic logistic regression; skipping.")
+    probs = np.array([])
+else:
+    preprocessor = get_preprocessor_dnf()
+    X_dnf_prep = preprocessor.fit_transform(X_dnf)
+    clf = LogisticRegression(max_iter=1000)
+    clf.fit(X_dnf_prep, y_dnf)
+    probs = clf.predict_proba(X_dnf_prep)[:, 1]
 
 
 dnf_model = train_and_evaluate_dnf_model(data, CACHE_VERSION)
@@ -3163,10 +3167,14 @@ with tab4:
 
     X_predict_dnf = all_active_driver_inputs[existing_dnf_features]
 
-    if X_predict_dnf.isnull().any().any():
-        # st.warning("Imputing missing values in X_predict_dnf before prediction.")
-        X_predict_dnf = X_predict_dnf.fillna(X_predict_dnf.mean(numeric_only=True))
-    predicted_dnf_proba = dnf_model.predict_proba(X_predict_dnf)[:, 1]  # Probability of DNF=True
+    if X_predict_dnf.shape[0] == 0:
+        st.warning("DNF prediction input is empty; skipping DNF probability predictions.")
+        predicted_dnf_proba = np.array([])
+    else:
+        if X_predict_dnf.isnull().any().any():
+            # st.warning("Imputing missing values in X_predict_dnf before prediction.")
+            X_predict_dnf = X_predict_dnf.fillna(X_predict_dnf.mean(numeric_only=True))
+        predicted_dnf_proba = dnf_model.predict_proba(X_predict_dnf)[:, 1]  # Probability of DNF=True
 
     
     # Holdout year evaluation for Safety Car Model
@@ -3178,10 +3186,13 @@ with tab4:
     holdout_model = train_and_evaluate_safetycar_model(train, CACHE_VERSION)
     # Now use holdout_model for predictions:
     # y_pred = holdout_model.predict_proba(X_test)[:, 1]
-    if X_test.isnull().any().any():
-        
-        X_test = X_test.fillna(X_test.mean(numeric_only=True))
-    y_pred = holdout_model.predict_proba(X_test)[:, 1]
+    if X_test.shape[0] == 0:
+        st.warning("Safety Car holdout test set is empty; skipping predictions.")
+        y_pred = np.array([])
+    else:
+        if X_test.isnull().any().any():
+            X_test = X_test.fillna(X_test.mean(numeric_only=True))
+        y_pred = holdout_model.predict_proba(X_test)[:, 1]
    
     # Find the most recent year with both classes present in test set
     holdout_year = None
@@ -3199,9 +3210,13 @@ with tab4:
 
         # Do NOT re-fit safetycar_model! Instead, create a new model for holdout/test:
         holdout_model = train_and_evaluate_safetycar_model(train, CACHE_VERSION)
-        y_pred = holdout_model.predict_proba(X_test)[:, 1]
-        from sklearn.metrics import roc_auc_score
-        # st.write(f"Safety Car ROC AUC (holdout year {holdout_year}):", roc_auc_score(y_test, y_pred))
+        if X_test.shape[0] == 0:
+            st.warning(f"Safety Car holdout evaluation for year {holdout_year} skipped: test set is empty.")
+            y_pred = np.array([])
+        else:
+            y_pred = holdout_model.predict_proba(X_test)[:, 1]
+            from sklearn.metrics import roc_auc_score
+            # st.write(f"Safety Car ROC AUC (holdout year {holdout_year}):", roc_auc_score(y_test, y_pred))
     else:
         st.write("No valid holdout year with both classes present.")
 
@@ -3268,10 +3283,13 @@ with tab4:
     feature_list = features.columns.tolist()
 
     X_predict_safetycar = synthetic_df[feature_list]
-    if X_predict_safetycar.isnull().any().any():
-
-        X_predict_safetycar = X_predict_safetycar.fillna(X_predict_safetycar.mean(numeric_only=True))
-    safety_car_proba = safetycar_model.predict_proba(X_predict_safetycar)[:, 1][0]
+    if X_predict_safetycar.shape[0] == 0:
+        st.warning("Synthetic safety-car feature row is empty; skipping safety car probability for next race.")
+        safety_car_proba = np.nan
+    else:
+        if X_predict_safetycar.isnull().any().any():
+            X_predict_safetycar = X_predict_safetycar.fillna(X_predict_safetycar.mean(numeric_only=True))
+        safety_car_proba = safetycar_model.predict_proba(X_predict_safetycar)[:, 1][0]
     
     # Add both to your DataFrame
     all_active_driver_inputs['PredictedFinalPosition'] = predicted_position
@@ -3407,10 +3425,13 @@ with tab4:
     race_level = race_level.copy()  # Add this line before assignment if not already a copy
     
     X_sc, y_sc = get_features_and_target_safety_car(safety_cars)
-    if X_sc.isnull().any().any():
-
-        X_sc = X_sc.fillna(X_sc.mean(numeric_only=True))
-    safety_cars['PredictedSafetyCarProbability'] = safetycar_model.predict_proba(X_sc)[:, 1]
+    if X_sc.shape[0] == 0:
+        st.warning("No safety-car historical features available; skipping bulk safety car predictions.")
+        safety_cars['PredictedSafetyCarProbability'] = np.nan
+    else:
+        if X_sc.isnull().any().any():
+            X_sc = X_sc.fillna(X_sc.mean(numeric_only=True))
+        safety_cars['PredictedSafetyCarProbability'] = safetycar_model.predict_proba(X_sc)[:, 1]
     safety_cars['PredictedSafetyCarProbabilityPercentage'] = (safety_cars['PredictedSafetyCarProbability'] * 100).round(3)
 
     historical_display = safety_cars[['grandPrixName', 'grandPrixYear', 'PredictedSafetyCarProbabilityPercentage']].copy()
@@ -4842,18 +4863,27 @@ with tab5:
             X_dnf_eval, y_dnf_eval = get_features_and_target_dnf(data)
             mask_dnf = y_dnf_eval.notnull() & np.isfinite(y_dnf_eval)
             X_dnf_eval, y_dnf_eval = X_dnf_eval[mask_dnf], y_dnf_eval[mask_dnf]
-            X_train_dnf, X_test_dnf, y_train_dnf, y_test_dnf = train_test_split(X_dnf_eval, y_dnf_eval, test_size=0.2, random_state=42)
-            y_pred_dnf_proba = dnf_model.predict_proba(X_test_dnf)[:, 1]
-            mae_dnf = mean_absolute_error(y_test_dnf, y_pred_dnf_proba)
-            st.write(f"Mean Absolute Error (MAE) for DNF Probability (test set): {mae_dnf:.3f}")
-            scores_dnf = cross_val_score(dnf_model, X_dnf_eval, y_dnf_eval, cv=5, scoring='roc_auc')
-            st.write(f"DNF Model - Cross-validated ROC AUC: {scores_dnf.mean():.3f} (± {scores_dnf.std():.3f})")
+            if X_dnf_eval.shape[0] == 0:
+                st.warning("No data for DNF evaluation; skipping DNF test/CV metrics.")
+            else:
+                X_train_dnf, X_test_dnf, y_train_dnf, y_test_dnf = train_test_split(X_dnf_eval, y_dnf_eval, test_size=0.2, random_state=42)
+                if X_test_dnf.shape[0] == 0:
+                    st.warning("DNF test split is empty; skipping MAE calculation.")
+                else:
+                    y_pred_dnf_proba = dnf_model.predict_proba(X_test_dnf)[:, 1]
+                    mae_dnf = mean_absolute_error(y_test_dnf, y_pred_dnf_proba)
+                    st.write(f"Mean Absolute Error (MAE) for DNF Probability (test set): {mae_dnf:.3f}")
+                scores_dnf = cross_val_score(dnf_model, X_dnf_eval, y_dnf_eval, cv=5, scoring='roc_auc')
+                st.write(f"DNF Model - Cross-validated ROC AUC: {scores_dnf.mean():.3f} (± {scores_dnf.std():.3f})")
 
             X_sc_eval, y_sc_eval = get_features_and_target_safety_car(safety_cars)
             mask_sc = y_sc_eval.notnull() & np.isfinite(y_sc_eval)
             X_sc_eval, y_sc_eval = X_sc_eval[mask_sc], y_sc_eval[mask_sc]
-            scores_sc = cross_val_score(safetycar_model, X_sc_eval, y_sc_eval, cv=5, scoring='roc_auc')
-            st.write(f"Safety Car Model - Cross-validated ROC AUC (unique rows): {scores_sc.mean():.3f} (± {scores_sc.std():.3f})")
+            if X_sc_eval.shape[0] == 0:
+                st.warning("No safety-car data for CV evaluation; skipping safety car CV metrics.")
+            else:
+                scores_sc = cross_val_score(safetycar_model, X_sc_eval, y_sc_eval, cv=5, scoring='roc_auc')
+                st.write(f"Safety Car Model - Cross-validated ROC AUC (unique rows): {scores_sc.mean():.3f} (± {scores_sc.std():.3f})")
 
             # Model Accuracy for All Races
             st.write("### Model Accuracy Across All Races")
