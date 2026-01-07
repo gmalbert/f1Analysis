@@ -2844,7 +2844,8 @@ with tab4:
     else:
         last_race = None
 
-    active_driver_ids = data[data['activeDriver'] == True]['resultsDriverId'].unique()
+    latest_year = data['grandPrixYear'].max()
+    active_driver_ids = data[data['grandPrixYear'] == latest_year]['resultsDriverId'].unique()
     all_drivers_df = pd.DataFrame({'resultsDriverId': active_driver_ids})
 
     # Merge with detailsOfNextRace to get historical data if available
@@ -3026,6 +3027,10 @@ with tab4:
     existing_feature_names = [col for col in feature_names if col in all_active_driver_inputs.columns]
 
     X_predict = all_active_driver_inputs[existing_feature_names]
+
+    if X_predict.shape[0] == 0:
+        st.error("No data available for prediction. This may be because there are no active drivers or no historical data for the upcoming race.")
+        st.stop()
     
     # commented out on 9/17/2025 for early stopping
     # predicted_position = model.predict(X_predict)
