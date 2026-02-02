@@ -87,6 +87,8 @@ except ModuleNotFoundError:
 
 EarlyStopping = xgb.callback.EarlyStopping
 
+from footer import add_betting_oracle_footer
+
 
 
 DATA_DIR = 'data_files/'
@@ -5137,3 +5139,5 @@ with tab6:
             X_clean, y_clean = X[mask], y[mask]
             grid_search.fit(X_clean, y_clean)
             st.write("Best params:", grid_search.best_params_)
+
+add_betting_oracle_footer()
