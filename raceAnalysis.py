@@ -3675,6 +3675,8 @@ with tab4:
     
 
 with tab5:
+    # Force immediate render to test if tab executes
+    st.write("Tab 5 START")
     st.header("Predictive Models & Advanced Options")
     st.write("Advanced machine learning models, hyperparameter tuning, and feature selection tools.")
     
@@ -5135,6 +5137,8 @@ def leakage_audit_ui():
         pass
 
 with tab6:
+    # Force immediate render to test if tab executes
+    st.write("Tab 6 START")
     st.header("Data & Debug Tools")
     # Split Data & Debug into subtabs: Raw Data, Temporal Leakage Audit, Hyperparameter Tuning
     raw_tab, audit_tab, tuning_tab = st.tabs(["Raw Data", "Temporal Leakage Audit", "Hyperparameter Tuning"])#, "Position Analysis"])
