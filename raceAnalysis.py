@@ -1162,20 +1162,6 @@ def load_data(nrows, CACHE_VERSION):
 
     return fullResults, pitStops
 
-# Load model and preprocessor BEFORE tabs are created
-# This ensures tab4 (Next Race predictions) can access the preprocessor
-if 'training_preprocessor' not in st.session_state:
-    try:
-        # Use default early stopping for initial load
-        model, mse, r2, mae, mean_err, evals_result, preprocessor = get_trained_model(20, CACHE_VERSION)
-        st.session_state['main_model'] = model
-        st.session_state['global_mae'] = mae
-        st.session_state['training_preprocessor'] = preprocessor
-    except Exception as e:
-        st.error(f"Failed to load model: {e}")
-        # Set None to prevent repeated errors
-        st.session_state['training_preprocessor'] = None
-
 data, pitStops = load_data(10000, CACHE_VERSION)
 
 # Check for duplicate columns and remove them
@@ -2181,6 +2167,20 @@ def rfe_minimize_mae(X, y, min_features=3, max_features=20, step=1, random_state
             best_features = selected
             best_ranking = rfe.ranking_
     return best_features, best_ranking, best_mae, maes
+
+# Load model and preprocessor BEFORE tab content execution
+# This ensures tab4 (Next Race predictions) can access the preprocessor
+if 'training_preprocessor' not in st.session_state:
+    try:
+        # Use default early stopping for initial load
+        model, mse, r2, mae, mean_err, evals_result, preprocessor = get_trained_model(20, CACHE_VERSION)
+        st.session_state['main_model'] = model
+        st.session_state['global_mae'] = mae
+        st.session_state['training_preprocessor'] = preprocessor
+    except Exception as e:
+        st.error(f"Failed to load model: {e}")
+        # Set None to prevent repeated errors
+        st.session_state['training_preprocessor'] = None
 
 with tab1:
     st.header("Data Explorer")
