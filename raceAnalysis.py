@@ -3183,34 +3183,10 @@ with tab4:
         except Exception as _ex:
             debug_log('Diagnostics error', str(_ex))
 
-    # For sklearn-style models (LightGBM, CatBoost, sklearn wrappers) convert
-    # the preprocessed array back into a DataFrame with the exact feature
-    # names used during training. This prevents LightGBM from warning that
-    # "X does not have valid feature names" when it was fitted with names.
+    # All sklearn-style models (XGBoost, LightGBM, CatBoost) accept numpy arrays
+    # The preprocessed data X_predict_prep is already in the correct format (47 features)
     model, _ = get_main_model()
-    if isinstance(model, xgb.Booster):  # XGBoost
-        predicted_position = model.predict(xgb.DMatrix(X_predict_prep))
-    else:  # LightGBM, CatBoost, sklearn models
-        X_for_predict = X_predict_prep
-        if TRAINING_PREPROCESSOR is not None:
-            try:
-                try:
-                    feat_names = TRAINING_PREPROCESSOR.get_feature_names_out()
-                except Exception:
-                    feat_names = []
-                    for name, _, cols in TRAINING_PREPROCESSOR.transformers:
-                        feat_names.extend(cols)
-
-                if len(feat_names) == 0:
-                    # fallback: use numeric column indices
-                    X_for_predict = X_predict_prep
-                else:
-                    # If transformer returned a numpy array, wrap it with column names
-                    X_for_predict = pd.DataFrame(X_predict_prep, columns=feat_names)
-            except Exception:
-                X_for_predict = X_predict_prep
-
-        predicted_position = model.predict(X_for_predict)
+    predicted_position = model.predict(X_predict_prep)
 
     # Get DNF feature names
     dnf_features, _ = get_features_and_target_dnf(data)
