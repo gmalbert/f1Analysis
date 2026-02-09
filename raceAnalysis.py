@@ -3407,8 +3407,14 @@ with tab4:
             # Calculate MAE by individual positions for mapping to predicted positions
             X_mae, y_mae = get_features_and_target(data)
             X_train_mae, X_test_mae, y_train_mae, y_test_mae = train_test_split(X_mae, y_mae, test_size=0.2, random_state=42)
-            preprocessor_mae = get_preprocessor_position(X_mae)
-            preprocessor_mae.fit(X_train_mae)
+            
+            # Use the same preprocessor that was used to train the model
+            preprocessor_mae = st.session_state.get('training_preprocessor')
+            if preprocessor_mae is None:
+                # Fallback - create and fit new preprocessor if training one not available
+                preprocessor_mae = get_preprocessor_position(X_mae)
+                preprocessor_mae.fit(X_train_mae)
+            
             X_test_prep_mae = preprocessor_mae.transform(X_test_mae)
     
             # Predict based on model type
