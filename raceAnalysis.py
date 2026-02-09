@@ -851,6 +851,7 @@ weather_columns_to_display = {
 st.image(path.join(DATA_DIR, 'gridlocked-logo-with-text.png'), width=450)
 st.title(f'F1 Races from {raceNoEarlierThan} to {current_year}')
 st.caption(f"Last updated: {readable_time}")
+st.caption(f"Code deployed at: {datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
 
 # Table styling toggle - set to False to revert to default borders
 CLEAN_TABLE_BORDERS = True
