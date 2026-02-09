@@ -94,7 +94,7 @@ from footer import add_betting_oracle_footer
 DATA_DIR = 'data_files/'
 
 # Cache version - increment this when preprocessor logic changes
-CACHE_VERSION = "v2.3"
+CACHE_VERSION = "v2.4"  # Bumped to invalidate cache after adding preprocessor return value
 
 # Preprocessor used when training the main position model. Set during training so
 # prediction uses the exact same feature ordering and transforms (prevents
@@ -2040,11 +2040,15 @@ def get_safetycar_model(CACHE_VERSION, force_retrain=False):
             return pretrained['model']
     return train_and_evaluate_safetycar_model(safety_cars, CACHE_VERSION)
 
-
-X_sc, y_sc = get_features_and_target_safety_car(safety_cars)
-if X_sc.isnull().any().any():
-    
-    X_sc = X_sc.fillna(X_sc.mean(numeric_only=True))
+# Module-level execution guarded for headless imports
+import os
+if os.environ.get('STREAMLIT_SERVER_HEADLESS') != '1':
+    X_sc, y_sc = get_features_and_target_safety_car(safety_cars)
+    if X_sc.isnull().any().any():
+        X_sc = X_sc.fillna(X_sc.mean(numeric_only=True))
+else:
+    # In headless mode, skip data loading
+    X_sc, y_sc = None, None
 
 def monte_carlo_feature_selection(
     X, y, model_class, n_trials=50, min_features=8, max_features=15, random_state=42, cv=5
@@ -3097,19 +3101,23 @@ with tab4:
     # predicted_position = model.predict(X_predict)
     # Get preprocessor from session state (set by get_main_model)
     preprocessor = st.session_state.get('training_preprocessor')
+    all_preprocessor_columns = []  # Initialize to prevent NameError in headless mode
     
     if preprocessor is None:
-        st.error("CRITICAL: Preprocessor not found in session state! The model's preprocessor was not loaded.")
-        st.error("This will cause feature shape mismatch. Check that models include 'preprocessor' key in pickle artifact.")
-        st.stop()
-    
-    all_preprocessor_columns = []
-    for name, _, cols in preprocessor.transformers:
-        all_preprocessor_columns.extend(cols)
-    missing_cols = [col for col in all_preprocessor_columns if col not in X_predict.columns]
-    if missing_cols:
-        st.error(f"These columns are missing from your prediction data and required by the training preprocessor: {missing_cols}")
-        st.stop()
+        # In headless mode or before model is loaded, skip predictions
+        import os
+        if os.environ.get('STREAMLIT_SERVER_HEADLESS') != '1':
+            st.error("CRITICAL: Preprocessor not found in session state! The model's preprocessor was not loaded.")
+            st.error("This will cause feature shape mismatch. Check that models include 'preprocessor' key in pickle artifact.")
+            st.stop()
+    else:
+        # Only execute prediction code if preprocessor is loaded
+        for name, _, cols in preprocessor.transformers:
+            all_preprocessor_columns.extend(cols)
+        missing_cols = [col for col in all_preprocessor_columns if col not in X_predict.columns]
+        if missing_cols:
+            st.error(f"These columns are missing from your prediction data and required by the training preprocessor: {missing_cols}")
+            st.stop()
 
     # Fill any all-NaN columns expected by the preprocessor
     for col in all_preprocessor_columns:
@@ -3667,7 +3675,6 @@ with tab4:
     
 
 with tab5:
-    st.write("DEBUG: Tab5 is rendering")  # DEBUG
     st.header("Predictive Models & Advanced Options")
     st.write("Advanced machine learning models, hyperparameter tuning, and feature selection tools.")
     
@@ -3729,10 +3736,16 @@ with tab5:
     st.session_state['early_stopping_rounds'] = early_stopping_rounds
 
     # Train model once at the top level for reuse (lazy loading with cache)
-    model, mse, r2, mae, mean_err, evals_result, preprocessor = get_trained_model(early_stopping_rounds, CACHE_VERSION)
-    
-    # Store preprocessor in session state
-    st.session_state['training_preprocessor'] = preprocessor
+    try:
+        model, mse, r2, mae, mean_err, evals_result, preprocessor = get_trained_model(early_stopping_rounds, CACHE_VERSION)
+        
+        # Store preprocessor in session state
+        st.session_state['training_preprocessor'] = preprocessor
+    except Exception as e:
+        st.error(f"CRITICAL ERROR in get_trained_model: {e}")
+        import traceback
+        st.code(traceback.format_exc())
+        st.stop()
     
     # Single expander with 6 tabs inside
     with st.expander("🔧 Advanced Options", expanded=True):
@@ -5122,7 +5135,6 @@ def leakage_audit_ui():
         pass
 
 with tab6:
-    st.write("DEBUG: Tab6 is rendering")  # DEBUG
     st.header("Data & Debug Tools")
     # Split Data & Debug into subtabs: Raw Data, Temporal Leakage Audit, Hyperparameter Tuning
     raw_tab, audit_tab, tuning_tab = st.tabs(["Raw Data", "Temporal Leakage Audit", "Hyperparameter Tuning"])#, "Position Analysis"])
