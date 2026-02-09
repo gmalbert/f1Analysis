@@ -1978,28 +1978,29 @@ def load_pretrained_model(model_name='position_model', CACHE_VERSION='v2.3'):
 
 @st.cache_data
 def get_trained_model(early_stopping_rounds, CACHE_VERSION, force_retrain=False):
-    """Load or train the position prediction model."""
+    """Load or train the position prediction model. Returns (model, mse, r2, mae, mean_err, evals_result, preprocessor)."""
     # Try to load pre-trained model first
     if not force_retrain:
         pretrained = load_pretrained_model('position_model', CACHE_VERSION)
         if pretrained is not None:
-            # Set the global preprocessor for predictions
-            global TRAINING_PREPROCESSOR
-            TRAINING_PREPROCESSOR = pretrained.get('preprocessor')
-            return pretrained['model'], pretrained['mse'], pretrained['r2'], pretrained['mae'], pretrained['mean_err'], pretrained['evals_result']
+            return (pretrained['model'], pretrained['mse'], pretrained['r2'], 
+                    pretrained['mae'], pretrained['mean_err'], pretrained['evals_result'],
+                    pretrained.get('preprocessor'))
     
     # Fall back to training
     model, mse, r2, mae, mean_err, evals_result, preprocessor = train_and_evaluate_model(data, early_stopping_rounds=early_stopping_rounds)
-    # Set the global preprocessor
-    TRAINING_PREPROCESSOR = preprocessor
-    return model, mse, r2, mae, mean_err, evals_result
+    return model, mse, r2, mae, mean_err, evals_result, preprocessor
 
 # Lazy-load models (only when accessed, not at module load)
 def get_main_model():
     if 'main_model' not in st.session_state:
-        model, mse, r2, mae, mean_err, evals_result = get_trained_model(20, CACHE_VERSION)
+        model, mse, r2, mae, mean_err, evals_result, preprocessor = get_trained_model(20, CACHE_VERSION)
         st.session_state['main_model'] = model
         st.session_state['global_mae'] = mae
+        st.session_state['training_preprocessor'] = preprocessor
+        # Also set global for backward compatibility
+        global TRAINING_PREPROCESSOR
+        TRAINING_PREPROCESSOR = preprocessor
     return st.session_state['main_model'], st.session_state.get('global_mae', None)
 
 data['DNF'] = data['DNF'].astype(int)
@@ -3094,50 +3095,32 @@ with tab4:
     
     # commented out on 9/17/2025 for early stopping
     # predicted_position = model.predict(X_predict)
-    # Prefer the preprocessor used during training to ensure identical
-    # feature ordering/transforms. Fall back to creating a new preprocessor
-    # from `X_predict` if training preprocessor is not available.
-    if TRAINING_PREPROCESSOR is not None:
-        preprocessor = TRAINING_PREPROCESSOR
-        all_preprocessor_columns = []
-        for name, _, cols in preprocessor.transformers:
-            all_preprocessor_columns.extend(cols)
-        missing_cols = [col for col in all_preprocessor_columns if col not in X_predict.columns]
-        if missing_cols:
-            st.error(f"These columns are missing from your prediction data and required by the training preprocessor: {missing_cols}")
-            st.stop()
+    # Get preprocessor from session state (set by get_main_model)
+    preprocessor = st.session_state.get('training_preprocessor')
+    
+    if preprocessor is None:
+        st.error("CRITICAL: Preprocessor not found in session state! The model's preprocessor was not loaded.")
+        st.error("This will cause feature shape mismatch. Check that models include 'preprocessor' key in pickle artifact.")
+        st.stop()
+    
+    all_preprocessor_columns = []
+    for name, _, cols in preprocessor.transformers:
+        all_preprocessor_columns.extend(cols)
+    missing_cols = [col for col in all_preprocessor_columns if col not in X_predict.columns]
+    if missing_cols:
+        st.error(f"These columns are missing from your prediction data and required by the training preprocessor: {missing_cols}")
+        st.stop()
 
-        # Fill any all-NaN columns expected by the preprocessor
-        for col in all_preprocessor_columns:
-            if col in X_predict.columns and X_predict[col].isnull().all():
-                try:
-                    tmp_series = X_predict[col].fillna(0).infer_objects(copy=False)
-                except Exception:
-                    tmp_series = X_predict[col].fillna(0)
-                X_predict.loc[:, col] = tmp_series
+    # Fill any all-NaN columns expected by the preprocessor
+    for col in all_preprocessor_columns:
+        if col in X_predict.columns and X_predict[col].isnull().all():
+            try:
+                tmp_series = X_predict[col].fillna(0).infer_objects(copy=False)
+            except Exception:
+                tmp_series = X_predict[col].fillna(0)
+            X_predict.loc[:, col] = tmp_series
 
-        X_predict_prep = preprocessor.transform(X_predict)
-    else:
-        preprocessor = get_preprocessor_position(X_predict)
-        all_preprocessor_columns = []
-        for name, _, cols in preprocessor.transformers:
-            all_preprocessor_columns.extend(cols)
-        missing_cols = [col for col in all_preprocessor_columns if col not in X_predict.columns]
-        if missing_cols:
-            st.error(f"These columns are missing from your prediction data and required by the preprocessor: {missing_cols}")
-            st.stop()
-
-        # Fill all-NaN features with 0 to avoid imputer warning
-        for col in X_predict.columns:
-            if X_predict[col].isnull().all():
-                try:
-                    tmp_series = X_predict[col].fillna(0).infer_objects(copy=False)
-                except Exception:
-                    tmp_series = X_predict[col].fillna(0)
-                X_predict.loc[:, col] = tmp_series
-
-        preprocessor.fit(X_predict)  # Fit if not already fitted, or reuse fitted preprocessor
-        X_predict_prep = preprocessor.transform(X_predict)
+    X_predict_prep = preprocessor.transform(X_predict)
     
     # Runtime diagnostics: when DEBUG enabled, emit model and feature info
     if DEBUG:
@@ -3745,7 +3728,10 @@ with tab5:
     st.session_state['early_stopping_rounds'] = early_stopping_rounds
 
     # Train model once at the top level for reuse (lazy loading with cache)
-    model, mse, r2, mae, mean_err, evals_result = get_trained_model(early_stopping_rounds, CACHE_VERSION)
+    model, mse, r2, mae, mean_err, evals_result, preprocessor = get_trained_model(early_stopping_rounds, CACHE_VERSION)
+    
+    # Store preprocessor in session state
+    st.session_state['training_preprocessor'] = preprocessor
     
     # Single expander with 6 tabs inside
     with st.expander("🔧 Advanced Options", expanded=True):
