@@ -872,6 +872,20 @@ if CLEAN_TABLE_BORDERS:
     </style>
     """, unsafe_allow_html=True)
 
+# Load model and preprocessor BEFORE tabs are created
+# This ensures tab4 (Next Race predictions) can access the preprocessor
+if 'training_preprocessor' not in st.session_state:
+    try:
+        # Use default early stopping for initial load
+        model, mse, r2, mae, mean_err, evals_result, preprocessor = get_trained_model(20, CACHE_VERSION)
+        st.session_state['main_model'] = model
+        st.session_state['global_mae'] = mae
+        st.session_state['training_preprocessor'] = preprocessor
+    except Exception as e:
+        st.error(f"Failed to load model: {e}")
+        # Set None to prevent repeated errors
+        st.session_state['training_preprocessor'] = None
+
 # Create main tabs
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "📊 Data Explorer", 
@@ -3093,446 +3107,448 @@ with tab4:
 
     X_predict = all_active_driver_inputs[existing_feature_names]
 
-    if X_predict.shape[0] == 0:
-        st.error("No data available for prediction. This may be because there are no active drivers or no historical data for the upcoming race.")
-        st.stop()
+    # Note: Empty data check is handled in the preprocessor conditional below
+    # No st.stop() here to allow tabs 5 and 6 to render
     
     # commented out on 9/17/2025 for early stopping
     # predicted_position = model.predict(X_predict)
-    # Get preprocessor from session state (set by get_main_model)
+    # Get preprocessor from session state (set before tabs were created)
     preprocessor = st.session_state.get('training_preprocessor')
-    all_preprocessor_columns = []  # Initialize to prevent NameError in headless mode
     
-    if preprocessor is None:
-        # In headless mode or before model is loaded, skip predictions
-        import os
-        if os.environ.get('STREAMLIT_SERVER_HEADLESS') != '1':
-            st.error("CRITICAL: Preprocessor not found in session state! The model's preprocessor was not loaded.")
-            st.error("This will cause feature shape mismatch. Check that models include 'preprocessor' key in pickle artifact.")
-            st.stop()
+    # Check if we can make predictions
+    if preprocessor is None or X_predict.shape[0] == 0:
+        if preprocessor is None:
+            st.warning("⚠️ Model not loaded yet.")
+            st.info("Visit the **Predictive Models** tab to load the model, then return here for predictions.")
+        else:
+            st.error("No data available for prediction.")
+        # Show weather data only (skip predictions)
     else:
-        # Only execute prediction code if preprocessor is loaded
+        # Have preprocessor and data - proceed with predictions
+        all_preprocessor_columns = []
         for name, _, cols in preprocessor.transformers:
             all_preprocessor_columns.extend(cols)
         missing_cols = [col for col in all_preprocessor_columns if col not in X_predict.columns]
         if missing_cols:
-            st.error(f"These columns are missing from your prediction data and required by the training preprocessor: {missing_cols}")
-            st.stop()
-
-    # Fill any all-NaN columns expected by the preprocessor
-    for col in all_preprocessor_columns:
-        if col in X_predict.columns and X_predict[col].isnull().all():
-            try:
-                tmp_series = X_predict[col].fillna(0).infer_objects(copy=False)
-            except Exception:
-                tmp_series = X_predict[col].fillna(0)
-            X_predict.loc[:, col] = tmp_series
-
-    X_predict_prep = preprocessor.transform(X_predict)
-    
-    # Runtime diagnostics: when DEBUG enabled, emit model and feature info
-    if DEBUG:
-        try:
-            debug_log("Model type", type(model))
-            # XGBoost trained via sklearn wrapper
-            try:
-                booster = None
-                if hasattr(model, 'get_booster'):
-                    booster = model.get_booster()
-                elif isinstance(model, xgb.Booster):
-                    booster = model
-                if booster is not None and hasattr(booster, 'num_features'):
-                    debug_log("XGBoost booster.num_features()", booster.num_features())
-            except Exception as _e:
-                debug_log("Could not read XGBoost booster features", str(_e))
-
-            # sklearn-style attribute
-            try:
-                if hasattr(model, 'n_features_in_'):
-                    debug_log('model.n_features_in_', getattr(model, 'n_features_in_', None))
-            except Exception:
-                pass
-
-            debug_log('X_predict.shape', X_predict.shape)
-            try:
-                debug_log('X_predict_prep.shape', X_predict_prep.shape)
-            except Exception:
-                debug_log('X_predict_prep', type(X_predict_prep))
-
-            # Feature names expected by preprocessor
-            if TRAINING_PREPROCESSOR is not None:
-                try:
-                    feat_names = TRAINING_PREPROCESSOR.get_feature_names_out()
-                except Exception:
-                    feat_names = []
-                    for name, _, cols in TRAINING_PREPROCESSOR.transformers:
-                        feat_names.extend(cols)
-                debug_log('training_preprocessor_feature_count', len(feat_names))
-                debug_log('training_preprocessor_feature_sample', feat_names[:50])
-            else:
-                debug_log('TRAINING_PREPROCESSOR not set', None)
-        except Exception as _ex:
-            debug_log('Diagnostics error', str(_ex))
-
-    # All sklearn-style models (XGBoost, LightGBM, CatBoost) accept numpy arrays
-    # The preprocessed data X_predict_prep is already in the correct format (47 features)
-    model, _ = get_main_model()
-    predicted_position = model.predict(X_predict_prep)
-
-    # Get DNF feature names
-    dnf_features, _ = get_features_and_target_dnf(data)
-    dnf_feature_names = dnf_features.columns.tolist()
-
-    # For position prediction
-    for col in feature_names:
-        if col not in all_active_driver_inputs.columns:
-            all_active_driver_inputs[col] = np.nan
-
-    # For DNF prediction
-    for col in dnf_feature_names:
-        if col not in all_active_driver_inputs.columns:
-            all_active_driver_inputs[col] = np.nan
-
-    existing_dnf_features = [col for col in dnf_feature_names if col in all_active_driver_inputs.columns]
-    missing_dnf_features = [col for col in dnf_feature_names if col not in all_active_driver_inputs.columns]
-    if missing_dnf_features:
-        st.warning(f"These DNF features are missing from prediction data and will be skipped: {missing_dnf_features}")
-
-    X_predict_dnf = all_active_driver_inputs[existing_dnf_features]
-
-    if X_predict_dnf.shape[0] == 0:
-        st.warning("DNF prediction input is empty; skipping DNF probability predictions.")
-        predicted_dnf_proba = np.array([])
-    else:
-        if X_predict_dnf.isnull().any().any():
-            # st.warning("Imputing missing values in X_predict_dnf before prediction.")
-            X_predict_dnf = X_predict_dnf.fillna(X_predict_dnf.mean(numeric_only=True))
-        predicted_dnf_proba = get_dnf_model(CACHE_VERSION).predict_proba(X_predict_dnf)[:, 1]  # Probability of DNF=True
-
-    
-    # Holdout year evaluation for Safety Car Model
-    train = safety_cars[safety_cars['grandPrixYear'] < current_year]
-    test = safety_cars[safety_cars['grandPrixYear'] == current_year]
-    X_train, y_train = get_features_and_target_safety_car(train)
-    X_test, y_test = get_features_and_target_safety_car(test)
-
-    holdout_model = train_and_evaluate_safetycar_model(train, CACHE_VERSION)
-    # Now use holdout_model for predictions:
-    # y_pred = holdout_model.predict_proba(X_test)[:, 1]
-    if X_test.shape[0] == 0:
-        st.warning("Safety Car holdout test set is empty; skipping predictions.")
-        y_pred = np.array([])
-    else:
-        if X_test.isnull().any().any():
-            X_test = X_test.fillna(X_test.mean(numeric_only=True))
-        y_pred = holdout_model.predict_proba(X_test)[:, 1]
-   
-    # Find the most recent year with both classes present in test set
-    holdout_year = None
-    for year in sorted(safety_cars['grandPrixYear'].unique(), reverse=True):
-        test = safety_cars[safety_cars['grandPrixYear'] == year]
-        if len(test['SafetyCarStatus'].unique()) > 1:
-            holdout_year = year
-            break
-
-    if holdout_year is not None:
-        train = safety_cars[safety_cars['grandPrixYear'] < holdout_year]
-        test = safety_cars[safety_cars['grandPrixYear'] == holdout_year]
-        X_train, y_train = get_features_and_target_safety_car(train)
-        X_test, y_test = get_features_and_target_safety_car(test)
-
-        # Do NOT re-fit safetycar_model! Instead, create a new model for holdout/test:
-        holdout_model = train_and_evaluate_safetycar_model(train, CACHE_VERSION)
-        if X_test.shape[0] == 0:
-            st.warning(f"Safety Car holdout evaluation for year {holdout_year} skipped: test set is empty.")
-            y_pred = np.array([])
+            st.error(f"Missing required columns: {missing_cols}")
         else:
-            y_pred = holdout_model.predict_proba(X_test)[:, 1]
-            from sklearn.metrics import roc_auc_score
-            # st.write(f"Safety Car ROC AUC (holdout year {holdout_year}):", roc_auc_score(y_test, y_pred))
-    else:
-        st.write("No valid holdout year with both classes present.")
+            # Fill any all-NaN columns expected by the preprocessor
+            for col in all_preprocessor_columns:
+                if col in X_predict.columns and X_predict[col].isnull().all():
+                    try:
+                        tmp_series = X_predict[col].fillna(0).infer_objects(copy=False)
+                    except Exception:
+                        tmp_series = X_predict[col].fillna(0)
+                    X_predict.loc[:, col] = tmp_series
 
-    # Get race-level features for the next race (should be one row)
-    race_level = detailsOfNextRace.drop_duplicates(subset=['grandPrixYear', 'grandPrixName'])
-
-    features, _ = get_features_and_target_safety_car(safety_cars)
-    safetycar_feature_columns = features.columns.tolist()
-
-
-    synthetic_row = {col: np.nan for col in safetycar_feature_columns}
-
-    # Populate synthetic row from `nextRace` when available; otherwise keep NaN
-    if not nextRace.empty:
-        # use .iat for scalar access
-        if 'year' in nextRace.columns:
-            synthetic_row['grandPrixYear'] = nextRace['year'].iat[0]
-        if 'fullName' in nextRace.columns:
-            synthetic_row['grandPrixName'] = nextRace['fullName'].iat[0]
-    else:
-        synthetic_row['grandPrixYear'] = np.nan
-        synthetic_row['grandPrixName'] = np.nan
+            X_predict_prep = preprocessor.transform(X_predict)
     
-    # Fill with available info from nextRace, schedule, weather, etc.
-    for col in ['circuitId', 'grandPrixLaps', 'turns', 'streetRace', 'trackRace']:
-        if not nextRace.empty and col in nextRace.columns:
-            synthetic_row[col] = nextRace[col].iat[0]
-
-    # Fill weather features if available
-    weather_row = weatherData[weatherData['grandPrixId'] == next_race_id]
-    if not weather_row.empty:
-        for col in ['average_temp', 'average_humidity', 'average_wind_speed', 'total_precipitation']:
-            if col in weather_row.columns:
-                # safe scalar access
+            # Runtime diagnostics: when DEBUG enabled, emit model and feature info
+            if DEBUG:
                 try:
-                    synthetic_row[col] = weather_row[col].iat[0]
-                except Exception:
-                    synthetic_row[col] = weather_row[col].values[0]
+                    debug_log("Model type", type(model))
+                    # XGBoost trained via sklearn wrapper
+                    try:
+                        booster = None
+                        if hasattr(model, 'get_booster'):
+                            booster = model.get_booster()
+                        elif isinstance(model, xgb.Booster):
+                            booster = model
+                        if booster is not None and hasattr(booster, 'num_features'):
+                            debug_log("XGBoost booster.num_features()", booster.num_features())
+                    except Exception as _e:
+                        debug_log("Could not read XGBoost booster features", str(_e))
 
-    
-    safety_cars['SafetyCarStatus'] = (safety_cars['SafetyCarStatus'] > 0).astype(int)
+                    # sklearn-style attribute
+                    try:
+                        if hasattr(model, 'n_features_in_'):
+                            debug_log('model.n_features_in_', getattr(model, 'n_features_in_', None))
+                    except Exception:
+                        pass
 
-    # Improved logic: Use median of last 2 years for this GP if available, else overall median
-    for col in safetycar_feature_columns:
-        if pd.isna(synthetic_row[col]) and col in safety_cars.columns:
-            if pd.api.types.is_numeric_dtype(safety_cars[col]):
-                gp_vals = safety_cars[safety_cars['grandPrixName'] == synthetic_row['grandPrixName']]
-                # Aggregate by year (mean across drivers for each year)
-                per_race_means = gp_vals.groupby('grandPrixYear')[col].mean()
-                # Get the last 2 years
-                last_2_years = sorted(per_race_means.index)[-2:]
-                per_race_means_recent = per_race_means.loc[last_2_years]
-                if not per_race_means_recent.empty:
-                    synthetic_row[col] = per_race_means_recent.median()
-                else:
-                    synthetic_row[col] = safety_cars[col].dropna().median()
+                    debug_log('X_predict.shape', X_predict.shape)
+                    try:
+                        debug_log('X_predict_prep.shape', X_predict_prep.shape)
+                    except Exception:
+                        debug_log('X_predict_prep', type(X_predict_prep))
+
+                    # Feature names expected by preprocessor
+                    if TRAINING_PREPROCESSOR is not None:
+                        try:
+                            feat_names = TRAINING_PREPROCESSOR.get_feature_names_out()
+                        except Exception:
+                            feat_names = []
+                            for name, _, cols in TRAINING_PREPROCESSOR.transformers:
+                                feat_names.extend(cols)
+                        debug_log('training_preprocessor_feature_count', len(feat_names))
+                        debug_log('training_preprocessor_feature_sample', feat_names[:50])
+                    else:
+                        debug_log('TRAINING_PREPROCESSOR not set', None)
+                except Exception as _ex:
+                    debug_log('Diagnostics error', str(_ex))
+
+            # All sklearn-style models (XGBoost, LightGBM, CatBoost) accept numpy arrays
+            # The preprocessed data X_predict_prep is already in the correct format (47 features)
+            model, _ = get_main_model()
+            predicted_position = model.predict(X_predict_prep)
+
+            # Get DNF feature names
+            dnf_features, _ = get_features_and_target_dnf(data)
+            dnf_feature_names = dnf_features.columns.tolist()
+
+            # For position prediction
+            for col in feature_names:
+                if col not in all_active_driver_inputs.columns:
+                    all_active_driver_inputs[col] = np.nan
+
+            # For DNF prediction
+            for col in dnf_feature_names:
+                if col not in all_active_driver_inputs.columns:
+                    all_active_driver_inputs[col] = np.nan
+
+            existing_dnf_features = [col for col in dnf_feature_names if col in all_active_driver_inputs.columns]
+            missing_dnf_features = [col for col in dnf_feature_names if col not in all_active_driver_inputs.columns]
+            if missing_dnf_features:
+                st.warning(f"These DNF features are missing from prediction data and will be skipped: {missing_dnf_features}")
+
+            X_predict_dnf = all_active_driver_inputs[existing_dnf_features]
+
+            if X_predict_dnf.shape[0] == 0:
+                st.warning("DNF prediction input is empty; skipping DNF probability predictions.")
+                predicted_dnf_proba = np.array([])
             else:
-                synthetic_row[col] = np.nan
+                if X_predict_dnf.isnull().any().any():
+                    # st.warning("Imputing missing values in X_predict_dnf before prediction.")
+                    X_predict_dnf = X_predict_dnf.fillna(X_predict_dnf.mean(numeric_only=True))
+                predicted_dnf_proba = get_dnf_model(CACHE_VERSION).predict_proba(X_predict_dnf)[:, 1]  # Probability of DNF=True
 
-    synthetic_df = pd.DataFrame([synthetic_row])
-
-
-    features, _ = get_features_and_target_safety_car(safety_cars)
-    feature_list = features.columns.tolist()
-
-    X_predict_safetycar = synthetic_df[feature_list]
-    if X_predict_safetycar.shape[0] == 0:
-        st.warning("Synthetic safety-car feature row is empty; skipping safety car probability for next race.")
-        safety_car_proba = np.nan
-    else:
-        if X_predict_safetycar.isnull().any().any():
-            X_predict_safetycar = X_predict_safetycar.fillna(X_predict_safetycar.mean(numeric_only=True))
-        safety_car_proba = get_safetycar_model(CACHE_VERSION).predict_proba(X_predict_safetycar)[:, 1][0]
     
-    # Add both to your DataFrame
-    all_active_driver_inputs['PredictedFinalPosition'] = predicted_position
-    all_active_driver_inputs['PredictedDNFProbability'] = predicted_dnf_proba
-    all_active_driver_inputs['PredictedDNFProbabilityPercentage'] = (all_active_driver_inputs['PredictedDNFProbability'] * 100).round(3)
-    _, global_mae = get_main_model()
-    all_active_driver_inputs['PredictedFinalPosition_Low'] = (all_active_driver_inputs['PredictedFinalPosition'] - global_mae).astype(float)
-    all_active_driver_inputs['PredictedFinalPosition_High'] = (all_active_driver_inputs['PredictedFinalPosition'] + global_mae).astype(float)
+            # Holdout year evaluation for Safety Car Model
+            train = safety_cars[safety_cars['grandPrixYear'] < current_year]
+            test = safety_cars[safety_cars['grandPrixYear'] == current_year]
+            X_train, y_train = get_features_and_target_safety_car(train)
+            X_test, y_test = get_features_and_target_safety_car(test)
 
-    # Get latest DNF stats for each active driver from the main dataset
-    latest_dnf_stats = (
-        data.sort_values('grandPrixYear')
-            .groupby('resultsDriverId')
-            .tail(1)[['resultsDriverId', 'driverDNFCount', 'driverDNFAvg']]
-    )
+            holdout_model = train_and_evaluate_safetycar_model(train, CACHE_VERSION)
+            # Now use holdout_model for predictions:
+            # y_pred = holdout_model.predict_proba(X_test)[:, 1]
+            if X_test.shape[0] == 0:
+                st.warning("Safety Car holdout test set is empty; skipping predictions.")
+                y_pred = np.array([])
+            else:
+                if X_test.isnull().any().any():
+                    X_test = X_test.fillna(X_test.mean(numeric_only=True))
+                y_pred = holdout_model.predict_proba(X_test)[:, 1]
+   
+            # Find the most recent year with both classes present in test set
+            holdout_year = None
+            for year in sorted(safety_cars['grandPrixYear'].unique(), reverse=True):
+                test = safety_cars[safety_cars['grandPrixYear'] == year]
+                if len(test['SafetyCarStatus'].unique()) > 1:
+                    holdout_year = year
+                    break
 
-    # Merge the latest stats
-    all_active_driver_inputs = pd.merge(
-        all_active_driver_inputs,
-        latest_dnf_stats,
-        on='resultsDriverId',
-        how='left',
-        suffixes=('', '_latest')
-    )
+            if holdout_year is not None:
+                train = safety_cars[safety_cars['grandPrixYear'] < holdout_year]
+                test = safety_cars[safety_cars['grandPrixYear'] == holdout_year]
+                X_train, y_train = get_features_and_target_safety_car(train)
+                X_test, y_test = get_features_and_target_safety_car(test)
 
-    # Use latest stats if available, otherwise fill with 0
-    all_active_driver_inputs['driverDNFCount'] = (
-        all_active_driver_inputs['driverDNFCount_latest']
-        .fillna(all_active_driver_inputs['driverDNFCount'])
-        .fillna(0)
-        .astype(int)
-    )
+                # Do NOT re-fit safetycar_model! Instead, create a new model for holdout/test:
+                holdout_model = train_and_evaluate_safetycar_model(train, CACHE_VERSION)
+                if X_test.shape[0] == 0:
+                    st.warning(f"Safety Car holdout evaluation for year {holdout_year} skipped: test set is empty.")
+                    y_pred = np.array([])
+                else:
+                    y_pred = holdout_model.predict_proba(X_test)[:, 1]
+                    from sklearn.metrics import roc_auc_score
+                    # st.write(f"Safety Car ROC AUC (holdout year {holdout_year}):", roc_auc_score(y_test, y_pred))
+            else:
+                st.write("No valid holdout year with both classes present.")
 
-    all_active_driver_inputs['driverDNFAvg'] = (
-        all_active_driver_inputs['driverDNFAvg_latest']
-        .fillna(all_active_driver_inputs['driverDNFAvg'])
-        .fillna(0.0)
-        .astype(float)
-    )
+            # Get race-level features for the next race (should be one row)
+            race_level = detailsOfNextRace.drop_duplicates(subset=['grandPrixYear', 'grandPrixName'])
 
-    # Clean up temporary columns
-    all_active_driver_inputs = all_active_driver_inputs.drop(columns=['driverDNFCount_latest', 'driverDNFAvg_latest'], errors='ignore')
+            features, _ = get_features_and_target_safety_car(safety_cars)
+            safetycar_feature_columns = features.columns.tolist()
 
-    # Calculate percentage
-    all_active_driver_inputs['driverDNFPercentage'] = (all_active_driver_inputs['driverDNFAvg'] * 100).round(3)
 
-    all_active_driver_inputs['driverDNFPercentage'] = (all_active_driver_inputs['driverDNFAvg'].fillna(0).astype(float) * 100).round(3)
+            synthetic_row = {col: np.nan for col in safetycar_feature_columns}
+
+            # Populate synthetic row from `nextRace` when available; otherwise keep NaN
+            if not nextRace.empty:
+                # use .iat for scalar access
+                if 'year' in nextRace.columns:
+                    synthetic_row['grandPrixYear'] = nextRace['year'].iat[0]
+                if 'fullName' in nextRace.columns:
+                    synthetic_row['grandPrixName'] = nextRace['fullName'].iat[0]
+            else:
+                synthetic_row['grandPrixYear'] = np.nan
+                synthetic_row['grandPrixName'] = np.nan
+    
+            # Fill with available info from nextRace, schedule, weather, etc.
+            for col in ['circuitId', 'grandPrixLaps', 'turns', 'streetRace', 'trackRace']:
+                if not nextRace.empty and col in nextRace.columns:
+                    synthetic_row[col] = nextRace[col].iat[0]
+
+            # Fill weather features if available
+            weather_row = weatherData[weatherData['grandPrixId'] == next_race_id]
+            if not weather_row.empty:
+                for col in ['average_temp', 'average_humidity', 'average_wind_speed', 'total_precipitation']:
+                    if col in weather_row.columns:
+                        # safe scalar access
+                        try:
+                            synthetic_row[col] = weather_row[col].iat[0]
+                        except Exception:
+                            synthetic_row[col] = weather_row[col].values[0]
+
+    
+            safety_cars['SafetyCarStatus'] = (safety_cars['SafetyCarStatus'] > 0).astype(int)
+
+            # Improved logic: Use median of last 2 years for this GP if available, else overall median
+            for col in safetycar_feature_columns:
+                if pd.isna(synthetic_row[col]) and col in safety_cars.columns:
+                    if pd.api.types.is_numeric_dtype(safety_cars[col]):
+                        gp_vals = safety_cars[safety_cars['grandPrixName'] == synthetic_row['grandPrixName']]
+                        # Aggregate by year (mean across drivers for each year)
+                        per_race_means = gp_vals.groupby('grandPrixYear')[col].mean()
+                        # Get the last 2 years
+                        last_2_years = sorted(per_race_means.index)[-2:]
+                        per_race_means_recent = per_race_means.loc[last_2_years]
+                        if not per_race_means_recent.empty:
+                            synthetic_row[col] = per_race_means_recent.median()
+                        else:
+                            synthetic_row[col] = safety_cars[col].dropna().median()
+                    else:
+                        synthetic_row[col] = np.nan
+
+            synthetic_df = pd.DataFrame([synthetic_row])
+
+
+            features, _ = get_features_and_target_safety_car(safety_cars)
+            feature_list = features.columns.tolist()
+
+            X_predict_safetycar = synthetic_df[feature_list]
+            if X_predict_safetycar.shape[0] == 0:
+                st.warning("Synthetic safety-car feature row is empty; skipping safety car probability for next race.")
+                safety_car_proba = np.nan
+            else:
+                if X_predict_safetycar.isnull().any().any():
+                    X_predict_safetycar = X_predict_safetycar.fillna(X_predict_safetycar.mean(numeric_only=True))
+                safety_car_proba = get_safetycar_model(CACHE_VERSION).predict_proba(X_predict_safetycar)[:, 1][0]
+    
+            # Add both to your DataFrame
+            all_active_driver_inputs['PredictedFinalPosition'] = predicted_position
+            all_active_driver_inputs['PredictedDNFProbability'] = predicted_dnf_proba
+            all_active_driver_inputs['PredictedDNFProbabilityPercentage'] = (all_active_driver_inputs['PredictedDNFProbability'] * 100).round(3)
+            _, global_mae = get_main_model()
+            all_active_driver_inputs['PredictedFinalPosition_Low'] = (all_active_driver_inputs['PredictedFinalPosition'] - global_mae).astype(float)
+            all_active_driver_inputs['PredictedFinalPosition_High'] = (all_active_driver_inputs['PredictedFinalPosition'] + global_mae).astype(float)
+
+            # Get latest DNF stats for each active driver from the main dataset
+            latest_dnf_stats = (
+                data.sort_values('grandPrixYear')
+                    .groupby('resultsDriverId')
+                    .tail(1)[['resultsDriverId', 'driverDNFCount', 'driverDNFAvg']]
+            )
+
+            # Merge the latest stats
+            all_active_driver_inputs = pd.merge(
+                all_active_driver_inputs,
+                latest_dnf_stats,
+                on='resultsDriverId',
+                how='left',
+                suffixes=('', '_latest')
+            )
+
+            # Use latest stats if available, otherwise fill with 0
+            all_active_driver_inputs['driverDNFCount'] = (
+                all_active_driver_inputs['driverDNFCount_latest']
+                .fillna(all_active_driver_inputs['driverDNFCount'])
+                .fillna(0)
+                .astype(int)
+            )
+
+            all_active_driver_inputs['driverDNFAvg'] = (
+                all_active_driver_inputs['driverDNFAvg_latest']
+                .fillna(all_active_driver_inputs['driverDNFAvg'])
+                .fillna(0.0)
+                .astype(float)
+            )
+
+            # Clean up temporary columns
+            all_active_driver_inputs = all_active_driver_inputs.drop(columns=['driverDNFCount_latest', 'driverDNFAvg_latest'], errors='ignore')
+
+            # Calculate percentage
+            all_active_driver_inputs['driverDNFPercentage'] = (all_active_driver_inputs['driverDNFAvg'] * 100).round(3)
+
+            all_active_driver_inputs['driverDNFPercentage'] = (all_active_driver_inputs['driverDNFAvg'].fillna(0).astype(float) * 100).round(3)
     
 
-    # --- Rookie DNF Simulation: Overwrite rookie DNF predictions with simulation ---
-    all_active_driver_inputs = simulate_rookie_dnf(data, all_active_driver_inputs, current_year, n_simulations=1000)
-    if 'PredictedDNFProbabilityStd' not in all_active_driver_inputs.columns:
-        all_active_driver_inputs['PredictedDNFProbabilityStd'] = np.nan
+            # --- Rookie DNF Simulation: Overwrite rookie DNF predictions with simulation ---
+            all_active_driver_inputs = simulate_rookie_dnf(data, all_active_driver_inputs, current_year, n_simulations=1000)
+            if 'PredictedDNFProbabilityStd' not in all_active_driver_inputs.columns:
+                all_active_driver_inputs['PredictedDNFProbabilityStd'] = np.nan
 
-    # --- Rookie Simulation: Overwrite rookie predictions with simulation ---
-    all_active_driver_inputs = simulate_rookie_predictions(data, all_active_driver_inputs, current_year, n_simulations=1000)
-    if 'PredictedFinalPositionStd' not in all_active_driver_inputs.columns:
-        all_active_driver_inputs['PredictedFinalPositionStd'] = np.nan
+            # --- Rookie Simulation: Overwrite rookie predictions with simulation ---
+            all_active_driver_inputs = simulate_rookie_predictions(data, all_active_driver_inputs, current_year, n_simulations=1000)
+            if 'PredictedFinalPositionStd' not in all_active_driver_inputs.columns:
+                all_active_driver_inputs['PredictedFinalPositionStd'] = np.nan
 
-    all_active_driver_inputs.sort_values(by='PredictedFinalPosition', ascending=True, inplace=True)
-    all_active_driver_inputs['Rank'] = range(1, len(all_active_driver_inputs) + 1)
-    all_active_driver_inputs['Historical MAE by Rank'] = all_active_driver_inputs['Rank'].map(position_mae_dict)
-    all_active_driver_inputs = all_active_driver_inputs.set_index('Rank')
+            all_active_driver_inputs.sort_values(by='PredictedFinalPosition', ascending=True, inplace=True)
+            all_active_driver_inputs['Rank'] = range(1, len(all_active_driver_inputs) + 1)
+            all_active_driver_inputs['Historical MAE by Rank'] = all_active_driver_inputs['Rank'].map(position_mae_dict)
+            all_active_driver_inputs = all_active_driver_inputs.set_index('Rank')
 
-    # Fix the column data for display after the merge
-    all_active_driver_inputs.drop(columns=['constructorName', 'constructorName_y'], inplace=True, errors='ignore')
-    all_active_driver_inputs = all_active_driver_inputs.rename(columns={'constructorName_x': 'constructorName'})
+            # Fix the column data for display after the merge
+            all_active_driver_inputs.drop(columns=['constructorName', 'constructorName_y'], inplace=True, errors='ignore')
+            all_active_driver_inputs = all_active_driver_inputs.rename(columns={'constructorName_x': 'constructorName'})
 
-    # Calculate MAE by individual positions for mapping to predicted positions
-    X_mae, y_mae = get_features_and_target(data)
-    X_train_mae, X_test_mae, y_train_mae, y_test_mae = train_test_split(X_mae, y_mae, test_size=0.2, random_state=42)
-    preprocessor_mae = get_preprocessor_position(X_mae)
-    preprocessor_mae.fit(X_train_mae)
-    X_test_prep_mae = preprocessor_mae.transform(X_test_mae)
+            # Calculate MAE by individual positions for mapping to predicted positions
+            X_mae, y_mae = get_features_and_target(data)
+            X_train_mae, X_test_mae, y_train_mae, y_test_mae = train_test_split(X_mae, y_mae, test_size=0.2, random_state=42)
+            preprocessor_mae = get_preprocessor_position(X_mae)
+            preprocessor_mae.fit(X_train_mae)
+            X_test_prep_mae = preprocessor_mae.transform(X_test_mae)
     
-    # Predict based on model type
-    if isinstance(model, xgb.Booster):  # XGBoost
-        y_pred_mae = model.predict(xgb.DMatrix(X_test_prep_mae))
-    else:  # LightGBM, CatBoost, sklearn models
-        y_pred_mae = model.predict(X_test_prep_mae)
+            # Predict based on model type
+            if isinstance(model, xgb.Booster):  # XGBoost
+                y_pred_mae = model.predict(xgb.DMatrix(X_test_prep_mae))
+            else:  # LightGBM, CatBoost, sklearn models
+                y_pred_mae = model.predict(X_test_prep_mae)
     
-    results_df_analysis_mae = pd.DataFrame({
-        'Actual': y_test_mae.values,
-        'Predicted': y_pred_mae
-    })
-    
-    individual_mae = []
-    for pos in range(1, 21):
-        pos_data = results_df_analysis_mae[results_df_analysis_mae['Actual'] == pos]
-        if len(pos_data) > 0:
-            mae_pos = mean_absolute_error(pos_data['Actual'], pos_data['Predicted'])
-            individual_mae.append({
-                'Position': pos,
-                'MAE': mae_pos,
-                'Sample Size': len(pos_data)
+            results_df_analysis_mae = pd.DataFrame({
+                'Actual': y_test_mae.values,
+                'Predicted': y_pred_mae
             })
     
-    individual_mae_df = pd.DataFrame(individual_mae)
+            individual_mae = []
+            for pos in range(1, 21):
+                pos_data = results_df_analysis_mae[results_df_analysis_mae['Actual'] == pos]
+                if len(pos_data) > 0:
+                    mae_pos = mean_absolute_error(pos_data['Actual'], pos_data['Predicted'])
+                    individual_mae.append({
+                        'Position': pos,
+                        'MAE': mae_pos,
+                        'Sample Size': len(pos_data)
+                    })
     
-    # Create mapping from position to MAE
-    mae_by_position = dict(zip(individual_mae_df['Position'], individual_mae_df['MAE']))
+            individual_mae_df = pd.DataFrame(individual_mae)
     
-    # Add MAE for predicted position to the dataframe
-    _, global_mae = get_main_model()
-    all_active_driver_inputs['PredictedPositionMAE'] = (
-        all_active_driver_inputs.index
-        .map(mae_by_position)
-        .fillna(global_mae)
-    )
-
-    all_active_driver_inputs['PredictedPositionMAE_Low'] = all_active_driver_inputs['PredictedFinalPosition'] - all_active_driver_inputs['PredictedPositionMAE']
-    all_active_driver_inputs['PredictedPositionMAE_High'] = all_active_driver_inputs['PredictedFinalPosition'] + all_active_driver_inputs['PredictedPositionMAE']
-
-    # st.write(all_active_driver_inputs.columns.tolist())
-    st.subheader("Predictive Results for Active Drivers")
-
-    st.write(f"MAE for Position Predictions: {global_mae:.3f}")
-    height = get_dataframe_height(all_active_driver_inputs)
-    st.dataframe(all_active_driver_inputs, hide_index=False, column_config=predicted_position_columns_to_display, width=1200, height=height, 
-    column_order=['constructorName', 'resultsDriverName', 'PredictedFinalPosition', 'PredictedFinalPositionStd', 'PredictedFinalPosition_Low', 'PredictedFinalPosition_High', 'PredictedPositionMAE', 'PredictedPositionMAE_Low', 'PredictedPositionMAE_High'])
-
-    st.subheader("Predictive DNF")
-
-    st.write("Logistic Regression DNF Probabilities:")
-    probs = get_dnf_diagnostic_probs(CACHE_VERSION)
-    st.write("Min:", probs.min(), "Max:", probs.max(), "Mean:", probs.mean())
-
-    all_active_driver_inputs.sort_values(by='PredictedDNFProbabilityPercentage', ascending=False, inplace=True)
-    height = get_dataframe_height(all_active_driver_inputs)
-    st.dataframe(all_active_driver_inputs, hide_index=False, column_config=predicted_dnf_position_columns_to_display, width=800, height=height, 
-    column_order=['constructorName', 'resultsDriverName', 'driverDNFCount',  'driverDNFPercentage', 'PredictedDNFProbabilityPercentage', 'PredictedDNFProbabilityStd'], )  
-
-    st.subheader("Predicted Safety Car")
-
-    # Ensure race_level is a copy to avoid SettingWithCopyWarning
-    race_level = race_level.copy()  # Add this line before assignment if not already a copy
+            # Create mapping from position to MAE
+            mae_by_position = dict(zip(individual_mae_df['Position'], individual_mae_df['MAE']))
     
-    X_sc, y_sc = get_features_and_target_safety_car(safety_cars)
-    if X_sc.shape[0] == 0:
-        st.warning("No safety-car historical features available; skipping bulk safety car predictions.")
-        safety_cars['PredictedSafetyCarProbability'] = np.nan
-    else:
-        if X_sc.isnull().any().any():
-            X_sc = X_sc.fillna(X_sc.mean(numeric_only=True))
-        safety_cars['PredictedSafetyCarProbability'] = get_safetycar_model(CACHE_VERSION).predict_proba(X_sc)[:, 1]
-    safety_cars['PredictedSafetyCarProbabilityPercentage'] = (safety_cars['PredictedSafetyCarProbability'] * 100).round(3)
+            # Add MAE for predicted position to the dataframe
+            _, global_mae = get_main_model()
+            all_active_driver_inputs['PredictedPositionMAE'] = (
+                all_active_driver_inputs.index
+                .map(mae_by_position)
+                .fillna(global_mae)
+            )
 
-    historical_display = safety_cars[['grandPrixName', 'grandPrixYear', 'PredictedSafetyCarProbabilityPercentage']].copy()
-    historical_display['Type'] = 'Historical'
+            all_active_driver_inputs['PredictedPositionMAE_Low'] = all_active_driver_inputs['PredictedFinalPosition'] - all_active_driver_inputs['PredictedPositionMAE']
+            all_active_driver_inputs['PredictedPositionMAE_High'] = all_active_driver_inputs['PredictedFinalPosition'] + all_active_driver_inputs['PredictedPositionMAE']
 
-    synthetic_df['PredictedSafetyCarProbability'] = safety_car_proba
-    synthetic_df['PredictedSafetyCarProbabilityPercentage'] = (synthetic_df['PredictedSafetyCarProbability'] * 100).round(3)
-    synthetic_df['Type'] = 'Next Race'
+            # st.write(all_active_driver_inputs.columns.tolist())
+            st.subheader("Predictive Results for Active Drivers")
 
-    # Only show historical and synthetic predictions for the current Grand Prix
-    if not synthetic_df.empty:
-        current_gp_name = synthetic_df['grandPrixName'].iat[0] if 'grandPrixName' in synthetic_df.columns else None
-        current_gp_year = synthetic_df['grandPrixYear'].iat[0] if 'grandPrixYear' in synthetic_df.columns else None
-    else:
-        current_gp_name = None
-        current_gp_year = None
+            st.write(f"MAE for Position Predictions: {global_mae:.3f}")
+            height = get_dataframe_height(all_active_driver_inputs)
+            st.dataframe(all_active_driver_inputs, hide_index=False, column_config=predicted_position_columns_to_display, width=1200, height=height, 
+            column_order=['constructorName', 'resultsDriverName', 'PredictedFinalPosition', 'PredictedFinalPositionStd', 'PredictedFinalPosition_Low', 'PredictedFinalPosition_High', 'PredictedPositionMAE', 'PredictedPositionMAE_Low', 'PredictedPositionMAE_High'])
 
-    # Filter and deduplicate historical predictions for this Grand Prix
-    historical_this_gp = historical_display[historical_display['grandPrixName'] == current_gp_name].copy()
-    historical_this_gp = historical_this_gp[historical_this_gp['grandPrixYear'] != current_gp_year]
-    historical_this_gp = historical_this_gp.drop_duplicates(subset=['grandPrixYear'])
+            st.subheader("Predictive DNF")
 
-    # Combine historical and synthetic predictions
-    display_df = pd.concat([
-        historical_this_gp,
-        synthetic_df[['grandPrixName', 'grandPrixYear', 'PredictedSafetyCarProbabilityPercentage', 'Type']]
-    ], ignore_index=True)
+            st.write("Logistic Regression DNF Probabilities:")
+            probs = get_dnf_diagnostic_probs(CACHE_VERSION)
+            st.write("Min:", probs.min(), "Max:", probs.max(), "Mean:", probs.mean())
 
-    st.write("Historical Safety Car Probabilities (mean):", safety_cars['PredictedSafetyCarProbabilityPercentage'].mean())
-    st.write("Historical Safety Car Probabilities (min/max):", safety_cars['PredictedSafetyCarProbabilityPercentage'].min(), safety_cars['PredictedSafetyCarProbabilityPercentage'].max())
+            all_active_driver_inputs.sort_values(by='PredictedDNFProbabilityPercentage', ascending=False, inplace=True)
+            height = get_dataframe_height(all_active_driver_inputs)
+            st.dataframe(all_active_driver_inputs, hide_index=False, column_config=predicted_dnf_position_columns_to_display, width=800, height=height, 
+            column_order=['constructorName', 'resultsDriverName', 'driverDNFCount',  'driverDNFPercentage', 'PredictedDNFProbabilityPercentage', 'PredictedDNFProbabilityStd'], )  
 
-    height = get_dataframe_height(display_df)
-    st.dataframe(
-        display_df[['grandPrixName', 'grandPrixYear', 'PredictedSafetyCarProbabilityPercentage', 'Type']].sort_values(by=['grandPrixYear'], ascending=[False]),
-        hide_index=True,
-        width=800,
-        height=height,
-        column_config={
-            'grandPrixName': st.column_config.TextColumn("Grand Prix"),
-            'grandPrixYear': st.column_config.NumberColumn("Year"),
-            'PredictedSafetyCarProbabilityPercentage': st.column_config.NumberColumn("Predicted Safety Car Probability (%)"),
-            'Type': st.column_config.TextColumn("Type")
-    }
-)
+            st.subheader("Predicted Safety Car")
 
-    # After prediction and before displaying the predictive results
-    predicted_results = all_active_driver_inputs.reset_index()[[
-        'Rank', 'resultsDriverName', 'constructorName', 'PredictedFinalPosition', 'PredictedDNFProbability', 'PredictedDNFProbabilityPercentage'
-    ]].copy()
-    predicted_results['raceId'] = next_race_id
-    if not nextRace.empty:
-        predicted_results['grandPrixName'] = nextRace['fullName'].iat[0] if 'fullName' in nextRace.columns else pd.NA
-        predicted_results['grandPrixYear'] = nextRace['year'].iat[0] if 'year' in nextRace.columns else pd.NA
-        year_for_fname = str(nextRace['year'].iat[0]) if 'year' in nextRace.columns and not nextRace['year'].isnull().all() else 'unknown'
-    else:
-        predicted_results['grandPrixName'] = pd.NA
-        predicted_results['grandPrixYear'] = pd.NA
-        year_for_fname = 'unknown'
+            # Ensure race_level is a copy to avoid SettingWithCopyWarning
+            race_level = race_level.copy()  # Add this line before assignment if not already a copy
+    
+            X_sc, y_sc = get_features_and_target_safety_car(safety_cars)
+            if X_sc.shape[0] == 0:
+                st.warning("No safety-car historical features available; skipping bulk safety car predictions.")
+                safety_cars['PredictedSafetyCarProbability'] = np.nan
+            else:
+                if X_sc.isnull().any().any():
+                    X_sc = X_sc.fillna(X_sc.mean(numeric_only=True))
+                safety_cars['PredictedSafetyCarProbability'] = get_safetycar_model(CACHE_VERSION).predict_proba(X_sc)[:, 1]
+            safety_cars['PredictedSafetyCarProbabilityPercentage'] = (safety_cars['PredictedSafetyCarProbability'] * 100).round(3)
 
-    # Save to CSV for later comparison; guard filename construction
-    fname = path.join(DATA_DIR, f"predictions_{next_race_id if next_race_id is not None else 'unknown'}_{year_for_fname}.csv")
-    try:
-        predicted_results.to_csv(fname, index=False)
-    except Exception as _e:
-        print(f"Could not write predictions file {fname}: {_e}")
+            historical_display = safety_cars[['grandPrixName', 'grandPrixYear', 'PredictedSafetyCarProbabilityPercentage']].copy()
+            historical_display['Type'] = 'Historical'
+
+            synthetic_df['PredictedSafetyCarProbability'] = safety_car_proba
+            synthetic_df['PredictedSafetyCarProbabilityPercentage'] = (synthetic_df['PredictedSafetyCarProbability'] * 100).round(3)
+            synthetic_df['Type'] = 'Next Race'
+
+            # Only show historical and synthetic predictions for the current Grand Prix
+            if not synthetic_df.empty:
+                current_gp_name = synthetic_df['grandPrixName'].iat[0] if 'grandPrixName' in synthetic_df.columns else None
+                current_gp_year = synthetic_df['grandPrixYear'].iat[0] if 'grandPrixYear' in synthetic_df.columns else None
+            else:
+                current_gp_name = None
+                current_gp_year = None
+
+            # Filter and deduplicate historical predictions for this Grand Prix
+            historical_this_gp = historical_display[historical_display['grandPrixName'] == current_gp_name].copy()
+            historical_this_gp = historical_this_gp[historical_this_gp['grandPrixYear'] != current_gp_year]
+            historical_this_gp = historical_this_gp.drop_duplicates(subset=['grandPrixYear'])
+
+            # Combine historical and synthetic predictions
+            display_df = pd.concat([
+                historical_this_gp,
+                synthetic_df[['grandPrixName', 'grandPrixYear', 'PredictedSafetyCarProbabilityPercentage', 'Type']]
+            ], ignore_index=True)
+
+            st.write("Historical Safety Car Probabilities (mean):", safety_cars['PredictedSafetyCarProbabilityPercentage'].mean())
+            st.write("Historical Safety Car Probabilities (min/max):", safety_cars['PredictedSafetyCarProbabilityPercentage'].min(), safety_cars['PredictedSafetyCarProbabilityPercentage'].max())
+
+            height = get_dataframe_height(display_df)
+            st.dataframe(
+                display_df[['grandPrixName', 'grandPrixYear', 'PredictedSafetyCarProbabilityPercentage', 'Type']].sort_values(by=['grandPrixYear'], ascending=[False]),
+                hide_index=True,
+                width=800,
+                height=height,
+                column_config={
+                    'grandPrixName': st.column_config.TextColumn("Grand Prix"),
+                    'grandPrixYear': st.column_config.NumberColumn("Year"),
+                    'PredictedSafetyCarProbabilityPercentage': st.column_config.NumberColumn("Predicted Safety Car Probability (%)"),
+                    'Type': st.column_config.TextColumn("Type")
+            }
+        )
+
+            # After prediction and before displaying the predictive results
+            predicted_results = all_active_driver_inputs.reset_index()[[
+                'Rank', 'resultsDriverName', 'constructorName', 'PredictedFinalPosition', 'PredictedDNFProbability', 'PredictedDNFProbabilityPercentage'
+            ]].copy()
+            predicted_results['raceId'] = next_race_id
+            if not nextRace.empty:
+                predicted_results['grandPrixName'] = nextRace['fullName'].iat[0] if 'fullName' in nextRace.columns else pd.NA
+                predicted_results['grandPrixYear'] = nextRace['year'].iat[0] if 'year' in nextRace.columns else pd.NA
+                year_for_fname = str(nextRace['year'].iat[0]) if 'year' in nextRace.columns and not nextRace['year'].isnull().all() else 'unknown'
+            else:
+                predicted_results['grandPrixName'] = pd.NA
+                predicted_results['grandPrixYear'] = pd.NA
+                year_for_fname = 'unknown'
+
+            # Save to CSV for later comparison; guard filename construction
+            fname = path.join(DATA_DIR, f"predictions_{next_race_id if next_race_id is not None else 'unknown'}_{year_for_fname}.csv")
+            try:
+                predicted_results.to_csv(fname, index=False)
+            except Exception as _e:
+                print(f"Could not write predictions file {fname}: {_e}")
+
+    # === End of prediction calculations ===
+    # Historical analysis below runs regardless of whether predictions were made
 
     individual_race_grouped = detailsOfNextRace.groupby(['resultsDriverName']).agg(
         #activeDriver = ('activeDriver', 'first'),
