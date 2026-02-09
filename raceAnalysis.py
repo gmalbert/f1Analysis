@@ -14,7 +14,7 @@ import warnings
 # explicit infer_objects where possible, otherwise silence the noisy warning
 warnings.filterwarnings(
     "ignore",
-    message="Downcasting object dtype arrays on \.fillna, \.ffill, \.bfill is deprecated",
+    message=r"Downcasting object dtype arrays on \.fillna, \.ffill, \.bfill is deprecated",
     category=FutureWarning,
 )
 from pandas.api.types import (
@@ -1543,6 +1543,7 @@ def load_f1_position_model_features():
 numerical_features, categorical_features = load_f1_position_model_features()
 
 def get_preprocessor_position(X=None):
+    global numerical_features, categorical_features
     numerical_imputer = SimpleImputer(strategy='mean')
     categorical_imputer = SimpleImputer(strategy='most_frequent')
 
@@ -1573,6 +1574,10 @@ def get_preprocessor_position(X=None):
                 ]), categorical_features_fallback
             ))
     else:
+        # Filter out numerical features that are all NaN to avoid sklearn imputation warnings
+        if X is not None:
+            numerical_features = [col for col in numerical_features if col in X.columns and not X[col].isna().all()]
+        
         transformers = [
             ('num', Pipeline(steps=[
                 ('imputer', numerical_imputer),
@@ -1947,39 +1952,86 @@ def train_and_evaluate_safetycar_model(data, CACHE_VERSION):
 
     return model
 
-# @st.cache_resource
-@st.cache_data
-def get_trained_model(early_stopping_rounds, CACHE_VERSION):
-    model, mse, r2, mae, mean_err, evals_result = train_and_evaluate_model(data, early_stopping_rounds=early_stopping_rounds)
-    # global_mae = mae
-    return model
+def load_pretrained_model(model_name='position_model', CACHE_VERSION='v2.3'):
+    """Load a pre-trained model from disk if available."""
+    import pickle
+    from pathlib import Path
+    
+    models_dir = Path('data_files/models')
+    model_file = models_dir / f'{model_name}.pkl'
+    
+    if model_file.exists():
+        try:
+            with open(model_file, 'rb') as f:
+                artifact = pickle.load(f)
+            
+            # Check cache version compatibility
+            if artifact.get('cache_version') == CACHE_VERSION:
+                return artifact
+            else:
+                st.info(f"Pre-trained {model_name} found but cache version mismatch. Will retrain.")
+        except Exception as e:
+            st.warning(f"Error loading pre-trained {model_name}: {e}. Will retrain.")
+    
+    return None
 
-model = get_trained_model(20, CACHE_VERSION)
-model, mse, r2, mae, mean_err, evals_result = train_and_evaluate_model(data, early_stopping_rounds=20)
-global_mae = mae
+@st.cache_data
+def get_trained_model(early_stopping_rounds, CACHE_VERSION, force_retrain=False):
+    """Load or train the position prediction model."""
+    # Try to load pre-trained model first
+    if not force_retrain:
+        pretrained = load_pretrained_model('position_model', CACHE_VERSION)
+        if pretrained is not None:
+            return pretrained['model'], pretrained['mse'], pretrained['r2'], pretrained['mae'], pretrained['mean_err'], pretrained['evals_result']
+    
+    # Fall back to training
+    model, mse, r2, mae, mean_err, evals_result = train_and_evaluate_model(data, early_stopping_rounds=early_stopping_rounds)
+    return model, mse, r2, mae, mean_err, evals_result
+
+# Lazy-load models (only when accessed, not at module load)
+def get_main_model():
+    if 'main_model' not in st.session_state:
+        model, mse, r2, mae, mean_err, evals_result = get_trained_model(20, CACHE_VERSION)
+        st.session_state['main_model'] = model
+        st.session_state['global_mae'] = mae
+    return st.session_state['main_model'], st.session_state.get('global_mae', None)
 
 data['DNF'] = data['DNF'].astype(int)
 
-# Diagnostic: Try Logistic Regression for DNF prediction
-from sklearn.linear_model import LogisticRegression
+@st.cache_data
+def get_dnf_diagnostic_probs(CACHE_VERSION):
+    """Lazy-load DNF diagnostic logistic regression probabilities."""
+    from sklearn.linear_model import LogisticRegression
+    
+    X_dnf, y_dnf = get_features_and_target_dnf(data)
+    mask = y_dnf.notnull() & np.isfinite(y_dnf)
+    X_dnf, y_dnf = X_dnf[mask], y_dnf[mask]
+    if X_dnf.shape[0] == 0:
+        return np.array([])
+    else:
+        preprocessor = get_preprocessor_dnf()
+        X_dnf_prep = preprocessor.fit_transform(X_dnf)
+        clf = LogisticRegression(max_iter=1000)
+        clf.fit(X_dnf_prep, y_dnf)
+        return clf.predict_proba(X_dnf_prep)[:, 1]
 
-X_dnf, y_dnf = get_features_and_target_dnf(data)
-mask = y_dnf.notnull() & np.isfinite(y_dnf)
-X_dnf, y_dnf = X_dnf[mask], y_dnf[mask]
-if X_dnf.shape[0] == 0:
-    st.warning("No data available for DNF diagnostic logistic regression; skipping.")
-    probs = np.array([])
-else:
-    preprocessor = get_preprocessor_dnf()
-    X_dnf_prep = preprocessor.fit_transform(X_dnf)
-    clf = LogisticRegression(max_iter=1000)
-    clf.fit(X_dnf_prep, y_dnf)
-    probs = clf.predict_proba(X_dnf_prep)[:, 1]
+@st.cache_data
+def get_dnf_model(CACHE_VERSION, force_retrain=False):
+    """Load or train the DNF prediction model."""
+    if not force_retrain:
+        pretrained = load_pretrained_model('dnf_model', CACHE_VERSION)
+        if pretrained is not None:
+            return pretrained['model']
+    return train_and_evaluate_dnf_model(data, CACHE_VERSION)
 
-
-dnf_model = train_and_evaluate_dnf_model(data, CACHE_VERSION)
-
-safetycar_model = train_and_evaluate_safetycar_model(safety_cars, CACHE_VERSION)
+@st.cache_data
+def get_safetycar_model(CACHE_VERSION, force_retrain=False):
+    """Load or train the safety car prediction model."""
+    if not force_retrain:
+        pretrained = load_pretrained_model('safetycar_model', CACHE_VERSION)
+        if pretrained is not None:
+            return pretrained['model']
+    return train_and_evaluate_safetycar_model(safety_cars, CACHE_VERSION)
 
 
 X_sc, y_sc = get_features_and_target_safety_car(safety_cars)
@@ -3129,6 +3181,7 @@ with tab4:
     # the preprocessed array back into a DataFrame with the exact feature
     # names used during training. This prevents LightGBM from warning that
     # "X does not have valid feature names" when it was fitted with names.
+    model, _ = get_main_model()
     if isinstance(model, xgb.Booster):  # XGBoost
         predicted_position = model.predict(xgb.DMatrix(X_predict_prep))
     else:  # LightGBM, CatBoost, sklearn models
@@ -3181,7 +3234,7 @@ with tab4:
         if X_predict_dnf.isnull().any().any():
             # st.warning("Imputing missing values in X_predict_dnf before prediction.")
             X_predict_dnf = X_predict_dnf.fillna(X_predict_dnf.mean(numeric_only=True))
-        predicted_dnf_proba = dnf_model.predict_proba(X_predict_dnf)[:, 1]  # Probability of DNF=True
+        predicted_dnf_proba = get_dnf_model(CACHE_VERSION).predict_proba(X_predict_dnf)[:, 1]  # Probability of DNF=True
 
     
     # Holdout year evaluation for Safety Car Model
@@ -3296,12 +3349,13 @@ with tab4:
     else:
         if X_predict_safetycar.isnull().any().any():
             X_predict_safetycar = X_predict_safetycar.fillna(X_predict_safetycar.mean(numeric_only=True))
-        safety_car_proba = safetycar_model.predict_proba(X_predict_safetycar)[:, 1][0]
+        safety_car_proba = get_safetycar_model(CACHE_VERSION).predict_proba(X_predict_safetycar)[:, 1][0]
     
     # Add both to your DataFrame
     all_active_driver_inputs['PredictedFinalPosition'] = predicted_position
     all_active_driver_inputs['PredictedDNFProbability'] = predicted_dnf_proba
     all_active_driver_inputs['PredictedDNFProbabilityPercentage'] = (all_active_driver_inputs['PredictedDNFProbability'] * 100).round(3)
+    _, global_mae = get_main_model()
     all_active_driver_inputs['PredictedFinalPosition_Low'] = (all_active_driver_inputs['PredictedFinalPosition'] - global_mae).astype(float)
     all_active_driver_inputs['PredictedFinalPosition_High'] = (all_active_driver_inputs['PredictedFinalPosition'] + global_mae).astype(float)
 
@@ -3399,6 +3453,7 @@ with tab4:
     mae_by_position = dict(zip(individual_mae_df['Position'], individual_mae_df['MAE']))
     
     # Add MAE for predicted position to the dataframe
+    _, global_mae = get_main_model()
     all_active_driver_inputs['PredictedPositionMAE'] = (
         all_active_driver_inputs.index
         .map(mae_by_position)
@@ -3419,6 +3474,7 @@ with tab4:
     st.subheader("Predictive DNF")
 
     st.write("Logistic Regression DNF Probabilities:")
+    probs = get_dnf_diagnostic_probs(CACHE_VERSION)
     st.write("Min:", probs.min(), "Max:", probs.max(), "Mean:", probs.mean())
 
     all_active_driver_inputs.sort_values(by='PredictedDNFProbabilityPercentage', ascending=False, inplace=True)
@@ -3438,7 +3494,7 @@ with tab4:
     else:
         if X_sc.isnull().any().any():
             X_sc = X_sc.fillna(X_sc.mean(numeric_only=True))
-        safety_cars['PredictedSafetyCarProbability'] = safetycar_model.predict_proba(X_sc)[:, 1]
+        safety_cars['PredictedSafetyCarProbability'] = get_safetycar_model(CACHE_VERSION).predict_proba(X_sc)[:, 1]
     safety_cars['PredictedSafetyCarProbabilityPercentage'] = (safety_cars['PredictedSafetyCarProbability'] * 100).round(3)
 
     historical_display = safety_cars[['grandPrixName', 'grandPrixYear', 'PredictedSafetyCarProbabilityPercentage']].copy()
@@ -3706,8 +3762,8 @@ with tab5:
     # Store for use in Tab 4
     st.session_state['early_stopping_rounds'] = early_stopping_rounds
 
-    # Train model once at the top level for reuse
-    model, mse, r2, mae, mean_err, evals_result = train_and_evaluate_model(data, early_stopping_rounds=early_stopping_rounds, model_type=model_type)
+    # Train model once at the top level for reuse (lazy loading with cache)
+    model, mse, r2, mae, mean_err, evals_result = get_trained_model(early_stopping_rounds, CACHE_VERSION)
     
     # Single expander with 6 tabs inside
     with st.expander("🔧 Advanced Options", expanded=True):
@@ -4001,10 +4057,11 @@ with tab5:
 
             # Safety Car Data Importances
             st.write("### Safety Car Feature Importance")
-            preprocessor_sc = safetycar_model.named_steps['preprocessor']
+            safetycar_model_loaded = get_safetycar_model(CACHE_VERSION)
+            preprocessor_sc = safetycar_model_loaded.named_steps['preprocessor']
             feature_names_sc = preprocessor_sc.get_feature_names_out()
             feature_names_sc = [name.replace('num__', '').replace('cat__', '') for name in feature_names_sc]
-            importances_sc = safetycar_model.named_steps['classifier'].coef_[0]
+            importances_sc = safetycar_model_loaded.named_steps['classifier'].coef_[0]
 
             odds_ratios = np.exp(importances_sc)
             prob_change = (1 / (1 + np.exp(-importances_sc))) - 0.5
@@ -4877,10 +4934,10 @@ with tab5:
                 if X_test_dnf.shape[0] == 0:
                     st.warning("DNF test split is empty; skipping MAE calculation.")
                 else:
-                    y_pred_dnf_proba = dnf_model.predict_proba(X_test_dnf)[:, 1]
+                    y_pred_dnf_proba = get_dnf_model(CACHE_VERSION).predict_proba(X_test_dnf)[:, 1]
                     mae_dnf = mean_absolute_error(y_test_dnf, y_pred_dnf_proba)
                     st.write(f"Mean Absolute Error (MAE) for DNF Probability (test set): {mae_dnf:.3f}")
-                scores_dnf = cross_val_score(dnf_model, X_dnf_eval, y_dnf_eval, cv=5, scoring='roc_auc')
+                scores_dnf = cross_val_score(get_dnf_model(CACHE_VERSION), X_dnf_eval, y_dnf_eval, cv=5, scoring='roc_auc')
                 st.write(f"DNF Model - Cross-validated ROC AUC: {scores_dnf.mean():.3f} (± {scores_dnf.std():.3f})")
 
             X_sc_eval, y_sc_eval = get_features_and_target_safety_car(safety_cars)
@@ -4889,7 +4946,7 @@ with tab5:
             if X_sc_eval.shape[0] == 0:
                 st.warning("No safety-car data for CV evaluation; skipping safety car CV metrics.")
             else:
-                scores_sc = cross_val_score(safetycar_model, X_sc_eval, y_sc_eval, cv=5, scoring='roc_auc')
+                scores_sc = cross_val_score(get_safetycar_model(CACHE_VERSION), X_sc_eval, y_sc_eval, cv=5, scoring='roc_auc')
                 st.write(f"Safety Car Model - Cross-validated ROC AUC (unique rows): {scores_sc.mean():.3f} (± {scores_sc.std():.3f})")
 
             # Model Accuracy for All Races

@@ -4,21 +4,20 @@ name: Keep Streamlit App Alive
 # due to inactivity on Streamlit Community Cloud.
 #
 # Features:
-# - Runs twice daily with configurable schedule
-# - Adds random 0-20 minute delay to vary timing (looks more natural in logs)
+# - Runs every 30 minutes with 0-10 minute randomization (pings every ~30-40 minutes)
+# - Adds random delay to vary timing and make logs look more natural
 # - Tolerates failures without breaking the workflow
 #
 # To use in another repository:
 # 1. Copy this file to .github/workflows/
 # 2. Update the STREAMLIT_APP_URL below with your app's URL
-# 3. Adjust the schedule if needed (currently runs twice daily)
+# 3. Adjust the schedule if needed (currently runs every 30 minutes)
 # 4. Adjust DELAY calculation to change random window (currently 0-20 min)
 
 on:
   schedule:
-    # Run twice daily: 9 AM and 9 PM UTC (4 AM and 4 PM ET)
-    # Adjust times based on your primary user timezone
-    - cron: '0 9,21 * * *'
+    # Run every 30 minutes with randomization (pings roughly every 30-40 minutes)
+    - cron: '*/30 * * * *'
   
   workflow_dispatch:  # Allow manual trigger for testing
 
@@ -29,13 +28,13 @@ env:
 jobs:
   ping-app:
     runs-on: ubuntu-latest
-    timeout-minutes: 25  # Allow for 20-minute random delay + ping time
+    timeout-minutes: 15  # Allow for 10-minute random delay + ping time
 
     steps:
-      - name: Random delay (0-20 minutes)
+      - name: Random delay (0-10 minutes)
         run: |
           # Add random delay to vary timing and make logs look more natural
-          DELAY=$((RANDOM % 1200))  # 0-1200 seconds (0-20 minutes)
+          DELAY=$((RANDOM % 600))  # 0-600 seconds (0-10 minutes)
           echo "⏳ Waiting ${DELAY} seconds before ping..."
           sleep $DELAY
       
@@ -44,11 +43,19 @@ jobs:
           echo "🔔 Pinging Streamlit app at: ${{ env.STREAMLIT_APP_URL }}"
           echo "   Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
           
-          # Make HTTP request with timeout
+          # Make HTTP request with timeout (use generic browser-like User-Agent)
+          USER_AGENTS=(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+          )
+          RANDOM_UA=${USER_AGENTS[$RANDOM % ${#USER_AGENTS[@]}]}
+          
           RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
             --max-time 30 \
             --retry 2 \
             --retry-delay 5 \
+            --user-agent "$RANDOM_UA" \
             "${{ env.STREAMLIT_APP_URL }}")
           
           echo "   Response code: $RESPONSE"
