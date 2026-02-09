@@ -73,6 +73,7 @@ def train_all_models():
         train_and_evaluate_dnf_model,
         train_and_evaluate_safetycar_model,
         get_features_and_target_safety_car,
+        TRAINING_PREPROCESSOR
     )
     
     print(f"Loading data with CACHE_VERSION={CACHE_VERSION}...")
@@ -120,6 +121,7 @@ def train_all_models():
     # Save model and metrics
     model_artifact = {
         'model': model,
+        'preprocessor': TRAINING_PREPROCESSOR,
         'mse': mse,
         'r2': r2,
         'mae': mae,

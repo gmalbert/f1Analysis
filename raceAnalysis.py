@@ -1982,6 +1982,9 @@ def get_trained_model(early_stopping_rounds, CACHE_VERSION, force_retrain=False)
     if not force_retrain:
         pretrained = load_pretrained_model('position_model', CACHE_VERSION)
         if pretrained is not None:
+            # Set the global preprocessor for predictions
+            global TRAINING_PREPROCESSOR
+            TRAINING_PREPROCESSOR = pretrained.get('preprocessor')
             return pretrained['model'], pretrained['mse'], pretrained['r2'], pretrained['mae'], pretrained['mean_err'], pretrained['evals_result']
     
     # Fall back to training
