@@ -123,6 +123,7 @@ def make_headless_predictions(driver_df):
     numerical_features, categorical_features = load_f1_position_model_features()
 
     def get_preprocessor_position(X=None):
+        global numerical_features, categorical_features
         numerical_imputer = SimpleImputer(strategy='mean')
         categorical_imputer = SimpleImputer(strategy='most_frequent')
         if not numerical_features and not categorical_features:
@@ -141,6 +142,10 @@ def make_headless_predictions(driver_df):
                     'cat', Pipeline(steps=[('imputer', categorical_imputer),('onehot', OneHotEncoder(handle_unknown='ignore'))]), categorical_features_fallback
                 ))
         else:
+            # Filter out numerical features that are all NaN to avoid sklearn imputation warnings
+            if X is not None:
+                numerical_features = [col for col in numerical_features if col in X.columns and not X[col].isna().all()]
+            
             transformers = [
                 ('num', Pipeline(steps=[('imputer', numerical_imputer),('scaler', StandardScaler())]), numerical_features)
             ]
