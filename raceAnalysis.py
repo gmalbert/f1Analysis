@@ -872,20 +872,6 @@ if CLEAN_TABLE_BORDERS:
     </style>
     """, unsafe_allow_html=True)
 
-# Load model and preprocessor BEFORE tabs are created
-# This ensures tab4 (Next Race predictions) can access the preprocessor
-if 'training_preprocessor' not in st.session_state:
-    try:
-        # Use default early stopping for initial load
-        model, mse, r2, mae, mean_err, evals_result, preprocessor = get_trained_model(20, CACHE_VERSION)
-        st.session_state['main_model'] = model
-        st.session_state['global_mae'] = mae
-        st.session_state['training_preprocessor'] = preprocessor
-    except Exception as e:
-        st.error(f"Failed to load model: {e}")
-        # Set None to prevent repeated errors
-        st.session_state['training_preprocessor'] = None
-
 # Create main tabs
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "📊 Data Explorer", 
@@ -1175,6 +1161,20 @@ def load_data(nrows, CACHE_VERSION):
     fullResults.drop_duplicates(subset=['grandPrixYear', 'grandPrixName', 'resultsDriverName'], inplace=True)
 
     return fullResults, pitStops
+
+# Load model and preprocessor BEFORE tabs are created
+# This ensures tab4 (Next Race predictions) can access the preprocessor
+if 'training_preprocessor' not in st.session_state:
+    try:
+        # Use default early stopping for initial load
+        model, mse, r2, mae, mean_err, evals_result, preprocessor = get_trained_model(20, CACHE_VERSION)
+        st.session_state['main_model'] = model
+        st.session_state['global_mae'] = mae
+        st.session_state['training_preprocessor'] = preprocessor
+    except Exception as e:
+        st.error(f"Failed to load model: {e}")
+        # Set None to prevent repeated errors
+        st.session_state['training_preprocessor'] = None
 
 data, pitStops = load_data(10000, CACHE_VERSION)
 
