@@ -1824,7 +1824,7 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
         mae = mean_absolute_error(y_test, y_pred)
         mean_err = np.mean(y_pred - y_test)
         
-        return model, mse, r2, mae, mean_err, evals_result
+        return model, mse, r2, mae, mean_err, evals_result, preprocessor
 
     elif model_type == "LightGBM":
         from lightgbm import LGBMRegressor
@@ -1856,7 +1856,7 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
         # Mock evals_result
         evals_result = {'eval': {'mae': [mae]}}
         
-        return model, mse, r2, mae, mean_err, evals_result
+        return model, mse, r2, mae, mean_err, evals_result, preprocessor
 
     elif model_type == "CatBoost":
         from catboost import CatBoostRegressor
@@ -1888,7 +1888,7 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
         # Mock evals_result
         evals_result = {'eval': {'mae': [mae]}}
         
-        return model, mse, r2, mae, mean_err, evals_result
+        return model, mse, r2, mae, mean_err, evals_result, preprocessor
 
     elif model_type == "Ensemble (XGBoost + LightGBM + CatBoost)":
         from sklearn.ensemble import StackingRegressor
@@ -1920,7 +1920,7 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
         # Mock evals_result
         evals_result = {'eval': {'mae': [mae]}}
         
-        return model, mse, r2, mae, mean_err, evals_result
+        return model, mse, r2, mae, mean_err, evals_result, preprocessor
 
 
 @st.cache_data
@@ -1988,7 +1988,9 @@ def get_trained_model(early_stopping_rounds, CACHE_VERSION, force_retrain=False)
             return pretrained['model'], pretrained['mse'], pretrained['r2'], pretrained['mae'], pretrained['mean_err'], pretrained['evals_result']
     
     # Fall back to training
-    model, mse, r2, mae, mean_err, evals_result = train_and_evaluate_model(data, early_stopping_rounds=early_stopping_rounds)
+    model, mse, r2, mae, mean_err, evals_result, preprocessor = train_and_evaluate_model(data, early_stopping_rounds=early_stopping_rounds)
+    # Set the global preprocessor
+    TRAINING_PREPROCESSOR = preprocessor
     return model, mse, r2, mae, mean_err, evals_result
 
 # Lazy-load models (only when accessed, not at module load)
@@ -2705,7 +2707,7 @@ with tab2:
             st.warning("No data available after filtering. Please adjust your filters.")
         else:
             # Split the data
-            model, mse, r2, mae, mean_err, evals_result = train_and_evaluate_model(filtered_data)
+            model, mse, r2, mae, mean_err, evals_result, _ = train_and_evaluate_model(filtered_data)
 
             st.write(f"Mean Squared Error: {mse:.3f}")
 

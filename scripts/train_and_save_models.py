@@ -72,8 +72,7 @@ def train_all_models():
         train_and_evaluate_model,
         train_and_evaluate_dnf_model,
         train_and_evaluate_safetycar_model,
-        get_features_and_target_safety_car,
-        TRAINING_PREPROCESSOR
+        get_features_and_target_safety_car
     )
     
     print(f"Loading data with CACHE_VERSION={CACHE_VERSION}...")
@@ -112,7 +111,7 @@ def train_all_models():
     
     # Train position prediction model (main model)
     print("\n1. Training position prediction model (XGBoost)...")
-    model, mse, r2, mae, mean_err, evals_result = train_and_evaluate_model(
+    model, mse, r2, mae, mean_err, evals_result, preprocessor = train_and_evaluate_model(
         data, 
         early_stopping_rounds=20,
         model_type="XGBoost"
@@ -121,7 +120,7 @@ def train_all_models():
     # Save model and metrics
     model_artifact = {
         'model': model,
-        'preprocessor': TRAINING_PREPROCESSOR,
+        'preprocessor': preprocessor,
         'mse': mse,
         'r2': r2,
         'mae': mae,
