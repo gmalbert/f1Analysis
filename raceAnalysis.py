@@ -3806,15 +3806,18 @@ with tab5:
             X, y = get_features_and_target(data)
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-            preprocessor = get_preprocessor_position(X)
-            preprocessor.fit(X_train)
-            X_test_prep = preprocessor.transform(X_test)
-            
-            # Predict based on actual model type
-            if isinstance(model, xgb.Booster):
-                y_pred = model.predict(xgb.DMatrix(X_test_prep))
+            # Use the training preprocessor from session state (ensures feature consistency)
+            preprocessor = st.session_state.get('training_preprocessor')
+            if preprocessor is None:
+                st.error("Training preprocessor not found. Please train a model first.")
             else:
-                y_pred = model.predict(X_test_prep)
+                X_test_prep = preprocessor.transform(X_test)
+                
+                # Predict based on actual model type
+                if isinstance(model, xgb.Booster):
+                    y_pred = model.predict(xgb.DMatrix(X_test_prep))
+                else:
+                    y_pred = model.predict(X_test_prep)
 
 
             results_df = X_test.copy()
@@ -4960,15 +4963,18 @@ with tab5:
             X_all, y_all = get_features_and_target(data)
             X_train_all, X_test_all, y_train_all, y_test_all = train_test_split(X_all, y_all, test_size=0.2, random_state=42)
 
-            preprocessor_all = get_preprocessor_position(X_all)
-            preprocessor_all.fit(X_train_all)
-            X_test_prep_all = preprocessor_all.transform(X_test_all)
-            
-            # Predict based on model type
-            if isinstance(model, xgb.Booster):  # XGBoost
-                y_pred_all = model.predict(xgb.DMatrix(X_test_prep_all))
-            else:  # LightGBM, CatBoost, sklearn models
-                y_pred_all = model.predict(X_test_prep_all)
+            # Use the training preprocessor from session state (ensures feature consistency)
+            preprocessor_all = st.session_state.get('training_preprocessor')
+            if preprocessor_all is None:
+                st.error("Training preprocessor not found. Please train a model first.")
+            else:
+                X_test_prep_all = preprocessor_all.transform(X_test_all)
+                
+                # Predict based on model type
+                if isinstance(model, xgb.Booster):  # XGBoost
+                    y_pred_all = model.predict(xgb.DMatrix(X_test_prep_all))
+                else:  # LightGBM, CatBoost, sklearn models
+                    y_pred_all = model.predict(X_test_prep_all)
 
             results_df_all = X_test_all.copy()
             results_df_all['ActualFinalPosition'] = y_test_all.values
