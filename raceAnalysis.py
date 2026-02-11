@@ -94,7 +94,7 @@ from footer import add_betting_oracle_footer
 DATA_DIR = 'data_files/'
 
 # Cache version - increment this when preprocessor logic changes
-CACHE_VERSION = "v2.4"  # Bumped to invalidate cache after adding preprocessor return value
+CACHE_VERSION = "v2.5"  # Fixed Monte Carlo feature loading to include lap-level qualifying features
 
 # Preprocessor used when training the main position model. Set during training so
 # prediction uses the exact same feature ordering and transforms (prevents
@@ -1137,7 +1137,10 @@ def load_data(nrows, CACHE_VERSION):
                                         'pole_to_win_rate', 'front_row_conversion', 'recent_wins_3_races',
                                         'rolling_3_race_win_percentage', 'recent_qualifying_improvement_trend', 'head_to_head_teammate_performance_delta', 'championship_position_pressure_factor',
                                         'constructor_recent_mechanical_dnf_rate', 'driver_performance_at_circuit_type', 'weather_pattern_analysis_by_location', 'overtaking_difficulty_index',
-                                        'q1_q2_q3_sector_consistency', 'qualifying_position_vs_race_pace_delta_by_track']
+                                        'q1_q2_q3_sector_consistency', 'qualifying_position_vs_race_pace_delta_by_track',
+                                        # Race pace & strategy features
+                                        'practice_race_conversion', 'avg_positions_gained_5r', 'race_pace_consistency',
+                                        'overtaking_success_top10', 'tire_management_score']
 
     bin_columns = [col for col in all_columns if col.endswith('_bin')]
     usecols = selected_columns + bin_columns
@@ -1163,6 +1166,11 @@ def load_data(nrows, CACHE_VERSION):
     return fullResults, pitStops
 
 data, pitStops = load_data(10000, CACHE_VERSION)
+
+# Debug: Check what columns were actually loaded
+print(f"[DEBUG] Loaded data with {len(data.columns)} columns")
+lap_level_in_data = [c for c in data.columns if any(x in c for x in ['sector1_sec', 'sector2_sec', 'sector3_sec', 'theoretical_best_lap', 'sector_consistency'])]
+print(f"[DEBUG] Lap-level/engineered columns in loaded data: {lap_level_in_data}")
 
 # Check for duplicate columns and remove them
 dupes = [col for col in data.columns if data.columns.tolist().count(col) > 1]
@@ -1211,7 +1219,8 @@ data['totalStopTime'] = data['totalStopTime'].astype('Float64')
 data['driverBestStartingGridPosition'] = data['driverBestStartingGridPosition'].astype('Int64')
 data['driverBestRaceResult'] = data['driverBestRaceResult'].astype('Int64')
 data['constructorRank'] = data['constructorRank'].astype('Int64')
-data['Points'] = data['Points'].astype('Int64')
+if 'Points' in data.columns:
+    data['Points'] = data['Points'].astype('Int64')
 data['driverRank'] = data['driverRank'].astype('Int64')
 # if 'bestQualifyingTime_sec' in data.columns:
 #     data['bestQualifyingTime_sec'] = data['bestQualifyingTime_sec'].astype('Float64')
@@ -1219,21 +1228,37 @@ data['driverRank'] = data['driverRank'].astype('Int64')
 #     st.warning("'bestQualifyingTime_sec' column not found in data.")
 data['driverTotalChampionshipWins'] = data['driverTotalChampionshipWins'].astype('Int64')
 data['driverTotalRaceEntries'] = data['driverTotalRaceEntries'].astype('Int64')
-data['bestChampionshipPosition'] = data['bestChampionshipPosition_results_with_qualifying'].astype('Int64')
-data['bestStartingGridPosition'] = data['bestStartingGridPosition_results_with_qualifying'].astype('Int64')
-data['bestRaceResult'] = data['bestRaceResult_results_with_qualifying'].astype('Int64')
-data['totalChampionshipWins'] = data['totalChampionshipWins_results_with_qualifying'].astype('Int64')
-data['totalRaceStarts'] = data['totalRaceStarts_results_with_qualifying'].astype('Int64')
-data['totalRaceWins'] = data['totalRaceWins_results_with_qualifying'].astype('Int64')
-data['total1And2Finishes'] = data['total1And2Finishes'].astype('Int64')
-data['totalRaceLaps'] = data['totalRaceLaps_results_with_qualifying'].astype('Int64')
-data['totalPodiums'] = data['totalPodiums_results_with_qualifying'].astype('Int64')
-data['totalPodiumRaces'] = data['totalPodiumRaces'].astype('Int64')
-data['totalPoints'] = data['totalPoints_results_with_qualifying'].astype('Float64')
-data['totalChampionshipPoints'] = data['totalChampionshipPoints_results_with_qualifying'].astype('Float64')
+
+# Handle columns that may or may not exist (legacy suffixes from older data structure)
+if 'bestChampionshipPosition_results_with_qualifying' in data.columns:
+    data['bestChampionshipPosition'] = data['bestChampionshipPosition_results_with_qualifying'].astype('Int64')
+if 'bestStartingGridPosition_results_with_qualifying' in data.columns:
+    data['bestStartingGridPosition'] = data['bestStartingGridPosition_results_with_qualifying'].astype('Int64')
+if 'bestRaceResult_results_with_qualifying' in data.columns:
+    data['bestRaceResult'] = data['bestRaceResult_results_with_qualifying'].astype('Int64')
+if 'totalChampionshipWins_results_with_qualifying' in data.columns:
+    data['totalChampionshipWins'] = data['totalChampionshipWins_results_with_qualifying'].astype('Int64')
+if 'totalRaceStarts_results_with_qualifying' in data.columns:
+    data['totalRaceStarts'] = data['totalRaceStarts_results_with_qualifying'].astype('Int64')
+if 'totalRaceWins_results_with_qualifying' in data.columns:
+    data['totalRaceWins'] = data['totalRaceWins_results_with_qualifying'].astype('Int64')
+if 'total1And2Finishes' in data.columns:
+    data['total1And2Finishes'] = data['total1And2Finishes'].astype('Int64')
+if 'totalRaceLaps_results_with_qualifying' in data.columns:
+    data['totalRaceLaps'] = data['totalRaceLaps_results_with_qualifying'].astype('Int64')
+if 'totalPodiums_results_with_qualifying' in data.columns:
+    data['totalPodiums'] = data['totalPodiums_results_with_qualifying'].astype('Int64')
+if 'totalPodiumRaces' in data.columns:
+    data['totalPodiumRaces'] = data['totalPodiumRaces'].astype('Int64')
+if 'totalPoints_results_with_qualifying' in data.columns:
+    data['totalPoints'] = data['totalPoints_results_with_qualifying'].astype('Float64')
+if 'totalChampionshipPoints_results_with_qualifying' in data.columns:
+    data['totalChampionshipPoints'] = data['totalChampionshipPoints_results_with_qualifying'].astype('Float64')
 # data['totalPolePositions'] = data['totalPolePositions_results_with_qualifying'].astype('Int64')
-data['totalFastestLaps'] = data['totalFastestLaps_results_with_qualifying'].astype('Int64')
-data['totalRaceEntries'] = data['totalRaceEntries_results_with_qualifying'].astype('Int64')
+if 'totalFastestLaps_results_with_qualifying' in data.columns:
+    data['totalFastestLaps'] = data['totalFastestLaps_results_with_qualifying'].astype('Int64')
+if 'totalRaceEntries_results_with_qualifying' in data.columns:
+    data['totalRaceEntries'] = data['totalRaceEntries_results_with_qualifying'].astype('Int64')
 data['driverAge'] = data['driverAge'].astype('Int64')
 # data['delta_from_race_avg'] = data['delta_from_race_avg'].astype('Float64')
 data['driverAge'] = data['driverAge'].astype('Int64')
@@ -1471,7 +1496,10 @@ def get_features_and_target(data):
         'pole_to_win_rate', 'front_row_conversion', 'recent_wins_3_races',
         'rolling_3_race_win_percentage', 'recent_qualifying_improvement_trend', 'head_to_head_teammate_performance_delta', 'championship_position_pressure_factor',
         'constructor_recent_mechanical_dnf_rate', 'driver_performance_at_circuit_type', 'weather_pattern_analysis_by_location', 'overtaking_difficulty_index',
-        'q1_q2_q3_sector_consistency', 'qualifying_position_vs_race_pace_delta_by_track'
+        'q1_q2_q3_sector_consistency', 'qualifying_position_vs_race_pace_delta_by_track',
+        # Race pace & strategy features
+        'practice_race_conversion', 'avg_positions_gained_5r', 'race_pace_consistency',
+        'overtaking_success_top10', 'tire_management_score'
     ]
     
     # Add team-aware features if they exist (for drivers who change constructors)
@@ -1533,8 +1561,9 @@ def load_f1_position_model_features():
         with open(monte_carlo_filepath, 'r') as f:
             lines = [line.strip() for line in f if line.strip() and not line.startswith('Best MAE')]
         # Separate into numerical and categorical
-        numerical = [f for f in lines if f in default_numerical]
-        categorical = []  # Temporarily disable categorical to avoid MAE increase
+        # Monte Carlo features REPLACE defaults, don't filter by them
+        numerical = [f for f in lines if f not in categorical_features_known]
+        categorical = []  # Disable categorical to avoid import-time errors with binned features
         if numerical or categorical:
             
             return numerical, categorical
@@ -3224,8 +3253,12 @@ with tab4:
 
     
             # Holdout year evaluation for Safety Car Model
-            train = safety_cars[safety_cars['grandPrixYear'] < current_year]
-            test = safety_cars[safety_cars['grandPrixYear'] == current_year]
+            # Use current year if it has data, otherwise use most recent year with data
+            max_year_with_data = safety_cars['grandPrixYear'].max()
+            holdout_test_year = current_year if current_year <= max_year_with_data else max_year_with_data
+            
+            train = safety_cars[safety_cars['grandPrixYear'] < holdout_test_year]
+            test = safety_cars[safety_cars['grandPrixYear'] == holdout_test_year]
             X_train, y_train = get_features_and_target_safety_car(train)
             X_test, y_test = get_features_and_target_safety_car(test)
 
@@ -3233,7 +3266,7 @@ with tab4:
             # Now use holdout_model for predictions:
             # y_pred = holdout_model.predict_proba(X_test)[:, 1]
             if X_test.shape[0] == 0:
-                st.warning("Safety Car holdout test set is empty; skipping predictions.")
+                st.warning(f"Safety Car holdout test set for year {holdout_test_year} is empty; skipping predictions.")
                 y_pred = np.array([])
             else:
                 if X_test.isnull().any().any():
