@@ -1,6 +1,7 @@
 import fastf1
 import pandas as pd
 from fastf1.ergast import Ergast
+from fastf1.req import RateLimitExceededError
 from os import path
 import os
 from datetime import date, timedelta
@@ -67,12 +68,11 @@ if os.path.exists(csv_path):
                 break
     # Build processed_sessions by selecting rows where at least one qualifying time exists
     if not processed_df.empty:
-        has_time_mask = (
-            processed_df.get('q1_sec').notna().fillna(False)
-            | processed_df.get('q2_sec').notna().fillna(False)
-            | processed_df.get('q3_sec').notna().fillna(False)
-            | processed_df.get('best_qual_time').notna().fillna(False)
-        )
+        has_time_mask = pd.Series([False] * len(processed_df), index=processed_df.index)
+        # Check both uppercase and lowercase variants since FastF1 uses Q1_sec, Q2_sec, Q3_sec
+        for col in ['q1_sec', 'q2_sec', 'q3_sec', 'best_qual_time', 'Q1_sec', 'Q2_sec', 'Q3_sec']:
+            if col in processed_df.columns:
+                has_time_mask |= processed_df[col].notna()
         processed_sessions = set(zip(processed_df.loc[has_time_mask, 'Year'], processed_df.loc[has_time_mask, 'Round']))
     else:
         processed_sessions = set()
@@ -92,11 +92,30 @@ races = pd.read_json(path.join(DATA_DIR, 'f1db-races.json'))
 races = races.rename(columns={'year': 'Year', 'round': 'Round', 'id': 'raceId'})
 
 # Loop through all seasons and rounds
-for i in range(current_year, current_year + 1):
-    season_schedule = ergast.get_race_schedule(season=i)
+# FastF1 data is available from 2018 onwards
+# Process all years from 2018 to current year
+rate_limit_hit = False
+for i in range(2018, current_year + 1):
+    if rate_limit_hit:
+        print(f"Stopped processing at year {i} due to rate limit. Re-run script to continue.")
+        break
+    
+    try:
+        season_schedule = ergast.get_race_schedule(season=i)
+    except RateLimitExceededError as e:
+        print(f"\nRate limit hit while fetching schedule for {i}: {e}")
+        print(f"Saving {len(qualifying_results_list)} sessions processed so far...")
+        rate_limit_hit = True
+        break
+    except Exception as e:
+        print(f"Failed to get schedule for {i}: {e}")
+        continue
+    
     total_rounds = len(season_schedule)
 
     for round_number in range(1, total_rounds + 1):
+        if rate_limit_hit:
+            break
         session_key = (i, round_number)
         if session_key in processed_sessions:
             print(f"Skipping session: {session_key} (already processed)")
@@ -132,18 +151,110 @@ for i in range(current_year, current_year + 1):
             # Load the qualifying session
             qualifying = fastf1.get_session(i, round_number, 'Q')
             qualifying.load()
-
-            # Get qualifying results as a DataFrame
+            
+            # Get qualifying results as a DataFrame (session-level summary)
             qualifying_results = qualifying.results
-            # Add driverId as a hyphenated string for each row
-            print(qualifying_results.head())
+            
+            # ENHANCED: Get all individual qualifying laps for granular analysis
+            qualifying_laps = qualifying.laps
+            
+            # Calculate per-driver lap-level statistics from all qualifying laps
+            driver_lap_stats = []
+            for driver_abbrev in qualifying_results['Abbreviation'].unique():
+                driver_laps = qualifying_laps[qualifying_laps['Driver'] == driver_abbrev]
+                
+                if len(driver_laps) == 0:
+                    continue
+                    
+                # Get valid laps (not deleted, with lap time)
+                valid_laps = driver_laps[
+                    (~driver_laps['Deleted']) & 
+                    (driver_laps['LapTime'].notna()) &
+                    (driver_laps['Sector1Time'].notna()) &
+                    (driver_laps['Sector2Time'].notna()) &
+                    (driver_laps['Sector3Time'].notna())
+                ]
+                
+                stats = {
+                    'DriverNumber': driver_laps.iloc[0]['DriverNumber'],
+                    'Abbreviation': driver_abbrev,
+                    'total_qualifying_laps': len(driver_laps),
+                    'valid_laps': len(valid_laps),
+                    'deleted_laps': len(driver_laps[driver_laps['Deleted'] == True]),
+                }
+                
+                if len(valid_laps) > 0:
+                    # Convert timedelta to seconds for calculations
+                    lap_times_sec = valid_laps['LapTime'].dt.total_seconds()
+                    s1_times_sec = valid_laps['Sector1Time'].dt.total_seconds()
+                    s2_times_sec = valid_laps['Sector2Time'].dt.total_seconds()
+                    s3_times_sec = valid_laps['Sector3Time'].dt.total_seconds()
+                    
+                    # Best sector times (could be from different laps)
+                    stats['best_sector1_sec'] = s1_times_sec.min()
+                    stats['best_sector2_sec'] = s2_times_sec.min()
+                    stats['best_sector3_sec'] = s3_times_sec.min()
+                    
+                    # Theoretical best lap (best S1 + best S2 + best S3)
+                    stats['theoretical_best_lap'] = stats['best_sector1_sec'] + stats['best_sector2_sec'] + stats['best_sector3_sec']
+                    
+                    # Actual best lap time
+                    stats['actual_best_lap'] = lap_times_sec.min()
+                    
+                    # Consistency metrics
+                    stats['lap_time_std'] = lap_times_sec.std() if len(lap_times_sec) > 1 else 0
+                    stats['sector1_std'] = s1_times_sec.std() if len(s1_times_sec) > 1 else 0
+                    stats['sector2_std'] = s2_times_sec.std() if len(s2_times_sec) > 1 else 0
+                    stats['sector3_std'] = s3_times_sec.std() if len(s3_times_sec) > 1 else 0
+                    
+                    # Average sector times
+                    stats['avg_sector1_sec'] = s1_times_sec.mean()
+                    stats['avg_sector2_sec'] = s2_times_sec.mean()
+                    stats['avg_sector3_sec'] = s3_times_sec.mean()
+                    
+                    # Tire compound (take most common compound used)
+                    if 'Compound' in valid_laps.columns:
+                        stats['primary_compound'] = valid_laps['Compound'].mode()[0] if len(valid_laps['Compound'].mode()) > 0 else None
+                    
+                    # Delta between theoretical best and actual best (shows consistency)
+                    stats['theoretical_gap'] = stats['actual_best_lap'] - stats['theoretical_best_lap']
+                else:
+                    # No valid laps - set to NaN
+                    for key in ['best_sector1_sec', 'best_sector2_sec', 'best_sector3_sec', 
+                               'theoretical_best_lap', 'actual_best_lap', 'lap_time_std',
+                               'sector1_std', 'sector2_std', 'sector3_std',
+                               'avg_sector1_sec', 'avg_sector2_sec', 'avg_sector3_sec',
+                               'primary_compound', 'theoretical_gap']:
+                        stats[key] = np.nan
+                
+                driver_lap_stats.append(stats)
+            
+            # Convert to DataFrame
+            lap_stats_df = pd.DataFrame(driver_lap_stats)
+            
+            # Merge lap stats with qualifying results
+            qualifying_results = pd.merge(
+                qualifying_results,
+                lap_stats_df,
+                on=['DriverNumber', 'Abbreviation'],
+                how='left'
+            )
+            
+            # Add metadata
+            print(f"Processed {len(qualifying_results)} drivers with lap-level statistics")
             if isinstance(qualifying_results, pd.DataFrame):
                 qualifying_results['Round'] = round_number
                 qualifying_results['Year'] = i
                 qualifying_results['Event'] = qualifying.event['EventName']
                 qualifying_results_list.append(qualifying_results)
+        except RateLimitExceededError as e:
+            print(f"\nRate limit hit at session ({i}, {round_number}): {e}")
+            print(f"Saving {len(qualifying_results_list)} sessions processed so far...")
+            rate_limit_hit = True
+            break
         except Exception as e:
-            print(f"Skipping round {round_number} for {i}: {e}")
+            if not isinstance(e, RateLimitExceededError):
+                print(f"Skipping round {round_number} for {i}: {e}")
             continue
 
 # Combine all new qualifying results into a single DataFrame
@@ -206,10 +317,39 @@ if qualifying_results_list:
 
     # Save the combined DataFrame to a CSV file
     combined_df.to_csv(csv_path, sep='\t', index=False)
+    
+    if rate_limit_hit:
+        print(f"\n[WARNING] Rate limit reached - saved {len(qualifying_results_list)} sessions successfully.")
+        print(f"   CSV updated with partial results. Re-run script in ~1 hour to continue.")
+    else:
+        print(f"[SUCCESS] Successfully processed and saved {len(qualifying_results_list)} qualifying sessions.")
 else:
     print("No new qualifying results were found.")
 
+# Only proceed with post-processing if the CSV file exists and has data
+if not path.exists(csv_path):
+    print("CSV file does not exist yet. No data to process.")
+    exit(0)
+
 qualifying = pd.read_csv(path.join(DATA_DIR, 'all_qualifying_races.csv'), sep='\t')
+
+if qualifying.empty:
+    print("CSV file is empty. No data to process.")
+    exit(0)
+
+# Rename FastF1 column names to match expected format for merging
+# FastF1 uses DriverId, TeamId (capitalized) while our data uses driverId, constructorId
+column_mapping = {
+    'DriverId': 'driverId',
+    'TeamId': 'constructorId',
+    'TeamName': 'constructorName'
+}
+qualifying = qualifying.rename(columns=column_mapping)
+
+# Skip post-processing if required columns don't exist after renaming
+if 'driverId' not in qualifying.columns:
+    print("CSV file missing required columns. Skipping post-processing.")
+    exit(0)
 
 qualifying['driverId'] = qualifying['driverId'].replace({'jos-verstappen': 'max-verstappen'})
 
@@ -368,6 +508,13 @@ qualifying_with_driverId.to_csv(path.join(DATA_DIR, 'all_qualifying_races.csv'),
     'Year', 'Round', 'Event', 'raceId', 'DriverNumber', 'Abbreviation', 'FullName', 
     'LastName', 'driverId', 'constructorName', 'q1_sec', 'q1_pos', 'q2_sec', 'q2_pos', 'q3_sec', 'q3_pos', #'q1', 'q2', 'q3',
     'best_qual_time', 'teammate_qual_delta', #'Position', 'Points',
+    # Lap-level granular metrics (2018+ from FastF1)
+    'total_qualifying_laps', 'valid_laps', 'deleted_laps',
+    'best_sector1_sec', 'best_sector2_sec', 'best_sector3_sec',
+    'theoretical_best_lap', 'actual_best_lap', 'theoretical_gap',
+    'lap_time_std', 'sector1_std', 'sector2_std', 'sector3_std',
+    'avg_sector1_sec', 'avg_sector2_sec', 'avg_sector3_sec', 'primary_compound',
+    # Driver career stats
     'totalChampionshipPoints', 'totalChampionshipWins', 'totalFastestLaps', 'totalGrandSlams', 'totalPodiums', 
     'totalPoints',  'totalPolePositions',  'totalRaceEntries',  'totalRaceLaps', 
       'totalRaceStarts',  'totalRaceWins', 'bestChampionshipPosition',  'bestRaceResult', 'bestStartingGridPosition',  'constructorId', 

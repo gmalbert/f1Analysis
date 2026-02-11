@@ -124,8 +124,8 @@ drivers = drivers[drivers['id'] != 'jos-verstappen']
 race_results = pd.read_json(path.join(DATA_DIR, 'f1db-races-race-results.json')) 
 races = pd.read_json(path.join(DATA_DIR, 'f1db-races.json')) 
 constructors = pd.read_json(path.join(DATA_DIR, 'f1db-constructors.json')) 
-qualifying_json = pd.read_json(path.join(DATA_DIR, 'f1db-races-qualifying-results.json')) 
-qualifying_csv = pd.read_csv(path.join(DATA_DIR, 'all_qualifying_races.csv'), sep='\t') 
+qualifying_json = pd.read_json(path.join(DATA_DIR, 'f1db-races-qualifying-results.json'))
+# Note: all_qualifying_races.csv is not used (empty/broken) - we use f1db JSON directly
 grandPrix = pd.read_json(path.join(DATA_DIR, 'f1db-grands-prix.json')) 
 fp1 = pd.read_json(path.join(DATA_DIR, 'f1db-races-free-practice-1-results.json')) 
 fp2 = pd.read_json(path.join(DATA_DIR, 'f1db-races-free-practice-2-results.json')) 
@@ -175,23 +175,102 @@ driver_standings = pd.read_csv(path.join(DATA_DIR, 'driver_standings.csv'), sep=
 drivers['id'] = drivers['id'].str.replace('^andrea-', '', regex=True)
 drivers['name'] = drivers['name'].replace({'Andrea Kimi Antonelli': 'Kimi Antonelli'})
 
-qualifying_csv['driverId'] = qualifying_csv['driverId'].str.replace('^andrea-', '', regex=True)
-qualifying_csv['FullName'] = qualifying_csv['FullName'].replace({'Andrea Kimi Antonelli': 'Kimi Antonelli'})
-
 # After loading race_results
 current_practices['resultsDriverId'] = current_practices['resultsDriverId'].str.replace('^andrea-', '', regex=True)
 
 driver_standings['driverId'] = driver_standings['driverId'].str.replace('^andrea-', '', regex=True)
 driver_standings['driverName'] = driver_standings['driverName'].replace({'Andrea Kimi Antonelli': 'Kimi Antonelli'})
 
-qualifying = pd.merge(
-    qualifying_json,
-    qualifying_csv[['q1_sec', 'q1_pos', 'q2_sec', 'q2_pos', 'q3_sec', 'q3_pos', 'best_qual_time', 'teammate_qual_delta', 'raceId', 'driverId', ]],
-    left_on=['raceId', 'driverId'],
-    right_on=['raceId', 'driverId'],
-    how='right',
-    suffixes=('_json', '_csv')
-)
+# Use f1db qualifying JSON directly (qualifying_csv is empty/broken)
+# Convert time strings to seconds for consistency
+def time_str_to_seconds(time_str):
+    """Convert qualifying time string (e.g., '1:21.164') to seconds float."""
+    if pd.isna(time_str) or time_str is None:
+        return np.nan
+    try:
+        time_str = str(time_str).strip()
+        if ':' in time_str:
+            parts = time_str.split(':')
+            if len(parts) == 2:
+                minutes = float(parts[0])
+                seconds = float(parts[1])
+                return minutes * 60 + seconds
+        return float(time_str)
+    except Exception:
+        return np.nan
+
+qualifying = qualifying_json.copy()
+qualifying['q1_sec'] = qualifying['q1'].apply(time_str_to_seconds)
+qualifying['q2_sec'] = qualifying['q2'].apply(time_str_to_seconds)
+qualifying['q3_sec'] = qualifying['q3'].apply(time_str_to_seconds)
+qualifying['best_qual_time'] = qualifying[['q1_sec', 'q2_sec', 'q3_sec']].min(axis=1)
+
+# Derive qualifying positions from lap times (rank within each race session)
+# Faster time (lower seconds) = better position (lower number)
+qualifying['q1_pos'] = qualifying.groupby('raceId')['q1_sec'].rank(method='min', na_option='keep')
+qualifying['q2_pos'] = qualifying.groupby('raceId')['q2_sec'].rank(method='min', na_option='keep')
+qualifying['q3_pos'] = qualifying.groupby('raceId')['q3_sec'].rank(method='min', na_option='keep')
+
+# Calculate teammate qualifying delta
+qualifying['constructor_group'] = qualifying['constructorId']
+teammate_deltas = []
+for _, group in qualifying.groupby(['raceId', 'constructor_group']):
+    if len(group) >= 2 and group['best_qual_time'].notna().sum() >= 2:
+        for idx, row in group.iterrows():
+            if pd.notna(row['best_qual_time']):
+                teammate_times = group[group.index != idx]['best_qual_time'].dropna()
+                if len(teammate_times) > 0:
+                    teammate_deltas.append((idx, row['best_qual_time'] - teammate_times.mean()))
+                else:
+                    teammate_deltas.append((idx, np.nan))
+            else:
+                teammate_deltas.append((idx, np.nan))
+    else:
+        for idx in group.index:
+            teammate_deltas.append((idx, np.nan))
+
+teammate_delta_dict = dict(teammate_deltas)
+qualifying['teammate_qual_delta'] = qualifying.index.map(lambda i: teammate_delta_dict.get(i, np.nan))
+
+# Merge lap-level qualifying data from all_qualifying_races.csv (FastF1 enhanced data)
+qualifying_csv_path = path.join(DATA_DIR, 'all_qualifying_races.csv')
+if path.exists(qualifying_csv_path):
+    try:
+        qualifying_fastf1 = pd.read_csv(qualifying_csv_path, sep='\t')
+        
+        # Lap-level columns to merge
+        lap_level_cols = [
+            'best_sector1_sec', 'best_sector2_sec', 'best_sector3_sec',
+            'theoretical_best_lap', 'actual_best_lap', 'lap_time_std',
+            'sector1_std', 'sector2_std', 'sector3_std',
+            'avg_sector1_sec', 'avg_sector2_sec', 'avg_sector3_sec',
+            'primary_compound', 'theoretical_gap',
+            'total_qualifying_laps', 'valid_laps', 'deleted_laps'
+        ]
+        
+        # Keep only columns that exist in the CSV
+        available_cols = [c for c in lap_level_cols if c in qualifying_fastf1.columns]
+        
+        if available_cols and 'raceId' in qualifying_fastf1.columns and 'driverId' in qualifying_fastf1.columns:
+            merge_cols = ['raceId', 'driverId'] + available_cols
+            qualifying_fastf1_subset = qualifying_fastf1[merge_cols].copy()
+            
+            # Merge on raceId and driverId
+            qualifying = qualifying.merge(
+                qualifying_fastf1_subset,
+                on=['raceId', 'driverId'],
+                how='left',
+                suffixes=('', '_fastf1')
+            )
+            
+            print(f"Merged {len(available_cols)} lap-level qualifying columns from all_qualifying_races.csv")
+        else:
+            print(f"Warning: all_qualifying_races.csv missing required columns (raceId, driverId, or lap-level fields)")
+            
+    except Exception as e:
+        print(f"Warning: Could not merge lap-level qualifying data: {e}")
+else:
+    print(f"Warning: {qualifying_csv_path} not found - lap-level qualifying data not available")
 
 ##### Pit Stops
 
@@ -279,6 +358,15 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying = pd.merge(
     how='left',
     suffixes=['_results', '_qualifying']
 )
+
+# Debug: Check if lap-level columns made it through the merge
+lap_level_cols = ['best_sector1_sec', 'best_sector2_sec', 'best_sector3_sec', 'theoretical_best_lap']
+present_cols = [c for c in lap_level_cols if c in results_and_drivers_and_constructors_and_grandprix_and_qualifying.columns]
+if present_cols:
+    non_null_counts = {c: results_and_drivers_and_constructors_and_grandprix_and_qualifying[c].notna().sum() for c in present_cols}
+    print(f"Lap-level columns after qualifying merge: {non_null_counts}")
+else:
+    print(f"Warning: No lap-level columns found after qualifying merge")
 
 results_and_drivers_and_constructors_and_grandprix_and_qualifying.rename(columns={'constructorName_qualifying': 'constructorName'}, inplace=True)
 
@@ -1683,6 +1771,73 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
     .transform(lambda x: x.shift(1).mean())
 )
 
+# --- RACE PACE & STRATEGY FEATURES (Target race performance, not qualifying) ---
+
+# 1. Practice-to-race conversion rate: How well does practice pace translate to race position?
+#    (Practice position vs qualifying shows race simulation strength)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['practice_race_conversion'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['averagePracticePosition'] -
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsQualificationPositionNumber']
+)
+
+# 2. Historical overtaking ability: Average positions gained per race (last 5 races)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['avg_positions_gained_5r'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .groupby('resultsDriverName')['positionsGained']
+    .transform(lambda x: x.shift(1).rolling(5, min_periods=1).mean())
+)
+
+# 3. Race pace consistency (low delta_lap values = consistent race pace)
+if all(col in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns 
+       for col in ['delta_lap_5', 'delta_lap_10', 'delta_lap_15']):
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['race_pace_consistency'] = (
+        (results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['delta_lap_5'].abs() +
+         results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['delta_lap_10'].abs() +
+         results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['delta_lap_15'].abs()) / 3.0
+    )
+
+# 4. Wet weather racecraft: Compare wet race results to wet quali (historical avg)
+wet_race_mask = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['total_precipitation'] > 0
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['wet_race_vs_quali_delta'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    .groupby('resultsDriverName')
+    .apply(lambda g: (g[wet_race_mask]['resultsFinalPositionNumber'] - 
+                      g[wet_race_mask]['resultsQualificationPositionNumber']).shift(1).mean())
+    .reindex(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.index, level='resultsDriverName')
+).values
+
+# 5. Overtaking success rate in top 10 (normalized by opportunities)
+top10_mask = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsQualificationPositionNumber'] <= 10
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['overtaking_success_top10'] = (
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[top10_mask]
+    .groupby('resultsDriverName')['positionsGained']
+    .transform(lambda x: (x.shift(1).rolling(5, min_periods=1).sum() / 
+                         x.shift(1).rolling(5, min_periods=1).count()).fillna(0))
+)
+
+# 6. Championship pressure performance: Performance when in top 3 championship positions
+#    (Compare finishing position when fighting for championship vs when not)
+if 'championship_position' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+    in_championship_fight = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['championship_position'] <= 3
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['championship_fight_performance'] = (
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[in_championship_fight]
+        .groupby('resultsDriverName')['resultsFinalPositionNumber']
+        .transform(lambda x: x.shift(1).rolling(3, min_periods=1).mean())
+    )
+else:
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['championship_fight_performance'] = np.nan
+
+# 7. Tire management indicator: Improvement in relative position from lap 5 to lap 15
+#    (Drivers with good tire management gain positions as others degrade)
+if 'delta_lap_5_historical' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns and \
+   'delta_lap_15_historical' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['tire_management_score'] = (
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['delta_lap_5_historical'] -
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['delta_lap_15_historical']
+    )
+
+print("Created 7 race pace/strategy features targeting overtaking, tire management, and pressure performance")
+
 # --- Interaction Features ---
 if 'SpeedI1_mph' not in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
     if 'SpeedI1_mph_y' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
@@ -2350,6 +2505,11 @@ static_columns=['grandPrixYear', 'grandPrixName', 'raceId_results', 'circuitId',
                                        'driver_positionsGained_5_races',  'driver_dnf_rate_5_races', 'avg_final_position_per_track', 'last_final_position_per_track', 'q1_sec', 'q2_sec', 'q3_sec', 'q1_pos', 'q2_pos', 'q3_pos',
                                        'driver_positionsGained_3_races', 'driverFastestPracticeLap_sec', 'BestConstructorPracticeLap_sec', 'teammate_practice_delta', 'teammate_qual_delta', 'best_qual_time',
                                        'avg_final_position_per_track_constructor', 'last_final_position_per_track_constructor', 'bestQualifyingTime_sec', 'qualifying_gap_to_pole',
+                                       # Lap-level qualifying columns from all_qualifying_races.csv (FastF1 enhanced data)
+                                       'best_sector1_sec', 'best_sector2_sec', 'best_sector3_sec', 'theoretical_best_lap', 'actual_best_lap',
+                                       'lap_time_std', 'sector1_std', 'sector2_std', 'sector3_std',
+                                       'avg_sector1_sec', 'avg_sector2_sec', 'avg_sector3_sec',
+                                       'primary_compound', 'theoretical_gap', 'total_qualifying_laps', 'valid_laps', 'deleted_laps',
                                        'practice_position_improvement_1P_2P', 'practice_position_improvement_2P_3P', 'practice_position_improvement_1P_3P', 'practice_time_improvement_1T_2T', 'practice_time_improvement_time_time', 
                                        'practice_time_improvement_2T_3T', 'practice_time_improvement_1T_3T', 'qualifying_consistency_std', 'driver_starting_position_3_races', 'driver_starting_position_5_races',
                                        'qual_vs_track_avg', 'constructor_avg_practice_position', 'practice_position_std', 'recent_vs_season',
@@ -2397,7 +2557,10 @@ static_columns=['grandPrixYear', 'grandPrixName', 'raceId_results', 'circuitId',
                                         'pole_to_win_rate', 'front_row_conversion', 'recent_wins_3_races',
                                         'rolling_3_race_win_percentage', 'recent_qualifying_improvement_trend', 'head_to_head_teammate_performance_delta', 'championship_position_pressure_factor',
                                         'constructor_recent_mechanical_dnf_rate', 'driver_performance_at_circuit_type', 'weather_pattern_analysis_by_location', 'overtaking_difficulty_index',
-                                        'q1_q2_q3_sector_consistency', 'qualifying_position_vs_race_pace_delta_by_track'
+                                        'q1_q2_q3_sector_consistency', 'qualifying_position_vs_race_pace_delta_by_track',
+                                        # Race pace & strategy features (targeting overtaking, tire management, pressure performance)
+                                        'practice_race_conversion', 'avg_positions_gained_5r', 'race_pace_consistency',
+                                        'overtaking_success_top10', 'tire_management_score'
                                                                               ]
 
 # Concatenate static columns and bin_fields
@@ -2819,10 +2982,10 @@ try:
                 main_df.loc[rows_to_update & main_df.index.isin(main_df_current[update_mask].index), 'constructorName'] = \
                     main_df_current.loc[update_mask, 'new_constructorName']
                 
-                print(f"  ✓ Updated {update_mask.sum()} rows with latest team assignments for {current_year}")
-                print(f"  ✓ Affected drivers: {main_df_current[update_mask]['resultsDriverName'].unique().tolist()}")
+                print(f"  [SUCCESS] Updated {update_mask.sum()} rows with latest team assignments for {current_year}")
+                print(f"  [SUCCESS] Affected drivers: {main_df_current[update_mask]['resultsDriverName'].unique().tolist()}")
             else:
-                print(f"  ℹ No team updates needed for {current_year} data")
+                print(f"  [INFO] No team updates needed for {current_year} data")
             
             # Write updated DataFrame back to CSV
             main_df.to_csv(
@@ -2830,14 +2993,14 @@ try:
                 sep='\t',
                 index=False
             )
-            print(f"  ✓ Updated f1ForAnalysis.csv saved")
+            print(f"  [SUCCESS] Updated f1ForAnalysis.csv saved")
         else:
-            print(f"  ℹ No {current_year} data found in f1ForAnalysis.csv to update")
+            print(f"  [INFO] No {current_year} data found in f1ForAnalysis.csv to update")
     else:
-        print(f"  ℹ No {current_year} race results found in f1db-races-race-results.json")
+        print(f"  [INFO] No {current_year} race results found in f1db-races-race-results.json")
         
 except Exception as e:
-    print(f"  ⚠ Warning: Could not update team assignments: {e}")
+    print(f"  [WARNING] Could not update team assignments: {e}")
     print(f"  Continuing with existing data...")
 
 # Optional smoke check: run post-generation smoke tests when --check-smoke is provided
