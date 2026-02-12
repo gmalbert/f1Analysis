@@ -121,8 +121,14 @@ def main():
         print("[ERROR] No model found! Run model training first.")
         sys.exit(1)
     
-    with open(model_path, 'rb') as f:
-        model_data = pickle.load(f, encoding='latin1')
+    # Load model with encoding fallback for cross-platform compatibility
+    try:
+        with open(model_path, 'rb') as f:
+            model_data = pickle.load(f)
+    except UnicodeDecodeError:
+        # Fallback for Windows-generated pickles loaded on Linux (or vice versa)
+        with open(model_path, 'rb') as f:
+            model_data = pickle.load(f, encoding='latin1')
     
     model = model_data['model']
     preprocessor = model_data['preprocessor']

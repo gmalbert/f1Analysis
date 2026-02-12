@@ -22,6 +22,14 @@ jobs:
           cache: 'pip'
       - run: pip install -r requirements.txt
       
+      - name: Download XGBoost models from previous workflow
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          name: xgboost-models
+          path: data_files/models/xgboost/
+          workflow: train-all-models.yml
+          workflow_conclusion: success
+      
       - name: Run Position Group Analysis
         run: python scripts/precompute/position_group_analysis_precompute.py
         env:
