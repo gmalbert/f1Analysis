@@ -11,8 +11,10 @@ from datetime import datetime
 from pathlib import Path
 
 os.environ['STREAMLIT_SERVER_HEADLESS'] = 'true'
+os.environ['STREAMLIT_LOG_LEVEL'] = 'error'  # Minimize Streamlit logging
 
 import warnings
+import logging
 warnings.filterwarnings("ignore")
 
 import numpy as np
@@ -28,6 +30,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 def optimize_xgboost(X, y, season_groups, n_trials=100):
     """Optimize XGBoost hyperparameters using Optuna."""
     from raceAnalysis import get_preprocessor_position
+    
+    # Suppress Streamlit headless mode warnings AFTER streamlit is imported
+    logging.getLogger('streamlit.runtime.scriptrunner_utils.script_run_context').setLevel(logging.ERROR)
+    logging.getLogger('streamlit.runtime.caching.cache_data_api').setLevel(logging.ERROR)
+    logging.getLogger('streamlit').setLevel(logging.ERROR)
+    logging.getLogger('streamlit.runtime.state.session_state_proxy').setLevel(logging.ERROR)
     
     print(f"  Optimizing XGBoost ({n_trials} trials)...")
     
@@ -166,14 +174,14 @@ def main():
         print("XGBoost Optimization")
         print("-" * 60)
         results['optimizations']['xgboost'] = optimize_xgboost(X_clean, y_clean, season_groups, args.n_trials)
-        print(f"  ✓ Best MAE: {results['optimizations']['xgboost']['best_mae']:.4f}")
+        print(f"  [OK] Best MAE: {results['optimizations']['xgboost']['best_mae']:.4f}")
     
     if 'lightgbm' in args.model_types:
         print("\n" + "-" * 60)
         print("LightGBM Optimization")
         print("-" * 60)
         results['optimizations']['lightgbm'] = optimize_lightgbm(X_clean, y_clean, season_groups, args.n_trials)
-        print(f"  ✓ Best MAE: {results['optimizations']['lightgbm']['best_mae']:.4f}")
+        print(f"  [OK] Best MAE: {results['optimizations']['lightgbm']['best_mae']:.4f}")
     
     # Save results
     output_path = Path(args.output)

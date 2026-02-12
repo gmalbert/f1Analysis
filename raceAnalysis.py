@@ -44,6 +44,7 @@ from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 from sklearn.inspection import permutation_importance
 from sklearn.impute import SimpleImputer
 from sklearn.ensemble import VotingRegressor, StackingRegressor
+from sklearn.base import BaseEstimator, RegressorMixin
 import seaborn as sns
 from xgboost import XGBRegressor
 import shap
@@ -89,6 +90,45 @@ EarlyStopping = xgb.callback.EarlyStopping
 
 from footer import add_betting_oracle_footer
 
+
+class SklearnCompatibleCatBoost(BaseEstimator, RegressorMixin):
+    """Wrapper for CatBoostRegressor to make it sklearn-compatible for ensemble stacking."""
+    
+    def __init__(self, **kwargs):
+        self.model = CatBoostRegressor(**kwargs)
+        self._estimator_type = "regressor"
+    
+    def fit(self, X, y, **kwargs):
+        self.model.fit(X, y, **kwargs)
+        return self
+    
+    def predict(self, X):
+        return self.model.predict(X)
+    
+    def get_params(self, deep=True):
+        return self.model.get_params(deep=deep)
+    
+    def set_params(self, **params):
+        self.model.set_params(**params)
+        return self
+    
+    def __sklearn_tags__(self):
+        """Manually implement sklearn tags to ensure proper regressor recognition."""
+        from sklearn.utils._tags import Tags, TargetTags, RegressorTags, InputTags
+        tags = Tags(
+            estimator_type="regressor",
+            target_tags=TargetTags(required=True),
+            transformer_tags=None,
+            regressor_tags=RegressorTags(),
+            classifier_tags=None,
+            array_api_support=False,
+            no_validation=False,
+            non_deterministic=False,
+            requires_fit=True,
+            _skip_test=False,
+            input_tags=InputTags(pairwise=False),
+        )
+        return tags
 
 
 DATA_DIR = 'data_files/'
@@ -546,9 +586,12 @@ def get_last_modified_file(dir_path):
         return None
 
 latest_file = get_last_modified_file(DATA_DIR)
-modification_time = path.getmtime(latest_file)
-#readable_time = time.ctime(modification_time)
-readable_time = datetime.datetime.fromtimestamp(modification_time).strftime('%Y-%m-%d %I:%M %p')
+if latest_file is not None:
+    modification_time = path.getmtime(latest_file)
+    #readable_time = time.ctime(modification_time)
+    readable_time = datetime.datetime.fromtimestamp(modification_time).strftime('%Y-%m-%d %I:%M %p')
+else:
+    readable_time = "No data files found"
 
 def reset_filters():
     # Assuming you have filters stored in session state
@@ -2047,13 +2090,15 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
 
     elif model_type == "Ensemble (XGBoost + LightGBM + CatBoost)":
         from sklearn.ensemble import StackingRegressor
+        from sklearn.base import BaseEstimator, RegressorMixin
         from lightgbm import LGBMRegressor
         from catboost import CatBoostRegressor
         
+        # Wrapper to make CatBoost sklearn-compatible
         base_estimators = [
             ('xgb', XGBRegressor(n_estimators=100, max_depth=4, learning_rate=0.1, random_state=42, n_jobs=-1)),
             ('lgb', LGBMRegressor(n_estimators=100, max_depth=4, learning_rate=0.1, random_state=42, n_jobs=-1, verbose=-1)),
-            ('cat', CatBoostRegressor(iterations=100, depth=4, learning_rate=0.1, random_state=42, verbose=False))
+            ('cat', SklearnCompatibleCatBoost(iterations=100, depth=4, learning_rate=0.1, random_state=42, verbose=False))
         ]
         
         model = StackingRegressor(

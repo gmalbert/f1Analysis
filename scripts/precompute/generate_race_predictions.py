@@ -12,8 +12,10 @@ from datetime import datetime
 from pathlib import Path
 
 os.environ['STREAMLIT_SERVER_HEADLESS'] = 'true'
+os.environ['STREAMLIT_LOG_LEVEL'] = 'error'  # Minimize Streamlit logging
 
 import warnings
+import logging
 warnings.filterwarnings("ignore")
 
 import numpy as np
@@ -32,14 +34,14 @@ def load_models(models_dir: Path):
         if model_path.exists():
             with open(model_path, 'rb') as f:
                 models[model_type] = pickle.load(f)
-            print(f"  ✓ Loaded {model_type} model")
+            print(f"  [OK] Loaded {model_type} model")
     
     # Also load DNF model
     dnf_path = models_dir / 'xgboost' / 'dnf_model.pkl'
     if dnf_path.exists():
         with open(dnf_path, 'rb') as f:
             models['dnf'] = pickle.load(f)
-        print("  ✓ Loaded DNF model")
+        print("  [OK] Loaded DNF model")
     
     return models
 
@@ -64,6 +66,12 @@ def generate_predictions(data, models, next_race, output_dir: Path):
     """Generate predictions for all drivers for the next race."""
     
     from raceAnalysis import get_features_and_target
+    
+    # Suppress Streamlit headless mode warnings AFTER streamlit is imported
+    logging.getLogger('streamlit.runtime.scriptrunner_utils.script_run_context').setLevel(logging.ERROR)
+    logging.getLogger('streamlit.runtime.caching.cache_data_api').setLevel(logging.ERROR)
+    logging.getLogger('streamlit').setLevel(logging.ERROR)
+    logging.getLogger('streamlit.runtime.state.session_state_proxy').setLevel(logging.ERROR)
     
     features, _ = get_features_and_target(data)
     feature_names = features.columns.tolist()
@@ -143,7 +151,7 @@ def generate_predictions(data, models, next_race, output_dir: Path):
                 'predictions': driver_predictions
             }
             
-            print(f"  ✓ Generated {len(driver_predictions)} predictions with {model_type} (MAE: {model_data.get('mae', 0):.4f})")
+            print(f"  [OK] Generated {len(driver_predictions)} predictions with {model_type} (MAE: {model_data.get('mae', 0):.4f})")
             
         except Exception as e:
             print(f"  ✗ Error generating predictions with {model_type}: {e}")
@@ -158,7 +166,7 @@ def generate_predictions(data, models, next_race, output_dir: Path):
     with open(output_file, 'w') as f:
         json.dump(predictions, f, indent=2)
     
-    print(f"\n✓ Predictions saved to {output_file}")
+    print(f"\n[OK] Predictions saved to {output_file}")
     return predictions
 
 
@@ -183,7 +191,7 @@ def main():
     models = load_models(models_dir)
     
     if not models:
-        print("❌ No models found! Run model training first.")
+        print("[ERROR] No models found! Run model training first.")
         sys.exit(1)
     
     print(f"\nFound {len(models)} models")

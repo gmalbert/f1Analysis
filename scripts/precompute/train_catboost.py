@@ -11,8 +11,10 @@ from datetime import datetime
 
 os.environ['STREAMLIT_SERVER_HEADLESS'] = 'true'
 os.environ['STREAMLIT_BROWSER_GATHER_USAGE_STATS'] = 'false'
+os.environ['STREAMLIT_LOG_LEVEL'] = 'error'  # Minimize Streamlit logging
 
 import warnings
+import logging
 warnings.filterwarnings("ignore")
 
 import pandas as pd
@@ -35,6 +37,12 @@ def train_catboost_models():
         CACHE_VERSION,
         train_and_evaluate_model
     )
+    
+    # Suppress Streamlit headless mode warnings AFTER streamlit is imported
+    logging.getLogger('streamlit.runtime.scriptrunner_utils.script_run_context').setLevel(logging.ERROR)
+    logging.getLogger('streamlit.runtime.caching.cache_data_api').setLevel(logging.ERROR)
+    logging.getLogger('streamlit').setLevel(logging.ERROR)
+    logging.getLogger('streamlit.runtime.state.session_state_proxy').setLevel(logging.ERROR)
     
     print(f"\nLoading data (CACHE_VERSION={CACHE_VERSION})...")
     data, _ = load_data(10000, CACHE_VERSION)
@@ -73,7 +81,7 @@ def train_catboost_models():
     
     with open(output_dir / 'position_model.pkl', 'wb') as f:
         pickle.dump(position_artifact, f)
-    print(f"✓ Position model saved (MAE: {mae:.4f})")
+    print(f"[OK] Position model saved (MAE: {mae:.4f})")
     
     # Save metadata
     metadata = {
@@ -106,7 +114,7 @@ if __name__ == '__main__':
         metadata = train_catboost_models()
         sys.exit(0)
     except Exception as e:
-        print(f"\n❌ ERROR: {e}")
+        print(f"\n[ERROR] {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
