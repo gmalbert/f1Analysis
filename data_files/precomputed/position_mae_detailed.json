@@ -1,0 +1,433 @@
+{
+  "metadata": {
+    "generated_at": "2026-02-11T21:34:50.878762",
+    "model_mae": 2.0761589849739104,
+    "test_set_size": 865
+  },
+  "position_groups": {
+    "winners": {
+      "mae": 1.8760007894956148,
+      "median_error": 1.6670777797698975,
+      "std_error": 1.3042853115146202,
+      "max_error": 6.193912982940674,
+      "count": 39,
+      "percentile_25": 0.9679470062255859,
+      "percentile_75": 2.519797921180725,
+      "percentile_90": 2.826404571533204
+    },
+    "podium": {
+      "mae": 1.7777659902349114,
+      "median_error": 1.5436533689498901,
+      "std_error": 1.456381318944881,
+      "max_error": 7.032881736755371,
+      "count": 128,
+      "percentile_25": 0.747657060623169,
+      "percentile_75": 2.4699454307556152,
+      "percentile_90": 3.3840483665466308
+    },
+    "top_5": {
+      "mae": 1.8833815856621816,
+      "median_error": 1.4789950847625732,
+      "std_error": 1.5251914719487947,
+      "max_error": 7.032881736755371,
+      "count": 208,
+      "percentile_25": 0.7487495541572571,
+      "percentile_75": 2.7212764024734497,
+      "percentile_90": 3.8136977672576906
+    },
+    "points": {
+      "mae": 1.8251900527117064,
+      "median_error": 1.487574577331543,
+      "std_error": 1.451358652414576,
+      "max_error": 7.617787718772888,
+      "count": 417,
+      "percentile_25": 0.6935181617736816,
+      "percentile_75": 2.553055763244629,
+      "percentile_90": 3.7839342117309576
+    },
+    "midfield": {
+      "mae": 1.8850158188677482,
+      "median_error": 1.4093618392944336,
+      "std_error": 1.8330740624393709,
+      "max_error": 11.39164662361145,
+      "count": 221,
+      "percentile_25": 0.6071243286132812,
+      "percentile_75": 2.449075698852539,
+      "percentile_90": 4.2929487228393555
+    },
+    "backmarkers": {
+      "mae": 3.678908420412728,
+      "median_error": 3.2029523849487305,
+      "std_error": 2.7216620471018658,
+      "max_error": 14.962992429733276,
+      "count": 89,
+      "percentile_25": 1.9240856170654297,
+      "percentile_75": 4.752285003662109,
+      "percentile_90": 7.185918617248537
+    },
+    "overall": {
+      "mae": 2.0703103127472993,
+      "median_error": 1.5958237648010254,
+      "std_error": 1.8668886653985661,
+      "max_error": 14.962992429733276,
+      "count": 865,
+      "percentile_25": 0.7104344367980957,
+      "percentile_75": 2.839479684829712,
+      "percentile_90": 4.359263229370117
+    }
+  },
+  "by_driver": {
+    "Alexander Albon": {
+      "mae": 2.736,
+      "count": 26,
+      "std": 2.12
+    },
+    "Antonio Giovinazzi": {
+      "mae": 2.02,
+      "count": 19,
+      "std": 1.744
+    },
+    "Brendon Hartley": {
+      "mae": 2.321,
+      "count": 4,
+      "std": 1.869
+    },
+    "Carlos Sainz Jr.": {
+      "mae": 2.21,
+      "count": 31,
+      "std": 1.766
+    },
+    "Charles Leclerc": {
+      "mae": 2.375,
+      "count": 30,
+      "std": 2.253
+    },
+    "Daniel Ricciardo": {
+      "mae": 2.292,
+      "count": 28,
+      "std": 1.877
+    },
+    "Daniil Kvyat": {
+      "mae": 1.801,
+      "count": 14,
+      "std": 1.483
+    },
+    "Esteban Guti\u00e9rrez": {
+      "mae": 0.474,
+      "count": 2,
+      "std": 0.392
+    },
+    "Esteban Ocon": {
+      "mae": 2.293,
+      "count": 30,
+      "std": 1.916
+    },
+    "Felipe Massa": {
+      "mae": 3.784,
+      "count": 4,
+      "std": 2.807
+    },
+    "Felipe Nasr": {
+      "mae": 0.353,
+      "count": 3,
+      "std": 0.158
+    },
+    "Fernando Alonso": {
+      "mae": 2.285,
+      "count": 28,
+      "std": 2.029
+    },
+    "Franco Colapinto": {
+      "mae": 1.299,
+      "count": 5,
+      "std": 1.014
+    },
+    "Gabriel Bortoleto": {
+      "mae": 1.392,
+      "count": 4,
+      "std": 1.009
+    },
+    "George Russell": {
+      "mae": 1.715,
+      "count": 35,
+      "std": 1.94
+    },
+    "Guanyu Zhou": {
+      "mae": 1.842,
+      "count": 16,
+      "std": 1.437
+    },
+    "Isack Hadjar": {
+      "mae": 1.061,
+      "count": 8,
+      "std": 0.767
+    },
+    "Jack Doohan": {
+      "mae": 0.023,
+      "count": 1,
+      "std": NaN
+    },
+    "Jenson Button": {
+      "mae": 0.778,
+      "count": 2,
+      "std": 0.154
+    },
+    "Jolyon Palmer": {
+      "mae": 2.178,
+      "count": 7,
+      "std": 1.697
+    },
+    "Kevin Magnussen": {
+      "mae": 2.923,
+      "count": 27,
+      "std": 1.73
+    },
+    "Kimi Antonelli": {
+      "mae": 2.41,
+      "count": 3,
+      "std": 1.704
+    },
+    "Kimi R\u00e4ikk\u00f6nen": {
+      "mae": 2.079,
+      "count": 23,
+      "std": 2.339
+    },
+    "Lance Stroll": {
+      "mae": 2.511,
+      "count": 29,
+      "std": 1.939
+    },
+    "Lando Norris": {
+      "mae": 2.025,
+      "count": 29,
+      "std": 1.445
+    },
+    "Lewis Hamilton": {
+      "mae": 2.061,
+      "count": 41,
+      "std": 2.496
+    },
+    "Liam Lawson": {
+      "mae": 1.709,
+      "count": 7,
+      "std": 1.173
+    },
+    "Logan Sargeant": {
+      "mae": 1.937,
+      "count": 8,
+      "std": 1.501
+    },
+    "Marcus Ericsson": {
+      "mae": 1.468,
+      "count": 11,
+      "std": 1.241
+    },
+    "Max Verstappen": {
+      "mae": 1.703,
+      "count": 36,
+      "std": 1.687
+    },
+    "Mick Schumacher": {
+      "mae": 3.024,
+      "count": 2,
+      "std": 2.598
+    },
+    "Nicholas Latifi": {
+      "mae": 1.675,
+      "count": 11,
+      "std": 1.119
+    },
+    "Nico H\u00fclkenberg": {
+      "mae": 2.395,
+      "count": 21,
+      "std": 1.749
+    },
+    "Nico Rosberg": {
+      "mae": 2.179,
+      "count": 4,
+      "std": 0.806
+    },
+    "Nikita Mazepin": {
+      "mae": 3.217,
+      "count": 1,
+      "std": NaN
+    },
+    "Nyck de Vries": {
+      "mae": 0.711,
+      "count": 2,
+      "std": 0.277
+    },
+    "Oliver Bearman": {
+      "mae": 1.371,
+      "count": 5,
+      "std": 1.855
+    },
+    "Oscar Piastri": {
+      "mae": 2.341,
+      "count": 16,
+      "std": 1.54
+    },
+    "Pascal Wehrlein": {
+      "mae": 2.211,
+      "count": 7,
+      "std": 2.164
+    },
+    "Paul di Resta": {
+      "mae": NaN,
+      "count": 0,
+      "std": NaN
+    },
+    "Pierre Gasly": {
+      "mae": 1.934,
+      "count": 22,
+      "std": 2.008
+    },
+    "Pietro Fittipaldi": {
+      "mae": 0.869,
+      "count": 1,
+      "std": NaN
+    },
+    "Rio Haryanto": {
+      "mae": 0.265,
+      "count": 1,
+      "std": NaN
+    },
+    "Robert Kubica": {
+      "mae": 0.022,
+      "count": 1,
+      "std": NaN
+    },
+    "Romain Grosjean": {
+      "mae": 1.721,
+      "count": 15,
+      "std": 1.512
+    },
+    "Sebastian Vettel": {
+      "mae": 1.69,
+      "count": 14,
+      "std": 1.253
+    },
+    "Sergey Sirotkin": {
+      "mae": 0.398,
+      "count": 2,
+      "std": 0.296
+    },
+    "Sergio P\u00e9rez": {
+      "mae": 2.353,
+      "count": 32,
+      "std": 2.919
+    },
+    "Stoffel Vandoorne": {
+      "mae": 1.131,
+      "count": 6,
+      "std": 0.768
+    },
+    "Valtteri Bottas": {
+      "mae": 1.895,
+      "count": 32,
+      "std": 1.355
+    },
+    "Yuki Tsunoda": {
+      "mae": 1.948,
+      "count": 21,
+      "std": 1.273
+    }
+  },
+  "by_constructor": {
+    "Alfa Romeo": {
+      "mae": 2.153,
+      "count": 49,
+      "std": 1.684
+    },
+    "AlphaTauri": {
+      "mae": 1.832,
+      "count": 30,
+      "std": 1.146
+    },
+    "Alpine": {
+      "mae": 2.209,
+      "count": 34,
+      "std": 2.487
+    },
+    "Aston Martin": {
+      "mae": 2.096,
+      "count": 31,
+      "std": 1.632
+    },
+    "Ferrari": {
+      "mae": 2.161,
+      "count": 66,
+      "std": 2.033
+    },
+    "Force India": {
+      "mae": 2.077,
+      "count": 22,
+      "std": 1.479
+    },
+    "Haas": {
+      "mae": 2.173,
+      "count": 60,
+      "std": 1.739
+    },
+    "Kick Sauber": {
+      "mae": 1.486,
+      "count": 23,
+      "std": 1.239
+    },
+    "Manor": {
+      "mae": 2.281,
+      "count": 9,
+      "std": 1.935
+    },
+    "McLaren": {
+      "mae": 2.244,
+      "count": 76,
+      "std": 1.725
+    },
+    "Mercedes": {
+      "mae": 1.809,
+      "count": 89,
+      "std": 2.147
+    },
+    "RB": {
+      "mae": 1.647,
+      "count": 9,
+      "std": 1.309
+    },
+    "Racing Bulls": {
+      "mae": 1.095,
+      "count": 11,
+      "std": 0.937
+    },
+    "Racing Point": {
+      "mae": 2.444,
+      "count": 12,
+      "std": 2.212
+    },
+    "Red Bull": {
+      "mae": 2.341,
+      "count": 75,
+      "std": 2.467
+    },
+    "Renault": {
+      "mae": 2.292,
+      "count": 27,
+      "std": 1.674
+    },
+    "Sauber": {
+      "mae": 1.413,
+      "count": 17,
+      "std": 1.423
+    },
+    "Toro Rosso": {
+      "mae": 2.199,
+      "count": 23,
+      "std": 1.527
+    },
+    "Williams": {
+      "mae": 2.053,
+      "count": 64,
+      "std": 1.566
+    }
+  }
+}
