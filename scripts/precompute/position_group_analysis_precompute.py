@@ -16,6 +16,9 @@ os.environ['STREAMLIT_LOG_LEVEL'] = 'error'  # Minimize Streamlit logging
 import warnings
 import logging
 warnings.filterwarnings("ignore")
+# Suppress specific Streamlit runtime warnings
+logging.getLogger("streamlit.runtime.scriptrunner").setLevel(logging.ERROR)
+logging.getLogger("streamlit.runtime").setLevel(logging.ERROR)
 
 import numpy as np
 import pandas as pd
@@ -119,7 +122,7 @@ def main():
         sys.exit(1)
     
     with open(model_path, 'rb') as f:
-        model_data = pickle.load(f)
+        model_data = pickle.load(f, encoding='latin1')
     
     model = model_data['model']
     preprocessor = model_data['preprocessor']
