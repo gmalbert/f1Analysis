@@ -1,0 +1,106 @@
+name: Feature Selection Suite
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 5 * 3-11 sun'  # Mar-Nov (EDT): Sundays at 5 AM UTC
+    - cron: '0 5 * 12,1,2 sun'  # Dec-Feb (EST): Sundays at 5 AM UTC
+
+jobs:
+  rfe-selection:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+      - name: Run RFE
+        run: python scripts/precompute/rfe_features.py --output data_files/precomputed/rfe_results.json
+        env:
+          STREAMLIT_SERVER_HEADLESS: '1'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rfe-results
+          path: data_files/precomputed/rfe_results.json
+
+  boruta-selection:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+      - name: Run Boruta
+        run: python scripts/precompute/boruta_features.py --max-iter 200 --output data_files/precomputed/boruta_results.json
+        env:
+          STREAMLIT_SERVER_HEADLESS: '1'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: boruta-results
+          path: data_files/precomputed/boruta_results.json
+
+  shap-analysis:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+      - name: Run SHAP Analysis
+        run: python scripts/precompute/shap_analysis.py --output data_files/precomputed/shap_results.json
+        env:
+          STREAMLIT_SERVER_HEADLESS: '1'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shap-results
+          path: data_files/precomputed/shap_results.json
+
+  permutation-importance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+      - name: Run Permutation Importance
+        run: python scripts/precompute/permutation_importance.py --output data_files/precomputed/permutation_results.json
+        env:
+          STREAMLIT_SERVER_HEADLESS: '1'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: permutation-results
+          path: data_files/precomputed/permutation_results.json
+
+  commit-all:
+    needs: [rfe-selection, boruta-selection, shap-analysis, permutation-importance]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: '*-results'
+          path: data_files/precomputed/
+          merge-multiple: true
+      - name: Commit feature selection results
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data_files/precomputed/
+          if git diff --staged --quiet; then
+            echo "No changes"
+          else
+            git commit -m "chore: update feature selection results [skip ci]"
+            git push
+          fi

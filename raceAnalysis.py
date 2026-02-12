@@ -829,6 +829,131 @@ def load_weather_data(nrows, CACHE_VERSION):
 
 weatherData = load_weather_data(10000, CACHE_VERSION)
 
+# Precomputed analysis loaders
+@st.cache_data
+def load_precomputed_monte_carlo(CACHE_VERSION):
+    """Load precomputed Monte Carlo feature selection results."""
+    try:
+        precomputed_path = path.join(DATA_DIR, 'precomputed', 'monte_carlo_results.json')
+        if path.exists(precomputed_path):
+            with open(precomputed_path, 'r') as f:
+                return json.load(f)
+    except Exception as e:
+        st.warning(f"Could not load precomputed Monte Carlo results: {e}")
+    return None
+
+@st.cache_data
+def load_precomputed_shap(CACHE_VERSION):
+    """Load precomputed SHAP analysis results."""
+    try:
+        precomputed_path = path.join(DATA_DIR, 'precomputed', 'shap_results.json')
+        if path.exists(precomputed_path):
+            with open(precomputed_path, 'r') as f:
+                return json.load(f)
+    except Exception as e:
+        st.warning(f"Could not load precomputed SHAP results: {e}")
+    return None
+
+@st.cache_data
+def load_precomputed_rfe(CACHE_VERSION):
+    """Load precomputed RFE results."""
+    try:
+        precomputed_path = path.join(DATA_DIR, 'precomputed', 'rfe_results.json')
+        if path.exists(precomputed_path):
+            with open(precomputed_path, 'r') as f:
+                return json.load(f)
+    except Exception as e:
+        st.warning(f"Could not load precomputed RFE results: {e}")
+    return None
+
+@st.cache_data
+def load_precomputed_boruta(CACHE_VERSION):
+    """Load precomputed Boruta results."""
+    try:
+        precomputed_path = path.join(DATA_DIR, 'precomputed', 'boruta_results.json')
+        if path.exists(precomputed_path):
+            with open(precomputed_path, 'r') as f:
+                return json.load(f)
+    except Exception as e:
+        st.warning(f"Could not load precomputed Boruta results: {e}")
+    return None
+
+@st.cache_data
+def load_precomputed_permutation(CACHE_VERSION):
+    """Load precomputed permutation importance results."""
+    try:
+        precomputed_path = path.join(DATA_DIR, 'precomputed', 'permutation_results.json')
+        if path.exists(precomputed_path):
+            with open(precomputed_path, 'r') as f:
+                return json.load(f)
+    except Exception as e:
+        st.warning(f"Could not load precomputed permutation results: {e}")
+    return None
+
+@st.cache_data
+def load_precomputed_hyperparams(method='bayesian', CACHE_VERSION=None):
+    """Load precomputed hyperparameter optimization results.
+    
+    Args:
+        method: 'bayesian' or 'grid_search'
+        CACHE_VERSION: Cache version for invalidation
+    """
+    try:
+        filename = 'hyperparam_bayesian.json' if method == 'bayesian' else 'hyperparam_grid.json'
+        precomputed_path = path.join(DATA_DIR, 'precomputed', filename)
+        if path.exists(precomputed_path):
+            with open(precomputed_path, 'r') as f:
+                return json.load(f)
+    except Exception as e:
+        st.warning(f"Could not load precomputed hyperparameters ({method}): {e}")
+    return None
+
+@st.cache_data
+def load_precomputed_position_mae(CACHE_VERSION):
+    """Load precomputed position group MAE analysis."""
+    try:
+        precomputed_path = path.join(DATA_DIR, 'precomputed', 'position_mae_detailed.json')
+        if path.exists(precomputed_path):
+            with open(precomputed_path, 'r') as f:
+                return json.load(f)
+    except Exception as e:
+        st.warning(f"Could not load precomputed position MAE: {e}")
+    return None
+
+@st.cache_data
+def load_precomputed_predictions(race_name=None, year=None, CACHE_VERSION=None):
+    """Load precomputed next race predictions.
+    
+    Args:
+        race_name: Optional race name to load specific predictions
+        year: Optional year
+        CACHE_VERSION: Cache version for invalidation
+    """
+    try:
+        predictions_dir = path.join(DATA_DIR, 'precomputed', 'predictions')
+        if not path.exists(predictions_dir):
+            return None
+            
+        # If specific race requested, look for that file
+        if race_name and year:
+            filename = f"predictions_{race_name.replace(' ', '_')}_{year}.json"
+            file_path = path.join(predictions_dir, filename)
+            if path.exists(file_path):
+                with open(file_path, 'r') as f:
+                    return json.load(f)
+        
+        # Otherwise find the most recent prediction file
+        import glob
+        prediction_files = glob.glob(path.join(predictions_dir, 'predictions_*.json'))
+        if prediction_files:
+            # Sort by modification time, get most recent
+            latest_file = max(prediction_files, key=path.getmtime)
+            with open(latest_file, 'r') as f:
+                return json.load(f)
+    except Exception as e:
+        st.warning(f"Could not load precomputed predictions: {e}")
+    return None
+
 
 weather_columns_to_display = {
     'short_date': st.column_config.DateColumn("Date", format="YYYY-MM-DD"),
@@ -2904,6 +3029,53 @@ with tab4:
     st.header("Next Race")
     st.write("Details, predictions, and analysis for the upcoming race.")
     
+    # Check for precomputed predictions
+    precomputed_predictions = load_precomputed_predictions(CACHE_VERSION=CACHE_VERSION)
+    
+    if precomputed_predictions:
+        st.success("📦 Precomputed predictions available from GitHub Actions!")
+        use_precomputed = st.radio(
+            "Prediction Source",
+            ["Use precomputed predictions (fast)", "Generate fresh predictions (slow)"],
+            index=0,
+            help="Precomputed predictions are generated by GitHub Actions and updated regularly"
+        )
+        
+        if use_precomputed == "Use precomputed predictions (fast)":
+            with st.expander("📊 Precomputed Predictions", expanded=True):
+                metadata = precomputed_predictions.get('metadata', {})
+                st.write(f"**Race:** {metadata.get('race_name', 'Unknown')}")
+                st.write(f"**Year:** {metadata.get('year', 'Unknown')}")
+                st.write(f"**Computed:** {metadata.get('timestamp', 'Unknown')}")
+                st.write(f"**Model:** {metadata.get('model_type', 'Unknown')}")
+                
+                # Display position predictions
+                position_preds = precomputed_predictions.get('position_predictions', {})
+                if position_preds:
+                    st.subheader("Position Predictions")
+                    pos_df = pd.DataFrame(position_preds)
+                    if 'driver_name' in pos_df.columns:
+                        pos_df = pos_df.sort_values('predicted_position')
+                        st.dataframe(pos_df, hide_index=True, width=1000)
+                
+                # Display DNF predictions
+                dnf_preds = precomputed_predictions.get('dnf_predictions', {})
+                if dnf_preds:
+                    st.subheader("DNF Probability Predictions")
+                    dnf_df = pd.DataFrame(dnf_preds)
+                    if 'driver_name' in dnf_df.columns:
+                        dnf_df = dnf_df.sort_values('dnf_probability', ascending=False)
+                        st.dataframe(dnf_df, hide_index=True, width=1000)
+                
+                # Display safety car prediction
+                safety_car_prob = precomputed_predictions.get('safety_car_probability')
+                if safety_car_prob is not None:
+                    st.subheader("Safety Car Prediction")
+                    st.write(f"**Probability:** {safety_car_prob * 100:.1f}%")
+            
+            # Skip the rest of the fresh prediction generation
+            st.stop()
+    
     if st.checkbox("Show Next Race", value=True):
         st.subheader("Next Race:")
     
@@ -4158,6 +4330,75 @@ with tab5:
         
         with tab_select:
             st.subheader("Feature Selection Tools")
+            
+            # Check for precomputed results
+            precomputed_monte_carlo = load_precomputed_monte_carlo(CACHE_VERSION)
+            precomputed_shap = load_precomputed_shap(CACHE_VERSION)
+            precomputed_rfe = load_precomputed_rfe(CACHE_VERSION)
+            precomputed_boruta = load_precomputed_boruta(CACHE_VERSION)
+            precomputed_permutation = load_precomputed_permutation(CACHE_VERSION)
+            
+            # Show availability status
+            has_precomputed = any([precomputed_monte_carlo, precomputed_shap, precomputed_rfe, precomputed_boruta, precomputed_permutation])
+            
+            if has_precomputed:
+                st.info("📦 Precomputed feature selection results available from GitHub Actions!")
+                
+                with st.expander("📊 View Precomputed Results", expanded=True):
+                    if precomputed_monte_carlo:
+                        st.write("### Monte Carlo Results (Precomputed)")
+                        metadata = precomputed_monte_carlo.get('metadata', {})
+                        st.write(f"**Computed:** {metadata.get('timestamp', 'Unknown')}")
+                        st.write(f"**Trials:** {metadata.get('n_trials', 'N/A')}")
+                        
+                        best_result = precomputed_monte_carlo.get('best_result', {})
+                        st.write(f"**Best MAE:** {best_result.get('mae', 'N/A')}")
+                        st.write("**Best Features:**", ", ".join([f"`{f}`" for f in best_result.get('features', [])]))
+                        
+                        # Show top results if available
+                        top_results = precomputed_monte_carlo.get('top_20_results', [])
+                        if top_results:
+                            st.dataframe(pd.DataFrame(top_results), hide_index=True)
+                    
+                    if precomputed_shap:
+                        st.write("### SHAP Analysis (Precomputed)")
+                        metadata = precomputed_shap.get('metadata', {})
+                        st.write(f"**Computed:** {metadata.get('timestamp', 'Unknown')}")
+                        
+                        feature_importance = precomputed_shap.get('feature_importance', [])
+                        if feature_importance:
+                            shap_df = pd.DataFrame(feature_importance)
+                            st.dataframe(shap_df.head(30), hide_index=True)
+                    
+                    if precomputed_rfe:
+                        st.write("### RFE Results (Precomputed)")
+                        metadata = precomputed_rfe.get('metadata', {})
+                        st.write(f"**Computed:** {metadata.get('timestamp', 'Unknown')}")
+                        st.write(f"**Features selected:** {metadata.get('n_features_selected', 'N/A')}")
+                        
+                        selected = precomputed_rfe.get('selected_features', [])
+                        st.write("**Selected Features:**", ", ".join([f"`{f}`" for f in selected]))
+                    
+                    if precomputed_boruta:
+                        st.write("### Boruta Results (Precomputed)")
+                        metadata = precomputed_boruta.get('metadata', {})
+                        st.write(f"**Computed:** {metadata.get('timestamp', 'Unknown')}")
+                        st.write(f"**Iterations:** {metadata.get('max_iter', 'N/A')}")
+                        
+                        selected = precomputed_boruta.get('selected_features', [])
+                        st.write("**Selected Features:**", ", ".join([f"`{f}`" for f in selected]))
+                    
+                    if precomputed_permutation:
+                        st.write("### Permutation Importance (Precomputed)")
+                        metadata = precomputed_permutation.get('metadata', {})
+                        st.write(f"**Computed:** {metadata.get('timestamp', 'Unknown')}")
+                        
+                        importances = precomputed_permutation.get('importances', [])
+                        if importances:
+                            perm_df = pd.DataFrame(importances)
+                            st.dataframe(perm_df.head(30), hide_index=True)
+            
+            st.write("---")
             
             # Monte Carlo Feature Subset Search
             st.write("### Monte Carlo Feature Subset Search")

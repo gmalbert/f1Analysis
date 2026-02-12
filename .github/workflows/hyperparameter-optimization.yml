@@ -1,0 +1,85 @@
+name: Hyperparameter Optimization
+
+on:
+  workflow_dispatch:
+    inputs:
+      method:
+        description: 'Optimization method'
+        type: choice
+        options:
+          - grid_search
+          - bayesian
+          - both
+        default: bayesian
+      n_trials:
+        description: 'Number of Optuna trials (bayesian only)'
+        type: number
+        default: 100
+  schedule:
+    - cron: '0 2 1 3,6,9,12 *'  # 1st of Mar, Jun, Sep, Dec at 2 AM UTC
+
+jobs:
+  grid-search:
+    if: ${{ inputs.method == 'grid_search' || inputs.method == 'both' || github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+      - name: Run Grid Search
+        run: python scripts/precompute/hyperparameter_grid_search.py --output data_files/precomputed/hyperparam_grid.json
+        env:
+          STREAMLIT_SERVER_HEADLESS: '1'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: grid-search-results
+          path: data_files/precomputed/hyperparam_grid.json
+
+  bayesian-optimization:
+    if: ${{ inputs.method == 'bayesian' || inputs.method == 'both' || github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+      - name: Run Bayesian Optimization
+        run: |
+          python scripts/precompute/hyperparameter_bayesian.py \
+            --n-trials ${{ inputs.n_trials || 100 }} \
+            --output data_files/precomputed/hyperparam_bayesian.json
+        env:
+          STREAMLIT_SERVER_HEADLESS: '1'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bayesian-results
+          path: data_files/precomputed/hyperparam_bayesian.json
+
+  commit-results:
+    needs: [grid-search, bayesian-optimization]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: data_files/precomputed/
+          merge-multiple: true
+      - name: Commit hyperparameter results
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data_files/precomputed/
+          if git diff --staged --quiet; then
+            echo "No changes"
+          else
+            git commit -m "chore: update hyperparameter optimization results [skip ci]"
+            git push
+          fi
