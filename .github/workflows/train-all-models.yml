@@ -1,0 +1,126 @@
+name: Train All Models (Multi-Type)
+
+on:
+  workflow_run:
+    workflows: ["Generate F1 Analysis Data"]
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      force_retrain:
+        description: 'Force full retrain even if models exist'
+        type: boolean
+        default: false
+  schedule:
+    - cron: '0 3 * 3-11 sat'    # Mar-Nov (EDT): Saturdays at 3 AM UTC
+    - cron: '0 3 * 12,1,2 sat'  # Dec-Feb (EST): Saturdays at 3 AM UTC
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  train-xgboost:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+      - name: Train XGBoost Models
+        run: python scripts/precompute/train_xgboost.py
+        env:
+          MODEL_TYPE: XGBoost
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xgboost-models
+          path: data_files/models/xgboost/
+          retention-days: 90
+
+  train-lightgbm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+      - name: Train LightGBM Models
+        run: python scripts/precompute/train_lightgbm.py
+        env:
+          MODEL_TYPE: LightGBM
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lightgbm-models
+          path: data_files/models/lightgbm/
+          retention-days: 90
+
+  train-catboost:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+      - name: Train CatBoost Models
+        run: python scripts/precompute/train_catboost.py
+        env:
+          MODEL_TYPE: CatBoost
+      - uses: actions/upload-artifact@v4
+        with:
+          name: catboost-models
+          path: data_files/models/catboost/
+          retention-days: 90
+
+  train-ensemble:
+    needs: [train-xgboost, train-lightgbm, train-catboost]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: '*-models'
+          path: data_files/models/
+          merge-multiple: true
+      - run: pip install -r requirements.txt
+      - name: Train Ensemble Model
+        run: python scripts/precompute/train_ensemble.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ensemble-models
+          path: data_files/models/ensemble/
+          retention-days: 90
+
+  commit-models:
+    needs: [train-ensemble]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: '*-models'
+          path: data_files/models/
+          merge-multiple: true
+      - name: Commit all models
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data_files/models/
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update pre-trained models (all types) [skip ci]"
+            git push
+          fi

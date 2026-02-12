@@ -1,0 +1,56 @@
+name: Position Group Analysis
+
+on:
+  workflow_run:
+    workflows: ["Train All Models (Multi-Type)"]
+    types:
+      - completed
+  workflow_dispatch:
+  schedule:
+    - cron: '0 7 * 3-11 sat'  # Mar-Nov (EDT): Saturdays at 7 AM UTC
+    - cron: '0 7 * 12,1,2 sat'  # Dec-Feb (EST): Saturdays at 7 AM UTC
+
+jobs:
+  position-analysis:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+      
+      - name: Run Position Group Analysis
+        run: python scripts/precompute/position_group_analysis_precompute.py
+        env:
+          STREAMLIT_SERVER_HEADLESS: '1'
+      
+      - name: Generate MAE by Season Trends
+        run: python scripts/position_group_analysis.py
+        env:
+          STREAMLIT_SERVER_HEADLESS: '1'
+        continue-on-error: true
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: position-analysis
+          path: |
+            scripts/output/mae_by_season.csv
+            scripts/output/mae_trends.png
+            scripts/output/confid_int_*.csv
+            scripts/output/heatmap_*.png
+            data_files/precomputed/position_mae_detailed.json
+      
+      - name: Commit analysis results
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add scripts/output/ data_files/precomputed/
+          if git diff --staged --quiet; then
+            echo "No changes"
+          else
+            git commit -m "chore: update position group analysis [skip ci]"
+            git push
+          fi

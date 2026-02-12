@@ -406,7 +406,7 @@ if args.include_partial:
     candidate_race_ids = set(races['id'].unique()) - existing_race_ids
 
     # collect partial rows from qualifying and practices for those candidate races
-    partial_quals = qualifying_csv[qualifying_csv['raceId'].isin(candidate_race_ids)].copy()
+    partial_quals = qualifying[qualifying['raceId'].isin(candidate_race_ids)].copy()
     partial_pracs = current_practices[current_practices['raceId'].isin(candidate_race_ids)].copy()
 
     partial_frames = []

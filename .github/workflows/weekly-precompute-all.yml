@@ -1,0 +1,92 @@
+name: Weekly Full Precomputation
+
+on:
+  # Schedule to run during F1 season only (March-November, December-February)
+  # Equivalent to 8 PM Eastern on Fridays, accounting for DST
+  schedule:
+    - cron: '0 0 * 3-11 sat'    # Mar-Nov (EDT): Saturday 12:00 AM UTC
+    - cron: '0 1 * 12,1,2 sat'  # Dec-Feb (EST): Saturday 1:00 AM UTC
+  workflow_dispatch:
+    inputs:
+      skip_data_generation:
+        description: 'Skip data generation (use existing data)'
+        type: boolean
+        default: false
+
+jobs:
+  train-models:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger model training workflow
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'train-all-models.yml',
+              ref: 'main'
+            });
+  
+  feature-selection:
+    needs: [train-models]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger feature selection workflow
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'feature-selection-suite.yml',
+              ref: 'main'
+            });
+  
+  monte-carlo-features:
+    needs: [train-models]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Monte Carlo workflow
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'feature-selection-monte-carlo.yml',
+              ref: 'main',
+              inputs: {
+                n_trials: '500'
+              }
+            });
+  
+  predictions:
+    needs: [train-models]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger predictions workflow
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'precompute-predictions.yml',
+              ref: 'main'
+            });
+  
+  position-analysis:
+    needs: [train-models]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger position analysis workflow
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'position-analysis.yml',
+              ref: 'main'
+            });

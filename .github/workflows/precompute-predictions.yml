@@ -1,0 +1,48 @@
+name: Precompute Race Predictions
+
+on:
+  workflow_run:
+    workflows: ["Train All Models (Multi-Type)"]
+    types:
+      - completed
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * 3-11 fri'  # Mar-Nov (EDT): Fridays at 6 AM UTC
+    - cron: '0 6 * 12,1,2 fri'  # Dec-Feb (EST): Fridays at 6 AM UTC
+
+jobs:
+  generate-predictions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+      
+      - name: Generate predictions for next race
+        run: |
+          python scripts/precompute/generate_race_predictions.py \
+            --output data_files/precomputed/predictions/ \
+            --all-models
+        env:
+          STREAMLIT_SERVER_HEADLESS: '1'
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: race-predictions
+          path: data_files/precomputed/predictions/
+      
+      - name: Commit predictions
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data_files/precomputed/predictions/
+          if git diff --staged --quiet; then
+            echo "No changes"
+          else
+            git commit -m "chore: update race predictions [skip ci]"
+            git push
+          fi

@@ -1,0 +1,60 @@
+name: Monte Carlo Feature Selection
+
+on:
+  workflow_dispatch:
+    inputs:
+      n_trials:
+        description: 'Number of trials'
+        type: number
+        default: 1000
+      min_features:
+        description: 'Minimum features per trial'
+        type: number
+        default: 8
+      max_features:
+        description: 'Maximum features per trial'
+        type: number
+        default: 15
+  schedule:
+    - cron: '0 4 * 3-11 sun'  # Mar-Nov (EDT): Sundays at 4 AM UTC
+    - cron: '0 4 * 12,1,2 sun'  # Dec-Feb (EST): Sundays at 4 AM UTC
+
+jobs:
+  monte-carlo-search:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+      
+      - name: Run Monte Carlo Feature Selection
+        run: |
+          python scripts/precompute/monte_carlo_features.py \
+            --n-trials ${{ inputs.n_trials || 1000 }} \
+            --min-features ${{ inputs.min_features || 8 }} \
+            --max-features ${{ inputs.max_features || 15 }} \
+            --cv-folds 10 \
+            --output data_files/precomputed/monte_carlo_results.json
+        env:
+          STREAMLIT_SERVER_HEADLESS: '1'
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: monte-carlo-results
+          path: data_files/precomputed/monte_carlo_results.json
+      
+      - name: Commit results
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data_files/precomputed/
+          if git diff --staged --quiet; then
+            echo "No changes"
+          else
+            git commit -m "chore: update Monte Carlo feature selection results [skip ci]"
+            git push
+          fi
