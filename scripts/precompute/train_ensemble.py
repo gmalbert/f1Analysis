@@ -3,6 +3,9 @@
 Train Ensemble model (stacking XGBoost, LightGBM, CatBoost).
 Requires individual models to be trained first.
 Run via GitHub Actions or locally for model artifact generation.
+
+Note: Streamlit emits informational warnings in headless mode that state 
+"can be ignored when running in bare mode" - these don't affect functionality.
 """
 import os
 import sys
@@ -12,9 +15,12 @@ from datetime import datetime
 
 os.environ['STREAMLIT_SERVER_HEADLESS'] = 'true'
 os.environ['STREAMLIT_BROWSER_GATHER_USAGE_STATS'] = 'false'
+os.environ['STREAMLIT_LOG_LEVEL'] = 'error'  # Minimize Streamlit logging
 
 import warnings
+import logging
 warnings.filterwarnings("ignore")
+logging.basicConfig(level=logging.ERROR)
 
 import pandas as pd
 import numpy as np
@@ -23,6 +29,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 def train_ensemble_model():
     """Train ensemble model and save to data_files/models/ensemble/"""
+    
+    # Change to project root directory
+    os.chdir(Path(__file__).parent.parent.parent)
     
     print("=" * 60)
     print("Ensemble Model Training")
@@ -74,7 +83,7 @@ def train_ensemble_model():
     
     with open(output_dir / 'position_model.pkl', 'wb') as f:
         pickle.dump(position_artifact, f)
-    print(f"✓ Ensemble model saved (MAE: {mae:.4f})")
+    print(f"[OK] Ensemble model saved (MAE: {mae:.4f})")
     
     # Save metadata
     metadata = {
@@ -107,7 +116,7 @@ if __name__ == '__main__':
         metadata = train_ensemble_model()
         sys.exit(0)
     except Exception as e:
-        print(f"\n❌ ERROR: {e}")
+        print(f"\n[ERROR] {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

@@ -12,8 +12,10 @@ from collections import Counter
 from datetime import datetime
 
 os.environ['STREAMLIT_SERVER_HEADLESS'] = 'true'
+os.environ['STREAMLIT_LOG_LEVEL'] = 'error'  # Minimize Streamlit logging
 
 import warnings
+import logging
 warnings.filterwarnings("ignore")
 
 import numpy as np
@@ -32,6 +34,13 @@ def load_data():
 def get_features_and_target(data):
     """Extract features and target from data."""
     from raceAnalysis import get_features_and_target as get_ft
+    
+    # Suppress Streamlit headless mode warnings AFTER streamlit is imported
+    logging.getLogger('streamlit.runtime.scriptrunner_utils.script_run_context').setLevel(logging.ERROR)
+    logging.getLogger('streamlit.runtime.caching.cache_data_api').setLevel(logging.ERROR)
+    logging.getLogger('streamlit').setLevel(logging.ERROR)
+    logging.getLogger('streamlit.runtime.state.session_state_proxy').setLevel(logging.ERROR)
+    
     return get_ft(data)
 
 def monte_carlo_feature_selection(

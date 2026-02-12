@@ -11,9 +11,12 @@ from datetime import datetime
 from pathlib import Path
 
 os.environ['STREAMLIT_SERVER_HEADLESS'] = 'true'
+os.environ['STREAMLIT_LOG_LEVEL'] = 'error'  # Minimize Streamlit logging
 
 import warnings
+import logging
 warnings.filterwarnings("ignore")
+
 
 import numpy as np
 import pandas as pd
@@ -37,6 +40,13 @@ def main():
     data = pd.read_csv('data_files/f1ForAnalysis.csv', sep='\t', low_memory=False)
     
     from raceAnalysis import get_features_and_target, get_preprocessor_position
+    
+    # Suppress Streamlit headless mode warnings AFTER streamlit is imported
+    logging.getLogger('streamlit.runtime.scriptrunner_utils.script_run_context').setLevel(logging.ERROR)
+    logging.getLogger('streamlit.runtime.caching.cache_data_api').setLevel(logging.ERROR)
+    logging.getLogger('streamlit').setLevel(logging.ERROR)
+    logging.getLogger('streamlit.runtime.state.session_state_proxy').setLevel(logging.ERROR)
+    
     X, y = get_features_and_target(data)
     
     # Clean data
