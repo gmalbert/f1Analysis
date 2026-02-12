@@ -2157,21 +2157,28 @@ def load_pretrained_model(model_name='position_model', CACHE_VERSION='v2.3'):
     import pickle
     from pathlib import Path
     
-    models_dir = Path('data_files/models')
-    model_file = models_dir / f'{model_name}.pkl'
+    # Check multiple locations (new structure first, then legacy)
+    search_paths = [
+        Path('data_files/models/xgboost') / f'{model_name}.pkl',  # Precompute script location
+        Path('data_files/models/lightgbm') / f'{model_name}.pkl',
+        Path('data_files/models/catboost') / f'{model_name}.pkl',
+        Path('data_files/models/ensemble') / f'{model_name}.pkl',
+        Path('data_files/models') / f'{model_name}.pkl',  # Legacy location
+    ]
     
-    if model_file.exists():
-        try:
-            with open(model_file, 'rb') as f:
-                artifact = pickle.load(f)
-            
-            # Check cache version compatibility
-            if artifact.get('cache_version') == CACHE_VERSION:
-                return artifact
-            else:
-                st.info(f"Pre-trained {model_name} found but cache version mismatch. Will retrain.")
-        except Exception as e:
-            st.warning(f"Error loading pre-trained {model_name}: {e}. Will retrain.")
+    for model_file in search_paths:
+        if model_file.exists():
+            try:
+                with open(model_file, 'rb') as f:
+                    artifact = pickle.load(f)
+                
+                # Check cache version compatibility
+                if artifact.get('cache_version') == CACHE_VERSION:
+                    return artifact
+                else:
+                    st.info(f"Pre-trained {model_name} found at {model_file} but cache version mismatch. Will retrain.")
+            except Exception as e:
+                st.warning(f"Error loading pre-trained {model_name} from {model_file}: {e}. Will retrain.")
     
     return None
 
