@@ -385,9 +385,11 @@ Practical tips / QC checks
   st.line_chart(data, width='content')    # Auto-size
   st.scatter_chart(data, width='stretch')
   
-  # Altair charts - use use_container_width parameter
-  st.altair_chart(chart, use_container_width=True)   # Full width
-  st.altair_chart(chart, use_container_width=False)  # Default size
+  # Altair charts - use width parameter (do NOT use `use_container_width`)
+  st.altair_chart(chart, width='stretch')   # Full width
+  st.altair_chart(chart, width='content')  # Default size
+  
+  # IMPORTANT: do not revert to `use_container_width`. Always prefer `width='stretch'` or `width='content'` so Copilot and other contributors follow the modern API.
   ```
 - **Streamlit DataFrame height optimization**:
   ```python

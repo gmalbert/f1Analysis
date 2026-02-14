@@ -273,9 +273,9 @@ The application uses different chart width parameters depending on the chart typ
   - Use `width='content'` for auto-sizing based on content
   
 - **Altair/Vega Charts** (`st.altair_chart`):
-  - Use `use_container_width=True` for full-width display
-  - Use `use_container_width=False` for default sizing
-  - Note: The `width` parameter is NOT supported by `st.altair_chart()`
+  - Use `width='stretch'` for full-width display
+  - Use `width='content'` for default sizing
+  - Note: Prefer `width` over `use_container_width`; do NOT use `use_container_width`
 
 ### Streamlit DataFrame Height Optimization
 
@@ -303,9 +303,9 @@ st.dataframe(df, height=height)
 - `max_height`: Maximum height cap (default: 600, use None for unlimited)
   
 - **Altair/Vega Charts** (`st.altair_chart`):
-  - Use `use_container_width=True` for full-width display
-  - Use `use_container_width=False` for default sizing
-  - Note: The `width` parameter is NOT supported by `st.altair_chart()`
+  - Use `width='stretch'` for full-width display
+  - Use `width='content'` for default sizing
+  - Note: Prefer `width` over `use_container_width`; do NOT use `use_container_width`
 
 [↑ Back to top](#table-of-contents)
 

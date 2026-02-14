@@ -573,6 +573,57 @@ def get_dataframe_height(df, row_height=35, header_height=38, padding=2, max_hei
         return min(calculated_height, max_height)
     return calculated_height
 
+
+def display_model_performance(metrics=None, position_mae=None, title=None):
+    """Render model summary metrics and optional position-group MAE in a compact, readable format.
+
+    - Top row: four quick cards (MSE, R^2, MAE, Mean Error)
+    - Bottom: small table for position-specific MAE values
+
+    Args:
+        metrics (dict): {'Mean Squared Error': float, 'R^2 Score': float, 'Mean Absolute Error': float, 'Mean Error': float}
+        position_mae (dict): {'Podium (1-3)': 1.234, 'Winners': 1.111, ...}
+        title (str): optional subheader text
+    """
+    if title:
+        st.subheader(title)
+
+    # Render top-line metrics as 4 small cards
+    if metrics:
+        cols = st.columns(4)
+        labels = ["Mean Squared Error", "R^2 Score", "Mean Absolute Error", "Mean Error"]
+        for c, label in zip(cols, labels):
+            val = None
+            # accept either long-form labels or short keys
+            for key in (label, label.replace(' ', '_').lower(), label.split(' ')[0].lower()):
+                if metrics.get(key) is not None:
+                    val = metrics.get(key)
+                    break
+            # format value for display
+            if val is None or (isinstance(val, float) and np.isnan(val)):
+                disp = "—"
+            else:
+                if label == 'R^2 Score':
+                    disp = f"{val:.3f}"
+                elif label in ('Mean Error', 'Mean Absolute Error'):
+                    disp = f"{val:.2f}"
+                else:
+                    disp = f"{val:.3f}"
+            c.metric(label, disp)
+
+    # Position-group MAE table (interactive)
+    if position_mae:
+        pos_df = pd.DataFrame(list(position_mae.items()), columns=["Position Group", "MAE"])
+        # keep MAE numeric so users can sort/filter; show 3 decimals
+        pos_df['MAE'] = pos_df['MAE'].astype(float).round(3)
+        height = get_dataframe_height(pos_df, max_height=200)
+        styled = pos_df.set_index('Position Group').style.format({"MAE": "{:.3f}"})
+        st.dataframe(styled, width='content', height=height)
+
+    # small visual spacer
+    st.write('')
+
+
 def get_last_modified_file(dir_path):
     try:
         files = [path.join(dir_path, f) for f in os.listdir(dir_path) if path.isfile(os.path.join(dir_path, f))]
@@ -2935,11 +2986,13 @@ with tab2:
             # Split the data
             model, mse, r2, mae, mean_err, evals_result, _ = train_and_evaluate_model(filtered_data)
 
-            st.write(f"Mean Squared Error: {mse:.3f}")
-
-            st.write(f"R^2 Score: {r2:.3f}")
-            st.write(f"Mean Absolute Error: {mae:.2f}")
-            st.write(f"Mean Error: {mean_err:.2f}")
+            metrics = {
+                'Mean Squared Error': mse,
+                'R^2 Score': r2,
+                'Mean Absolute Error': mae,
+                'Mean Error': mean_err
+            }
+            display_model_performance(metrics=metrics)
                    
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
@@ -3996,10 +4049,8 @@ with tab5:
         with tab_perf:
             st.subheader("Predictive Data Model Metrics")
             
-            st.write(f"Mean Squared Error: {mse:.3f}")
-            st.write(f"R^2 Score: {r2:.3f}")
-            st.write(f"Mean Absolute Error: {mae:.2f}")
-            st.write(f"Mean Error: {mean_err:.2f}")
+            # Metrics and position-MAE are rendered together later (see `display_model_performance`)
+            
             
             # Display boosting rounds used (model-specific)
             if hasattr(model, 'best_iteration'):
@@ -4048,15 +4099,30 @@ with tab5:
             
             if len(podium_actual) > 0:
                 podium_mae = mean_absolute_error(podium_actual['Actual'], podium_actual['Predicted'])
-                st.write(f"MAE for Podium Finishers (1-3): {podium_mae:.3f}")
                 
             if len(winners_actual) > 0:
                 winner_mae = mean_absolute_error(winners_actual['Actual'], winners_actual['Predicted'])
-                st.write(f"MAE for Race Winners: {winner_mae:.3f}")
 
             if len(points_actual) > 0:
                 points_mae = mean_absolute_error(points_actual['Actual'], points_actual['Predicted'])
-                st.write(f"MAE for Points Positions (1-10): {points_mae:.3f}")
+
+            # Compose metrics + position-MAE summary and render with helper
+            metrics = {
+                'Mean Squared Error': mse,
+                'R^2 Score': r2,
+                'Mean Absolute Error': mae,
+                'Mean Error': mean_err
+            }
+
+            position_mae = {}
+            if 'podium_mae' in locals():
+                position_mae['Podium (1-3)'] = podium_mae
+            if 'winner_mae' in locals():
+                position_mae['Winners'] = winner_mae
+            if 'points_mae' in locals():
+                position_mae['Points (1-10)'] = points_mae
+
+            display_model_performance(metrics=metrics, position_mae=position_mae if position_mae else None)
 
             if len(bottom_10_actual) > 0:
                 bottom_10_mae = mean_absolute_error(bottom_10_actual['Actual'], bottom_10_actual['Predicted'])
@@ -4976,7 +5042,7 @@ with tab5:
                             mae_img = OUT_DIR / 'mae_trends.png'
                             if mae_img.exists():
                                 st.subheader('MAE by Season')
-                                st.image(str(mae_img), use_container_width=True)
+                                st.image(str(mae_img), width=1000)
                     except Exception:
                         pass
 
@@ -5260,11 +5326,6 @@ with tab5:
             results_df_all['PredictedFinalPosition'] = y_pred_all
             results_df_all['Error'] = results_df_all['ActualFinalPosition'] - results_df_all['PredictedFinalPosition']
 
-            st.write(f"Mean Squared Error: {mse:.3f}")
-            st.write(f"R^2 Score: {r2:.3f}")
-            st.write(f"Mean Absolute Error: {mae:.2f}")
-            st.write(f"Mean Error: {mean_err:.2f}")
-
             results_df_pos = pd.DataFrame({
                 'Actual': y_test_all.values,
                 'Predicted': y_pred_all
@@ -5276,15 +5337,29 @@ with tab5:
 
             if len(podium_actual_hist) > 0:
                 podium_mae_hist = mean_absolute_error(podium_actual_hist['Actual'], podium_actual_hist['Predicted'])
-                st.write(f"MAE for Podium Finishers (1-3): {podium_mae_hist:.3f}")
                 
             if len(winners_actual_hist) > 0:
                 winner_mae_hist = mean_absolute_error(winners_actual_hist['Actual'], winners_actual_hist['Predicted'])
-                st.write(f"MAE for Race Winners: {winner_mae_hist:.3f}")
 
             if len(points_actual_hist) > 0:
                 points_mae_hist = mean_absolute_error(points_actual_hist['Actual'], points_actual_hist['Predicted'])
-                st.write(f"MAE for Points Positions (1-10): {points_mae_hist:.3f}")
+
+            # Render a compact metrics + position MAE table
+            metrics = {
+                'Mean Squared Error': mse,
+                'R^2 Score': r2,
+                'Mean Absolute Error': mae,
+                'Mean Error': mean_err
+            }
+            position_mae_hist = {}
+            if 'podium_mae_hist' in locals():
+                position_mae_hist['Podium (1-3)'] = podium_mae_hist
+            if 'winner_mae_hist' in locals():
+                position_mae_hist['Winners'] = winner_mae_hist
+            if 'points_mae_hist' in locals():
+                position_mae_hist['Points (1-10)'] = points_mae_hist
+
+            display_model_performance(metrics=metrics, position_mae=position_mae_hist if position_mae_hist else None)
 
             st.dataframe(
                 results_df_all[['constructorName', 'resultsDriverName', 'ActualFinalPosition', 'PredictedFinalPosition', 'Error']].sort_values(by=['ActualFinalPosition']),
