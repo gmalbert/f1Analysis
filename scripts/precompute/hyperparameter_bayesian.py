@@ -26,6 +26,9 @@ from xgboost import XGBRegressor
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+# helper for robust json serialization of numpy/pandas scalars used by precompute scripts
+import json_helpers
+
 
 def optimize_xgboost(X, y, season_groups, n_trials=100):
     """Optimize XGBoost hyperparameters using Optuna."""
@@ -187,8 +190,7 @@ def main():
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     
-    with open(output_path, 'w') as f:
-        json.dump(results, f, indent=2)
+    json_helpers.safe_dump(results, output_path, indent=2)
     
     print("\n" + "=" * 60)
     print(f"Results saved to {output_path}")

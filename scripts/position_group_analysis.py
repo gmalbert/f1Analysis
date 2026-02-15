@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from datetime import datetime, timezone
 import json
+import json_helpers
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -288,8 +289,7 @@ def main():
 
     meta_path = OUT_DIR / 'position_group_analysis_metadata.json'
     try:
-        with open(meta_path, 'w', encoding='utf-8') as mf:
-            json.dump(metadata, mf, indent=2)
+        json_helpers.safe_dump(metadata, meta_path, indent=2)
         print('Wrote', meta_path)
     except Exception as e:
         print('Failed to write metadata:', e)

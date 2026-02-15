@@ -23,6 +23,9 @@ from xgboost import XGBRegressor
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+# helper for robust json serialization of numpy/pandas scalars used by precompute scripts
+import json_helpers
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--max-samples', type=int, default=1000, help='Max samples for SHAP calculation')
@@ -95,8 +98,7 @@ def main():
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     
-    with open(output_path, 'w') as f:
-        json.dump(output, f, indent=2)
+    json_helpers.safe_dump(output, output_path, indent=2)
     
     print(f"\nResults saved to {output_path}")
     print(f"Top 5 features by SHAP importance:")

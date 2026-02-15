@@ -27,6 +27,9 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+# helper for robust json serialization of numpy/pandas scalars used by precompute scripts
+import json_helpers
+
 def train_ensemble_model():
     """Train ensemble model and save to data_files/models/ensemble/"""
     
@@ -100,9 +103,7 @@ def train_ensemble_model():
         }
     }
     
-    with open(output_dir / 'metadata.json', 'w') as f:
-        import json
-        json.dump(metadata, f, indent=2)
+    json_helpers.safe_dump(metadata, output_dir / 'metadata.json', indent=2)
     
     print("\n" + "=" * 60)
     print("Ensemble Training Complete!")

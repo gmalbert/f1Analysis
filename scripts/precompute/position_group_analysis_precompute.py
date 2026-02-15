@@ -27,6 +27,9 @@ from sklearn.model_selection import train_test_split
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+# helper for robust json serialization of numpy/pandas scalars used by precompute scripts
+import json_helpers
+
 
 def compute_position_specific_mae(y_true, y_pred):
     """Compute MAE for different position groups."""
@@ -183,8 +186,7 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
     
     output_path = output_dir / 'position_mae_detailed.json'
-    with open(output_path, 'w') as f:
-        json.dump(results, f, indent=2)
+    json_helpers.safe_dump(results, output_path, indent=2)
     
     print("\n" + "=" * 60)
     print(f"Results saved to {output_path}")

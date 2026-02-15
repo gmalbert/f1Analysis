@@ -23,6 +23,9 @@ from xgboost import XGBRegressor
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+# helper for robust json serialization of numpy/pandas scalars used by precompute scripts
+import json_helpers
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--max-iter', type=int, default=200)
@@ -71,7 +74,7 @@ def main():
     
     # Create feature ranking dataframe
     feature_ranking = [
-        {'feature': feat, 'rank': int(rank), 'selected': select}
+        {'feature': feat, 'rank': int(rank), 'selected': bool(select)}
         for feat, rank, select in zip(X_clean.columns, ranking, boruta_selector.support_)
     ]
     feature_ranking.sort(key=lambda x: x['rank'])
@@ -91,7 +94,7 @@ def main():
     output_path.parent.mkdir(parents=True, exist_ok=True)
     
     with open(output_path, 'w') as f:
-        json.dump(output, f, indent=2)
+        json.dump(output, f, indent=2, default=json_helpers.json_default)
     
     print(f"\nResults saved to {output_path}")
     print(f"Selected {len(selected_features)} features")

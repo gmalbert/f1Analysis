@@ -22,6 +22,9 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+# helper for robust json serialization of numpy/pandas scalars used by precompute scripts
+import json_helpers
+
 def train_catboost_models():
     """Train all CatBoost models and save to data_files/models/catboost/"""
     
@@ -98,9 +101,7 @@ def train_catboost_models():
         }
     }
     
-    with open(output_dir / 'metadata.json', 'w') as f:
-        import json
-        json.dump(metadata, f, indent=2)
+    json_helpers.safe_dump(metadata, output_dir / 'metadata.json', indent=2)
     
     print("\n" + "=" * 60)
     print("CatBoost Training Complete!")
