@@ -24,6 +24,9 @@ from scipy.stats import truncnorm
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+# helper for robust json serialization of numpy/pandas scalars used by precompute scripts
+import json_helpers
+
 
 def load_models(models_dir: Path):
     """Load all pre-trained models."""
@@ -163,8 +166,7 @@ def generate_predictions(data, models, next_race, output_dir: Path):
     race_name = next_race.get('fullName', 'unknown').replace(' ', '_').lower()
     output_file = output_dir / f'predictions_{race_name}_{current_year}.json'
     
-    with open(output_file, 'w') as f:
-        json.dump(predictions, f, indent=2)
+    json_helpers.safe_dump(predictions, output_file, indent=2)
     
     print(f"\n[OK] Predictions saved to {output_file}")
     return predictions
