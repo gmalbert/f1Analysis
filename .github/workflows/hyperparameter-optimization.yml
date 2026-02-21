@@ -76,6 +76,8 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
+          git fetch origin main
+          git rebase origin/main || true
           git add data_files/precomputed/
           if git diff --staged --quiet; then
             echo "No changes"
