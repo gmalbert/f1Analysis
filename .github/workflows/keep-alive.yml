@@ -4,7 +4,7 @@ name: Keep Streamlit App Alive
 # due to inactivity on Streamlit Community Cloud.
 #
 # Features:
-# - Runs every 30 minutes with 0-10 minute randomization (pings every ~30-40 minutes)
+# - Runs every 30 minutes with randomization (pings every ~30-40 minutes)
 # - Adds random delay to vary timing and make logs look more natural
 # - Tolerates failures without breaking the workflow
 #
@@ -28,7 +28,7 @@ env:
 jobs:
   ping-app:
     runs-on: ubuntu-latest
-    timeout-minutes: 15  # Allow for 10-minute random delay + ping time
+    timeout-minutes: 25  # Allow for 10-minute random delay + ping time + browser installation
 
     steps:
       - name: Random delay (0-10 minutes)
@@ -39,6 +39,7 @@ jobs:
           sleep $DELAY
       
       - name: Ping Streamlit App
+        id: ping
         run: |
           echo "🔔 Pinging Streamlit app at: ${{ env.STREAMLIT_APP_URL }}"
           echo "   Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
@@ -51,7 +52,9 @@ jobs:
           )
           RANDOM_UA=${USER_AGENTS[$RANDOM % ${#USER_AGENTS[@]}]}
           
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+          # Save body to temp file and capture code for diagnostics
+          BODY_FILE=$(mktemp)
+          RESPONSE=$(curl -s -o "$BODY_FILE" -w "%{http_code}" \
             --max-time 30 \
             --retry 2 \
             --retry-delay 5 \
@@ -59,16 +62,69 @@ jobs:
             "${{ env.STREAMLIT_APP_URL }}")
           
           echo "   Response code: $RESPONSE"
+          echo "   Response body (first 400 chars):"
+          head -c 400 "$BODY_FILE" | sed -e 's/[\r\n]/ /g'
+          echo ""
+          rm -f "$BODY_FILE"
           
-          # Check if request was successful (2xx or 3xx status codes)
-          if [ "$RESPONSE" -ge 200 ] && [ "$RESPONSE" -lt 400 ]; then
-            echo "✅ App is alive and responding!"
+          # Export response as step output for later conditional steps
+          echo "response=$RESPONSE" >> $GITHUB_OUTPUT
+          
+          # Decide whether the app needs a wake (treat only 2xx as healthy)
+          NEEDS_WAKE=0
+          if [ "$RESPONSE" -lt 200 ] || [ "$RESPONSE" -ge 300 ]; then
+            NEEDS_WAKE=1
+          fi
+
+          # Detect auth/login redirect in the response body and add an annotation
+          if grep -E -i 'share.streamlit.io|/\-/login' "$BODY_FILE" >/dev/null 2>&1; then
+            echo "::warning title=Keep-alive ping::Auth/login redirect detected (HTTP $RESPONSE). The ping was redirected to Streamlit auth (e.g., share.streamlit.io or /-/login). If this is unexpected, check your app visibility and access settings. Playwright will attempt to visit the page to wake it. (No email will be sent.)"
+            NEEDS_WAKE=1
+          fi
+
+          # Export whether we need to run Playwright (useful for future steps)
+          echo "needs_wake=$NEEDS_WAKE" >> $GITHUB_OUTPUT
+
+          if [ "$NEEDS_WAKE" -eq 0 ]; then
+            echo "✅ App is alive and responding (2xx)"
             exit 0
           else
-            echo "⚠️  App returned status code: $RESPONSE"
-            echo "   This might be temporary - will retry on next schedule"
+            echo "⚠️  App may require waking (HTTP $RESPONSE)"
+            echo "   Playwright will run if necessary"
             exit 0  # Don't fail the workflow, just log the issue
           fi
+
+      - name: Wake Streamlit App (headless Playwright)
+        if: ${{ !startsWith(steps.ping.outputs.response, '2') }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Restore Playwright & npm cache
+        if: ${{ !startsWith(steps.ping.outputs.response, '2') }}
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            ~/.cache/ms-playwright
+            ~/.cache/playwright
+          key: ${{ runner.os }}-playwright-cache-v1
+          restore-keys: |
+            ${{ runner.os }}-playwright-cache-
+
+      - name: Install Playwright and browsers
+        if: ${{ !startsWith(steps.ping.outputs.response, '2') }}
+        run: |
+          npm init -y
+          npm i playwright --silent --no-audit --no-fund
+          npx playwright install chromium --with-deps
+
+      - name: Run headless browser to open the app
+        if: ${{ !startsWith(steps.ping.outputs.response, '2') }}
+        env:
+          STREAMLIT_APP_URL: ${{ env.STREAMLIT_APP_URL }}
+        run: |
+          node -e "const {chromium}=require('playwright');(async()=>{let browser; try{browser=await chromium.launch({args:['--no-sandbox','--disable-setuid-sandbox']}); const page=await browser.newPage(); console.log('Playwright: navigating to', process.env.STREAMLIT_APP_URL); await page.goto(process.env.STREAMLIT_APP_URL,{waitUntil:'domcontentloaded',timeout:120000}); await page.waitForSelector('section[data-testid=\"stApp\"]',{timeout:120000}); await page.waitForTimeout(5000); console.log('Playwright: visit complete');}catch(e){console.log('Playwright error:',e && e.message ? e.message : e);}finally{if(browser){try{await browser.close();}catch(_){}}}})();"
 
       - name: Log completion
         if: always()
