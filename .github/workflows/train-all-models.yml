@@ -108,17 +108,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/download-artifact@v4
         with:
           pattern: '*-models'
           path: data_files/models/
           merge-multiple: true
+      - name: Show git status at start
+        run: |
+          echo "Job started at $(date -u)"
+          git status
+          git log -1 --oneline
+          git pull --ff-only origin main || true
       - name: Commit all models
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git fetch origin main
-          git rebase origin/main || true
+          git pull --ff-only origin main || true
           git add data_files/models/
           if git diff --staged --quiet; then
             echo "No changes to commit"
@@ -126,3 +133,9 @@ jobs:
             git commit -m "chore: update pre-trained models (all types) [skip ci]"
             git push
           fi
+      - name: Show post-push status
+        if: success()
+        run: |
+          echo "Job finished at $(date -u)"
+          git log -1 --oneline
+          git remote show origin | grep "HEAD branch" -A1

@@ -16,6 +16,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -29,6 +31,13 @@ jobs:
           path: data_files/models/xgboost/
           workflow: train-all-models.yml
           workflow_conclusion: success
+      
+      - name: Show git status at start
+        run: |
+          echo "Job started at $(date -u)"
+          git status
+          git log -1 --oneline
+          git pull --ff-only origin main || true
       
       - name: Run Position Group Analysis
         run: python scripts/precompute/position_group_analysis_precompute.py
@@ -55,8 +64,7 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git fetch origin main
-          git rebase origin/main || true
+          git pull --ff-only origin main || true
           git add scripts/output/ data_files/precomputed/
           if git diff --staged --quiet; then
             echo "No changes"
@@ -64,3 +72,10 @@ jobs:
             git commit -m "chore: update position group analysis [skip ci]"
             git push
           fi
+      
+      - name: Show post-push status
+        if: success()
+        run: |
+          echo "Job finished at $(date -u)"
+          git log -1 --oneline
+          git remote show origin | grep "HEAD branch" -A1

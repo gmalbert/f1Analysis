@@ -16,11 +16,21 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0            # full history so we can pull/rebase
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
       - run: pip install -r requirements.txt
+      
+      - name: Show git status at start
+        run: |
+          echo "Job started at $(date -u)"
+          git status
+          git log -1 --oneline
+          git fetch origin main
+          echo "origin/main is at $(git rev-parse origin/main)"
       
       - name: Generate predictions for next race
         run: |
@@ -39,9 +49,8 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          # ensure we have latest remote changes before committing
-          git fetch origin main
-          git rebase origin/main || true
+          # bring our branch up to date with remote in case someone pushed
+          git pull --ff-only origin main || true
           git add data_files/precomputed/predictions/
           if git diff --staged --quiet; then
             echo "No changes"
@@ -49,3 +58,10 @@ jobs:
             git commit -m "chore: update race predictions [skip ci]"
             git push
           fi
+      - name: Show post-push status
+        if: success()
+        run: |
+          echo "Job finished at $(date -u)"
+          git log -1 --oneline
+          git remote show origin | grep "HEAD branch" -A1
+

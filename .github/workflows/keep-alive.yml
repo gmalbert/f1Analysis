@@ -35,13 +35,13 @@ jobs:
         run: |
           # Add random delay to vary timing and make logs look more natural
           DELAY=$((RANDOM % 600))  # 0-600 seconds (0-10 minutes)
-          echo "⏳ Waiting ${DELAY} seconds before ping..."
+          echo "Waiting ${DELAY} seconds before ping..."
           sleep $DELAY
       
       - name: Ping Streamlit App
         id: ping
         run: |
-          echo "🔔 Pinging Streamlit app at: ${{ env.STREAMLIT_APP_URL }}"
+          echo "Pinging Streamlit app at: ${{ env.STREAMLIT_APP_URL }}"
           echo "   Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
           
           # Make HTTP request with timeout (use generic browser-like User-Agent)
@@ -86,10 +86,10 @@ jobs:
           echo "needs_wake=$NEEDS_WAKE" >> $GITHUB_OUTPUT
 
           if [ "$NEEDS_WAKE" -eq 0 ]; then
-            echo "✅ App is alive and responding (2xx)"
+            echo "App is alive and responding (2xx)"
             exit 0
           else
-            echo "⚠️  App may require waking (HTTP $RESPONSE)"
+            echo "App may require waking (HTTP $RESPONSE)"
             echo "   Playwright will run if necessary"
             exit 0  # Don't fail the workflow, just log the issue
           fi
@@ -129,5 +129,5 @@ jobs:
       - name: Log completion
         if: always()
         run: |
-          echo "📊 Keep-alive ping completed"
+          echo "Keep-alive ping completed"
           echo "   Next scheduled run: Check the Actions tab for schedule"
