@@ -53,6 +53,9 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
+
+          # ensure we have latest remote changes
+          git pull --ff-only origin main || true
           
           # Add model files
           git add data_files/models/*.pkl

@@ -25,6 +25,8 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -47,12 +49,18 @@ jobs:
           name: monte-carlo-results
           path: data_files/precomputed/monte_carlo_results.json
       
+      - name: Show git status at start
+        run: |
+          echo "Job started at $(date -u)"
+          git status
+          git log -1 --oneline
+          git pull --ff-only origin main || true
+      
       - name: Commit results
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git fetch origin main
-          git rebase origin/main || true
+          git pull --ff-only origin main || true
           git add data_files/precomputed/
           if git diff --staged --quiet; then
             echo "No changes"
@@ -60,3 +68,10 @@ jobs:
             git commit -m "chore: update Monte Carlo feature selection results [skip ci]"
             git push
           fi
+      
+      - name: Show post-push status
+        if: success()
+        run: |
+          echo "Job finished at $(date -u)"
+          git log -1 --oneline
+          git remote show origin | grep "HEAD branch" -A1

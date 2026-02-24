@@ -27,40 +27,12 @@ jobs:
               workflow_id: 'train-all-models.yml',
               ref: 'main'
             });
-  
-  feature-selection:
-    needs: [train-models]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger feature selection workflow
-        uses: actions/github-script@v7
-        with:
-          script: |
-            await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'feature-selection-suite.yml',
-              ref: 'main'
-            });
-  
-  monte-carlo-features:
-    needs: [train-models]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger Monte Carlo workflow
-        uses: actions/github-script@v7
-        with:
-          script: |
-            await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'feature-selection-monte-carlo.yml',
-              ref: 'main',
-              inputs: {
-                n_trials: '500'
-              }
-            });
-  
+
+  # downstream jobs are intentionally staggered to avoid simultaneous
+  # pushes to `main`. each step waits a few minutes before firing the
+  # next workflow. the `needs` dependency guarantees that the trigger job
+  # does not start until the previous one completes.
+
   predictions:
     needs: [train-models]
     runs-on: ubuntu-latest
@@ -75,11 +47,50 @@ jobs:
               workflow_id: 'precompute-predictions.yml',
               ref: 'main'
             });
-  
-  position-analysis:
-    needs: [train-models]
+
+  feature-selection:
+    needs: [predictions]
     runs-on: ubuntu-latest
     steps:
+      - name: Wait 60 minutes to avoid overlap
+        run: sleep 3600
+      - name: Trigger feature selection workflow
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'feature-selection-suite.yml',
+              ref: 'main'
+            });
+
+  monte-carlo-features:
+    needs: [feature-selection]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait 60 minutes
+        run: sleep 3600
+      - name: Trigger Monte Carlo workflow
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'feature-selection-monte-carlo.yml',
+              ref: 'main',
+              inputs: {
+                n_trials: '500'
+              }
+            });
+
+  position-analysis:
+    needs: [monte-carlo-features]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait 60 minutes
+        run: sleep 3600
       - name: Trigger position analysis workflow
         uses: actions/github-script@v7
         with:
