@@ -1796,15 +1796,28 @@ if all(col in results_and_drivers_and_constructors_and_grandprix_and_qualifying_
          results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['delta_lap_15'].abs()) / 3.0
     )
 
-# 4. Wet weather racecraft: Compare wet race results to wet quali (historical avg)
-wet_race_mask = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['total_precipitation'] > 0
-results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['wet_race_vs_quali_delta'] = (
-    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
-    .groupby('resultsDriverName')
-    .apply(lambda g: (g[wet_race_mask]['resultsFinalPositionNumber'] - 
-                      g[wet_race_mask]['resultsQualificationPositionNumber']).shift(1).mean())
-    .reindex(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.index, level='resultsDriverName')
-).values
+# 4. Wet weather racecraft — FIXED: filter inside group, not globally
+# The original code applied wet_race_mask from the global df inside a group lambda,
+# which always produced empty selections. Now we filter the df BEFORE groupby.
+_df = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+_df['wet_race_vs_quali_delta'] = np.nan
+_wet_rows = _df['total_precipitation'] > 0
+if _wet_rows.sum() > 20:
+    _wet_delta = (
+        _df.loc[_wet_rows]
+        .groupby('resultsDriverName', group_keys=False)
+        .apply(lambda g: (
+            g['resultsFinalPositionNumber'] - g['resultsQualificationPositionNumber']
+        ).shift(1).expanding().mean(), include_groups=False)
+    )
+    _df.loc[_wet_rows, 'wet_race_vs_quali_delta'] = _wet_delta
+    # Forward-fill: use last known wet performance for non-wet races
+    _df['wet_race_vs_quali_delta'] = (
+        _df.groupby('resultsDriverName')['wet_race_vs_quali_delta'].ffill()
+    )
+    _wet_cov = _df['wet_race_vs_quali_delta'].notna().mean()
+    print(f"  wet_race_vs_quali_delta coverage: {_wet_cov:.1%}")
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = _df
 
 # 5. Overtaking success rate in top 10 (normalized by opportunities)
 top10_mask = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsQualificationPositionNumber'] <= 10
@@ -1815,17 +1828,9 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
                          x.shift(1).rolling(5, min_periods=1).count()).fillna(0))
 )
 
-# 6. Championship pressure performance: Performance when in top 3 championship positions
-#    (Compare finishing position when fighting for championship vs when not)
-if 'championship_position' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
-    in_championship_fight = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['championship_position'] <= 3
-    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['championship_fight_performance'] = (
-        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[in_championship_fight]
-        .groupby('resultsDriverName')['resultsFinalPositionNumber']
-        .transform(lambda x: x.shift(1).rolling(3, min_periods=1).mean())
-    )
-else:
-    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['championship_fight_performance'] = np.nan
+# 6. Championship pressure performance placeholder — computed LATER after championship_position is populated
+# (championship_position is assigned around line 2295, so this block would always take the else branch here)
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['championship_fight_performance'] = np.nan
 
 # 7. Tire management indicator: Improvement in relative position from lap 5 to lap 15
 #    (Drivers with good tire management gain positions as others degrade)
@@ -2294,6 +2299,20 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
 # Championship position features (using driverPoints instead of Points)
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['championship_position'] = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.groupby(['grandPrixYear', 'resultsDriverId'])['driverPoints'].rank(ascending=False)
 
+# championship_fight_performance: FIXED — now computed AFTER championship_position exists
+# Overwrite the NaN placeholder assigned earlier in the features section
+_cfp_df = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+_in_fight = _cfp_df['championship_position'] <= 3
+if _in_fight.sum() > 50:
+    _cfp_df.loc[_in_fight, 'championship_fight_performance'] = (
+        _cfp_df.loc[_in_fight]
+        .groupby('resultsDriverName')['resultsFinalPositionNumber']
+        .transform(lambda x: x.shift(1).rolling(3, min_periods=1).mean())
+    )
+    _cfp_cov = _cfp_df['championship_fight_performance'].notna().mean()
+    print(f"  championship_fight_performance coverage: {_cfp_cov:.1%}")
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = _cfp_df
+
 # Compute `points_leader_gap` without leaking future races.
 # Instead of taking the season-wide max (which includes future races) we compute
 # the leader's points at the same race snapshot (grouped by year+round/race identifier)
@@ -2434,6 +2453,147 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
     .transform(lambda x: x.shift(1).mean())
 )
 
+# --- TIRE STRATEGY FEATURES (from f1-tire-strategy.py backfill) ---
+_tire_file = path.join('data_files', 'tire_strategy_data.csv')
+if path.exists(_tire_file):
+    try:
+        _tire_data = pd.read_csv(_tire_file, sep='\t')
+        print(f"Loaded tire strategy data: {len(_tire_data)} rows")
+        _abbr_col = 'Abbreviation' if 'Abbreviation' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns else 'abbreviation'
+        if _abbr_col in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+            _df_tire = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.merge(
+                _tire_data.rename(columns={'year': '_tire_year', 'round': '_tire_round', 'driver': '_tire_driver'}),
+                left_on=['grandPrixYear', 'round', _abbr_col],
+                right_on=['_tire_year', '_tire_round', '_tire_driver'],
+                how='left', suffixes=('', '_tire')
+            )
+            results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = _df_tire
+            # Historical rolling avg tire degradation per driver (leakage-free)
+            results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_avg_tire_degradation'] = (
+                results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+                .groupby('resultsDriverName')['avg_tire_degradation_sec']
+                .transform(lambda x: x.shift(1).rolling(5, min_periods=1).mean()))
+            results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_avg_num_stints'] = (
+                results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+                .groupby('resultsDriverName')['num_stints']
+                .transform(lambda x: x.shift(1).rolling(5, min_periods=1).mean()))
+            results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_soft_tendency'] = (
+                results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+                .groupby('resultsDriverName')['soft_ratio']
+                .transform(lambda x: x.shift(1).rolling(5, min_periods=1).mean()))
+            results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['track_tire_degradation'] = (
+                results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+                .groupby('circuitId')['avg_tire_degradation_sec']
+                .transform(lambda x: x.shift(1).rolling(3, min_periods=1).mean()))
+            results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['tire_deg_x_track_deg'] = (
+                results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_avg_tire_degradation'] *
+                results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['track_tire_degradation'])
+            print("Created 5 tire strategy features")
+    except Exception as _tire_err:
+        print(f"  WARNING: tire strategy merge failed: {_tire_err}")
+        for _tc in ['driver_avg_tire_degradation', 'driver_avg_num_stints', 'driver_soft_tendency', 'track_tire_degradation', 'tire_deg_x_track_deg']:
+            results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[_tc] = np.nan
+else:
+    print("  INFO: tire_strategy_data.csv not found — run f1-tire-strategy.py first (tire features will be NaN)")
+    for _tc in ['driver_avg_tire_degradation', 'driver_avg_num_stints', 'driver_soft_tendency', 'track_tire_degradation', 'tire_deg_x_track_deg']:
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[_tc] = np.nan
+
+# --- RACE LAP PACE FEATURES (from f1-race-pace-laps.py backfill) ---
+_pace_file = path.join('data_files', 'race_pace_lap_data.csv')
+if path.exists(_pace_file):
+    try:
+        _pace_data = pd.read_csv(_pace_file, sep='\t')
+        print(f"Loaded race lap pace data: {len(_pace_data)} rows")
+        _abbr_col2 = 'Abbreviation' if 'Abbreviation' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns else 'abbreviation'
+        if _abbr_col2 in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+            _df_pace = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.merge(
+                _pace_data.rename(columns={'year': '_pace_year', 'round': '_pace_round', 'driver': '_pace_driver'}),
+                left_on=['grandPrixYear', 'round', _abbr_col2],
+                right_on=['_pace_year', '_pace_round', '_pace_driver'],
+                how='left', suffixes=('', '_rp')
+            )
+            results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = _df_pace
+            results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_fuel_corrected_pace'] = (
+                results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+                .groupby('resultsDriverName')['fuel_corrected_pace_pct']
+                .transform(lambda x: x.shift(1).rolling(5, min_periods=1).mean()))
+            results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_race_pace_std'] = (
+                results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+                .groupby('resultsDriverName')['race_pace_std']
+                .transform(lambda x: x.shift(1).rolling(5, min_periods=1).mean()))
+            results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['track_race_pace_std'] = (
+                results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+                .groupby(['circuitId', 'resultsDriverName'])['race_pace_std']
+                .transform(lambda x: x.shift(1).rolling(3, min_periods=1).mean()))
+            # Race consistency relative to qualifying consistency
+            _qual_std = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['qualifying_consistency_std'].fillna(1).replace(0, 1)
+            results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['race_vs_qual_consistency'] = (
+                results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_race_pace_std'].fillna(0) / _qual_std)
+            results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_avg_completion_pct'] = (
+                results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+                .groupby('resultsDriverName')['completion_pct']
+                .transform(lambda x: x.shift(1).rolling(10, min_periods=1).mean()))
+            print("Created 5 race lap pace features")
+    except Exception as _pace_err:
+        print(f"  WARNING: race lap pace merge failed: {_pace_err}")
+        for _pc in ['driver_fuel_corrected_pace', 'driver_race_pace_std', 'track_race_pace_std', 'race_vs_qual_consistency', 'driver_avg_completion_pct']:
+            results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[_pc] = np.nan
+else:
+    print("  INFO: race_pace_lap_data.csv not found — run f1-race-pace-laps.py first (pace features will be NaN)")
+    for _pc in ['driver_fuel_corrected_pace', 'driver_race_pace_std', 'track_race_pace_std', 'race_vs_qual_consistency', 'driver_avg_completion_pct']:
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[_pc] = np.nan
+
+# --- NEW INTERACTION FEATURES (2026 roadmap additions) ---
+# Tire management × circuit corner count
+if 'tire_management_score' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns and 'turns' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['tire_mgmt_x_turns'] = (
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['tire_management_score'].fillna(0) *
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['turns'].fillna(0))
+else:
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['tire_mgmt_x_turns'] = np.nan
+
+# Practice-to-race pace conversion × grid position
+if 'practice_race_conversion' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['practice_conversion_x_grid'] = (
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['practice_race_conversion'].fillna(0) *
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsStartingGridPositionNumber'].fillna(10))
+else:
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['practice_conversion_x_grid'] = np.nan
+
+# Championship pressure × recent form
+if 'championship_position_pressure_factor' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns and 'recent_form_3_races' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['pressure_x_recent_form'] = (
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['championship_position_pressure_factor'].fillna(0.5) *
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['recent_form_3_races'].fillna(10))
+else:
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['pressure_x_recent_form'] = np.nan
+
+# Constructor reliability × driver form
+if 'constructor_dnf_rate_3_races' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns and 'recent_form_3_races' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['constructor_reliability_x_form'] = (
+        (1 - results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['constructor_dnf_rate_3_races'].fillna(0)) *
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['recent_form_3_races'].fillna(10))
+else:
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['constructor_reliability_x_form'] = np.nan
+
+# Wet racecraft skill × actual precipitation (active predictor for wet races)
+if 'total_precipitation' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['wet_skill_x_precip'] = (
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['wet_race_vs_quali_delta'].fillna(0) *
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['total_precipitation'].fillna(0))
+else:
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['wet_skill_x_precip'] = np.nan
+
+# Track experience × qualifying position
+if 'track_experience' in results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns:
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['track_exp_x_qual'] = (
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['track_experience'].fillna(0) *
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsQualificationPositionNumber'].fillna(10))
+else:
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['track_exp_x_qual'] = np.nan
+
+print("Created 6 new interaction features (2026 roadmap)")
+
 # Function to load features from text files
 def load_features_from_file(filename):
     filepath = path.join('data_files', filename)
@@ -2560,8 +2720,19 @@ static_columns=['grandPrixYear', 'grandPrixName', 'raceId_results', 'circuitId',
                                         'q1_q2_q3_sector_consistency', 'qualifying_position_vs_race_pace_delta_by_track',
                                         # Race pace & strategy features (targeting overtaking, tire management, pressure performance)
                                         'practice_race_conversion', 'avg_positions_gained_5r', 'race_pace_consistency',
-                                        'overtaking_success_top10', 'tire_management_score'
-                                                                              ]
+                                        'overtaking_success_top10', 'tire_management_score',
+                                        # Bug-fixed features (wet racecraft and championship pressure) — added 2026
+                                        'wet_race_vs_quali_delta', 'championship_fight_performance',
+                                        # Tire strategy features (from f1-tire-strategy.py backfill, defensive)
+                                        'driver_avg_tire_degradation', 'driver_avg_num_stints', 'driver_soft_tendency',
+                                        'track_tire_degradation', 'tire_deg_x_track_deg',
+                                        # Race lap pace features (from f1-race-pace-laps.py backfill, defensive)
+                                        'driver_fuel_corrected_pace', 'driver_race_pace_std', 'track_race_pace_std',
+                                        'race_vs_qual_consistency', 'driver_avg_completion_pct',
+                                        # New interaction features (2026 roadmap)
+                                        'tire_mgmt_x_turns', 'practice_conversion_x_grid', 'pressure_x_recent_form',
+                                        'constructor_reliability_x_form', 'wet_skill_x_precip', 'track_exp_x_qual',
+                                        ]
 
 # Concatenate static columns and bin_fields
 all_columns = static_columns + bin_fields
@@ -2734,7 +2905,8 @@ if os.path.exists(weather_csv_path):
         processed_weather_set = set(processed_weather['short_date_compare'])
     except ValueError:
         # The expected 'short_date' column is not present in the weather file; attempt to find an alternative
-        print(f"Warning: '{weather_csv_path}' does not contain 'short_date' column — attempting to infer date column")
+        if '.imputed' not in weather_csv_path:
+            print(f"Warning: '{weather_csv_path}' does not contain 'short_date' column — attempting to infer date column")
         processed_weather_set = set()
         try:
             processed_weather = pd.read_csv(weather_csv_path, sep='\t', low_memory=False)
@@ -2742,10 +2914,12 @@ if os.path.exists(weather_csv_path):
             for alt in ('short_date', 'date', 'datetime', 'time'):
                 if alt in processed_weather.columns:
                     processed_weather_set = set(pd.to_datetime(processed_weather[alt]).dt.strftime('%Y-%m-%d'))
-                    print(f"Inferred date column '{alt}' from {weather_csv_path}")
+                    if '.imputed' not in weather_csv_path:
+                        print(f"Inferred date column '{alt}' from {weather_csv_path}")
                     break
         except Exception:
-            print(f"Could not read {weather_csv_path} to infer dates; proceeding as if no processed weather exists")
+            if '.imputed' not in weather_csv_path:
+                print(f"Could not read {weather_csv_path} to infer dates; proceeding as if no processed weather exists")
 else:
     processed_weather_set = set()
 

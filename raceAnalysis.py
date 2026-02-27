@@ -141,6 +141,36 @@ CACHE_VERSION = "v2.5"  # Fixed Monte Carlo feature loading to include lap-level
 # feature-shape mismatches between training and prediction environments).
 TRAINING_PREPROCESSOR = None
 
+def is_preprocessor_valid(preprocessor, X):
+    """Return True if every column the preprocessor was fitted on is present in X.
+
+    A stale preprocessor (e.g. from a pkl trained with a feature that has since
+    been removed) will have columns that are missing from the current data, which
+    causes sklearn to raise ValueError on transform().  This helper lets callers
+    detect and discard stale preprocessors before attempting the transform.
+    """
+    if preprocessor is None:
+        return False
+    try:
+        # sklearn >= 1.0 stores feature_names_in_ after fit
+        if hasattr(preprocessor, 'feature_names_in_'):
+            missing = set(preprocessor.feature_names_in_) - set(X.columns)
+            if missing:
+                print(f"INFO: Preprocessor is stale — missing columns: {missing}. Will retrain.")
+                return False
+            return True
+        # Fallback: inspect each transformer's column list
+        if hasattr(preprocessor, 'transformers_'):
+            for _, _, cols in preprocessor.transformers_:
+                if isinstance(cols, list):
+                    missing = set(cols) - set(X.columns)
+                    if missing:
+                        print(f"INFO: Preprocessor is stale — missing columns: {missing}. Will retrain.")
+                        return False
+        return True
+    except Exception:
+        return False
+
 def debug_log(msg, obj=None):
     """Helper to emit diagnostics both to Streamlit UI and logs when DEBUG is enabled."""
     if not DEBUG:
@@ -257,19 +287,38 @@ def create_constructor_adjusted_driver_features(data):
             agg_dict[podium_col] = 'mean'
             col_names.append('constructorPodiumRate')
         
-        constructor_performance = data.groupby(['grandPrixYear', 'constructorName']).agg(agg_dict).reset_index()
-        constructor_performance.columns = col_names
-        
-        # Merge back to main data
-        data_enhanced = data.merge(constructor_performance, on=['grandPrixYear', 'constructorName'], how='left')
-        
-        # Create relative driver performance metrics
-        data_enhanced['driverVsConstructorPosition'] = data_enhanced['resultsFinalPositionNumber'] - data_enhanced['constructorAvgPosition']
-        
-        if points_col and 'constructorAvgPoints' in data_enhanced.columns:
-            data_enhanced['driverRelativeToConstructor'] = data_enhanced[points_col] / (data_enhanced['constructorAvgPoints'] + 0.1)
-        
-        return data_enhanced
+        # Sort by year + a race-ordering column so shift(1) gives accurate historical avg
+        sort_cols = ['grandPrixYear', 'constructorName']
+        for rc in ['round', 'Round', 'race_round', 'grandPrixRound', 'raceId_results', 'grandPrixRaceId']:
+            if rc in data.columns:
+                sort_cols.append(rc)
+                break
+        data_sorted = data.sort_values(sort_cols).copy()
+
+        # Compute historical (leakage-free) constructor avg using expanding mean shifted by 1
+        data_sorted['constructorAvgPosition'] = (
+            data_sorted.groupby(['grandPrixYear', 'constructorName'])['resultsFinalPositionNumber']
+            .transform(lambda x: x.shift(1).expanding().mean())
+        )
+
+        if points_col:
+            data_sorted['constructorAvgPoints'] = (
+                data_sorted.groupby(['grandPrixYear', 'constructorName'])[points_col]
+                .transform(lambda x: x.shift(1).expanding().mean())
+            )
+
+        if podium_col:
+            data_sorted['constructorPodiumRate'] = (
+                data_sorted.groupby(['grandPrixYear', 'constructorName'])[podium_col]
+                .transform(lambda x: x.shift(1).expanding().mean())
+            )
+
+        # driverVsConstructorPosition: driver pos vs historical constructor avg (leakage-free)
+        # Note: we intentionally do NOT include driverVsConstructorPosition as a model feature
+        # because it involves resultsFinalPositionNumber and risks encoding the target.
+        # constructorAvgPosition (historical) is the useful signal here.
+
+        return data_sorted
         
     except Exception as e:
         return data
@@ -303,21 +352,17 @@ def create_recent_performance_features(data, recent_races=5):
         
         data_sorted = data.sort_values(['resultsDriverId', 'grandPrixYear', round_col]).copy()
         
-        # Calculate rolling averages for recent performance
+        # Calculate rolling averages for recent performance (leakage-free: shift(1) excludes current race)
         for window in [3, 5, 10]:
             data_sorted[f'recentAvgPosition_{window}'] = (
                 data_sorted.groupby('resultsDriverId')['resultsFinalPositionNumber']
-                .rolling(window=window, min_periods=1)
-                .mean()
-                .reset_index(level=0, drop=True)
+                .transform(lambda x: x.shift(1).rolling(window=window, min_periods=1).mean())
             )
             
             if points_col:
                 data_sorted[f'recentAvgPoints_{window}'] = (
                     data_sorted.groupby('resultsDriverId')[points_col]
-                    .rolling(window=window, min_periods=1)
-                    .mean()
-                    .reset_index(level=0, drop=True)
+                    .transform(lambda x: x.shift(1).rolling(window=window, min_periods=1).mean())
                 )
         
         return data_sorted
@@ -349,42 +394,56 @@ def create_constructor_compatibility_features(data):
                 podium_col = col
                 break
         
-        # Driver's career average
-        career_agg = {'resultsFinalPositionNumber': 'mean'}
-        career_cols = ['resultsDriverId', 'driverCareerAvgPosition']
-        
+        # Determine sort column for temporal ordering (leakage-free)
+        sort_cols = ['grandPrixYear', 'resultsDriverId']
+        for rc in ['round', 'Round', 'race_round', 'grandPrixRound', 'raceId_results', 'grandPrixRaceId']:
+            if rc in data.columns:
+                sort_cols.insert(1, rc)
+                break
+        data_sorted = data.sort_values(sort_cols).copy()
+
+        # Driver career averages — historical only (shift(1) before expanding mean, no leakage)
+        data_sorted['driverCareerAvgPosition'] = (
+            data_sorted.groupby('resultsDriverId')['resultsFinalPositionNumber']
+            .transform(lambda x: x.shift(1).expanding().mean())
+        )
+
         if points_col:
-            career_agg[points_col] = 'mean'
-            career_cols.append('driverCareerAvgPoints')
-            
+            data_sorted['driverCareerAvgPoints'] = (
+                data_sorted.groupby('resultsDriverId')[points_col]
+                .transform(lambda x: x.shift(1).expanding().mean())
+            )
+
         if podium_col:
-            career_agg[podium_col] = 'mean'
-            career_cols.append('driverCareerPodiumRate')
-        
-        driver_career_avg = data.groupby('resultsDriverId').agg(career_agg).reset_index()
-        driver_career_avg.columns = career_cols
-        
-        # Driver's performance with current constructor
-        constructor_agg = {
-            'resultsFinalPositionNumber': 'mean',
-            'grandPrixYear': 'count'  # Number of races with this constructor
-        }
-        constructor_cols = ['resultsDriverId', 'constructorName', 'driverConstructorAvgPosition', 'racesWithConstructor']
-        
+            data_sorted['driverCareerPodiumRate'] = (
+                data_sorted.groupby('resultsDriverId')[podium_col]
+                .transform(lambda x: x.shift(1).expanding().mean())
+            )
+
+        # Driver-constructor averages — historical only (shift(1) before expanding mean)
+        data_sorted['driverConstructorAvgPosition'] = (
+            data_sorted.groupby(['resultsDriverId', 'constructorName'])['resultsFinalPositionNumber']
+            .transform(lambda x: x.shift(1).expanding().mean())
+        )
+
         if points_col:
-            constructor_agg[points_col] = 'mean'
-            constructor_cols.insert(-1, 'driverConstructorAvgPoints')
-            
+            data_sorted['driverConstructorAvgPoints'] = (
+                data_sorted.groupby(['resultsDriverId', 'constructorName'])[points_col]
+                .transform(lambda x: x.shift(1).expanding().mean())
+            )
+
         if podium_col:
-            constructor_agg[podium_col] = 'mean'
-            constructor_cols.insert(-1, 'driverConstructorPodiumRate')
-        
-        driver_constructor_performance = data.groupby(['resultsDriverId', 'constructorName']).agg(constructor_agg).reset_index()
-        driver_constructor_performance.columns = constructor_cols
-        
-        # Merge features
-        data_enhanced = data.merge(driver_career_avg, on='resultsDriverId', how='left')
-        data_enhanced = data_enhanced.merge(driver_constructor_performance, on=['resultsDriverId', 'constructorName'], how='left')
+            data_sorted['driverConstructorPodiumRate'] = (
+                data_sorted.groupby(['resultsDriverId', 'constructorName'])[podium_col]
+                .transform(lambda x: x.shift(1).expanding().mean())
+            )
+
+        # Races with constructor up to (but not including) current race
+        data_sorted['racesWithConstructor'] = (
+            data_sorted.groupby(['resultsDriverId', 'constructorName']).cumcount()
+        )
+
+        data_enhanced = data_sorted
         
         # Create compatibility metrics
         if 'driverCareerAvgPosition' in data_enhanced.columns and 'driverConstructorAvgPosition' in data_enhanced.columns:
@@ -1049,6 +1108,26 @@ def load_precomputed_predictions(race_name=None, year=None, CACHE_VERSION=None):
     return None
 
 
+@st.cache_data
+def load_tire_strategy_data(CACHE_VERSION, csv_mtime=None):
+    """Load tire strategy data from FastF1 backfill (2018–present).
+
+    csv_mtime is used purely for cache invalidation; callers should
+    pass the modification time of the CSV file so that when the file
+    changes the cached result is refreshed automatically.
+    """
+    try:
+        tire_path = path.join(DATA_DIR, 'tire_strategy_data.csv')
+        if csv_mtime is None and path.exists(tire_path):
+            csv_mtime = os.path.getmtime(tire_path)
+        if path.exists(tire_path):
+            df = pd.read_csv(tire_path, sep='\t')
+            return df
+    except Exception as e:
+        st.warning(f"Could not load tire strategy data: {e}")
+    return None
+
+
 weather_columns_to_display = {
     'short_date': st.column_config.DateColumn("Date", format="YYYY-MM-DD"),
     'average_temp': st.column_config.NumberColumn("Average Temperature (F)", format="%.2f"),
@@ -1294,7 +1373,15 @@ season_summary_columns_to_display = {
 }
 
 @st.cache_data
-def load_data(nrows, CACHE_VERSION):
+def load_data(nrows, CACHE_VERSION, csv_mtime=None):
+    # Note: csv_mtime is included as a cache key so updating the CSV file
+    # will automatically invalidate the cache. Callers should pass
+    # os.path.getmtime(DATA_DIR/"f1ForAnalysis.csv"). If None, compute it.
+    if csv_mtime is None:
+        try:
+            csv_mtime = os.path.getmtime(path.join(DATA_DIR, 'f1ForAnalysis.csv'))
+        except Exception:
+            csv_mtime = 0
     # Read the header only to get all column names
     all_columns = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t', nrows=0).columns.tolist()
     selected_columns = ['grandPrixYear', 'grandPrixName', 'resultsDriverName', 'resultsPodium', 'resultsTop5', 'resultsTop10', 'constructorName',  'resultsStartingGridPositionNumber', 'resultsFinalPositionNumber', 
@@ -1332,6 +1419,17 @@ def load_data(nrows, CACHE_VERSION):
                                          'driver_safetycar_qual_avg','driver_safetycar_practice_avg',
                                          'driver_constructor_id','races_with_constructor','is_first_season_with_constructor','driver_constructor_avg_final_position','driver_constructor_avg_qual_position','driver_constructor_podium_rate',
                                          'constructor_dnf_rate_3_races', 'constructor_dnf_rate_5_races', 'recent_dnf_rate_5_races', 'historical_race_pace_vs_median',
+
+            # new features added by ROADMAP-1 and subsequent backfill
+            'wet_race_vs_quali_delta', 'championship_fight_performance',
+            'driver_avg_tire_degradation', 'driver_avg_num_stints', 'driver_soft_tendency',
+            'track_tire_degradation', 'tire_deg_x_track_deg',
+            'driver_fuel_corrected_pace', 'driver_race_pace_std', 'track_race_pace_std',
+            'race_vs_qual_consistency', 'driver_avg_completion_pct',
+            # existing scoring/interaction features that might otherwise drop
+            'tire_mgmt_x_turns',
+            'practice_conversion_x_grid', 'pressure_x_recent_form',
+            'constructor_reliability_x_form', 'wet_skill_x_precip', 'track_exp_x_qual',
 
                                          'practice_to_qual_improvement_rate','practice_consistency_vs_teammate','qual_vs_constructor_avg_at_track','fp1_lap_time_delta_to_best','q3_lap_time_delta_to_pole',
                                          'fp3_position_percentile','qualifying_position_percentile','constructor_practice_improvement_rate','practice_qual_consistency_5r','track_fp1_fp3_improvement',
@@ -1384,7 +1482,11 @@ def load_data(nrows, CACHE_VERSION):
 
     return fullResults, pitStops
 
-data, pitStops = load_data(10000, CACHE_VERSION)
+data, pitStops = load_data(
+    10000,
+    CACHE_VERSION,
+    os.path.getmtime(path.join(DATA_DIR, 'f1ForAnalysis.csv'))
+)
 
 # Debug: Check what columns were actually loaded
 print(f"[DEBUG] Loaded data with {len(data.columns)} columns")
@@ -1718,13 +1820,33 @@ def get_features_and_target(data):
         'q1_q2_q3_sector_consistency', 'qualifying_position_vs_race_pace_delta_by_track',
         # Race pace & strategy features
         'practice_race_conversion', 'avg_positions_gained_5r', 'race_pace_consistency',
-        'overtaking_success_top10', 'tire_management_score'
+        'overtaking_success_top10', 'tire_management_score',
+        # Previously computed but unused features (added 2026 roadmap)
+        'practice_to_qual_improvement_rate',        # Practice→qual improvement speed
+        'q3_lap_time_delta_to_pole',                # Q3 gap to pole (competitive pressure)
+        'constructor_podium_rate_at_track',         # Constructor podium history at circuit
+        'wet_race_vs_quali_delta',                  # Wet racecraft delta (fixed 2026)
+        'championship_fight_performance',           # Pressure performance (fixed 2026)
+        'is_first_season_with_constructor',         # New team adaptation flag
+        'driver_constructor_avg_qual_position',     # Driver-team qual pairing history
+        'driver_constructor_synergy',               # Driver-team synergy score
+        # Tire strategy features (available after f1-tire-strategy.py backfill)
+        'driver_avg_tire_degradation', 'driver_avg_num_stints', 'driver_soft_tendency',
+        'track_tire_degradation', 'tire_deg_x_track_deg',
+        # Race lap pace features (available after f1-race-pace-laps.py backfill)
+        'driver_fuel_corrected_pace', 'driver_race_pace_std', 'track_race_pace_std',
+        'race_vs_qual_consistency', 'driver_avg_completion_pct',
+        # New interaction features (2026 roadmap)
+        'tire_mgmt_x_turns', 'practice_conversion_x_grid', 'pressure_x_recent_form',
+        'constructor_reliability_x_form', 'wet_skill_x_precip', 'track_exp_x_qual',
     ]
     
     # Add team-aware features if they exist (for drivers who change constructors)
     team_aware_features = [
         'constructorAvgPosition', 'constructorPodiumRate', 'constructorAvgPoints',
-        'driverVsConstructorPosition', 'driverRelativeToConstructor',
+        # 'driverVsConstructorPosition' and 'driverRelativeToConstructor' removed:
+        # driverVsConstructorPosition = finalPos - constructorAvgPosition which encodes the target.
+        # 'driverVsConstructorPosition', 'driverRelativeToConstructor',
         'recentAvgPosition_3', 'recentAvgPosition_5', 'recentAvgPosition_10',
         'recentAvgPoints_3', 'recentAvgPoints_5', 'recentAvgPoints_10',
         'driverCareerAvgPosition', 'driverCareerAvgPoints', 'driverCareerPodiumRate',
@@ -1742,8 +1864,13 @@ def get_features_and_target(data):
     if dupes:
         st.warning(f"Duplicate features in your feature list: {dupes}")
         features = list(dict.fromkeys(features))  # Remove duplicates, keep order
+    # Filter to only features that exist in data (gracefully skips new features not yet generated)
+    available_features = [f for f in features if f in data.columns]
+    missing_features = [f for f in features if f not in data.columns]
+    if missing_features:
+        print(f"INFO: {len(missing_features)} features not yet in CSV (run generator to populate): {missing_features[:5]}{'...' if len(missing_features) > 5 else ''}")
     target = 'resultsFinalPositionNumber'
-    return data[features], data[target]
+    return data[available_features], data[target]
 
 features, _ = get_features_and_target(data)
 missing = [col for col in features.columns if col not in data.columns]
@@ -2208,6 +2335,9 @@ def load_pretrained_model(model_name='position_model', CACHE_VERSION='v2.3'):
     import pickle
     from pathlib import Path
     
+    csv_path = Path(path.join(DATA_DIR, 'f1ForAnalysis.csv'))
+    csv_mtime = csv_path.stat().st_mtime if csv_path.exists() else 0
+
     # Check multiple locations (new structure first, then legacy)
     search_paths = [
         Path('data_files/models/xgboost') / f'{model_name}.pkl',  # Precompute script location
@@ -2219,6 +2349,10 @@ def load_pretrained_model(model_name='position_model', CACHE_VERSION='v2.3'):
     
     for model_file in search_paths:
         if model_file.exists():
+            # Reject pkl that is older than the CSV (stale model)
+            if model_file.stat().st_mtime < csv_mtime:
+                print(f"INFO: Skipping stale pre-trained model at {model_file} (older than CSV). Will retrain.")
+                continue
             try:
                 with open(model_file, 'rb') as f:
                     artifact = pickle.load(f)
@@ -2234,8 +2368,14 @@ def load_pretrained_model(model_name='position_model', CACHE_VERSION='v2.3'):
     return None
 
 @st.cache_data
-def get_trained_model(early_stopping_rounds, CACHE_VERSION, force_retrain=False):
-    """Load or train the position prediction model. Returns (model, mse, r2, mae, mean_err, evals_result, preprocessor)."""
+def get_trained_model(early_stopping_rounds, CACHE_VERSION, csv_mtime=None, force_retrain=False):
+    """Load or train the position prediction model.
+
+    The csv_mtime argument is included only so that the cache key
+    changes when the underlying f1ForAnalysis.csv file is updated.
+    Callers should pass `os.path.getmtime(DATA_DIR/'f1ForAnalysis.csv')`.
+
+    Returns (model, mse, r2, mae, mean_err, evals_result, preprocessor)."""
     # Try to load pre-trained model first
     if not force_retrain:
         pretrained = load_pretrained_model('position_model', CACHE_VERSION)
@@ -2251,7 +2391,11 @@ def get_trained_model(early_stopping_rounds, CACHE_VERSION, force_retrain=False)
 # Lazy-load models (only when accessed, not at module load)
 def get_main_model():
     if 'main_model' not in st.session_state:
-        model, mse, r2, mae, mean_err, evals_result, preprocessor = get_trained_model(20, CACHE_VERSION)
+        model, mse, r2, mae, mean_err, evals_result, preprocessor = get_trained_model(
+            20,
+            CACHE_VERSION,
+            os.path.getmtime(path.join(DATA_DIR, 'f1ForAnalysis.csv'))
+        )
         st.session_state['main_model'] = model
         st.session_state['global_mae'] = mae
         st.session_state['training_preprocessor'] = preprocessor
@@ -2427,10 +2571,29 @@ def rfe_minimize_mae(X, y, min_features=3, max_features=20, step=1, random_state
 
 # Load model and preprocessor BEFORE tab content execution
 # This ensures tab4 (Next Race predictions) can access the preprocessor
+
+# Invalidate session-state preprocessor if its feature columns no longer match
+# the current data (e.g. after a leakage fix removes a feature like
+# driverVsConstructorPosition).  This forces a safe retrain instead of crashing.
+_cached_pp = st.session_state.get('training_preprocessor')
+if _cached_pp is not None:
+    try:
+        _X_check, _ = get_features_and_target(data)
+        if not is_preprocessor_valid(_cached_pp, _X_check):
+            print("INFO: Clearing stale training_preprocessor from session state (feature mismatch).")
+            for _k in ['training_preprocessor', 'main_model', 'global_mae']:
+                st.session_state.pop(_k, None)
+    except Exception:
+        pass  # If feature extraction fails just let existing logic handle it
+
 if 'training_preprocessor' not in st.session_state:
     try:
         # Use default early stopping for initial load
-        model, mse, r2, mae, mean_err, evals_result, preprocessor = get_trained_model(20, CACHE_VERSION)
+        model, mse, r2, mae, mean_err, evals_result, preprocessor = get_trained_model(
+            20,
+            CACHE_VERSION,
+            os.path.getmtime(path.join(DATA_DIR, 'f1ForAnalysis.csv'))
+        )
         st.session_state['main_model'] = model
         st.session_state['global_mae'] = mae
         st.session_state['training_preprocessor'] = preprocessor
@@ -3100,6 +3263,133 @@ with tab2:
             st.dataframe(feature_importances_df.head(50), hide_index=True, width=800)
     else:
         st.info("Please filter results in the Data Explorer tab first to view analytics.")
+
+    # ── Tire Strategy Analysis ─────────────────────────────────────────────────
+    st.divider()
+    st.subheader("🏎️ Tire Strategy Analysis")
+    st.caption("Compound usage, stint data, and tire degradation per driver/race (FastF1:2018–present).")
+
+    tire_df = load_tire_strategy_data(
+        CACHE_VERSION,
+        os.path.getmtime(path.join(DATA_DIR, 'tire_strategy_data.csv'))
+    )
+    if tire_df is not None and not tire_df.empty:
+        # build abbreviation→name map using the full f1ForAnalysis.csv
+        # (the UI frequently loads only a subset via nrows, so using
+        # that slice would miss newer drivers). We read just the two
+        # columns and cache implicitly via Streamlit.
+        name_map = {}
+        try:
+            full_names = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t',
+                                     usecols=['abbreviation', 'resultsDriverName'])
+            temp = full_names.drop_duplicates()
+            name_map = temp.set_index('abbreviation')['resultsDriverName'].to_dict()
+        except Exception:
+            # fallback if the file can't be read (shouldn't happen)
+            if 'abbreviation' in data.columns and 'resultsDriverName' in data.columns:
+                temp = data[['abbreviation', 'resultsDriverName']].drop_duplicates()
+                name_map = temp.set_index('abbreviation')['resultsDriverName'].to_dict()
+
+        # Race selector
+        tire_years = sorted(tire_df['year'].dropna().unique(), reverse=True)
+        tire_col1, tire_col2 = st.columns(2)
+        with tire_col1:
+            selected_tire_year = st.selectbox("Year", tire_years, key="tire_year_select")
+        year_races = sorted(
+            tire_df[tire_df['year'] == selected_tire_year]['event_name'].dropna().unique()
+        )
+        with tire_col2:
+            selected_tire_race = st.selectbox("Grand Prix", year_races, key="tire_race_select")
+
+        race_tire = tire_df[
+            (tire_df['year'] == selected_tire_year) &
+            (tire_df['event_name'] == selected_tire_race)
+        ].copy()
+
+        if not race_tire.empty:
+            # translate driver codes
+            if 'driver' in race_tire.columns:
+                race_tire['driver'] = race_tire['driver'].map(name_map).fillna(race_tire['driver'])
+
+            # ── Compound usage table ──
+            st.markdown("**Compound Usage per Driver**")
+
+            # Build display columns
+            display_cols = {
+                'driver': 'Driver',
+                'starting_compound': 'Start Compound',
+                'num_stints': 'Stints',
+                'avg_stint_length': 'Avg Stint (laps)',
+                'max_stint_length': 'Max Stint (laps)',
+                'soft_ratio': 'Soft Lap %',
+                'used_soft': 'Used Soft',
+                'used_medium': 'Used Medium',
+                'used_hard': 'Used Hard',
+                'avg_tire_degradation_sec': 'Avg Deg (s/lap)',
+                'total_laps': 'Laps',
+            }
+            # Only keep columns that actually exist
+            available_cols = [c for c in display_cols if c in race_tire.columns]
+            display_race_tire = race_tire[available_cols].rename(columns=display_cols)
+
+            # Format percentages and floats
+            if 'Soft Lap %' in display_race_tire.columns:
+                display_race_tire['Soft Lap %'] = (display_race_tire['Soft Lap %'] * 100).round(1)
+            if 'Avg Stint (laps)' in display_race_tire.columns:
+                display_race_tire['Avg Stint (laps)'] = display_race_tire['Avg Stint (laps)'].round(1)
+            if 'Avg Deg (s/lap)' in display_race_tire.columns:
+                display_race_tire['Avg Deg (s/lap)'] = display_race_tire['Avg Deg (s/lap)'].round(3)
+
+            display_race_tire = display_race_tire.sort_values('Avg Deg (s/lap)') if 'Avg Deg (s/lap)' in display_race_tire.columns else display_race_tire
+            height_tire = get_dataframe_height(display_race_tire)
+            st.dataframe(display_race_tire, hide_index=True, height=height_tire, width='stretch')
+
+            # ── Degradation bar chart ──
+            if 'avg_tire_degradation_sec' in race_tire.columns and 'driver' in race_tire.columns:
+                st.markdown("**Avg Tire Degradation by Driver (s/lap)**")
+                deg_chart_data = (
+                    race_tire[['driver', 'avg_tire_degradation_sec']]
+                    .dropna()
+                    .sort_values('avg_tire_degradation_sec')
+                    .set_index('driver')
+                    .rename(columns={'avg_tire_degradation_sec': 'Degradation (s/lap)'})
+                )
+                st.bar_chart(deg_chart_data, width="stretch")
+
+            # ── Historical driver tire management ──
+            with st.expander("Historical Tire Management by Driver (all races in selected year)"):
+                year_tire = tire_df[tire_df['year'] == selected_tire_year].copy()
+                # translate driver codes for the yearly summary
+                if 'driver' in year_tire.columns:
+                    year_tire['driver'] = year_tire['driver'].map(name_map).fillna(year_tire['driver'])
+                if not year_tire.empty and 'avg_tire_degradation_sec' in year_tire.columns:
+                    driver_summary = (
+                        year_tire.groupby('driver')
+                        .agg(
+                            avg_deg=('avg_tire_degradation_sec', 'mean'),
+                            avg_stints=('num_stints', 'mean'),
+                            soft_pct=('soft_ratio', 'mean'),
+                            races=('event_name', 'count'),
+                        )
+                        .reset_index()
+                        .rename(columns={
+                            'driver': 'Driver',
+                            'avg_deg': 'Avg Deg (s/lap)',
+                            'avg_stints': 'Avg Stints',
+                            'soft_pct': 'Soft Lap %',
+                            'races': 'Races',
+                        })
+                    )
+                    driver_summary['Avg Deg (s/lap)'] = driver_summary['Avg Deg (s/lap)'].round(3)
+                    driver_summary['Avg Stints'] = driver_summary['Avg Stints'].round(2)
+                    driver_summary['Soft Lap %'] = (driver_summary['Soft Lap %'] * 100).round(1)
+                    driver_summary = driver_summary.sort_values('Avg Deg (s/lap)')
+                    h = get_dataframe_height(driver_summary)
+                    st.dataframe(driver_summary, hide_index=True, height=h, width=800)
+        else:
+            st.info(f"No tire strategy data available for {selected_tire_race} {selected_tire_year}.")
+    else:
+        st.info("Tire strategy data not found. Run `f1-tire-strategy.py` to generate it.")
 
 with tab3:
     st.header(f"{current_year} Season")
@@ -3983,7 +4273,7 @@ with tab5:
         - **Best for**: General-purpose predictions, when you want reliable and interpretable results
         - **Training speed**: Fast
         - **Memory usage**: Moderate
-        - **Current MAE**: ~1.94 (baseline)
+        - **Current MAE**: ~1.69 (168 features, 80/20 split — measured Feb 2026 after ROADMAP-1)
         
         **🚀 LightGBM**
         - **Strengths**: Very fast training, handles large datasets well, good for categorical features
@@ -4024,7 +4314,11 @@ with tab5:
 
     # Train model once at the top level for reuse (lazy loading with cache)
     try:
-        model, mse, r2, mae, mean_err, evals_result, preprocessor = get_trained_model(early_stopping_rounds, CACHE_VERSION)
+        model, mse, r2, mae, mean_err, evals_result, preprocessor = get_trained_model(
+            early_stopping_rounds,
+            CACHE_VERSION,
+            os.path.getmtime(path.join(DATA_DIR, 'f1ForAnalysis.csv'))
+        )
         
         # Store preprocessor in session state
         st.session_state['training_preprocessor'] = preprocessor
@@ -4069,9 +4363,10 @@ with tab5:
 
             # Use the training preprocessor from session state (ensures feature consistency)
             preprocessor = st.session_state.get('training_preprocessor')
-            if preprocessor is None:
-                st.error("Training preprocessor not found. Please train a model first.")
-            else:
+            if preprocessor is None or not is_preprocessor_valid(preprocessor, X_test):
+                st.error("Training preprocessor is missing or stale (feature columns changed). Please re-train the model using the 'Train Model' button above.")
+                preprocessor = None
+            if preprocessor is not None:
                 X_test_prep = preprocessor.transform(X_test)
                 
                 # Predict based on actual model type
@@ -4081,48 +4376,48 @@ with tab5:
                     y_pred = model.predict(X_test_prep)
 
 
-            results_df = X_test.copy()
-            results_df['Actual'] = y_test.values
-            results_df['Predicted'] = y_pred
-            results_df['Error'] = results_df['Actual'] - results_df['Predicted']
+                results_df = X_test.copy()
+                results_df['Actual'] = y_test.values
+                results_df['Predicted'] = y_pred
+                results_df['Error'] = results_df['Actual'] - results_df['Predicted']
 
-            # Position-specific MAE analysis
-            results_df_analysis = pd.DataFrame({
-                'Actual': y_test.values,
-                'Predicted': y_pred
-            })
+                # Position-specific MAE analysis
+                results_df_analysis = pd.DataFrame({
+                    'Actual': y_test.values,
+                    'Predicted': y_pred
+                })
 
-            podium_actual = results_df_analysis[results_df_analysis['Actual'] <= 3]
-            points_actual = results_df_analysis[results_df_analysis['Actual'] <= 10]
-            winners_actual = results_df_analysis[results_df_analysis['Actual'] == 1]
-            bottom_10_actual = results_df_analysis[results_df_analysis['Actual'] >= 11]
-            
-            if len(podium_actual) > 0:
-                podium_mae = mean_absolute_error(podium_actual['Actual'], podium_actual['Predicted'])
+                podium_actual = results_df_analysis[results_df_analysis['Actual'] <= 3]
+                points_actual = results_df_analysis[results_df_analysis['Actual'] <= 10]
+                winners_actual = results_df_analysis[results_df_analysis['Actual'] == 1]
+                bottom_10_actual = results_df_analysis[results_df_analysis['Actual'] >= 11]
                 
-            if len(winners_actual) > 0:
-                winner_mae = mean_absolute_error(winners_actual['Actual'], winners_actual['Predicted'])
+                if len(podium_actual) > 0:
+                    podium_mae = mean_absolute_error(podium_actual['Actual'], podium_actual['Predicted'])
+                    
+                if len(winners_actual) > 0:
+                    winner_mae = mean_absolute_error(winners_actual['Actual'], winners_actual['Predicted'])
 
-            if len(points_actual) > 0:
-                points_mae = mean_absolute_error(points_actual['Actual'], points_actual['Predicted'])
+                if len(points_actual) > 0:
+                    points_mae = mean_absolute_error(points_actual['Actual'], points_actual['Predicted'])
 
-            # Compose metrics + position-MAE summary and render with helper
-            metrics = {
-                'Mean Squared Error': mse,
-                'R^2 Score': r2,
-                'Mean Absolute Error': mae,
-                'Mean Error': mean_err
-            }
+                # Compose metrics + position-MAE summary and render with helper
+                metrics = {
+                    'Mean Squared Error': mse,
+                    'R^2 Score': r2,
+                    'Mean Absolute Error': mae,
+                    'Mean Error': mean_err
+                }
 
-            position_mae = {}
-            if 'podium_mae' in locals():
-                position_mae['Podium (1-3)'] = podium_mae
-            if 'winner_mae' in locals():
-                position_mae['Winners'] = winner_mae
-            if 'points_mae' in locals():
-                position_mae['Points (1-10)'] = points_mae
+                position_mae = {}
+                if 'podium_mae' in locals():
+                    position_mae['Podium (1-3)'] = podium_mae
+                if 'winner_mae' in locals():
+                    position_mae['Winners'] = winner_mae
+                if 'points_mae' in locals():
+                    position_mae['Points (1-10)'] = points_mae
 
-            display_model_performance(metrics=metrics, position_mae=position_mae if position_mae else None)
+                display_model_performance(metrics=metrics, position_mae=position_mae if position_mae else None)
 
             if len(bottom_10_actual) > 0:
                 bottom_10_mae = mean_absolute_error(bottom_10_actual['Actual'], bottom_10_actual['Predicted'])

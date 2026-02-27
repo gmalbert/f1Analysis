@@ -168,6 +168,12 @@ def main(argv: list[str] | None = None) -> int:
     # still remaining NaNs -> global median
     df_hourly = df_hourly.fillna(df_hourly.select_dtypes(include=[np.number]).median())
 
+    # ensure short_date column for compatibility with generator
+    if 'short_date' not in df_hourly.columns:
+        if 'date' in df_hourly.columns:
+            df_hourly['short_date'] = pd.to_datetime(df_hourly['date']).dt.strftime('%Y-%m-%d')
+        elif 'datetime' in df_hourly.columns:
+            df_hourly['short_date'] = pd.to_datetime(df_hourly['datetime']).dt.strftime('%Y-%m-%d')
     df_hourly.to_csv(out_hourly, index=False)
     print(f"Wrote imputed hourly weather to {out_hourly}")
 

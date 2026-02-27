@@ -33,7 +33,7 @@ Minimize MAE (Mean Absolute Error) for Formula 1 race predictions with a target 
 - ✅ Position group analysis (Winners, Podium, Points, Mid-field, Back-field)
 - ✅ Multi-source data integration (F1DB, FastF1, Open-Meteo)
 - ✅ Monte Carlo simulation for feature validation (1000 iterations)
-- ✅ Current MAE: ~1.94 (target: ≤1.5)
+- ✅ Current MAE: ~1.69 (80/20 split, 168 features, after ROADMAP-1 implementation — measured Feb 2026)
 
 ---
 

@@ -48,7 +48,11 @@ def train_catboost_models():
     logging.getLogger('streamlit.runtime.state.session_state_proxy').setLevel(logging.ERROR)
     
     print(f"\nLoading data (CACHE_VERSION={CACHE_VERSION})...")
-    data, _ = load_data(10000, CACHE_VERSION)
+    data, _ = load_data(
+        10000,
+        CACHE_VERSION,
+        os.path.getmtime(path.join(DATA_DIR, 'f1ForAnalysis.csv'))
+    )
     
     # Apply column renaming
     if 'constructorName_results_with_qualifying' in data.columns:

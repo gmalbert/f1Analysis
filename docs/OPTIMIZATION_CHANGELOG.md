@@ -106,12 +106,12 @@ python -c "import py_compile; py_compile.compile('raceAnalysis.py', doraise=True
 ```
 
 ### Testing Checklist:
-- [ ] Local: Run `python scripts/train_and_save_models.py` to generate models
-- [ ] Local: Run `streamlit run raceAnalysis.py` and verify <5s startup
-- [ ] Local: Navigate to Tab 5 and verify instant model loading
-- [ ] Local: Test predictions tab and verify lazy loading works
-- [ ] GitHub: Trigger workflow manually and verify model artifacts committed
-- [ ] Production: Deploy to Streamlit Cloud and verify models load from repo
+- [x] Local: Run `python scripts/train_and_save_models.py` to generate models
+- [x] Local: Run `streamlit run raceAnalysis.py` and verify <5s startup
+- [x] Local: Navigate to Tab 5 and verify instant model loading
+- [x] Local: Test predictions tab and verify lazy loading works
+- [x] GitHub: Trigger workflow manually and verify model artifacts committed
+- [x] Production: Deploy to Streamlit Cloud and verify models load from repo
 
 ## Troubleshooting
 

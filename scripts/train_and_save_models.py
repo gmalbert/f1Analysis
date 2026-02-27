@@ -10,6 +10,9 @@ import numpy as np
 import logging
 import warnings
 from pathlib import Path
+from os import path
+
+DATA_DIR = 'data_files/'
 
 # Suppress Streamlit warnings when running outside of Streamlit context
 import os
@@ -76,7 +79,11 @@ def train_all_models():
     )
     
     print(f"Loading data with CACHE_VERSION={CACHE_VERSION}...")
-    data, _ = load_data(10000, CACHE_VERSION)
+    data, _ = load_data(
+        10000,
+        CACHE_VERSION,
+        os.path.getmtime(path.join(DATA_DIR, 'f1ForAnalysis.csv'))
+    )
     
     # Apply the same column renaming logic as in raceAnalysis.py
     print("Applying column renaming logic...")
