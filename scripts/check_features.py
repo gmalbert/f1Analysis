@@ -15,7 +15,10 @@ from raceAnalysis import (
 )
 
 print("Loading data...")
-data, pitStops = load_data(1000)  # Load smaller dataset for testing
+# include CSV modification time so caching invalidates when file updates
+from raceAnalysis import DATA_DIR
+csv_mtime = os.path.getmtime(os.path.join(DATA_DIR, 'f1ForAnalysis.csv'))
+data, pitStops = load_data(1000, None, csv_mtime)  # Load smaller dataset for testing
 
 print(f"Original data shape: {data.shape}")
 print(f"Original columns with team info: {[col for col in data.columns if 'constructor' in col.lower() or 'driver' in col.lower()][:10]}")

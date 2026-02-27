@@ -56,7 +56,11 @@ def train_xgboost_models():
     logging.getLogger('streamlit.runtime.state.session_state_proxy').setLevel(logging.ERROR)
     
     print(f"\nLoading data (CACHE_VERSION={CACHE_VERSION})...")
-    data, _ = load_data(10000, CACHE_VERSION)
+    data, _ = load_data(
+        10000,
+        CACHE_VERSION,
+        os.path.getmtime(path.join(DATA_DIR, 'f1ForAnalysis.csv'))
+    )
     
     # Apply column renaming logic
     print("Applying column renaming...")
