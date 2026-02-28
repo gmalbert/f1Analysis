@@ -14,7 +14,30 @@ os.environ['STREAMLIT_LOG_LEVEL'] = 'error'  # Minimize Streamlit logging
 
 import warnings
 import logging
+
+# suppress all warnings from libraries and specifically Streamlit runtime messages
 warnings.filterwarnings("ignore")
+
+# apply a logging filter for the common "missing ScriptRunContext" messages
+class StreamlitWarningFilter(logging.Filter):
+    def filter(self, record):
+        suppressed = [
+            "missing ScriptRunContext",
+            "No runtime found, using MemoryCacheStorageManager",
+            "Session state does not function",
+            "to view this Streamlit app on a browser"
+        ]
+        return not any(msg in record.getMessage() for msg in suppressed)
+
+for logger_name in [
+    'streamlit',
+    'streamlit.runtime.scriptrunner_utils.script_run_context',
+    'streamlit.runtime.caching.cache_data_api',
+    'streamlit.runtime.state.session_state_proxy'
+]:
+    logger = logging.getLogger(logger_name)
+    logger.addFilter(StreamlitWarningFilter())
+    logger.setLevel(logging.ERROR)
 
 import numpy as np
 import pandas as pd
@@ -55,7 +78,12 @@ def main():
     for col in X_clean.select_dtypes(include='Int64').columns:
         X_clean[col] = X_clean[col].astype(float)
     
+    # impute numeric columns with their mean, then fill any remaining gaps with 0
     X_clean = X_clean.fillna(X_clean.mean(numeric_only=True))
+    if X_clean.isna().any().any():
+        # there are still NaNs in non-numeric or unusual columns
+        print(f"[WARNING] {X_clean.isna().sum().sum()} NaN values remain after mean imputation; filling with 0")
+        X_clean = X_clean.fillna(0)
     y_clean = y_clean.fillna(y_clean.mean())
     
     # Ensure y is 1D array

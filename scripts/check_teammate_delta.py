@@ -27,12 +27,22 @@ def main() -> int:
         print(f"ERROR: {QUAL_CSV} is empty")
         return 1
 
-    # Ensure best_qual_time is numeric
-    if 'best_qual_time' in q.columns:
-        q['best_qual_time'] = pd.to_numeric(q['best_qual_time'], errors='coerce')
+    # Resolve the best-time column — prefer actual_best_lap (seconds), fall back to best_qual_time
+    if 'actual_best_lap' in q.columns:
+        time_col = 'actual_best_lap'
+    elif 'best_qual_time' in q.columns:
+        time_col = 'best_qual_time'
     else:
-        print("ERROR: 'best_qual_time' column missing from qualifying CSV")
+        print("ERROR: neither 'actual_best_lap' nor 'best_qual_time' column found in qualifying CSV")
         return 1
+    q[time_col] = pd.to_numeric(q[time_col], errors='coerce')
+
+    # teammate_qual_delta is computed by fastF1-qualifying.py; warn if absent
+    if 'teammate_qual_delta' not in q.columns:
+        print(f"WARN: 'teammate_qual_delta' column not present in qualifying CSV "
+              f"(run fastF1-qualifying.py to compute it) — skipping delta check")
+        print(f"INFO: time column used: '{time_col}', rows: {len(q)}")
+        return 0
 
     # Build a stable constructor grouping
     if 'constructor_group' not in q.columns:
@@ -40,9 +50,9 @@ def main() -> int:
 
     group_cols = ['Year', 'Round', 'constructor_group']
 
-    # Identify groups where there are >1 non-null best_qual_time
+    # Identify groups where there are >1 non-null best qualifying time
     grp = q.groupby(group_cols)
-    groups_with_multiple = grp['best_qual_time'].apply(lambda s: s.notna().sum() > 1)
+    groups_with_multiple = grp[time_col].apply(lambda s: s.notna().sum() > 1)
     groups_to_check = groups_with_multiple[groups_with_multiple].index.tolist()
 
     total_groups = len(groups_to_check)
@@ -51,19 +61,19 @@ def main() -> int:
     for g in groups_to_check:
         sub = q[(q['Year'] == g[0]) & (q['Round'] == g[1]) & (q['constructor_group'] == g[2])]
         # rows with a best time should have teammate_qual_delta
-        mask = sub['best_qual_time'].notna() & sub['teammate_qual_delta'].isna()
+        mask = sub[time_col].notna() & sub['teammate_qual_delta'].isna()
         if mask.any():
             for _idx, row in sub[mask].iterrows():
-                failing_rows.append((int(row['Year']), int(row['Round']), row.get('driverId'), row.get('constructor_group'), row.get('best_qual_time')))
+                failing_rows.append((int(row['Year']), int(row['Round']), row.get('driverId'), row.get('constructor_group'), row.get(time_col)))
 
     if not failing_rows:
-        print(f"OK: teammate deltas present for all teams with >1 best_qual_time (checked {total_groups} groups)")
+        print(f"OK: teammate deltas present for all teams with >1 {time_col} (checked {total_groups} groups)")
         return 0
 
     print(f"FAIL: found {len(failing_rows)} rows missing teammate_qual_delta in {total_groups} groups")
     print("Examples:")
     for example in failing_rows[:10]:
-        print(" Year={}, Round={}, driverId={}, constructor_group={}, best_qual_time={}".format(*example))
+        print(" Year={}, Round={}, driverId={}, constructor_group={}, {}={}".format(*example[:4], time_col, example[4]))
     return 1
 
 

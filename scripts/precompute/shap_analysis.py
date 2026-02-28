@@ -65,8 +65,33 @@ def main():
         X_shap = X_prep
     
     print("Computing SHAP values...")
-    explainer = shap.TreeExplainer(model)
-    shap_values = explainer.shap_values(X_shap)
+    # XGBoost 2.x stores base_score as '[9.263952E0]' which older SHAP versions
+    # cannot parse.  Patch the booster config to normalise it before handing off.
+    import json as _json
+    import re as _re
+    try:
+        booster = model.get_booster()
+        config = _json.loads(booster.save_config())
+        lmp = config.get('learner', {}).get('learner_model_param', {})
+        if isinstance(lmp.get('base_score', ''), str) and lmp['base_score'].startswith('['):
+            raw = lmp['base_score']
+            numeric_str = _re.search(r'\[([^\]]+)\]', raw).group(1)
+            lmp['base_score'] = str(float(numeric_str))
+            booster.load_config(_json.dumps(config))
+        explainer = shap.TreeExplainer(booster)
+        shap_values = explainer.shap_values(X_shap)
+    except Exception as e1:
+        print(f"  TreeExplainer (patched booster) failed: {e1}")
+        try:
+            # Second fallback: pass raw XGBRegressor with check_additivity off
+            explainer = shap.TreeExplainer(model, feature_perturbation='tree_path_dependent')
+            shap_values = explainer.shap_values(X_shap, check_additivity=False)
+        except Exception as e2:
+            print(f"  TreeExplainer fallback also failed: {e2}")
+            # Final fallback: model-agnostic permutation explainer (slow but always works)
+            background = X_shap[:min(50, len(X_shap))]
+            explainer = shap.Explainer(model.predict, shap.maskers.Independent(background, max_samples=50))
+            shap_values = explainer(X_shap[:min(200, len(X_shap))]).values
     
     # Get feature names
     feature_names = preprocessor.get_feature_names_out()

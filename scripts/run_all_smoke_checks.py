@@ -6,13 +6,13 @@ Usage (from repo root):
 PowerShell examples
 ```
 # list discovered scripts
-python .\scripts\run_all_smoke_checks.py --list-only
+python .\\scripts\\run_all_smoke_checks.py --list-only
 
 # run all smoke checks (stop on first failure)
-python .\scripts\run_all_smoke_checks.py
+python .\\scripts\\run_all_smoke_checks.py
 
 # run all smoke checks, continue through failures and show full summary
-python .\scripts\run_all_smoke_checks.py --continue-on-fail
+python .\\scripts\\run_all_smoke_checks.py --continue-on-fail
 ```
 
 This script will look for a small set of canonical smoke-test scripts and run
@@ -132,7 +132,7 @@ def main(argv: list[str] | None = None) -> int:
     if any_fail:
         print('\nOne or more smoke checks failed.')
         return 1
-    print('\nAll smoke checks passed ✅')
+    print('\nAll smoke checks passed [OK]')
     return 0
 
 

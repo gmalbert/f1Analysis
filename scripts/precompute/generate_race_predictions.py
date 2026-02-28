@@ -133,8 +133,9 @@ def generate_predictions(data, models, next_race, output_dir: Path):
             # Store predictions
             driver_predictions = []
             for i, (_, row) in enumerate(input_data.iterrows()):
+                driver_id_raw = row.get('resultsDriverId', '')
                 driver_predictions.append({
-                    'driverId': int(row.get('resultsDriverId', 0)) if pd.notna(row.get('resultsDriverId')) else 0,
+                    'driverId': str(driver_id_raw) if pd.notna(driver_id_raw) else '',
                     'driverName': str(row.get('resultsDriverName', 'Unknown')),
                     'abbreviation': str(row.get('Abbreviation', '')),
                     'constructor': str(row.get('constructorName', '')),
@@ -157,7 +158,7 @@ def generate_predictions(data, models, next_race, output_dir: Path):
             print(f"  [OK] Generated {len(driver_predictions)} predictions with {model_type} (MAE: {model_data.get('mae', 0):.4f})")
             
         except Exception as e:
-            print(f"  ✗ Error generating predictions with {model_type}: {e}")
+            print(f"  [FAIL] Error generating predictions with {model_type}: {e}")
             import traceback
             traceback.print_exc()
     
