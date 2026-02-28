@@ -12,6 +12,7 @@ Produces:
 The script is defensive about column names and will try several common names
 found in the workspace prediction files.
 """
+import sys
 from pathlib import Path
 import re
 import pandas as pd
@@ -20,10 +21,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from datetime import datetime, timezone
 import json
-import json_helpers
-
 
 ROOT = Path(__file__).resolve().parents[1]
+# Ensure repo root is on the path so json_helpers can be found
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+import json_helpers
 DATA_DIR = ROOT / 'data_files'
 OUT_DIR = Path(__file__).resolve().parent / 'output'
 OUT_DIR.mkdir(parents=True, exist_ok=True)

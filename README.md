@@ -27,6 +27,36 @@ python f1-generate-analysis.py
 streamlit run raceAnalysis.py
 ```
 
+## Pipeline runner (convenience)
+
+If you've added or updated `.json`/`.csv` files and want to regenerate all downstream artifacts (generation, smoke checks, model training, predictions, feature-selection, and exports) run the convenience pipeline runner:
+
+```powershell
+# Run the full pipeline (generation, training, feature selection, exports)
+python run_full_pipeline.py
+
+# Skip data generation when CSVs are already up-to-date
+python run_full_pipeline.py --skip-generation
+
+# Quick mode: generation + smoke + training only
+python run_full_pipeline.py --quick
+```
+
+The runner lives at [run_full_pipeline.py](run_full_pipeline.py) and executes the following ordered stages:
+
+- Data generation: `f1-generate-analysis.py`
+- Smoke / data-quality checks: `scripts/run_all_smoke_checks.py`
+- Model training: `scripts/precompute/train_xgboost.py`, `train_lightgbm.py`, `train_catboost.py`, `train_ensemble.py`
+- Race predictions: `scripts/precompute/generate_race_predictions.py`
+- Feature selection suite: RFE, Boruta, SHAP, Permutation (`scripts/precompute/*`)
+- Position group analysis: `scripts/position_group_analysis.py` and `scripts/precompute/position_group_analysis_precompute.py`
+- Export artifacts: `scripts/export_feature_selection.py`
+
+Each step prints a concise status line and the runner prints a colour-coded summary at completion. By default the script runs in the active Python environment (it uses `sys.executable`) and sets `STREAMLIT_SERVER_HEADLESS=true` to suppress Streamlit UI warnings during batch runs.
+
+If you prefer to run individual stages manually, the runner's CLI flags let you skip any stage (see `--skip-generation`, `--skip-training`, `--skip-features`, etc.).
+
+
 ## Email notifications
 
 This repository includes a small email-notification pipeline that can embed a compact prediction table inline in the message and attach the full predictions CSV/TSV for the upcoming race.

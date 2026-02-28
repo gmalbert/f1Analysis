@@ -112,9 +112,20 @@ jobs:
           fetch-depth: 0
       - uses: actions/download-artifact@v4
         with:
-          pattern: '*-models'
-          path: data_files/models/
-          merge-multiple: true
+          name: xgboost-models
+          path: data_files/models/xgboost/
+      - uses: actions/download-artifact@v4
+        with:
+          name: lightgbm-models
+          path: data_files/models/lightgbm/
+      - uses: actions/download-artifact@v4
+        with:
+          name: catboost-models
+          path: data_files/models/catboost/
+      - uses: actions/download-artifact@v4
+        with:
+          name: ensemble-models
+          path: data_files/models/ensemble/
       - name: Show git status at start
         run: |
           echo "Job started at $(date -u)"

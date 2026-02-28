@@ -90,7 +90,10 @@ def check_qualifying_completeness(threshold=0.05):
     if total == 0:
         print(f"WARN: {QUAL_CSV} is empty")
         return False, 'empty'
-    missing_best = q['best_qual_time'].isnull().sum() if 'best_qual_time' in q.columns else total
+    # Column is 'actual_best_lap' (seconds) in CSVs produced by fastF1-qualifying.py;
+    # fall back to legacy 'best_qual_time' name for backwards compatibility.
+    time_col = next((c for c in ('actual_best_lap', 'best_qual_time') if c in q.columns), None)
+    missing_best = q[time_col].isnull().sum() if time_col else total
     frac_missing = missing_best / total
     ok = frac_missing <= threshold
     return ok, {'total': total, 'missing_best': int(missing_best), 'frac_missing': frac_missing}

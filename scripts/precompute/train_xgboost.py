@@ -23,6 +23,8 @@ warnings.filterwarnings("ignore", message=".*missing ScriptRunContext.*")
 import pandas as pd
 import numpy as np
 
+DATA_DIR = 'data_files/'
+
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
@@ -59,7 +61,7 @@ def train_xgboost_models():
     data, _ = load_data(
         10000,
         CACHE_VERSION,
-        os.path.getmtime(path.join(DATA_DIR, 'f1ForAnalysis.csv'))
+        os.path.getmtime(os.path.join(DATA_DIR, 'f1ForAnalysis.csv'))
     )
     
     # Apply column renaming logic
@@ -146,7 +148,7 @@ def train_xgboost_models():
             pickle.dump(safetycar_artifact, f)
         print("[OK] Safety car model saved")
     else:
-        print("⚠ Safety car data not found - skipping")
+        print("[WARN] Safety car data not found - skipping")
     
     # Save metadata
     metadata = {

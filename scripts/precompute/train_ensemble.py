@@ -30,6 +30,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 # helper for robust json serialization of numpy/pandas scalars used by precompute scripts
 import json_helpers
 
+DATA_DIR = 'data_files/'
+
 def train_ensemble_model():
     """Train ensemble model and save to data_files/models/ensemble/"""
     
@@ -53,7 +55,7 @@ def train_ensemble_model():
     data, _ = load_data(
         10000,
         CACHE_VERSION,
-        os.path.getmtime(path.join(DATA_DIR, 'f1ForAnalysis.csv'))
+        os.path.getmtime(os.path.join(DATA_DIR, 'f1ForAnalysis.csv'))
     )
     
     # Apply column renaming

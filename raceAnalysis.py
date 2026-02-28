@@ -90,51 +90,17 @@ EarlyStopping = xgb.callback.EarlyStopping
 
 from footer import add_betting_oracle_footer
 
-
-class SklearnCompatibleCatBoost(BaseEstimator, RegressorMixin):
-    """Wrapper for CatBoostRegressor to make it sklearn-compatible for ensemble stacking."""
-    
-    def __init__(self, **kwargs):
-        self.model = CatBoostRegressor(**kwargs)
-        self._estimator_type = "regressor"
-    
-    def fit(self, X, y, **kwargs):
-        self.model.fit(X, y, **kwargs)
-        return self
-    
-    def predict(self, X):
-        return self.model.predict(X)
-    
-    def get_params(self, deep=True):
-        return self.model.get_params(deep=deep)
-    
-    def set_params(self, **params):
-        self.model.set_params(**params)
-        return self
-    
-    def __sklearn_tags__(self):
-        """Manually implement sklearn tags to ensure proper regressor recognition."""
-        from sklearn.utils._tags import Tags, TargetTags, RegressorTags, InputTags
-        tags = Tags(
-            estimator_type="regressor",
-            target_tags=TargetTags(required=True),
-            transformer_tags=None,
-            regressor_tags=RegressorTags(),
-            classifier_tags=None,
-            array_api_support=False,
-            no_validation=False,
-            non_deterministic=False,
-            requires_fit=True,
-            _skip_test=False,
-            input_tags=InputTags(pairwise=False),
-        )
-        return tags
+# SklearnCompatibleCatBoost lives in model_classes.py so that pickle.load
+# resolves the class by importing that lightweight module instead of
+# re-importing the entire raceAnalysis app (which would trigger duplicate
+# widget-key errors and CachedWidgetWarning).
+from model_classes import SklearnCompatibleCatBoost  # noqa: F401 – re-exported for pkl back-compat
 
 
 DATA_DIR = 'data_files/'
 
 # Cache version - increment this when preprocessor logic changes
-CACHE_VERSION = "v2.5"  # Fixed Monte Carlo feature loading to include lap-level qualifying features
+CACHE_VERSION = "v2.6"  # Moved SklearnCompatibleCatBoost to model_classes.py to prevent re-import on pkl load
 
 # Preprocessor used when training the main position model. Set during training so
 # prediction uses the exact same feature ordering and transforms (prevents
@@ -2123,6 +2089,24 @@ if missing:
     st.stop()
 
 
+def _prep_as_df(arr, preprocessor):
+    """Wrap a preprocessed array as a DataFrame with output feature names.
+
+    Ensures sklearn estimators (LightGBM, CatBoost, Ensemble) always receive
+    the same type at both .fit() and .predict() time, completely suppressing
+    the 'X does not have valid feature names' UserWarning that arises when a
+    model is trained with a DataFrame but predicted on a numpy array.
+    XGBoost is unaffected by this (it ignores column names).
+    """
+    if isinstance(arr, pd.DataFrame):
+        return arr
+    try:
+        cols = preprocessor.get_feature_names_out()
+        return pd.DataFrame(arr, columns=cols)
+    except Exception:
+        return arr  # fall back to numpy if feature names are unavailable
+
+
 def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost", preprocessor_version="v2"):
     import xgboost as xgb
     from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
@@ -2162,6 +2146,12 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
     X_train_prep = preprocessor.fit_transform(X_train)
     X_test_prep = preprocessor.transform(X_test)
     TRAINING_PREPROCESSOR = preprocessor
+    # Wrap as DataFrames so LightGBM/CatBoost/Ensemble are always fitted *and*
+    # predicted on DataFrames — eliminating the 'X does not have valid feature
+    # names' UserWarning.  XGBoost silently ignores column names so this is safe
+    # for all model types.
+    X_train_prep = _prep_as_df(X_train_prep, preprocessor)
+    X_test_prep  = _prep_as_df(X_test_prep,  preprocessor)
 
     if model_type == "XGBoost":
         # Use XGBRegressor for better compatibility with early stopping on Streamlit Cloud
@@ -2330,22 +2320,43 @@ def train_and_evaluate_safetycar_model(data, CACHE_VERSION):
 
     return model
 
-def load_pretrained_model(model_name='position_model', CACHE_VERSION='v2.3'):
-    """Load a pre-trained model from disk if available."""
+def load_pretrained_model(model_name='position_model', CACHE_VERSION='v2.3', model_type=None):
+    """Load a pre-trained model from disk if available.
+
+    When *model_type* is provided the matching sub-directory is searched first
+    (and exclusively for position models) so the right model is always returned.
+    """
     import pickle
     from pathlib import Path
-    
+
+    # Map UI drop-down label → directory name
+    _type_to_dir = {
+        'XGBoost': 'xgboost',
+        'LightGBM': 'lightgbm',
+        'CatBoost': 'catboost',
+        'Ensemble (XGBoost + LightGBM + CatBoost)': 'ensemble',
+    }
+
     csv_path = Path(path.join(DATA_DIR, 'f1ForAnalysis.csv'))
     csv_mtime = csv_path.stat().st_mtime if csv_path.exists() else 0
 
-    # Check multiple locations (new structure first, then legacy)
-    search_paths = [
-        Path('data_files/models/xgboost') / f'{model_name}.pkl',  # Precompute script location
-        Path('data_files/models/lightgbm') / f'{model_name}.pkl',
-        Path('data_files/models/catboost') / f'{model_name}.pkl',
-        Path('data_files/models/ensemble') / f'{model_name}.pkl',
-        Path('data_files/models') / f'{model_name}.pkl',  # Legacy location
-    ]
+    # Build search list.  If model_type is given, look ONLY in its directory
+    # (plus the legacy root as a fallback).  If not given, preserve the old
+    # behaviour of trying all four directories in order.
+    if model_type and model_type in _type_to_dir:
+        subdir = _type_to_dir[model_type]
+        search_paths = [
+            Path(f'data_files/models/{subdir}') / f'{model_name}.pkl',
+            Path('data_files/models') / f'{model_name}.pkl',  # legacy fallback
+        ]
+    else:
+        search_paths = [
+            Path('data_files/models/xgboost') / f'{model_name}.pkl',
+            Path('data_files/models/lightgbm') / f'{model_name}.pkl',
+            Path('data_files/models/catboost') / f'{model_name}.pkl',
+            Path('data_files/models/ensemble') / f'{model_name}.pkl',
+            Path('data_files/models') / f'{model_name}.pkl',  # Legacy location
+        ]
     
     for model_file in search_paths:
         if model_file.exists():
@@ -2368,25 +2379,39 @@ def load_pretrained_model(model_name='position_model', CACHE_VERSION='v2.3'):
     return None
 
 @st.cache_data
-def get_trained_model(early_stopping_rounds, CACHE_VERSION, csv_mtime=None, force_retrain=False):
-    """Load or train the position prediction model.
+def _train_model_cached(early_stopping_rounds, CACHE_VERSION, csv_mtime=None, model_type='XGBoost'):
+    """Live-train the position prediction model (cached).
 
-    The csv_mtime argument is included only so that the cache key
-    changes when the underlying f1ForAnalysis.csv file is updated.
-    Callers should pass `os.path.getmtime(DATA_DIR/'f1ForAnalysis.csv')`.
+    csv_mtime is included so the cache key changes when f1ForAnalysis.csv updates.
+    model_type is part of the cache key so switching models retrain correctly.
 
     Returns (model, mse, r2, mae, mean_err, evals_result, preprocessor)."""
-    # Try to load pre-trained model first
+    model, mse, r2, mae, mean_err, evals_result, preprocessor = train_and_evaluate_model(
+        data, early_stopping_rounds=early_stopping_rounds, model_type=model_type)
+    return model, mse, r2, mae, mean_err, evals_result, preprocessor
+
+
+def get_trained_model(early_stopping_rounds, CACHE_VERSION, csv_mtime=None, force_retrain=False, model_type='XGBoost'):
+    """Load or train the position prediction model.
+
+    The pkl load is intentionally performed OUTSIDE @st.cache_data so that
+    pickle.load (which may re-import raceAnalysis to resolve class references)
+    never runs inside a cached context — which would raise CachedWidgetWarning
+    due to top-level st.* calls in this module.
+
+    Returns (model, mse, r2, mae, mean_err, evals_result, preprocessor)."""
+    # Try to load pre-trained model first (outside cache to avoid CachedWidgetWarning)
     if not force_retrain:
-        pretrained = load_pretrained_model('position_model', CACHE_VERSION)
+        pretrained = load_pretrained_model('position_model', CACHE_VERSION, model_type=model_type)
         if pretrained is not None:
-            return (pretrained['model'], pretrained['mse'], pretrained['r2'], 
+            return (pretrained['model'], pretrained['mse'], pretrained['r2'],
                     pretrained['mae'], pretrained['mean_err'], pretrained['evals_result'],
                     pretrained.get('preprocessor'))
-    
-    # Fall back to training
-    model, mse, r2, mae, mean_err, evals_result, preprocessor = train_and_evaluate_model(data, early_stopping_rounds=early_stopping_rounds)
-    return model, mse, r2, mae, mean_err, evals_result, preprocessor
+
+    # Fall back to live training (cached); clear cache if forced
+    if force_retrain:
+        _train_model_cached.clear()
+    return _train_model_cached(early_stopping_rounds, CACHE_VERSION, csv_mtime, model_type)
 
 # Lazy-load models (only when accessed, not at module load)
 def get_main_model():
@@ -2398,7 +2423,10 @@ def get_main_model():
         )
         st.session_state['main_model'] = model
         st.session_state['global_mae'] = mae
-        st.session_state['training_preprocessor'] = preprocessor
+        # Use a dedicated key so Tab5 re-trains don't overwrite the preprocessor
+        # that is paired with this specific model object.
+        st.session_state['main_model_preprocessor'] = preprocessor
+        st.session_state['training_preprocessor'] = preprocessor  # backward compat
         # Also set global for backward compatibility
         global TRAINING_PREPROCESSOR
         TRAINING_PREPROCESSOR = preprocessor
@@ -2433,13 +2461,20 @@ def get_dnf_model(CACHE_VERSION, force_retrain=False):
     return train_and_evaluate_dnf_model(data, CACHE_VERSION)
 
 @st.cache_data
+def _train_safetycar_cached(CACHE_VERSION):
+    return train_and_evaluate_safetycar_model(safety_cars, CACHE_VERSION)
+
+
 def get_safetycar_model(CACHE_VERSION, force_retrain=False):
-    """Load or train the safety car prediction model."""
+    """Load or train the safety car prediction model.
+
+    pkl load is outside @st.cache_data for the same reason as get_trained_model
+    (avoids CachedWidgetWarning when pickle.load re-imports raceAnalysis)."""
     if not force_retrain:
         pretrained = load_pretrained_model('safetycar_model', CACHE_VERSION)
         if pretrained is not None:
             return pretrained['model']
-    return train_and_evaluate_safetycar_model(safety_cars, CACHE_VERSION)
+    return _train_safetycar_cached(CACHE_VERSION)
 
 # Module-level execution guarded for headless imports
 import os
@@ -2606,7 +2641,7 @@ with tab1:
     st.header("Data Explorer")
     st.write("Filter and explore F1 race data from multiple perspectives.")
     
-    if st.checkbox('Filter Results'):
+    if st.checkbox('Filter Results', key='filter_results_main'):
         # Create a dictionary to store selected filters for multiple columns
         filters = {}
         filters_for_reset = {}
@@ -3161,7 +3196,7 @@ with tab2:
 
             preprocessor = get_preprocessor_position(X)
             preprocessor.fit(X_train)  # Fit on training data
-            X_test_prep = preprocessor.transform(X_test)
+            X_test_prep = _prep_as_df(preprocessor.transform(X_test), preprocessor)
 
             # Predict based on model type
             if isinstance(model, xgb.Booster):  # XGBoost
@@ -3424,7 +3459,7 @@ with tab4:
     st.header("Next Race")
     st.write("Details, predictions, and analysis for the upcoming race.")
     
-    if st.checkbox("Show Next Race", value=True):
+    if st.checkbox("Show Next Race", value=True, key='show_next_race_tab3'):
         st.subheader("Next Race:")
     
     # include the current date in the raceSchedule
@@ -3659,10 +3694,12 @@ with tab4:
     # Note: Empty data check is handled in the preprocessor conditional below
     # No st.stop() here to allow tabs 5 and 6 to render
     
-    # commented out on 9/17/2025 for early stopping
-    # predicted_position = model.predict(X_predict)
-    # Get preprocessor from session state (set before tabs were created)
-    preprocessor = st.session_state.get('training_preprocessor')
+    # Get the preprocessor that is always paired with the current main_model.
+    # Using 'main_model_preprocessor' (not 'training_preprocessor') ensures both
+    # the model and its preprocessor came from the same training run, preventing
+    # "Feature shape mismatch" errors when Tab5 is visited first or uses a
+    # different model type.
+    preprocessor = st.session_state.get('main_model_preprocessor')
     
     # Check if we can make predictions
     if preprocessor is None or X_predict.shape[0] == 0:
@@ -3737,9 +3774,14 @@ with tab4:
                     debug_log('Diagnostics error', str(_ex))
 
             # All sklearn-style models (XGBoost, LightGBM, CatBoost) accept numpy arrays
-            # The preprocessed data X_predict_prep is already in the correct format (47 features)
-            model, _ = get_main_model()
-            predicted_position = model.predict(X_predict_prep)
+            # The preprocessed data X_predict_prep is already in the correct format.
+            # Use the session_state model — it is guaranteed to match main_model_preprocessor
+            # used above, avoiding "Feature shape mismatch" errors.
+            model = st.session_state.get('main_model')
+            if model is None:
+                get_main_model()  # trigger lazy load
+                model = st.session_state['main_model']
+            predicted_position = model.predict(_prep_as_df(X_predict_prep, preprocessor))
 
             # Get DNF feature names
             dnf_features, _ = get_features_and_target_dnf(data)
@@ -3968,7 +4010,7 @@ with tab4:
                 preprocessor_mae = get_preprocessor_position(X_mae)
                 preprocessor_mae.fit(X_train_mae)
             
-            X_test_prep_mae = preprocessor_mae.transform(X_test_mae)
+            X_test_prep_mae = _prep_as_df(preprocessor_mae.transform(X_test_mae), preprocessor_mae)
     
             # Predict based on model type
             if isinstance(model, xgb.Booster):  # XGBoost
@@ -4251,7 +4293,7 @@ with tab4:
 
 with tab5:
     # Force immediate render to test if tab executes
-    st.write("Tab 5 START")
+    
     st.header("Predictive Models & Advanced Options")
     st.write("Advanced machine learning models, hyperparameter tuning, and feature selection tools.")
     
@@ -4317,11 +4359,15 @@ with tab5:
         model, mse, r2, mae, mean_err, evals_result, preprocessor = get_trained_model(
             early_stopping_rounds,
             CACHE_VERSION,
-            os.path.getmtime(path.join(DATA_DIR, 'f1ForAnalysis.csv'))
+            os.path.getmtime(path.join(DATA_DIR, 'f1ForAnalysis.csv')),
+            model_type=model_type,
         )
         
-        # Store preprocessor in session state
+        # Store preprocessor in session state (paired with the model so Tab4 stays in sync)
         st.session_state['training_preprocessor'] = preprocessor
+        st.session_state['main_model_preprocessor'] = preprocessor
+        st.session_state['main_model'] = model
+        st.session_state['global_mae'] = mae
     except Exception as e:
         st.error(f"CRITICAL ERROR in get_trained_model: {e}")
         import traceback
@@ -4367,7 +4413,7 @@ with tab5:
                 st.error("Training preprocessor is missing or stale (feature columns changed). Please re-train the model using the 'Train Model' button above.")
                 preprocessor = None
             if preprocessor is not None:
-                X_test_prep = preprocessor.transform(X_test)
+                X_test_prep = _prep_as_df(preprocessor.transform(X_test), preprocessor)
                 
                 # Predict based on actual model type
                 if isinstance(model, xgb.Booster):
@@ -5608,7 +5654,7 @@ with tab5:
             if preprocessor_all is None:
                 st.error("Training preprocessor not found. Please train a model first.")
             else:
-                X_test_prep_all = preprocessor_all.transform(X_test_all)
+                X_test_prep_all = _prep_as_df(preprocessor_all.transform(X_test_all), preprocessor_all)
                 
                 # Predict based on model type
                 if isinstance(model, xgb.Booster):  # XGBoost
@@ -5822,7 +5868,7 @@ with tab6:
 
     with raw_tab:
         st.write("View the complete unfiltered dataset.")
-        if st.checkbox('Show Raw Data', value=False):
+        if st.checkbox('Show Raw Data', value=False, key='show_raw_data_debug'):
             st.write(f"Total number of results: {len(data):,d}")
             st.dataframe(data, column_config=columns_to_display,
                 hide_index=True, width='stretch', height=600)
@@ -5837,7 +5883,7 @@ with tab6:
 
     with tuning_tab:
         st.write("Run basic hyperparameter tuning (GridSearch) on the full dataset.")
-        if st.checkbox("Run Hyperparameter Tuning (subtab)"):
+        if st.checkbox("Run Hyperparameter Tuning (subtab)", key='run_hyperparam_tuning_tab5'):
             X, y = get_features_and_target(data)
             param_grid = {
                 'regressor__n_estimators': [100, 200],
