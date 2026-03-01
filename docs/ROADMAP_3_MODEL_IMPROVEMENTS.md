@@ -4,7 +4,7 @@
 
 ---
 
-## 3A. Position-Specific Sub-Models (HIGH IMPACT)
+## ⏳ 3A. Position-Specific Sub-Models (HIGH IMPACT) — pending
 
 The current single-model approach tries to minimize average error across all positions. But predicting position 1 (winner) is a very different problem from predicting positions 10–15. Position-specific models allow the algorithm to learn different signal patterns for each outcome segment.
 
@@ -77,7 +77,7 @@ def predict_with_position_models(models, preprocessor, X_pred):
 
 ---
 
-## 3B. IterativeImputer for Missing Features (vs. Median Fill)
+## ⏳ 3B. IterativeImputer for Missing Features (vs. Median Fill) — pending
 
 Currently, all NaN values are filled with column medians or zeros before model training. `IterativeImputer` uses other features to predict missing values, which can recover significant information from sparse features like `tire_management_score` or `wet_race_vs_quali_delta`.
 
@@ -107,7 +107,7 @@ numeric_transformer = Pipeline(steps=[
 
 ---
 
-## 3C. Target Encoding for Categorical Features
+## ⏳ 3C. Target Encoding for Categorical Features — pending
 
 `constructorId`, `circuitId`, `driverId` are currently one-hot encoded, producing sparse, high-cardinality matrices. Target encoding replaces each category with the mean target value (with shrinkage toward the global mean), which is significantly more information-dense and reduces model complexity.
 
@@ -141,7 +141,7 @@ preprocessor = ColumnTransformer(transformers=[
 
 ---
 
-## 3D. Outlier Capping & Robust Normalization
+## ⏳ 3D. Outlier Capping & Robust Normalization — pending
 
 Extreme outlier positions (DNFs coded as 20+, retirements in lap 1) skew the distribution and pull gradient-boosted trees toward incorrect split points. Capping at the 95th percentile + applying RobustScaler for position-adjacent features improves stability.
 
@@ -167,7 +167,7 @@ robust_cols = [c for c in X.columns if 'position' in c.lower() or 'rank' in c.lo
 
 ---
 
-## 3E. Track-Type Ensemble Weights
+## ⏳ 3E. Track-Type Ensemble Weights — pending
 
 Some models perform better on specific circuit archetypes. Calibrating ensemble weights per track type (street circuit vs. high-speed vs. technical) can shave a couple tenths off MAE.
 
@@ -219,7 +219,7 @@ final_pred = (
 
 ---
 
-## 3F. Optuna Monthly Hyperparameter Refresh
+## ⏳ 3F. Optuna Monthly Hyperparameter Refresh — pending
 
 The current Optuna HPO runs only in the weekly Monte Carlo workflow (feature selection mode). A separate monthly hyperparameter refresh with a full Optuna study on the final feature set will keep model params optimal as new race data accumulates.
 
@@ -332,14 +332,14 @@ if __name__ == '__main__':
 
 ## Summary
 
-| Improvement | Est. MAE Impact | Effort | Priority |
-|-------------|----------------|--------|----------|
-| Position-specific sub-models | 0.06–0.10 | 4–6 hrs | **P1** |
-| IterativeImputer (vs median) | 0.02–0.04 | 1–2 hrs | **P1** |
-| Target encoding (high-cardinality) | 0.02–0.04 | 2–3 hrs | **P2** |
-| Outlier capping + RobustScaler | 0.01–0.02 | 1 hr | **P2** |
-| Track-type ensemble weighting | 0.02–0.04 | 2–3 hrs | **P2** |
-| Monthly Optuna HPO refresh | 0.02–0.04 | 3–4 hrs | **P2** |
+| Improvement | Est. MAE Impact | Effort | Priority | Status |
+|-------------|----------------|--------|----------|--------|
+| Position-specific sub-models | 0.06–0.10 | 4–6 hrs | **P1** | ⏳ pending |
+| IterativeImputer (vs median) | 0.02–0.04 | 1–2 hrs | **P1** | ⏳ pending |
+| Target encoding (high-cardinality) | 0.02–0.04 | 2–3 hrs | **P2** | ⏳ pending |
+| Outlier capping + RobustScaler | 0.01–0.02 | 1 hr | **P2** | ⏳ pending |
+| Track-type ensemble weighting | 0.02–0.04 | 2–3 hrs | **P2** | ⏳ pending |
+| Monthly Optuna HPO refresh | 0.02–0.04 | 3–4 hrs | **P2** | ⏳ pending |
 | **Total estimated** | **0.15–0.28** | | |
 
 **Combined with ROADMAP_1 + ROADMAP_2: MAE → ~1.40–1.65**  
