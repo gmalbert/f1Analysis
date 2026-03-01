@@ -2,7 +2,7 @@
 
 **Baseline after ROADMAP-1: 1.69 (80/20) / 1.80 (GroupKFold) → Target: ≤ 1.5 | Estimated impact of this section: 0.10–0.18**
 
-> **Tire strategy data — already generated (Feb 2026):** `data_files/tire_strategy_data.csv` (3,452 rows, 2018–2025) and `data_files/race_pace_lap_data.csv` (3,268 rows) exist and are baked into the main CSV. Five tire features (`driver_avg_tire_degradation`, `driver_avg_num_stints`, `driver_soft_tendency`, `track_tire_degradation`, `tire_deg_x_track_deg`) and five pace features (`driver_fuel_corrected_pace`, `driver_race_pace_std`, `track_race_pace_std`, `race_vs_qual_consistency`, `driver_avg_completion_pct`) are in the model. Re-measurement confirmed **no MAE improvement over the 1.687 baseline** — XGBoost already imputed optimal values for the NaN slots. Next step: explore cross-source interaction features (e.g., `tire_deg × apparent_temperature`) that combine these new sources with expanded weather data.
+> **Tire strategy data — already generated (Feb 2026):** ✅ `data_files/tire_strategy_data.csv` (3,452 rows, 2018–2025) and `data_files/race_pace_lap_data.csv` (3,268 rows) exist and are baked into the main CSV. Five tire features (`driver_avg_tire_degradation`, `driver_avg_num_stints`, `driver_soft_tendency`, `track_tire_degradation`, `tire_deg_x_track_deg`) and five pace features (`driver_fuel_corrected_pace`, `driver_race_pace_std`, `track_race_pace_std`, `race_vs_qual_consistency`, `driver_avg_completion_pct`) are in the model. Re-measurement confirmed **no MAE improvement over the 1.687 baseline** — XGBoost already imputed optimal values for the NaN slots. Next step: explore cross-source interaction features (e.g., `tire_deg × apparent_temperature`) that combine these new sources with expanded weather data.
 
 ---
 
@@ -257,7 +257,7 @@ if os.path.exists(altitude_file):
 
 ---
 
-## 2D. Penalty / Incident Data
+## ✅ 2D. Penalty / Incident Data — already implemented
 
 Grid penalties (power unit changes = -5, -10 positions) are currently inferred but not directly modeled. The Jolpica API provides qualifying grid position adjustments.
 
@@ -327,13 +327,13 @@ df['market_rank'] = df.groupby('raceId')['win_probability_implied'].rank(ascendi
 
 ## Summary
 
-| Data Source | New Features | Est. MAE Impact | Effort | Priority |
-|-------------|-------------|----------------|--------|----------|
-| Expanded Open-Meteo weather | 5 | 0.03–0.05 | 3–4 hrs | **P1** |
-| First-lap positions (Jolpica) | 3 | 0.04–0.07 | 2–3 hrs | **P1** |
-| Circuit altitude (static CSV) | 3 | 0.02–0.03 | 1 hr | **P2** |
-| Grid penalties (derived) | 3 | 0.01–0.03 | 1 hr | **P2** |
-| Betting odds (The Odds API) | 3 | 0.05–0.08 | 4–6 hrs | **P3** |
+| Data Source | New Features | Est. MAE Impact | Effort | Priority | Status |
+|-------------|-------------|----------------|--------|----------|--------|
+| Expanded Open-Meteo weather | 5 | 0.03–0.05 | 3–4 hrs | **P1** | ⏳ pending |
+| First-lap positions (Jolpica) | 3 | 0.04–0.07 | 2–3 hrs | **P1** | ⏳ pending |
+| Circuit altitude (static CSV) | 3 | 0.02–0.03 | 1 hr | **P2** | ⏳ pending |
+| Grid penalties (derived) | 3 | 0.01–0.03 | 1 hr | **P2** | ✅ done |
+| Betting odds (The Odds API) | 3 | 0.05–0.08 | 4–6 hrs | **P3** | ⏳ pending |
 | **Total estimated** | **17** | **0.15–0.26** | | |
 
 **Net effect: MAE 1.69 → ~1.55–1.65 (this section alone, starting from post-ROADMAP-1 baseline)**  

@@ -9,9 +9,9 @@
 
 ---
 
-## 1A. Fix Broken / Zero-Coverage Features (Quick Wins)
+## ✅ 1A. Fix Broken / Zero-Coverage Features (Quick Wins) — Completed
 
-### Fix `championship_fight_performance` (always NaN)
+### ✅ Fix `championship_fight_performance` (always NaN) — implemented
 
 **Problem:** `championship_position` is computed AFTER `championship_fight_performance` tries to use it in the generator (line ~1822). The feature is always NaN because the `if 'championship_position' in df.columns` guard fails at that point in execution order.
 
@@ -36,7 +36,7 @@ if 'championship_position' in df.columns and df['championship_position'].notna()
 
 ---
 
-### Fix `wet_race_vs_quali_delta` (0% coverage)
+### ✅ Fix `wet_race_vs_quali_delta` (0% coverage) — implemented
 
 **Problem:** The `.apply()` with `wet_race_mask` filters before grouping, producing empty groups. The mask is applied to the global dataframe but used inside a per-group context, so every group is empty.
 
@@ -67,7 +67,7 @@ if wet_rows.sum() > 20:
 
 ---
 
-## 1B. Add Unused Engineered Features to Model
+## ✅ 1B. Add Unused Engineered Features to Model — Completed
 
 These features are already computed in the generator but NOT listed in `get_features_and_target()` in `raceAnalysis.py`. Adding them costs zero data-pull time.
 
@@ -89,7 +89,7 @@ These features are already computed in the generator but NOT listed in `get_feat
 
 ---
 
-## 1C. New Tire Strategy Features (HIGH IMPACT)
+## ✅ 1C. New Tire Strategy Features (HIGH IMPACT) — Added & evaluated
 
 The single biggest missing predictor category. F1 teams regard tire compound, stint count, and degradation as primary race-outcome drivers — yet these are completely absent from the current feature set.
 
@@ -260,7 +260,7 @@ else:
 
 ---
 
-## 1D. Race Lap Pace Features (HIGH IMPACT)
+## ✅ 1D. Race Lap Pace Features (HIGH IMPACT) — Added & evaluated
 
 Fuel-corrected pace and sector consistency from actual race lap data fill a major gap — the current model has qualifying lap data but no equivalent race-lap pace features.
 
@@ -407,7 +407,7 @@ if os.path.exists(race_pace_file):
 
 ---
 
-## 1E. New Interaction Features
+## ✅ 1E. New Interaction Features — Added
 
 **File:** `f1-generate-analysis.py` — add after existing interaction features (~line 1870)
 
@@ -453,7 +453,7 @@ Then add to `get_features_and_target()` in `raceAnalysis.py`:
 
 ---
 
-## 1F. Binning Continuous Race Pace Features
+## ✅ 1F. Binning Continuous Race Pace Features — Added
 
 Add these to the `bin_fields` list in `f1-generate-analysis.py` (~line 2478):
 
@@ -474,15 +474,15 @@ Add these to the `bin_fields` list in `f1-generate-analysis.py` (~line 2478):
 
 ## Summary
 
-| Item | Est. MAE Impact | Effort | Priority |
-|------|----------------|--------|----------|
-| Fix `championship_fight_performance` | 0.01–0.03 | 30 min | **P0** |
-| Fix `wet_race_vs_quali_delta` | 0.01–0.03 | 1 hr | **P0** |
-| Add unused features to model | 0.02–0.04 | 30 min | **P0** |
-| Tire strategy features (new data pull) | 0.08–0.12 | 3–4 hrs | **P1** |
-| Race lap pace features (new data pull) | 0.07–0.10 | 3–4 hrs | **P1** |
-| New interaction features | 0.02–0.04 | 1 hr | **P2** |
-| Bin continuous features | 0.01–0.03 | 30 min | **P2** |
+| Item | Est. MAE Impact | Effort | Priority | Status |
+|------|----------------|--------|----------|--------|
+| Fix `championship_fight_performance` | 0.01–0.03 | 30 min | **P0** | ✅ done |
+| Fix `wet_race_vs_quali_delta` | 0.01–0.03 | 1 hr | **P0** | ✅ done |
+| Add unused features to model | 0.02–0.04 | 30 min | **P0** | ✅ done |
+| Tire strategy features (new data pull) | 0.08–0.12 | 3–4 hrs | **P1** | ✅ done |
+| Race lap pace features (new data pull) | 0.07–0.10 | 3–4 hrs | **P1** | ✅ done |
+| New interaction features | 0.02–0.04 | 1 hr | **P2** | ✅ done |
+| Bin continuous features | 0.01–0.03 | 30 min | **P2** | ✅ done |
 | **Total estimated** | **0.22–0.39** | | |
 
 **Net effect (measured Feb 2026): MAE 2.08 → 1.69** (80/20 split, 168 features) / **1.80** (GroupKFold by season, leakage-free)  

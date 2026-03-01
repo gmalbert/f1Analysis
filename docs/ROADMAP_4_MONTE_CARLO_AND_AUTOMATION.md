@@ -4,7 +4,7 @@
 
 ---
 
-## 4A. Strengthen Monte Carlo Model (Quick Win)
+## ⏳ 4A. Strengthen Monte Carlo Model (Quick Win) — pending
 
 The Monte Carlo feature selection script uses a much weaker model than production, which means the features it selects aren't necessarily the best ones for the real model. Closing this gap ensures feature selection results generalize to production.
 
@@ -50,7 +50,7 @@ MONTE_CARLO_MODEL_LGBM = LGBMRegressor(
 
 ---
 
-## 4B. Tiered Feature Count Search
+## ⏳ 4B. Tiered Feature Count Search — pending
 
 The current Monte Carlo search sweeps 8–15 features. With 140+ features in the model, this undershoots the optimal count. A two-stage tiered search finds the right count more efficiently.
 
@@ -118,7 +118,7 @@ def run_tiered_monte_carlo(df, n_trials_per_stage=500):
 
 ---
 
-## 4C. More Frequent Monte Carlo Runs
+## ⏳ 4C. More Frequent Monte Carlo Runs — pending
 
 The current schedule (weekly Sundays) means the feature set is potentially 7 days stale when new race data lands. Increasing to 3×/week ensures features are optimized immediately after each race weekend.
 
@@ -153,7 +153,7 @@ on:
 
 ---
 
-## 4D. MAE Regression Check in CI
+## ⏳ 4D. MAE Regression Check in CI — pending
 
 Currently there's no automated check to detect if a code change worsens MAE. Adding a MAE regression guard to the CI pipeline prevents accidental regressions from being deployed.
 
@@ -251,7 +251,7 @@ if __name__ == '__main__':
 
 ---
 
-## 4E. Automated Data-Pull Schedule
+## ⏳ 4E. Automated Data-Pull Schedule — pending
 
 Currently data pulls are manual. Automating them means the model is always trained on the latest data after each race weekend without manual intervention.
 
@@ -311,7 +311,7 @@ jobs:
 
 ---
 
-## 4F. Monte Carlo Budget Analysis Dashboard
+## ⏳ 4F. Monte Carlo Budget Analysis Dashboard — pending
 
 Add a lightweight diagnostic section to the Streamlit app showing Monte Carlo cost/benefit: how many trials it took to converge, what the within-session MAE standard deviation is, and a plot of MAE vs. feature count.
 
@@ -358,14 +358,14 @@ if st.checkbox("Show Monte Carlo convergence analysis"):
 
 ## Summary
 
-| Improvement | Est. MAE Impact | Effort | Priority |
-|-------------|----------------|--------|----------|
-| Strengthen MC model (n_estimators/depth) | 0.02–0.04 | 30 min | **P0** |
-| Tiered feature count search | 0.01–0.02 | 2–3 hrs | **P1** |
-| 3×/week MC schedule | Indirect | 15 min | **P1** |
-| MAE regression CI check | 0 (safety) | 2–3 hrs | **P1** |
-| Automated data-pull schedule | 0 (reliability) | 2–3 hrs | **P2** |
-| MC convergence dashboard | 0 (insight) | 2–3 hrs | **P2** |
+| Improvement | Est. MAE Impact | Effort | Priority | Status |
+|-------------|----------------|--------|----------|--------|
+| Strengthen MC model (n_estimators/depth) | 0.02–0.04 | 30 min | **P0** | ⏳ pending |
+| Tiered feature count search | 0.01–0.02 | 2–3 hrs | **P1** | ⏳ pending |
+| 3×/week MC schedule | Indirect | 15 min | **P1** | ⏳ pending |
+| MAE regression CI check | 0 (safety) | 2–3 hrs | **P1** | ⏳ pending |
+| Automated data-pull schedule | 0 (reliability) | 2–3 hrs | **P2** | ⏳ pending |
+| MC convergence dashboard | 0 (insight) | 2–3 hrs | **P2** | ⏳ pending |
 | **Total MAE** | **0.03–0.06** | | |
 
 ---

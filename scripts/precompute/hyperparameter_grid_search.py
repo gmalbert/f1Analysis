@@ -30,7 +30,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 import json_helpers
 
 
-def main()
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', type=str, default='data_files/precomputed/hyperparam_grid.json')
     args = parser.parse_args()
