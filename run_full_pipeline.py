@@ -30,6 +30,13 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
+import warnings
+import logging
+
+warnings.filterwarnings("ignore", message=".*missing ScriptRunContext.*")
+warnings.filterwarnings("ignore", message=".*MemoryCacheStorageManager*")
+
+logging.getLogger("streamlit").setLevel(logging.WARNING)
 
 # Force UTF-8 stdout on Windows to prevent cp1252 UnicodeEncodeError
 if hasattr(sys.stdout, 'buffer') and sys.stdout.encoding and sys.stdout.encoding.lower() not in ('utf-8', 'utf8'):

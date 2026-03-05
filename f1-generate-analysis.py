@@ -7,6 +7,7 @@ import openmeteo_requests
 import argparse
 import requests_cache
 import numpy as np
+import json
 import warnings
 from retry_requests import retry
 from openmeteo_sdk.Variable import Variable
@@ -2293,24 +2294,62 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
     .reset_index(level=0, drop=True)
 )
 
-# Championship position features
-# results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['championship_position'] = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.groupby(['grandPrixYear', 'resultsDriverId'])['Points'].rank(ascending=False)
-# results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['points_leader_gap'] = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.groupby('grandPrixYear')['Points'].transform('max') - results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['Points']
-# Championship position features (using driverPoints instead of Points)
-results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['championship_position'] = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.groupby(['grandPrixYear', 'resultsDriverId'])['driverPoints'].rank(ascending=False)
+# Championship position features — join against F1DB race-by-race standings
+# (More accurate than ranking internal driverPoints, which is per-race score not cumulative)
+_standings_path = os.path.join(DATA_DIR, 'f1db-races-driver-standings.json')
+if os.path.exists(_standings_path):
+    _standings = pd.DataFrame(json.load(open(_standings_path)))
+    _standings = _standings.rename(columns={
+        'year': 'grandPrixYear',
+        'driverId': 'resultsDriverId',
+        'positionNumber': '_champ_pos_f1db',
+        'points': '_champ_pts_f1db',
+    })
+    _standings = _standings[['raceId', 'grandPrixYear', 'round',
+                              'resultsDriverId', '_champ_pos_f1db', '_champ_pts_f1db']].drop_duplicates()
+    _df = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+    # Join on raceId when available, otherwise year+round
+    if 'raceId' in _df.columns and _df['raceId'].notna().mean() > 0.5:
+        _df = _df.merge(_standings[['raceId', 'resultsDriverId', '_champ_pos_f1db', '_champ_pts_f1db']],
+                        on=['raceId', 'resultsDriverId'], how='left')
+    elif 'round' in _df.columns:
+        _df = _df.merge(_standings[['grandPrixYear', 'round', 'resultsDriverId', '_champ_pos_f1db', '_champ_pts_f1db']],
+                        on=['grandPrixYear', 'round', 'resultsDriverId'], how='left')
+    else:
+        _df['_champ_pos_f1db'] = np.nan
+        _df['_champ_pts_f1db'] = np.nan
+    _df['championship_position'] = _df['_champ_pos_f1db']
+    _cov = _df['championship_position'].notna().mean()
+    print(f"  championship_position (F1DB) coverage: {_cov:.1%}")
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = _df.drop(
+        columns=['_champ_pos_f1db', '_champ_pts_f1db'], errors='ignore')
+else:
+    # Fallback: rank by cumulative driverPoints within year (less accurate)
+    print("  WARNING: f1db-races-driver-standings.json not found; falling back to driverPoints rank")
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['championship_position'] = (
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+        .groupby(['grandPrixYear', 'resultsDriverId'])['driverPoints'].rank(ascending=False)
+    )
 
-# championship_fight_performance: FIXED — now computed AFTER championship_position exists
-# Overwrite the NaN placeholder assigned earlier in the features section
+# championship_fight_performance: rolling 3-race mean finishing pos for top-3 championship contenders
 _cfp_df = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+# Sort chronologically so rolling window respects race order
+_sort_cols = ['resultsDriverId', 'grandPrixYear'] + (['round'] if 'round' in _cfp_df.columns else [])
+_cfp_df = _cfp_df.sort_values(_sort_cols)
 _in_fight = _cfp_df['championship_position'] <= 3
-if _in_fight.sum() > 50:
+_threshold = 50
+if _in_fight.sum() < _threshold:
+    _in_fight = _cfp_df['championship_position'] <= 5  # widen if too few rows
+if _in_fight.sum() >= _threshold:
     _cfp_df.loc[_in_fight, 'championship_fight_performance'] = (
         _cfp_df.loc[_in_fight]
-        .groupby('resultsDriverName')['resultsFinalPositionNumber']
+        .groupby('resultsDriverId')['resultsFinalPositionNumber']
         .transform(lambda x: x.shift(1).rolling(3, min_periods=1).mean())
     )
     _cfp_cov = _cfp_df['championship_fight_performance'].notna().mean()
     print(f"  championship_fight_performance coverage: {_cfp_cov:.1%}")
+else:
+    print(f"  WARNING: only {_in_fight.sum()} championship-contender rows; skipping championship_fight_performance")
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = _cfp_df
 
 # Compute `points_leader_gap` without leaking future races.

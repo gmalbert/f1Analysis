@@ -1,0 +1,73 @@
+name: Monthly Hyperparameter Optimisation (ROADMAP-3F)
+
+# Runs on the 1st of every month at 02:00 UTC, or on-demand.
+# Runs Optuna for XGBoost, LightGBM, and CatBoost against the full
+# ROADMAP-3 feature set and commits updated best_hyperparams_*.json files.
+
+on:
+  schedule:
+    - cron: '0 2 1 * *'   # 1st of every month at 2 AM UTC
+  workflow_dispatch:
+    inputs:
+      trials:
+        description: 'Number of Optuna trials per model'
+        type: number
+        default: 200
+      cv_folds:
+        description: 'GroupKFold folds'
+        type: number
+        default: 5
+      models:
+        description: 'Comma-separated model keys to optimise (xgb,lgbm,cat)'
+        type: string
+        default: 'xgb,lgbm,cat'
+
+jobs:
+  monthly-hpo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300   # 5 hours max
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run monthly HPO
+        run: |
+          python scripts/precompute/monthly_hpo.py \
+            --trials ${{ inputs.trials || 200 }} \
+            --cv-folds ${{ inputs.cv_folds || 5 }} \
+            --models "${{ inputs.models || 'xgb,lgbm,cat' }}"
+        env:
+          STREAMLIT_SERVER_HEADLESS: '1'
+          STREAMLIT_BROWSER_GATHER_USAGE_STATS: 'false'
+          STREAMLIT_LOG_LEVEL: 'error'
+
+      - name: Upload HPO results as artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hpo-results-${{ github.run_id }}
+          path: data_files/best_hyperparams_*.json
+          if-no-files-found: warn
+
+      - name: Commit updated hyperparameters
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore: monthly hyperparameter refresh [skip ci]'
+          file_pattern: 'data_files/best_hyperparams_*.json'
+          commit_user_name: 'github-actions[bot]'
+          commit_user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_author: 'github-actions[bot] <github-actions[bot]@users.noreply.github.com>'
+          skip_dirty_check: false
+          push_options: '--force-with-lease'
