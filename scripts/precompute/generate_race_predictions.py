@@ -119,7 +119,18 @@ def generate_predictions(data, models, next_race, output_dir: Path):
             available_features = [f for f in feature_names if f in input_data.columns]
             X_predict = input_data[available_features].copy()
             X_predict = X_predict.fillna(X_predict.mean(numeric_only=True))
-            
+
+            # Pad any columns the preprocessor expects but weren't available in input_data
+            # (e.g. weather/qualifying cols that are unknown for a future race — imputed as NaN)
+            expected_cols = list(getattr(preprocessor, 'feature_names_in_', []))
+            if expected_cols:
+                missing_cols = [c for c in expected_cols if c not in X_predict.columns]
+                if missing_cols:
+                    print(f"    Note: padding {len(missing_cols)} missing feature(s) with NaN for {model_type}")
+                    for col in missing_cols:
+                        X_predict[col] = np.nan
+                X_predict = X_predict[expected_cols]  # align column order to match preprocessor
+
             # Transform
             X_prep = preprocessor.transform(X_predict)
             

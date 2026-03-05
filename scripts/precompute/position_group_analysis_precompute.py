@@ -132,24 +132,70 @@ def main():
         # Fallback for Windows-generated pickles loaded on Linux (or vice versa)
         with open(model_path, 'rb') as f:
             model_data = pickle.load(f, encoding='latin1')
-    
+
     model = model_data['model']
     preprocessor = model_data['preprocessor']
-    
+
     # Get features and target
-    from raceAnalysis import get_features_and_target
-    
+    from raceAnalysis import get_features_and_target, get_preprocessor_position
+
     # Suppress Streamlit headless mode warnings AFTER streamlit is imported
     logging.getLogger('streamlit.runtime.scriptrunner_utils.script_run_context').setLevel(logging.ERROR)
     logging.getLogger('streamlit.runtime.caching.cache_data_api').setLevel(logging.ERROR)
     logging.getLogger('streamlit').setLevel(logging.ERROR)
     logging.getLogger('streamlit.runtime.state.session_state_proxy').setLevel(logging.ERROR)
-    
+
     X, y = get_features_and_target(data)
-    
+
+    # Detect preprocessor/feature-set mismatch (stale pickle) and retrain inline.
+    # This happens when the CSV schema has changed since the pickle was built.
+    _expected = set(getattr(preprocessor, 'feature_names_in_', []))
+    _actual   = set(X.columns)
+    _missing  = _expected - _actual
+    _extra    = _actual  - _expected
+    if _missing or _extra:
+        print(f"[WARN] Stale preprocessor detected "
+              f"({len(_missing)} missing cols, {len(_extra)} extra cols). "
+              f"Retraining inline on current data …")
+        import xgboost as xgb
+        # Drop all-NaN columns, then drop rows where label is NaN/inf
+        X_clean = X.dropna(axis=1, how='all')
+        valid_idx = y.replace([np.inf, -np.inf], np.nan).dropna().index
+        X_clean = X_clean.loc[valid_idx]
+        y_clean = y.loc[valid_idx].astype(np.float64)
+        preprocessor = get_preprocessor_position(X_clean)
+        X_prep_full = preprocessor.fit_transform(X_clean, y_clean)
+        model = xgb.XGBRegressor(
+            n_estimators=500,
+            learning_rate=0.05,
+            max_depth=6,
+            subsample=0.8,
+            colsample_bytree=0.8,
+            random_state=42,
+            n_jobs=-1,
+        )
+        model.fit(X_prep_full, y_clean)
+        # Persist freshly-trained artefact so next run loads it immediately
+        try:
+            fresh = dict(model_data)
+            fresh['model'] = model
+            fresh['preprocessor'] = preprocessor
+            with open(model_path, 'wb') as _f:
+                pickle.dump(fresh, _f)
+            print(f"[INFO] Retrained model saved to {model_path}")
+        except Exception as _e:
+            print(f"[WARN] Could not persist retrained model: {_e}")
+        # Re-derive X and y with the cleaned rows/columns
+        X = X_clean
+        y = y_clean
+
     # Train/test split (same as in app)
+    # Drop rows where the label is NaN/inf (defensive, handles both retrain and normal paths)
+    valid_y = y.replace([np.inf, -np.inf], np.nan).dropna().index
+    X = X.loc[valid_y]
+    y = y.loc[valid_y].astype(np.float64)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    
+
     # Transform and predict
     print("Generating predictions...")
     X_test_prep = preprocessor.transform(X_test)

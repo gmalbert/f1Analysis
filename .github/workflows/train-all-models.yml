@@ -79,6 +79,24 @@ jobs:
           path: data_files/models/catboost/
           retention-days: 90
 
+  train-position-group:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+      - name: Train Position Group Ensemble
+        run: python scripts/precompute/train_position_group.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: position-group-models
+          path: data_files/models/position_group/
+          retention-days: 90
+
   train-ensemble:
     needs: [train-xgboost, train-lightgbm, train-catboost]
     runs-on: ubuntu-latest
@@ -104,7 +122,7 @@ jobs:
           retention-days: 90
 
   commit-models:
-    needs: [train-ensemble]
+    needs: [train-ensemble, train-position-group]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -126,6 +144,10 @@ jobs:
         with:
           name: ensemble-models
           path: data_files/models/ensemble/
+      - uses: actions/download-artifact@v4
+        with:
+          name: position-group-models
+          path: data_files/models/position_group/
       - name: Show git status at start
         run: |
           echo "Job started at $(date -u)"

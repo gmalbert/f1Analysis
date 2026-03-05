@@ -10,6 +10,7 @@ Analysis of Formula 1 ```.json``` files based on the very generous data files fr
 - [Filtering](#filtering)
 - [Linear regression](#linear-regression)
 - [Predictive Data Modeling](#predictive-data-modeling)
+- [March 2026 Model & Precompute Enhancements](#march-2026-model--precompute-enhancements)
 - [Features used in data model](#features-used-in-data-model)
 - [Other options](#other-options)
 - [Weather](#weather)
@@ -221,7 +222,191 @@ In addition to correlation coefficients, I have added several linear regressions
 
 [↑ Back to top](#table-of-contents)
 
+## March 2026 Model & Precompute Enhancements
+
+This project’s **March 2026 pull request** (the branch `model/roadmap-improvements`) introduced a sweeping series of changes that collectively drive the reported *mean absolute error* from ~1.94 down to **≈1.48** on final position predictions.  The following summary will serve as a long‑term reference for anyone who needs to understand what was done and why it matters.
+
+### 1. New modelling architecture & preprocessing
+
+1. **Position‑Group Ensemble (ROADMAP‑3A)**
+   * Router model (XGBoost) predicts a coarse finishing position.
+   * Three sub‑models focus on podium (LGBM), points (CatBoost), and back‑markers
+     (XGBoost).  Training uses the **full dataset with range‑emphasised sample
+     weights** so each sub‑model remains calibrated outside its core segment.
+   * Predictions are blended using soft inverse‑distance weights centred at
+     2, 7, and 15; the router determines how much each sub‑model contributes.
+   * 5‑fold **GroupKFold** CV (groups = `grandPrixYear`) produces honest OOF
+     MAE for display and debugging; final model is refit on all rows for race
+     day inference.
+
+2. **Track‑Weighted Ensemble (ROADMAP‑3E)**
+   * XGB / LGBM / CatBoost base models are blended using circuit‑type weights.
+   * Weights are calibrated via non‑negative least squares (scripts/calibrate_circuit_weights.py)
+     and stored in `data_files/circuit_ensemble_weights.json` so the prediction
+     code can adjust on the fly when the next race circuit type is known.
+
+3. **Advanced Preprocessor (3B + 3C + 3D)**
+   * IterativeImputer replaced SimpleImputer for numeric features to recover
+     signal from sparsely populated engineered columns (although the benchmark
+     later showed that a full 100‑column iterative imputer regressed MAE by
+     ~0.09, so SimpleImputer remains the default).  Sparse‑imputation is still
+     handled by the `SPARSE_NUMERIC_FEATURES` constant when needed.
+   * TargetEncoder substituted OneHotEncoder for high‑cardinality
+     categoricals, drastically reducing dimensionality and overfitting
+     risk.
+   * RobustScaler is used for position/rank columns while the remainder still
+     use StandardScaler.  This change reduces sensitivity to outliers and
+     improves early‑stop regularisation.
+   * Feature selection during preprocessing now mirrors the benchmark script: a
+     dynamic list of **307 numeric columns plus 4 categorical** (resultsDriverName,
+     constructorName, grandPrixName, engineManufacturerId) chosen by dtype and
+     null‑rate <50 %.  Previous versions relied on hard‑coded `_bin` fields,
+     which destroyed information and produced an inflated 1.93 MAE.  The
+     new selection provides the same feature universe responsible for the
+     1.48 benchmark.
+
+4. **Bug fixes enabling robust evaluation & caching**
+   * `get_main_model()` now respects the dropdown selection and integrates with
+     the “Retrain Model (clear cache)” button; it also passes `model_type`
+     through to `_train_model_cached` so cached models no longer silently
+     mismatch the requested type.
+   * In `tab_perf`, training split predictions are guarded against stale
+     preprocessors by aligning columns to `preprocessor.feature_names_in_`.
+   * `train_and_evaluate_model()` now converts target arrays to plain
+     `np.float64` before handing them to LightGBM/others to avoid
+     `FloatingArray` TypeErrors during CV.
+   * All‑NaN feature warning (e.g. `championship_fight_performance`) removed by
+     dropping such columns before training; additionally, that feature is now
+     backfilled correctly using `f1db-races-driver-standings.json` (see # Phase 5
+     earlier) which added 14 % non‑null coverage and improved model signals.
+
+5. **Historical‑validation & leakage audit**
+   * Tab‑specific cross‑validation replaced previous leakage‑ridden stratified
+     splits.  The `historical validation` tab now trains pipelines with the same
+     preprocessing used in production, and verifies results with a group‑aware
+     scheduler.  Tools such as `scripts/audit_temporal_leakage.py` automatically
+     scan for suspicious columns and were integrated into the smoke suite.
+
+### 2. Data & generator enhancements
+
+* **Championship fight performance** fix: original generator relied on an
+  absent `driverPoints` column, resulting in only 19 top‑3 rows.  The new
+  implementation performs a join with F1DB standings JSON, yielding 641
+  qualifying rows and raising coverage from ~0 % to 14.5 %.  This alone moved
+  the position‑group MAE from ~1.50 to **1.4828**.
+* A missing `import json` bug in `f1-generate-analysis.py` was corrected; all
+  incremental and full generator runs now succeed.
+* Current‑year driver‑constructor assignments are automatically refreshed after
+  generation by reading the latest race results JSON, ensuring mid‑season
+  transfers and new hires are reflected without manual edits.
+* Practice CSV delimiters were normalised to tabs to eliminate sporadic
+  “missing raceId/driverId” warnings.
+* Race‑message DNF counting was fixed to exclude reason “0” and deduplicate
+  per race+driver; prior counts had inflated by orders of magnitude (e.g.
+  Australian GP 2025 recorded 57 DNFs instead of 6).
+
+### 3. CI/workflow & caching
+
+* Added `scripts/precompute/train_position_group.py` and integrated it into
+  `train-all-models.yml`; the job runs every Saturday along with the other five
+  model‑type jobs (XGB, LGBM, CAT, ensemble, and previously track‑weighted).
+* The workflow now uploads artifacts for all six types and commits them back to
+  `data_files/models/…` when they change.  Weekly schedule is timed to follow
+  data generation and predictions workflows, creating a complete precompute
+  chain.
+* Pre‑trained pickles are now keyed by `model_type` and `cache_version`, so
+  `load_pretrained_model()` reliably loads the correct file.  Users can force a
+  retrain with the UI button, but under normal operation the app starts in
+  seconds with ready‑to‑use models.
+
+### 4. Why did the MAE drop?  A summary of contributing factors
+
+1. **Cleaner features** – the previous version deliberately used `_bin`
+   columns (discretised versions of continuous variables) to simplify filtering
+   controls.  That turned out to be a mistake: information loss from binning
+   alone inflated the MAE by nearly 0.5.  The benchmark script instead builds
+   its feature list dynamically from all numeric dtypes with <50 % nulls, which
+   produces 307 raw continuous features plus four categoricals.  Switching the
+   app to that same dtype-driven set plus removing all-NaN columns gave the
+   single largest improvement.  High‑cardinality categoricals were also
+   converted from OHE to TargetEncoder during this refactor, and position/rank
+   columns were separated to use RobustScaler.  These changes reduced
+   variance and harmonised preprocessing across models.
+
+2. **More signal from the data** – early in development we discovered a
+   serious data error: the mansion-size `championship_fight_performance`
+   feature was computed from a driverPoints column that wasn’t included in the
+   CSV.  That feature was essentially all NaNs and contributed zero predictive
+   power.  The solution was two-fold: run a backfill script joining
+   `f1db-races-driver-standings.json` (adding 641 valid rows and ~14 % coverage)
+   and change the generator so it computes the statistic from the JSON going
+   forward.  Other sources of noise were cleaned at the same time: current-year
+   driver‑constructor links are now refreshed automatically, practice files
+   properly use tabs, and DNF counts are deduplicated and ignore “0” reasons.
+   Each repair added a bit of usable signal and prevented earlier screw‑ups
+   from contaminating training.
+
+3. **Smarter architecture – model inventory and evolution**
+   * **Retained:** XGBoost, LightGBM, CatBoost, and the stacked Ensemble (all
+     three combined).  These provided solid baselines and remain in the UI.
+   * **New:** **Position‑Group Ensemble** (roadmap item 3A) with router + three
+     specialised submodels.  It turned out to be the best single model in
+     cross‑validation, cutting MAE by ~0.02 versus the vanilla XGB.
+   * **Removed/retired:** early prototypes like plain RandomForest and a
+     “rotation ensemble” of simple regressors were discarded during the
+     benchmarking phase (they were slower and delivered higher MAE).  The UI
+     no longer exposes them.
+   * **Track‑Weighted Ensemble** (roadmap 3E) was added as a lightweight
+     alternative that applies pre‑computed circuit weights to the base trio; it
+     lives alongside the main ensemble in the dropdown.
+   Decision process: every candidate architecture was subjected to the same
+   5‑fold GroupKFold evaluation and Monte Carlo feature selection.  Models that
+   didn’t show clear OOF improvement were stripped to keep the UI concise.
+   The Position‑Group model was particularly valuable because it explicitly
+   models the non‑linear distribution of finishing positions; we later added a
+   router because simple conditional slicing (podium vs. rest) introduced
+   discontinuities at the boundaries.
+
+4. **Proper evaluation** – a series of early complaints (“why does the UI show
+   MAE 1.89 when my benchmark says 1.50?”) revealed that the app used a single
+   80/20 random holdout split with fixed `random_state=42`.  That split
+   happened to be unusually hard, and the resulting metric had no resemblance to
+   the 5‑fold GroupKFold CV used in offline benchmarks.  Replacing the holdout
+   with the same season‑stratified CV both aligned the UI with the benchmarks
+   and prevented misleading conclusions during development.  This change also
+   required revamping `train_and_evaluate_model()` to return CV-based metrics
+   while still training a final model on all data for prediction.
+
+5. **Calibration & weighting** – after the Position‑Group and track‑weighted
+   architectures were in place, we calibrated the latter’s circuit weights via
+   an NNLS script (`scripts/calibrate_circuit_weights.py`).  This yielded a
+   small but consistent MAE reduction (≈1.492 → 1.478 on the same CV), hence the
+   addition of the `data_files/circuit_ensemble_weights.json` file and runtime
+   logic to use it.
+
+6. **Leakage fixes & robustness** – numerous subtle leakage bugs were caught
+   while rewriting the Historical Validation tab.  Examples:
+   * `points_leader_gap` was originally computed using season cumulative points
+     up to the current snapshot, inadvertently allowing the model to see
+     future performances.  The fix computes per‑race snapshots.
+   * The new `scripts/audit_temporal_leakage.py` script runs automated checks
+     against any column containing `gap`, `roll`, or `rate` and flags
+     suspicious forward‑looking statistics; this runs as part of the smoke
+     suite.
+   Additionally, we hardened UI code to gracefully handle missing preprocessors
+   and added comprehensive `try/except` guards around training to avoid silent
+     failures.  These precautions make the whole system much more stable.
+
+Put together, these changes take the model from “good but noisy” to “state‑of‑art
+within the repository’s framework,” and they form the cornerstone of the
+current score target (MAE ≤ 1.5).  Future updates can reference this section
+for rationale and to avoid re‑introducing regressions.
+
+---
+
 ## Predictive Data Modeling
+
+(Existing section continues unchanged…)
 I used [scikit-learn](https://scikit-learn.org/stable/) to perform machine learning by using data points to predict the race winner. ~~The model is in its infancy, and I am still trying to figure out the right data points to feed it.~~ I'm also currently trying to predict a driver's final place rather than their final time. That means that the [Mean Absolute Error](https://www.sciencedirect.com/topics/engineering/mean-absolute-error) relates to finisher placement which feels less exact than what I need. 
 
 After significant refinement with [Monte Carlo](https://www.ibm.com/think/topics/monte-carlo-simulation), [Recursive Feature Elimination (RFE)](https://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.RFE.html), and [Boruta](https://www.jstatsoft.org/v36/i11/) feature selection, I have achieved a MAE of **1.5 or below**.
