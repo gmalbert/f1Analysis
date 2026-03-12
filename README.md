@@ -7,6 +7,15 @@ Analysis of Formula 1 ```.json``` files based on the very generous data files fr
 - [How to run](#how-to-run)
 - [Deployment and caching](#deployment-and-caching)
 - [File organization](#file-organization)
+
+
+### Recent changes (this branch)
+- New GitHub workflows: practice/qualifying pulls, data-refresh, MAE regression check, modified precompute/feature-selection schedules.
+- Monte Carlo script overhaul (stronger models, tiered search) plus Streamlit convergence dashboard.
+- Generator improvements: weather column fallback, first-lap and altitude features, dynamic column lists, auto driver-team updates.
+- Added `scripts/check_mae_regression.py` and other automation helpers.
+- Persistent bug fixes (e.g. `int('None')` guard, KeyErrors) and documentation updates.
+
 - [Filtering](#filtering)
 - [Linear regression](#linear-regression)
 - [Predictive Data Modeling](#predictive-data-modeling)

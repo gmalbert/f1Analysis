@@ -1,0 +1,78 @@
+name: Pull Practice Session Data
+
+on:
+  # Run Saturday 22:00 UTC during F1 season — captures FP1/FP2/FP3 for all circuits,
+  # including late-running Americas sessions (COTA ~18:30 UTC, Miami ~18:30 UTC).
+  schedule:
+    - cron: '0 22 * 3-11 sat'   # Mar–Nov (EDT/EST): Saturday 22:00 UTC
+    - cron: '0 22 * 12,1,2 sat' # Dec–Feb (EST): Saturday 22:00 UTC
+  workflow_dispatch:
+    inputs:
+      force_repull:
+        description: 'Re-pull sessions already in all_practice_laps.csv (rewrites file)'
+        type: boolean
+        default: false
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  pull-practice:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90   # practice data is large; FastF1 downloads can be slow
+    permissions:
+      contents: write     # needed to push the updated CSV back to main
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history so we can pull/rebase before pushing
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Show job context
+        run: |
+          echo "Job started at $(date -u)"
+          echo "Python: $(python --version)"
+          git log -1 --oneline
+          git fetch origin main
+          echo "origin/main is at $(git rev-parse origin/main)"
+
+      - name: Pull practice session data (incremental)
+        run: python fastF1-practices.py
+        env:
+          LOCAL_RUN: '1'    # enables FastF1 disk cache
+
+      - name: Upload practice data as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: practice-laps-${{ github.run_id }}
+          path: data_files/all_practice_laps.csv
+          retention-days: 14
+
+      - name: Commit updated practice data
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          # Bring our branch up to date in case of concurrent pushes
+          git pull --ff-only origin main || true
+          git add data_files/all_practice_laps.csv
+          if git diff --staged --quiet; then
+            echo "No new practice data — nothing to commit"
+          else
+            ROWS=$(python -c "import pandas as pd; df=pd.read_csv('data_files/all_practice_laps.csv', sep='\t'); print(len(df))" 2>/dev/null || echo "?")
+            git commit -m "data: update all_practice_laps.csv (${ROWS} rows) [skip ci]"
+            git push
+            echo "Pushed updated practice data to main"
+          fi
+
+      - name: Show post-push status
+        run: |
+          echo "Job finished at $(date -u)"
+          git log -1 --oneline

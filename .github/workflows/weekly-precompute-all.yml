@@ -1,11 +1,10 @@
 name: Weekly Full Precomputation
 
 on:
-  # Schedule to run during F1 season only (March-November, December-February)
-  # Equivalent to 8 PM Eastern on Fridays, accounting for DST
-  schedule:
-    - cron: '0 0 * 3-11 sat'    # Mar-Nov (EDT): Saturday 12:00 AM UTC
-    - cron: '0 1 * 12,1,2 sat'  # Dec-Feb (EST): Saturday 1:00 AM UTC
+  # Precompute pipeline should only run after qualifying data has been pulled
+  # so that the new grid positions are picked up. The pull-qualifying-data
+  # workflow triggers this dispatch automatically upon a successful commit.
+  # A manual dispatch is still available below.
   workflow_dispatch:
     inputs:
       skip_data_generation:

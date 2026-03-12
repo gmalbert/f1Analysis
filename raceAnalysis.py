@@ -9,6 +9,7 @@ import sys
 import subprocess
 import streamlit as st
 import numpy as np
+from pathlib import Path
 import warnings
 # suppress pandas FutureWarning about silent downcasting on fillna; prefer
 # explicit infer_objects where possible, otherwise silence the noisy warning
@@ -2898,10 +2899,12 @@ if 'training_preprocessor' not in st.session_state:
         st.session_state['main_model'] = model
         st.session_state['global_mae'] = mae
         st.session_state['training_preprocessor'] = preprocessor
+        st.session_state['main_model_preprocessor'] = preprocessor
     except Exception as e:
         st.error(f"Failed to load model: {e}")
         # Set None to prevent repeated errors
         st.session_state['training_preprocessor'] = None
+        st.session_state['main_model_preprocessor'] = None
 
 with tab1:
     st.header("Data Explorer")
@@ -3952,6 +3955,33 @@ with tab4:
     # Remove duplicate columns (if any)
     all_active_driver_inputs = all_active_driver_inputs.loc[:, ~all_active_driver_inputs.columns.duplicated()]
 
+    # Compute is_first_season_with_constructor from known historical data —
+    # this can be determined before qualifying so there is no need to impute it.
+    if 'is_first_season_with_constructor' in feature_names and 'constructorId_results' in data.columns:
+        # Get each active driver's current constructor (prefer current_year, else most-recent row)
+        _cur_yr_data = data[data['grandPrixYear'] == current_year]
+        if _cur_yr_data.empty:
+            _cur_yr_data = data.sort_values('grandPrixYear').groupby('resultsDriverId').tail(1)
+        _current_ctor = (
+            _cur_yr_data[['resultsDriverId', 'constructorId_results']]
+            .drop_duplicates(subset=['resultsDriverId'])
+        )
+        # Pairs (driverId, constructorId) that existed before the current year
+        _prior_pairs = set(
+            zip(
+                data.loc[data['grandPrixYear'] < current_year, 'resultsDriverId'],
+                data.loc[data['grandPrixYear'] < current_year, 'constructorId_results']
+            )
+        )
+        # Merge current constructor onto prediction inputs
+        _tmp = all_active_driver_inputs[['resultsDriverId']].merge(
+            _current_ctor, on='resultsDriverId', how='left'
+        )
+        # vectorised: 1 = first season with this constructor, 0 = has raced with them before
+        _pairs = list(zip(_tmp['resultsDriverId'], _tmp['constructorId_results']))
+        all_active_driver_inputs['is_first_season_with_constructor'] = [
+            0 if p in _prior_pairs else 1 for p in _pairs
+        ]
 
     existing_feature_names = [col for col in feature_names if col in all_active_driver_inputs.columns]
 
@@ -4297,7 +4327,17 @@ with tab4:
                 # Fallback - create and fit new preprocessor if training one not available
                 preprocessor_mae = get_preprocessor_position(X_mae)
                 preprocessor_mae.fit(X_train_mae)
-            
+
+            # Pad any columns the preprocessor expects but X_test_mae is missing
+            # (mirrors the same logic used in the main Next Race prediction path)
+            all_mae_pp_columns = []
+            for _name, _, _cols in preprocessor_mae.transformers:
+                all_mae_pp_columns.extend(_cols)
+            missing_mae_cols = [c for c in all_mae_pp_columns if c not in X_test_mae.columns]
+            for c in missing_mae_cols:
+                X_test_mae[c] = np.nan
+            X_test_mae = X_test_mae[all_mae_pp_columns]
+
             X_test_prep_mae = _prep_as_df(preprocessor_mae.transform(X_test_mae), preprocessor_mae)
     
             # Predict based on model type
@@ -5235,6 +5275,51 @@ with tab5:
                 feature_counts_df = pd.DataFrame(feature_counts.items(), columns=['Feature', 'Appearances']).sort_values(by='Appearances', ascending=False)
                 st.subheader("Feature Appearance in Top 20 Subsets")
                 st.dataframe(feature_counts_df, hide_index=True, width=600)
+
+            # ----------------------------------------------------------------
+            # 4F: Monte Carlo convergence analysis dashboard (ROADMAP-4F)
+            # ----------------------------------------------------------------
+            st.write("---")
+            if st.checkbox("📈 Show Monte Carlo convergence analysis"):
+                mc_log_path = Path('data_files/precomputed/monte_carlo_run_log.json')
+                if mc_log_path.exists():
+                    import json as _json
+                    mc_log = _json.loads(mc_log_path.read_text())
+                    trials_data = mc_log.get('trials', [])
+                    if trials_data:
+                        mc_df = pd.DataFrame(trials_data)
+
+                        col1, col2, col3 = st.columns(3)
+                        col1.metric("Best Trial", mc_log.get('best_trial', '–'))
+                        col2.metric("Best MAE", f"{mc_log.get('best_mae', 0):.4f}" if mc_log.get('best_mae') else '–')
+                        col3.metric("Total Trials", mc_log.get('total_trials', 0))
+
+                        # MAE convergence over trial index
+                        import altair as _alt
+                        conv_chart = _alt.Chart(mc_df).mark_line(opacity=0.7).encode(
+                            x=_alt.X('trial:Q', title='Trial Number'),
+                            y=_alt.Y('mae:Q', title='MAE', scale=_alt.Scale(zero=False)),
+                            color=_alt.Color('stage:N', title='Stage'),
+                            tooltip=['trial', 'stage', 'n_features', 'mae'],
+                        ).properties(title='Monte Carlo MAE Convergence', height=250)
+                        st.altair_chart(conv_chart, width='stretch')
+
+                        # Feature count vs MAE scatter
+                        scatter_chart = _alt.Chart(mc_df).mark_circle(size=30, opacity=0.5).encode(
+                            x=_alt.X('n_features:Q', title='Feature Count'),
+                            y=_alt.Y('mae:Q', title='MAE', scale=_alt.Scale(zero=False)),
+                            color=_alt.Color('mae:Q', scale=_alt.Scale(
+                                scheme='redyellowgreen', reverse=True)),
+                            tooltip=['trial', 'stage', 'n_features', 'mae'],
+                        ).properties(title='Feature Count vs MAE', height=250)
+                        st.altair_chart(scatter_chart, width='stretch')
+                    else:
+                        st.info("Run log exists but contains no trial data yet.")
+                else:
+                    st.info("No Monte Carlo run log found at `data_files/precomputed/monte_carlo_run_log.json`. "
+                            "This is expected if the GitHub feature-selection workflow hasn’t executed yet. "
+                            "You can either trigger that workflow or run the selection script locally: "
+                            "`python scripts/precompute/monte_carlo_features.py` (it will emit the log file). ")
 
             # RFE
             st.write("### Recursive Feature Elimination (RFE)")

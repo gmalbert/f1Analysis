@@ -10,6 +10,25 @@ Short, actionable guidance for AI coding agents working on the Formula 1 Analysi
   2. **UI Phase**: Run the Streamlit app `raceAnalysis.py` which reads those CSVs and displays the UI
 - Heavy computations live in the generator step so the UI remains responsive. Don't modify UI behavior without checking how CSVs are produced.
 
+### Recent branch additions (since last commit)
+- Automated GitHub workflows added:
+  * `pull-practice-data.yml` (Sat 22:00 UTC), `pull-qualifying-data.yml` (Sun 05:00 UTC) and `weekly-data-refresh.yml` (Mon 04:00 UTC).
+  * Qualifying workflow now triggers `weekly-precompute-all.yml` after fresh grid data.
+  * Precompute cron removed; feature-selection schedule bumped to Mon/Wed/Fri + push trigger.
+  * MAE regression check workflow (`mae-regression-check.yml`) with accompanying script.
+- Monte Carlo feature selection script rewritten:
+  * Production-equivalent XGBoost model + optional LightGBM agreement check.
+  * Tiered two-stage search with run log JSON output.
+  * UI dashboard added to display convergence and feature‑count scatter.
+- Enhanced generator resiliency:
+  * Dynamic weather column selection to avoid KeyError.
+  * First‑lap positions pull integrated, with 2018+ start and bad‑value guard.
+  * Circuit altitude CSV merge and air‑density features.
+  * `to_csv` list filtered to present columns.
+  * Automatic current‑year driver constructor updates.
+- New automation and maintenance scripts: `scripts/check_mae_regression.py` and updated workflows.
+- Several bug fixes: `int('None')` guard, duplicated workflow removal, etc.
+
 ## Model Architecture & Selection
 - **XGBoost** (Default): Excellent general-purpose performance, handles missing data, built-in feature importance. Best MAE performance.
 - **LightGBM**: Very fast training, good for large datasets, handles categorical features well. Use when speed is critical.

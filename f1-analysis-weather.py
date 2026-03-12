@@ -45,7 +45,18 @@ for race in circuits_and_races_lat_long.itertuples():
 	"longitude": race.longitude,
 	"start_date": race.date.strftime('%Y-%m-%d'),
 	"end_date": race.date.strftime('%Y-%m-%d'),
-	"hourly": ["temperature_2m", "precipitation", "relative_humidity_2m", "wind_speed_10m"],
+	"hourly": [
+		"temperature_2m", "precipitation", "relative_humidity_2m", "wind_speed_10m",
+		# --- 2A NEW ADDITIONS ---
+		"apparent_temperature",
+		"wind_gusts_10m",
+		"weather_code",
+		"cloud_cover",
+		"surface_pressure",
+		"visibility",
+		"soil_temperature_0cm",
+		"shortwave_radiation"
+	],
     "temperature_unit": "fahrenheit",
     "wind_speed_unit": "mph"
 	}
@@ -66,6 +77,14 @@ for params in full_params:
     hourly_precipitation = hourly.Variables(1).ValuesAsNumpy()
     hourly_relative_humidity_2m = hourly.Variables(2).ValuesAsNumpy()
     hourly_wind_speed_10m = hourly.Variables(3).ValuesAsNumpy()
+    hourly_apparent_temperature = hourly.Variables(4).ValuesAsNumpy()
+    hourly_wind_gusts_10m = hourly.Variables(5).ValuesAsNumpy()
+    hourly_weather_code = hourly.Variables(6).ValuesAsNumpy()
+    hourly_cloud_cover = hourly.Variables(7).ValuesAsNumpy()
+    hourly_surface_pressure = hourly.Variables(8).ValuesAsNumpy()
+    hourly_visibility = hourly.Variables(9).ValuesAsNumpy()
+    hourly_soil_temperature_0cm = hourly.Variables(10).ValuesAsNumpy()
+    hourly_shortwave_radiation = hourly.Variables(11).ValuesAsNumpy()
 
     hourly_data = {"date": pd.date_range(
 	    start = pd.to_datetime(hourly.Time(), unit = "s", utc = True),
@@ -80,6 +99,14 @@ for params in full_params:
     hourly_data["hourly_precipitation"] = hourly_precipitation
     hourly_data["relative_humidity_2m"] = hourly_relative_humidity_2m
     hourly_data["wind_speed_10m"] = hourly_wind_speed_10m
+    hourly_data["apparent_temperature"] = hourly_apparent_temperature
+    hourly_data["wind_gusts_10m"] = hourly_wind_gusts_10m
+    hourly_data["weather_code"] = hourly_weather_code
+    hourly_data["cloud_cover"] = hourly_cloud_cover
+    hourly_data["surface_pressure"] = hourly_surface_pressure
+    hourly_data["visibility"] = hourly_visibility
+    hourly_data["soil_temperature_0cm"] = hourly_soil_temperature_0cm
+    hourly_data["shortwave_radiation"] = hourly_shortwave_radiation
     hourly_data["short_date"] = pd.to_datetime(hourly_data["date"]).strftime('%Y-%m-%d')
     hourly_dataframe = pd.DataFrame(data = hourly_data)
     
@@ -94,11 +121,38 @@ races_and_weather = pd.merge(all_hourly_data, circuits_and_races_lat_long, left_
 print(races_and_weather)
 
 
-races_and_weather.to_csv('f1WeatherData_AllData.csv', columns=['date_hourly', 'latitude_hourly', 'longitude_hourly', 'temperature_2m', 'hourly_precipitation', 'relative_humidity_2m', 'short_date',
-'wind_speed_10m', 'id_races', 'grandPrixId', 'circuitId'], sep='\t')
+races_and_weather.to_csv('f1WeatherData_AllData.csv', columns=[
+    'date_hourly', 'latitude_hourly', 'longitude_hourly',
+    'temperature_2m', 'hourly_precipitation', 'relative_humidity_2m', 'wind_speed_10m',
+    'apparent_temperature', 'wind_gusts_10m', 'weather_code', 'cloud_cover',
+    'surface_pressure', 'visibility', 'soil_temperature_0cm', 'shortwave_radiation',
+    'short_date', 'id_races', 'grandPrixId', 'circuitId'
+], sep='\t')
 
-races_and_weather_grouped = races_and_weather.groupby(['short_date', 'latitude_hourly', 'longitude_hourly', 'id_races', 'grandPrixId', 'circuitId']).agg(average_temp = ('temperature_2m', 'mean'), total_precipitation = ('hourly_precipitation', 'sum'), average_humidity = ('relative_humidity_2m', 'mean'), average_wind_speed = ('wind_speed_10m', 'mean')).reset_index()
+races_and_weather_grouped = races_and_weather.groupby(
+    ['short_date', 'latitude_hourly', 'longitude_hourly', 'id_races', 'grandPrixId', 'circuitId']
+).agg(
+    average_temp          = ('temperature_2m',        'mean'),
+    total_precipitation   = ('hourly_precipitation',  'sum'),
+    average_humidity      = ('relative_humidity_2m',  'mean'),
+    average_wind_speed    = ('wind_speed_10m',         'mean'),
+    # --- 2A NEW AGGREGATIONS ---
+    apparent_temperature  = ('apparent_temperature',  'mean'),
+    windgusts_10m         = ('wind_gusts_10m',         'max'),   # worst gust of the day
+    weathercode           = ('weather_code',           'max'),   # most severe code
+    cloudcover            = ('cloud_cover',            'mean'),
+    surface_pressure      = ('surface_pressure',       'mean'),
+    visibility            = ('visibility',             'min'),   # worst visibility
+    soil_temperature_0cm  = ('soil_temperature_0cm',   'mean'),
+    shortwave_radiation   = ('shortwave_radiation',    'sum'),   # total solar energy
+).reset_index()
 
-races_and_weather_grouped.to_csv('f1WeatherData_Grouped.csv', columns=['short_date', 'id_races', 'grandPrixId', 'circuitId', 'latitude_hourly', 'longitude_hourly', 'average_temp', 'total_precipitation', 'average_humidity', 'average_wind_speed'], sep='\t')
+races_and_weather_grouped.to_csv('f1WeatherData_Grouped.csv', columns=[
+    'short_date', 'id_races', 'grandPrixId', 'circuitId',
+    'latitude_hourly', 'longitude_hourly',
+    'average_temp', 'total_precipitation', 'average_humidity', 'average_wind_speed',
+    'apparent_temperature', 'windgusts_10m', 'weathercode', 'cloudcover',
+    'surface_pressure', 'visibility', 'soil_temperature_0cm', 'shortwave_radiation',
+], sep='\t')
 
 print(races_and_weather_grouped)
