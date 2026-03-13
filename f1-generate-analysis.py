@@ -5,6 +5,7 @@ from os import path
 import os
 import openmeteo_requests
 import argparse
+import requests
 import requests_cache
 import numpy as np
 import json
@@ -81,6 +82,84 @@ def run_missing_data_handlers():
 
 # Call handlers (best-effort): they will skip or emit warnings if inputs missing
 run_missing_data_handlers()
+
+
+def pull_first_lap_positions():
+    """Incremental pull of lap-1 positions from the Jolpica/Ergast API.
+
+    Skips (year, round) pairs already present in first_lap_positions.csv.
+    Only fetches race seasons 2018 onwards (FastF1 era).
+    Best-effort — network failures are logged and skipped.
+    """
+    output_file = path.join(DATA_DIR, 'first_lap_positions.csv')
+    base_url = "https://api.jolpi.ca/ergast/f1/{year}/{round}/laps/1.json"
+
+    existing: set = set()
+    if path.exists(output_file):
+        _old = pd.read_csv(output_file, sep='\t')
+        existing = set(zip(_old['year'].astype(int), _old['round'].astype(int)))
+
+    _cur_year = datetime.datetime.now().year
+    all_rows: list = []
+    new_count = 0
+
+    for _year in range(2018, _cur_year + 1):
+        for _rnd in range(1, 25):
+            if (_year, _rnd) in existing:
+                continue
+            _url = base_url.format(year=_year, round=_rnd)
+            try:
+                _resp = requests.get(_url, timeout=10)
+                if _resp.status_code == 404:
+                    break  # no more rounds this year
+                _resp.raise_for_status()
+                _data = _resp.json()
+                _races = _data.get('MRData', {}).get('RaceTable', {}).get('Races', [])
+                if not _races:
+                    break
+                _laps = _races[0].get('Laps', [])
+                if not _laps:
+                    import time as _time; _time.sleep(0.2)
+                    continue
+                for _timing in _laps[0].get('Timings', []):
+                    _eid = _timing.get('driverId', '')
+                    _raw_pos = _timing.get('position')
+                    try:
+                        _pos = int(_raw_pos)
+                    except (TypeError, ValueError):
+                        continue  # skip if position is None / 'None' (race not run yet)
+                    all_rows.append({
+                        'year': _year, 'round': _rnd,
+                        'driverId': _eid,
+                        'driverIdNorm': _eid.replace('_', '-'),
+                        'first_lap_position': _pos,
+                    })
+                new_count += 1
+                import time as _time; _time.sleep(0.2)
+            except requests.exceptions.HTTPError as _e:
+                if _resp.status_code == 429:
+                    import time as _time; _time.sleep(5)
+                else:
+                    print(f'  first_lap pull warning {_year} R{_rnd}: {_e}')
+                    import time as _time; _time.sleep(1)
+            except Exception as _e:
+                print(f'  first_lap pull warning {_year} R{_rnd}: {_e}')
+                import time as _time; _time.sleep(1)
+
+    if not all_rows and new_count == 0:
+        return  # nothing new
+
+    _result = pd.DataFrame(all_rows)
+    if path.exists(output_file):
+        _old = pd.read_csv(output_file, sep='\t')
+        _result = pd.concat([_old, _result], ignore_index=True).drop_duplicates(
+            subset=['year', 'round', 'driverId'], keep='last')
+    _result = _result.sort_values(['year', 'round', 'first_lap_position']).reset_index(drop=True)
+    _result.to_csv(output_file, sep='\t', index=False)
+    print(f'first_lap_positions.csv updated: {len(_result)} total rows')
+
+
+pull_first_lap_positions()
 
 def quantile_bin_feature(df, feature, q=10, suffix='_bin', dropna=True):
     """
@@ -1664,10 +1743,18 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
 # Load grouped weather data
 weather_grouped = pd.read_csv(path.join(DATA_DIR, 'f1WeatherData_Grouped.csv'), sep='\t')
 
+# Build column selection: always include the 4 base weather columns;
+# include expanded 2A columns only if they are already in the file
+# (the file is upgraded after re-running f1-analysis-weather.py).
+_weather_base_cols = ['short_date', 'circuitId', 'average_temp', 'total_precipitation', 'average_humidity', 'average_wind_speed']
+_weather_new_cols  = ['apparent_temperature', 'windgusts_10m', 'weathercode', 'cloudcover',
+                      'surface_pressure', 'visibility', 'soil_temperature_0cm', 'shortwave_radiation']
+_weather_select = _weather_base_cols + [c for c in _weather_new_cols if c in weather_grouped.columns]
+
 # Merge weather data into your main DataFrame
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = pd.merge(
     results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices,
-    weather_grouped[['short_date', 'circuitId', 'average_temp', 'total_precipitation', 'average_humidity', 'average_wind_speed']],
+    weather_grouped[_weather_select],
     left_on=['short_date', 'circuitId'],
     right_on=['short_date', 'circuitId'],
     how='left'
@@ -1727,6 +1814,114 @@ results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[
     results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[sc_mask]
     .groupby('resultsDriverName')['averagePracticePosition'].transform(lambda x: x.shift(1).mean())
 )
+
+# --- 2A: ADDITIONAL WEATHER FEATURES (from expanded weather pull) ---
+_df = results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+
+# Severe-weather flag: heavy rain (>5mm) OR extreme weather code (≥80 = rain shower+)
+if 'total_precipitation' in _df.columns and 'weathercode' in _df.columns:
+    _df['severe_weather_flag'] = (
+        (_df['total_precipitation'] > 5) | (_df['weathercode'].fillna(0) >= 80)
+    ).astype(int)
+
+# High wind-gust flag: race-day gusts over 60 km/h
+if 'windgusts_10m' in _df.columns:
+    _df['high_wind_gust_flag'] = (_df['windgusts_10m'].fillna(0) > 60).astype(int)
+
+# Track heat index: combined apparent-temperature + solar radiation index
+if 'apparent_temperature' in _df.columns and 'shortwave_radiation' in _df.columns:
+    _df['track_heat_index'] = (
+        _df['apparent_temperature'].fillna(_df.get('average_temp', 20)) +
+        _df['shortwave_radiation'].fillna(0) / 500.0
+    )
+
+# Safety-car weather risk score: weighted combination of adverse weather signals
+if all(c in _df.columns for c in ['total_precipitation', 'windgusts_10m', 'cloudcover', 'weathercode']):
+    _df['safety_car_weather_risk'] = (
+        _df['total_precipitation'].fillna(0) * 0.4 +
+        _df['windgusts_10m'].fillna(0) * 0.01 +
+        _df['cloudcover'].fillna(0) * 0.002 +
+        (_df['weathercode'].fillna(0) >= 60).astype(float) * 2.0
+    )
+
+# Thermal stress on tyres: large spread between soil and air temperature
+if 'soil_temperature_0cm' in _df.columns and 'average_temp' in _df.columns:
+    _df['thermal_stress'] = (
+        _df['soil_temperature_0cm'].fillna(_df['average_temp'].fillna(20)) -
+        _df['average_temp'].fillna(20)
+    ).abs()
+
+results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = _df
+
+
+# --- 2C: CIRCUIT ALTITUDE & ATMOSPHERIC DENSITY ---
+_altitude_file = os.path.join(DATA_DIR, 'circuit_altitude.csv')
+if os.path.exists(_altitude_file):
+    _altitude_data = pd.read_csv(_altitude_file, sep='\t')
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = pd.merge(
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices,
+        _altitude_data[['circuitId', 'altitude_m']],
+        on='circuitId',
+        how='left'
+    )
+    # Air density approximation: rho/rho_0 ≈ exp(-altitude / 8500)
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['air_density_index'] = (
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['altitude_m']
+        .apply(lambda alt: np.exp(-alt / 8500) if pd.notna(alt) else 1.0)
+    )
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['is_high_altitude'] = (
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['altitude_m']
+        .fillna(0).gt(500).astype(int)
+    )
+    print("Created altitude/air-density features from circuit_altitude.csv")
+else:
+    print("INFO: circuit_altitude.csv not found — altitude features skipped")
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['altitude_m'] = np.nan
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['air_density_index'] = 1.0
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['is_high_altitude'] = 0
+
+
+# --- 2B: FIRST-LAP POSITION FEATURES ---
+_first_lap_file = os.path.join(DATA_DIR, 'first_lap_positions.csv')
+if os.path.exists(_first_lap_file):
+    _first_lap = pd.read_csv(_first_lap_file, sep='\t')
+    # Ergast uses underscores (max_verstappen); f1db uses hyphens (max-verstappen)
+    if 'driverIdNorm' not in _first_lap.columns:
+        _first_lap['driverIdNorm'] = _first_lap['driverId'].str.replace('_', '-', regex=False)
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices = pd.merge(
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices,
+        _first_lap[['year', 'round', 'driverIdNorm', 'first_lap_position']],
+        left_on=['grandPrixYear', 'round', 'resultsDriverId'],
+        right_on=['year', 'round', 'driverIdNorm'],
+        how='left'
+    )
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.drop(
+        columns=['year', 'driverIdNorm'], errors='ignore', inplace=True)
+
+    # Positions gained/lost on lap 1 (positive = moved forward)
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['first_lap_delta'] = (
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['resultsStartingGridPositionNumber'] -
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['first_lap_position']
+    )
+    # Historical rolling average first-lap delta (last 5 races)
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_avg_first_lap_delta'] = (
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+        .groupby('resultsDriverName')['first_lap_delta']
+        .transform(lambda x: x.shift(1).rolling(5, min_periods=1).mean())
+    )
+    # Driver's historical first-lap incident indicator (lost ≥30% of starting position)
+    results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices['driver_first_lap_incident_rate'] = (
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices
+        .groupby('resultsDriverName')['first_lap_position']
+        .transform(lambda x: (
+            x.shift(1) > x.shift(1) * 1.3
+        ).rolling(5, min_periods=1).mean())
+    )
+    print("Created 3 first-lap position features from first_lap_positions.csv")
+else:
+    print("INFO: first_lap_positions.csv not found — first-lap features skipped")
+    for _col in ['first_lap_position', 'first_lap_delta', 'driver_avg_first_lap_delta', 'driver_first_lap_incident_rate']:
+        results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices[_col] = np.nan
 
 
 # --- Driver-Constructor Features ---
@@ -2771,6 +2966,16 @@ static_columns=['grandPrixYear', 'grandPrixName', 'raceId_results', 'circuitId',
                                         # New interaction features (2026 roadmap)
                                         'tire_mgmt_x_turns', 'practice_conversion_x_grid', 'pressure_x_recent_form',
                                         'constructor_reliability_x_form', 'wet_skill_x_precip', 'track_exp_x_qual',
+                                        # --- 2A: Expanded weather features ---
+                                        'apparent_temperature', 'windgusts_10m', 'weathercode', 'cloudcover',
+                                        'surface_pressure', 'visibility', 'soil_temperature_0cm', 'shortwave_radiation',
+                                        'severe_weather_flag', 'high_wind_gust_flag', 'track_heat_index',
+                                        'safety_car_weather_risk', 'thermal_stress',
+                                        # --- 2B: First-lap position features ---
+                                        'first_lap_position', 'first_lap_delta',
+                                        'driver_avg_first_lap_delta', 'driver_first_lap_incident_rate',
+                                        # --- 2C: Altitude / air-density features ---
+                                        'altitude_m', 'air_density_index', 'is_high_altitude',
                                         ]
 
 # Concatenate static columns and bin_fields
@@ -2790,9 +2995,19 @@ with warnings.catch_warnings():
 _filled_active = _filled_active.infer_objects(copy=False)
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.loc[active_mask] = _filled_active
 
+# Filter all_columns to only those that actually exist in the DataFrame.
+# This makes the pipeline robust when optional data sources (expanded weather,
+# first-lap positions, altitude) haven't been pulled yet.
+_df_cols = set(results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.columns)
+_missing_cols = [c for c in all_columns if c not in _df_cols]
+if _missing_cols:
+    print(f"INFO: {len(_missing_cols)} column(s) in static_columns not yet in DataFrame "
+          f"(optional data not pulled yet) — skipping: {_missing_cols[:10]}{'...' if len(_missing_cols) > 10 else ''}")
+all_columns_present = [c for c in all_columns if c in _df_cols]
+
 results_and_drivers_and_constructors_and_grandprix_and_qualifying_and_practices.to_csv(
     path.join(DATA_DIR, 'f1ForAnalysis.csv'),
-    columns=all_columns,
+    columns=all_columns_present,
     sep='\t',
     index=False
 )

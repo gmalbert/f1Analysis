@@ -1,0 +1,34 @@
+name: MAE Regression Check
+
+on:
+  pull_request:
+    paths:
+      - 'f1-generate-analysis.py'
+      - 'raceAnalysis.py'
+      - 'scripts/precompute/**'
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  mae-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run MAE regression check
+        run: python scripts/check_mae_regression.py --threshold 0.05
+        env:
+          # Set MAE_BASELINE as a repository variable (repo Settings → Variables).
+          # Update it manually after a confirmed improvement, e.g. "1.53"
+          MAE_BASELINE: ${{ vars.MAE_BASELINE || '1.94' }}
+          STREAMLIT_SERVER_HEADLESS: '1'

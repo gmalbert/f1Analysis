@@ -1,0 +1,106 @@
+name: Pull Qualifying Data
+
+on:
+  # Run Sunday 05:00 UTC during F1 season — qualifying sessions are done worldwide by then,
+  # including late-running Americas events (Brazil/Mexico ~23:00 UTC Sat, Las Vegas ~03:00 UTC Sun).
+  schedule:
+    - cron: '0 5 * 3-11 sun'    # Mar–Nov (EDT): Sunday 05:00 UTC
+    - cron: '0 5 * 12,1,2 sun'  # Dec–Feb (EST): Sunday 05:00 UTC
+  workflow_dispatch:
+    inputs:
+      trigger_precompute:
+        description: 'Trigger full precompute pipeline after qualifying pull'
+        type: boolean
+        default: true
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  pull-qualifying:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45   # qualifying pull is faster than practice
+    permissions:
+      contents: write     # needed to push the updated CSV back to main
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history so we can pull/rebase before pushing
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Show job context
+        run: |
+          echo "Job started at $(date -u)"
+          echo "Python: $(python --version)"
+          git log -1 --oneline
+          git fetch origin main
+          echo "origin/main is at $(git rev-parse origin/main)"
+
+      - name: Pull qualifying session data (incremental)
+        run: python fastF1-qualifying.py
+        env:
+          LOCAL_RUN: '1'    # enables FastF1 disk cache
+
+      - name: Upload qualifying data as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: qualifying-data-${{ github.run_id }}
+          path: data_files/all_qualifying_races.csv
+          retention-days: 14
+
+      - name: Commit updated qualifying data
+        id: commit-qual
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          # Bring our branch up to date in case of concurrent pushes
+          git pull --ff-only origin main || true
+          git add data_files/all_qualifying_races.csv
+          if git diff --staged --quiet; then
+            echo "No new qualifying data — nothing to commit"
+            echo "new_data=false" >> "$GITHUB_OUTPUT"
+          else
+            ROWS=$(python -c "import pandas as pd; df=pd.read_csv('data_files/all_qualifying_races.csv', sep='\t'); print(len(df))" 2>/dev/null || echo "?")
+            git commit -m "data: update all_qualifying_races.csv (${ROWS} rows) [skip ci]"
+            git push
+            echo "Pushed updated qualifying data to main"
+            echo "new_data=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Show post-push status
+        run: |
+          echo "Job finished at $(date -u)"
+          git log -1 --oneline
+
+  # Trigger full data generation + model training after qualifying data is committed.
+  # This ensures models are rebuilt with the weekend's qualifying positions before race day.
+  trigger-precompute:
+    needs: pull-qualifying
+    runs-on: ubuntu-latest
+    # Run automatically on schedule; respect the manual override for workflow_dispatch
+    if: |
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.trigger_precompute == 'true')
+    steps:
+      - name: Wait 2 minutes for the push to settle
+        run: sleep 120
+
+      - name: Trigger full precompute pipeline
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'weekly-precompute-all.yml',
+              ref: 'main'
+            });
+            console.log('Triggered weekly-precompute-all.yml from pull-qualifying-data.yml');

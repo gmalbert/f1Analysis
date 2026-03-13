@@ -6,7 +6,7 @@
 
 ---
 
-## 2A. Expanded Weather Data (Open-Meteo — No API Key Needed)
+## ✅ 2A. Expanded Weather Data (Open-Meteo — No API Key Needed)
 
 The current weather pull collects only 4 variables: `average_temp`, `total_precipitation`, `average_humidity`, `average_wind_speed`. The Open-Meteo archive API provides ~20 additional variables at no cost.
 
@@ -81,9 +81,11 @@ Add to `get_features_and_target()`:
 
 ---
 
-## 2B. First-Lap Position Data (Jolpica/Ergast API — Free)
+## ✅ 2B. First-Lap Position Data (Jolpica mirror of Ergast API — Free)
 
-First-lap positions are a powerful predictor of final position (safety card bunching, first-corner incidents). The Ergast/Jolpica API exposes lap-by-lap positions free of charge.
+First-lap positions are a powerful predictor of final position (safety car bunching, first-corner incidents). For now we'll pull them from the Jolpica mirror (`api.jolpi.ca`); it is essentially an HTTPS‑friendly wrapper around the official Ergast MRData service. If the mirror ever goes offline the underlying Ergast endpoint can be used instead with only minor changes to the pull script.
+
+The Ergast/Jolpica API exposes lap-by-lap positions free of charge.
 
 ### API endpoint
 
@@ -197,7 +199,7 @@ if os.path.exists(first_lap_file):
 
 ---
 
-## 2C. Circuit Altitude & Atmospheric Density
+## ✅ 2C. Circuit Altitude & Atmospheric Density
 
 High-altitude circuits (Mexico City: 2,285m; Interlagos: 792m; Austin: 148m) have dramatically different power unit performance and tire degradation. This is a static lookup — zero API cost.
 
@@ -329,9 +331,10 @@ df['market_rank'] = df.groupby('raceId')['win_probability_implied'].rank(ascendi
 
 | Data Source | New Features | Est. MAE Impact | Effort | Priority | Status |
 |-------------|-------------|----------------|--------|----------|--------|
-| Expanded Open-Meteo weather | 5 | 0.03–0.05 | 3–4 hrs | **P1** | ⏳ pending |
-| First-lap positions (Jolpica) | 3 | 0.04–0.07 | 2–3 hrs | **P1** | ⏳ pending |
-| Circuit altitude (static CSV) | 3 | 0.02–0.03 | 1 hr | **P2** | ⏳ pending |
+| Tire strategy data (generated Feb 2026) | 10 (5 tire + 5 pace) | 0 (no MAE change) | N/A | **P0** | ✅ done |
+| Expanded Open-Meteo weather | 5 | 0.03–0.05 | 3–4 hrs | **P1** | ✅ done |
+| First-lap positions (Jolpica) | 3 | 0.04–0.07 | 2–3 hrs | **P1** | ✅ done |
+| Circuit altitude (static CSV) | 3 | 0.02–0.03 | 1 hr | **P2** | ✅ done |
 | Grid penalties (derived) | 3 | 0.01–0.03 | 1 hr | **P2** | ✅ done |
 | Betting odds (The Odds API) | 3 | 0.05–0.08 | 4–6 hrs | **P3** | ⏳ pending |
 | **Total estimated** | **17** | **0.15–0.26** | | |

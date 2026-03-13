@@ -1,23 +1,31 @@
 name: Monte Carlo Feature Selection
 
 on:
+  # 4C: Run Mon/Wed/Fri to capture race-weekend data quickly (ROADMAP-4C).
+  # Monday  — day after race Sunday: new data incorporated immediately.
+  # Wednesday — mid-week refresh.
+  # Friday  — before FP1 so current feature set is up-to-date for the weekend.
+  schedule:
+    - cron: '0 3 * 3-11 mon'  # Mar-Nov: Monday 03:00 UTC
+    - cron: '0 3 * 3-11 wed'  # Mar-Nov: Wednesday 03:00 UTC
+    - cron: '0 3 * 3-11 fri'  # Mar-Nov: Friday 03:00 UTC
+    - cron: '0 3 * 12,1,2 mon'  # Dec-Feb: Monday 03:00 UTC
+    - cron: '0 3 * 12,1,2 wed'  # Dec-Feb: Wednesday 03:00 UTC
+    - cron: '0 3 * 12,1,2 fri'  # Dec-Feb: Friday 03:00 UTC
+  # Re-run whenever the main dataset changes (new race data committed).
+  push:
+    paths:
+      - 'data_files/f1ForAnalysis.csv'
   workflow_dispatch:
     inputs:
       n_trials:
-        description: 'Number of trials'
+        description: 'Total trials (split evenly across Stage 1 & 2)'
         type: number
         default: 1000
-      min_features:
-        description: 'Minimum features per trial'
-        type: number
-        default: 8
-      max_features:
-        description: 'Maximum features per trial'
-        type: number
-        default: 15
-  schedule:
-    - cron: '0 4 * 3-11 sun'  # Mar-Nov (EDT): Sundays at 4 AM UTC
-    - cron: '0 4 * 12,1,2 sun'  # Dec-Feb (EST): Sundays at 4 AM UTC
+      simple_mode:
+        description: 'Use simple single-stage mode instead of tiered'
+        type: boolean
+        default: false
 
 jobs:
   monte-carlo-search:
@@ -33,21 +41,26 @@ jobs:
           cache: 'pip'
       - run: pip install -r requirements.txt
       
-      - name: Run Monte Carlo Feature Selection
+      - name: Run Monte Carlo Feature Selection (Tiered)
         run: |
+          SIMPLE_FLAG=""
+          if [ "${{ inputs.simple_mode }}" = "true" ]; then
+            SIMPLE_FLAG="--simple"
+          fi
           python scripts/precompute/monte_carlo_features.py \
             --n-trials ${{ inputs.n_trials || 1000 }} \
-            --min-features ${{ inputs.min_features || 8 }} \
-            --max-features ${{ inputs.max_features || 15 }} \
             --cv-folds 10 \
-            --output data_files/precomputed/monte_carlo_results.json
+            --output data_files/precomputed/monte_carlo_results.json \
+            $SIMPLE_FLAG
         env:
           STREAMLIT_SERVER_HEADLESS: '1'
       
       - uses: actions/upload-artifact@v4
         with:
           name: monte-carlo-results
-          path: data_files/precomputed/monte_carlo_results.json
+          path: |
+            data_files/precomputed/monte_carlo_results.json
+            data_files/precomputed/monte_carlo_run_log.json
       
       - name: Show git status at start
         run: |
@@ -68,10 +81,3 @@ jobs:
             git commit -m "chore: update Monte Carlo feature selection results [skip ci]"
             git push
           fi
-      
-      - name: Show post-push status
-        if: success()
-        run: |
-          echo "Job finished at $(date -u)"
-          git log -1 --oneline
-          git remote show origin | grep "HEAD branch" -A1

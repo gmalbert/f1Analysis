@@ -2,9 +2,12 @@
 
 **Baseline after ROADMAP-1: 1.69 (80/20) / 1.80 (GroupKFold) → Target: ≤ 1.5 | Estimated impact of this section: 0.05–0.10**
 
+> ✅ All 4A–4F items have now been implemented; see the text above for details on each change.
+
+
 ---
 
-## ⏳ 4A. Strengthen Monte Carlo Model (Quick Win) — pending
+## ✅ 4A. Strengthen Monte Carlo Model (Quick Win) — done
 
 The Monte Carlo feature selection script uses a much weaker model than production, which means the features it selects aren't necessarily the best ones for the real model. Closing this gap ensures feature selection results generalize to production.
 
@@ -50,7 +53,7 @@ MONTE_CARLO_MODEL_LGBM = LGBMRegressor(
 
 ---
 
-## ⏳ 4B. Tiered Feature Count Search — pending
+## ✅ 4B. Tiered Feature Count Search — done
 
 The current Monte Carlo search sweeps 8–15 features. With 140+ features in the model, this undershoots the optimal count. A two-stage tiered search finds the right count more efficiently.
 
@@ -118,7 +121,7 @@ def run_tiered_monte_carlo(df, n_trials_per_stage=500):
 
 ---
 
-## ⏳ 4C. More Frequent Monte Carlo Runs — pending
+## ✅ 4C. More Frequent Monte Carlo Runs — done
 
 The current schedule (weekly Sundays) means the feature set is potentially 7 days stale when new race data lands. Increasing to 3×/week ensures features are optimized immediately after each race weekend.
 
@@ -153,7 +156,7 @@ on:
 
 ---
 
-## ⏳ 4D. MAE Regression Check in CI — pending
+## ✅ 4D. MAE Regression Check in CI — done
 
 Currently there's no automated check to detect if a code change worsens MAE. Adding a MAE regression guard to the CI pipeline prevents accidental regressions from being deployed.
 
@@ -251,7 +254,7 @@ if __name__ == '__main__':
 
 ---
 
-## ⏳ 4E. Automated Data-Pull Schedule — pending
+## ✅ 4E. Automated Data-Pull Schedule — done
 
 Currently data pulls are manual. Automating them means the model is always trained on the latest data after each race weekend without manual intervention.
 
@@ -311,7 +314,7 @@ jobs:
 
 ---
 
-## ⏳ 4F. Monte Carlo Budget Analysis Dashboard — pending
+## ✅ 4F. Monte Carlo Budget Analysis Dashboard — done
 
 Add a lightweight diagnostic section to the Streamlit app showing Monte Carlo cost/benefit: how many trials it took to converge, what the within-session MAE standard deviation is, and a plot of MAE vs. feature count.
 
