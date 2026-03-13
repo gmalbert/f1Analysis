@@ -3985,7 +3985,8 @@ with tab4:
 
     existing_feature_names = [col for col in feature_names if col in all_active_driver_inputs.columns]
 
-    X_predict = all_active_driver_inputs[existing_feature_names]
+    # Use a copy to avoid SettingWithCopyWarning when later assigning new columns.
+    X_predict = all_active_driver_inputs[existing_feature_names].copy()
 
     # Note: Empty data check is handled in the preprocessor conditional below
     # No st.stop() here to allow tabs 5 and 6 to render
@@ -4021,7 +4022,8 @@ with tab4:
                 f"`{'`, `'.join(missing_cols[:8])}{'…' if len(missing_cols) > 8 else ''}`"
             )
             for col in missing_cols:
-                X_predict[col] = np.nan
+                # Use .loc to avoid SettingWithCopyWarning when X_predict is a view.
+                X_predict.loc[:, col] = np.nan
 
         # Ensure column order matches what the preprocessor expects
         X_predict = X_predict[all_preprocessor_columns]
