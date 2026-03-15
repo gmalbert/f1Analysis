@@ -1,2296 +1,261 @@
 {
   "metadata": {
-    "generated_at": "2026-03-15T16:45:12.805366",
+    "generated_at": "2026-03-15T17:34:38.695161",
     "n_repeats": 10,
-    "total_features": 437
+    "total_features": 30
   },
   "feature_importance": [
     {
-      "feature": "race_pace_vs_median",
-      "importance": 0.3106596226033263,
-      "std": 0.008313260445437193
-    },
-    {
-      "feature": "avg_final_position_per_track",
-      "importance": 0.08220770198700728,
-      "std": 0.0018562279677685441
-    },
-    {
-      "feature": "avgLapPace",
-      "importance": 0.041963447640223306,
-      "std": 0.0009231230645850011
-    },
-    {
-      "feature": "podium_form_3_races",
-      "importance": 0.0217013925453445,
-      "std": 0.0007998720877802598
-    },
-    {
-      "feature": "avg_final_position_per_track_constructor",
-      "importance": 0.019657640162661815,
-      "std": 0.0006490380477985045
-    },
-    {
-      "feature": "pit_stop_rate",
-      "importance": 0.015802491491068205,
-      "std": 0.0003631002779068103
-    },
-    {
-      "feature": "qualPos_x_avg_practicePos",
-      "importance": 0.010354899289258401,
-      "std": 0.0004679108985612903
-    },
-    {
-      "feature": "delta_from_race_avg",
-      "importance": 0.01017699168292091,
-      "std": 0.000370091783661938
+      "feature": "qualifying_position_vs_field_best_at_track",
+      "importance": 0.28782056270008766,
+      "std": 0.004191424179070976
     },
     {
       "feature": "last_final_position_per_track",
-      "importance": 0.009904860210178345,
-      "std": 0.0004698247011574143
-    },
-    {
-      "feature": "grid_x_avg_pit_time",
-      "importance": 0.009561609461312449,
-      "std": 0.00031630010849628476
-    },
-    {
-      "feature": "head_to_head_teammate_performance_delta",
-      "importance": 0.00943721913448502,
-      "std": 0.0004190138151018077
+      "importance": 0.14223651787833186,
+      "std": 0.004281707277884427
     },
     {
       "feature": "championship_position",
-      "importance": 0.008743797856637026,
-      "std": 0.00034971081549524174
-    },
-    {
-      "feature": "delta_lap_20",
-      "importance": 0.0058840431868724345,
-      "std": 0.00027157059562241115
-    },
-    {
-      "feature": "pressure_x_recent_form",
-      "importance": 0.0058647645273985135,
-      "std": 0.00022078094245351807
-    },
-    {
-      "feature": "qual_vs_track_median",
-      "importance": 0.005755633741881571,
-      "std": 0.0003574353196650495
-    },
-    {
-      "feature": "qual_vs_worst_at_track",
-      "importance": 0.004810983937575586,
-      "std": 0.000229596920297272
-    },
-    {
-      "feature": "last_race_vs_track_avg",
-      "importance": 0.0039631160138214215,
-      "std": 0.0002687703722224232
-    },
-    {
-      "feature": "driver_constructor_avg_final_position",
-      "importance": 0.0039001441870323396,
-      "std": 0.0002839889025951089
-    },
-    {
-      "feature": "qualifying_position_percentile",
-      "importance": 0.0035963763970557117,
-      "std": 0.0003309799217102876
-    },
-    {
-      "feature": "track_race_pace_std",
-      "importance": 0.003291523446529954,
-      "std": 0.00020912098923772516
-    },
-    {
-      "feature": "races_with_constructor",
-      "importance": 0.0028578307537849732,
-      "std": 0.00024620469711215677
-    },
-    {
-      "feature": "qual_vs_constructor_avg_at_track",
-      "importance": 0.002835941054912716,
-      "std": 0.00022714127764701572
-    },
-    {
-      "feature": "fp3_position_percentile",
-      "importance": 0.002812696707352047,
-      "std": 0.0002529385595816818
+      "importance": 0.13339264380717097,
+      "std": 0.006471577517057543
     },
     {
       "feature": "championship_position_pressure_factor",
-      "importance": 0.002597644900884921,
-      "std": 0.00011581494462211263
+      "importance": 0.08062245711638125,
+      "std": 0.003412673758931691
     },
     {
-      "feature": "averageStopTime",
-      "importance": 0.0024730017081851297,
-      "std": 0.00015076269056283096
+      "feature": "pressure_x_recent_form",
+      "importance": 0.051266797879117997,
+      "std": 0.0018148382746516116
     },
     {
-      "feature": "qual_gap_to_teammate",
-      "importance": 0.0024469153594005146,
-      "std": 0.0003075390716862449
-    },
-    {
-      "feature": "recent_form_5_races",
-      "importance": 0.0024383870119476956,
-      "std": 0.00018045656087831694
-    },
-    {
-      "feature": "track_familiarity",
-      "importance": 0.0022029973799531644,
-      "std": 0.00015422454330703283
-    },
-    {
-      "feature": "fp3Gap",
-      "importance": 0.0021939065703177165,
-      "std": 0.00020301581308126903
-    },
-    {
-      "feature": "qual_vs_best_at_track",
-      "importance": 0.002085434576989442,
-      "std": 0.00013752269542634157
-    },
-    {
-      "feature": "practice_std_x_qual",
-      "importance": 0.0020234635549753687,
-      "std": 0.0001665958368258874
-    },
-    {
-      "feature": "top_speed_x_turns",
-      "importance": 0.0020064435328148167,
-      "std": 0.00013495639285504639
-    },
-    {
-      "feature": "best_s3_sec",
-      "importance": 0.0019684234515268796,
-      "std": 9.666352624734753e-05
-    },
-    {
-      "feature": "practice_position_percentile_vs_constructor",
-      "importance": 0.0019622299461522718,
-      "std": 0.000137233305415313
-    },
-    {
-      "feature": "practice_position_vs_field_recent_form",
-      "importance": 0.0018916123656573913,
-      "std": 0.00013660061884874952
-    },
-    {
-      "feature": "CleanAirAvg_FP1",
-      "importance": 0.0018877712145009217,
-      "std": 0.00012226172784551788
-    },
-    {
-      "feature": "practice_qual_consistency_5r",
-      "importance": 0.001826822845191789,
-      "std": 8.054761543781596e-05
-    },
-    {
-      "feature": "pit_count_x_pit_delta",
-      "importance": 0.0018169133458175502,
-      "std": 0.00017634153156506863
-    },
-    {
-      "feature": "grid_penalty_x_constructor",
-      "importance": 0.0017990154955701998,
-      "std": 0.00014693427600883359
-    },
-    {
-      "feature": "overtake_potential_3yr",
-      "importance": 0.0017967234474167038,
-      "std": 0.00014550924561491547
-    },
-    {
-      "feature": "track_tire_degradation",
-      "importance": 0.0017930040201285303,
-      "std": 0.00014625862686631124
-    },
-    {
-      "feature": "recent_form_3_races",
-      "importance": 0.0017721474479912348,
-      "std": 0.00023773242166636073
-    },
-    {
-      "feature": "driver_avg_qual_pos_at_track",
-      "importance": 0.0017122096742268945,
-      "std": 0.0001609796891294212
-    },
-    {
-      "feature": "qualifying_lap_time_delta_to_constructor_best",
-      "importance": 0.0016117200022341626,
-      "std": 8.091277719569502e-05
-    },
-    {
-      "feature": "practice_time_improvement_1T_2T",
-      "importance": 0.0015472118764796484,
-      "std": 0.00010482500100261971
-    },
-    {
-      "feature": "sector2_std",
-      "importance": 0.0015294053225036297,
-      "std": 0.00015743743876476954
-    },
-    {
-      "feature": "qualifying_position_percentile_vs_constructor",
-      "importance": 0.0015117283882579823,
-      "std": 0.00010348799590978003
-    },
-    {
-      "feature": "recent_form_ratio",
-      "importance": 0.001459383508905987,
-      "std": 0.00011682334226000055
-    },
-    {
-      "feature": "practice_position_std",
-      "importance": 0.0013795855907466237,
-      "std": 9.850008846182044e-05
-    },
-    {
-      "feature": "fp1_lap_delta_vs_best",
-      "importance": 0.0013783586511678548,
-      "std": 0.00012987189637371087
-    },
-    {
-      "feature": "constructor_recent_form_5_races",
-      "importance": 0.0013737650157259363,
-      "std": 9.650797647962145e-05
-    },
-    {
-      "feature": "practice_x_safetycar",
-      "importance": 0.0013652058237351272,
-      "std": 0.0001269476103606163
-    },
-    {
-      "feature": "wins_last_5_races",
-      "importance": 0.0013356900772128367,
-      "std": 6.04436542235897e-05
-    },
-    {
-      "feature": "practice_gap_to_teammate",
-      "importance": 0.0013345354907443152,
-      "std": 0.00010496960808620878
-    },
-    {
-      "feature": "constructor_dnf_rate_3_races",
-      "importance": 0.0013337974286425248,
-      "std": 0.00012603589718029933
-    },
-    {
-      "feature": "totalStopTime",
-      "importance": 0.0013312525463155089,
-      "std": 7.422317060962159e-05
-    },
-    {
-      "feature": "practice_improvement_x_qual",
-      "importance": 0.001306163229587165,
-      "std": 9.071019644911567e-05
-    },
-    {
-      "feature": "fp1Interval",
-      "importance": 0.0012971682432628584,
-      "std": 4.424610407698107e-05
-    },
-    {
-      "feature": "practice_consistency_vs_teammate",
-      "importance": 0.001253233914589369,
-      "std": 8.5380415421972e-05
-    },
-    {
-      "feature": "practice_consistency_vs_constructor_historical",
-      "importance": 0.0012343543099919696,
-      "std": 0.00012590424540746988
-    },
-    {
-      "feature": "driver_avg_num_stints",
-      "importance": 0.0012309302154908442,
-      "std": 9.822829562884219e-05
-    },
-    {
-      "feature": "driver_starting_position_3_races",
-      "importance": 0.0012283231483290358,
-      "std": 9.6378301216741e-05
-    },
-    {
-      "feature": "last_final_position_per_track_constructor",
-      "importance": 0.0012209970590790764,
-      "std": 8.12446776498036e-05
-    },
-    {
-      "feature": "driver_race_pace_std",
-      "importance": 0.0012140754686298162,
-      "std": 4.183034235021183e-05
-    },
-    {
-      "feature": "qualPos_x_last_practicePos",
-      "importance": 0.0012076240068283005,
-      "std": 0.00011585985510884574
-    },
-    {
-      "feature": "grandPrixName_United States Grand Prix",
-      "importance": 0.0012045921363967537,
-      "std": 0.0001489222770259943
-    },
-    {
-      "feature": "qual_lap_time_consistency",
-      "importance": 0.0011927249998771815,
-      "std": 7.785668858449191e-05
-    },
-    {
-      "feature": "driver_constructor_avg_qual_position",
-      "importance": 0.001191544637245956,
-      "std": 6.69521814697193e-05
-    },
-    {
-      "feature": "historical_race_pace_vs_median",
-      "importance": 0.0011848835955353466,
-      "std": 6.20893669823731e-05
-    },
-    {
-      "feature": "qual_to_final_delta_5yr",
-      "importance": 0.001178906246917477,
-      "std": 9.723910725966757e-05
-    },
-    {
-      "feature": "track_exp_x_qual",
-      "importance": 0.0011613382648910098,
-      "std": 0.00010552504928427617
-    },
-    {
-      "feature": "constructor_form_ratio",
-      "importance": 0.0011482123788346121,
-      "std": 8.475578933125262e-05
-    },
-    {
-      "feature": "DirtyAirAvg_FP1",
-      "importance": 0.0011305390507818868,
-      "std": 0.00011072315999691225
-    },
-    {
-      "feature": "practice_time_improvement_time_time",
-      "importance": 0.0011216970052602914,
-      "std": 4.9004101147331335e-05
-    },
-    {
-      "feature": "delta_lap_15",
-      "importance": 0.0011195289517512252,
-      "std": 5.719132173587918e-05
-    },
-    {
-      "feature": "qual_vs_track_avg",
-      "importance": 0.001072022025583219,
-      "std": 6.157823309459552e-05
-    },
-    {
-      "feature": "practice_vs_best_at_track",
-      "importance": 0.0010589561887069054,
-      "std": 0.00011079602483244802
-    },
-    {
-      "feature": "positions_gained_first_lap_pct",
-      "importance": 0.0010583485670555893,
-      "std": 7.76060515357114e-05
-    },
-    {
-      "feature": "qual_to_final_delta_3yr",
-      "importance": 0.0010385656172747226,
-      "std": 9.946477751019937e-05
-    },
-    {
-      "feature": "SpeedFL_mph",
-      "importance": 0.0010010901926558956,
-      "std": 8.942251897238744e-05
-    },
-    {
-      "feature": "driverFastestPracticeLap_sec",
-      "importance": 0.0009818031640311032,
-      "std": 9.981756637938313e-05
-    },
-    {
-      "feature": "constructor_recent_x_track_exp",
-      "importance": 0.0009685398427319525,
-      "std": 3.485180049054363e-05
-    },
-    {
-      "feature": "tire_management_score",
-      "importance": 0.0009634216657853801,
-      "std": 9.3745743805566e-05
-    },
-    {
-      "feature": "recent_podium_streak",
-      "importance": 0.0009458532919723872,
-      "std": 8.921582314036517e-05
-    },
-    {
-      "feature": "best_s1_sec",
-      "importance": 0.0009430849886047366,
-      "std": 8.546135983006864e-05
-    },
-    {
-      "feature": "constructor_qual_consistency_5r",
-      "importance": 0.0009417327130551434,
-      "std": 7.470024569629607e-05
-    },
-    {
-      "feature": "teammate_qual_delta",
-      "importance": 0.000926322690182102,
-      "std": 9.432309700895217e-05
-    },
-    {
-      "feature": "driver_positionsGained_3_races",
-      "importance": 0.0009251859045349753,
-      "std": 9.812360065764422e-05
-    },
-    {
-      "feature": "practice_time_improvement_2T_3T",
-      "importance": 0.0009235339025594036,
-      "std": 4.10300613245933e-05
-    },
-    {
-      "feature": "practice_position_vs_teammate_historical",
-      "importance": 0.0008833610953812632,
-      "std": 0.0001023566990880431
-    },
-    {
-      "feature": "driver_practice_improvement_3r",
-      "importance": 0.0008759829409314412,
-      "std": 7.93570402697693e-05
-    },
-    {
-      "feature": "pit_lane_time_constant",
-      "importance": 0.0008410998304303919,
-      "std": 0.00010366775378988432
-    },
-    {
-      "feature": "driver_avg_completion_pct",
-      "importance": 0.0008298009416354724,
-      "std": 9.996673728716034e-05
-    },
-    {
-      "feature": "averagePracticePosition",
-      "importance": 0.0008163102850487047,
-      "std": 0.00010160625052090354
-    },
-    {
-      "feature": "fp2Gap",
-      "importance": 0.0008044610895815429,
-      "std": 8.425217578665958e-05
-    },
-    {
-      "feature": "grid_position_percentile",
-      "importance": 0.0008015328548336975,
-      "std": 8.843787314501092e-05
-    },
-    {
-      "feature": "recent_form_median_5_races",
-      "importance": 0.000801006667346571,
-      "std": 8.066312446661115e-05
-    },
-    {
-      "feature": "driver_positionsGained_5_races",
-      "importance": 0.0008009950089622909,
-      "std": 4.953520451145645e-05
-    },
-    {
-      "feature": "tire_mgmt_x_turns",
-      "importance": 0.0007941108100038119,
-      "std": 5.963056789670045e-05
-    },
-    {
-      "feature": "SpeedI1_mph",
-      "importance": 0.0007781292907276804,
-      "std": 6.770816530406602e-05
-    },
-    {
-      "feature": "wet_race_vs_quali_delta",
-      "importance": 0.0007775461445048371,
-      "std": 5.480381994089335e-05
-    },
-    {
-      "feature": "driver_track_practice_avg",
-      "importance": 0.0007642849203097546,
-      "std": 0.00013150478254208534
-    },
-    {
-      "feature": "fp3Interval",
-      "importance": 0.0007138665593247496,
-      "std": 6.55950810114235e-05
-    },
-    {
-      "feature": "q2_sec",
-      "importance": 0.0007117903726403529,
-      "std": 0.00011650619099560406
-    },
-    {
-      "feature": "practice_lap_time_consistency_vs_field",
-      "importance": 0.000706854342119656,
-      "std": 9.114849050377214e-05
-    },
-    {
-      "feature": "grid_x_constructor_rank",
-      "importance": 0.0006915699340397929,
-      "std": 4.8403425378082067e-05
-    },
-    {
-      "feature": "grid_penalty",
-      "importance": 0.0006804862197073769,
-      "std": 6.766396620268247e-05
-    },
-    {
-      "feature": "fp1PositionNumber",
-      "importance": 0.0006665801921201143,
-      "std": 7.753055354344018e-05
-    },
-    {
-      "feature": "fp1Gap",
-      "importance": 0.0006661529104800112,
-      "std": 4.628909863827475e-05
-    },
-    {
-      "feature": "constructor_avg_qual_pos_at_track",
-      "importance": 0.0006631930511007966,
-      "std": 0.00010398558951430196
-    },
-    {
-      "feature": "grandPrixLaps",
-      "importance": 0.0006482949943890981,
-      "std": 9.732020115430531e-05
-    },
-    {
-      "feature": "grandPrixName_Hungarian Grand Prix",
-      "importance": 0.000645044400852135,
-      "std": 0.00010796167211812086
-    },
-    {
-      "feature": "practice_lap_time_consistency",
-      "importance": 0.0006329142363841522,
-      "std": 7.697120303846444e-05
-    },
-    {
-      "feature": "delta_lap_15_historical",
-      "importance": 0.0006281085423664679,
-      "std": 4.916720743482327e-05
-    },
-    {
-      "feature": "avg_sector3_sec",
-      "importance": 0.0006219221338304215,
-      "std": 6.43142208853673e-05
-    },
-    {
-      "feature": "recent_qualifying_improvement_trend",
-      "importance": 0.0006188751403155002,
-      "std": 5.133247868604542e-05
-    },
-    {
-      "feature": "delta_lap_5",
-      "importance": 0.000614311738163098,
-      "std": 4.6209750598205515e-05
-    },
-    {
-      "feature": "driver_avg_grid_pos_at_track",
-      "importance": 0.0006082418436417659,
-      "std": 6.372652269178413e-05
-    },
-    {
-      "feature": "constructor_dnf_rate_5_races",
-      "importance": 0.0005970415802545204,
-      "std": 5.862161031291891e-05
-    },
-    {
-      "feature": "practice_vs_worst_at_track",
-      "importance": 0.0005877978424907448,
-      "std": 4.811191900534344e-05
-    },
-    {
-      "feature": "constructor_podium_rate_at_track",
-      "importance": 0.0005829632565586107,
-      "std": 0.00010121143695416544
-    },
-    {
-      "feature": "tire_deg_x_track_deg",
-      "importance": 0.0005825557844098661,
-      "std": 4.7023382745534024e-05
-    },
-    {
-      "feature": "overtaking_difficulty_index",
-      "importance": 0.0005792797932224869,
-      "std": 8.198867765681744e-05
-    },
-    {
-      "feature": "grid_penalty_x_constructor_rank",
-      "importance": 0.0005697822665905016,
-      "std": 9.516649037902313e-05
-    },
-    {
-      "feature": "track_fp1_fp3_improvement",
-      "importance": 0.0005691441196781999,
-      "std": 5.0268441735043516e-05
-    },
-    {
-      "feature": "Delta_FP2",
-      "importance": 0.0005574987034006717,
-      "std": 5.587248308318302e-05
-    },
-    {
-      "feature": "race_pace_consistency",
-      "importance": 0.0005504658419972052,
-      "std": 6.236263596624212e-05
-    },
-    {
-      "feature": "avg_sector1_sec",
-      "importance": 0.000537860631687892,
-      "std": 7.93648226792359e-05
-    },
-    {
-      "feature": "practice_position_vs_constructor_median_at_track",
-      "importance": 0.000531780615419275,
-      "std": 5.7730163251091415e-05
-    },
-    {
-      "feature": "driver_soft_tendency",
-      "importance": 0.0005183737270699873,
-      "std": 3.151501508166626e-05
-    },
-    {
-      "feature": "constructor_recent_form_3_races",
-      "importance": 0.0005162098110976343,
-      "std": 4.5072745134374116e-05
-    },
-    {
-      "feature": "fp3_vs_constructor_avg",
-      "importance": 0.0005132101950017897,
-      "std": 5.7174991877687045e-05
-    },
-    {
-      "feature": "wet_skill_x_precip",
-      "importance": 0.0005117922431095434,
-      "std": 0.00010043664856603288
-    },
-    {
-      "feature": "practice_lap_time_delta_to_constructor_best",
-      "importance": 0.0005111680216890235,
-      "std": 6.674462449675071e-05
-    },
-    {
-      "feature": "overtake_potential_5yr",
-      "importance": 0.0005063984023178425,
-      "std": 7.751308288153496e-05
-    },
-    {
-      "feature": "qual_x_constructor_wins",
-      "importance": 0.000490638095082252,
-      "std": 8.659017773155202e-05
-    },
-    {
-      "feature": "driver_starting_position_5_races",
-      "importance": 0.00047261407815769597,
-      "std": 6.533348923591914e-05
-    },
-    {
-      "feature": "qualifying_position_vs_constructor_median_at_track",
-      "importance": 0.0004714945422212624,
-      "std": 4.8219817824496106e-05
-    },
-    {
-      "feature": "sector1_std",
-      "importance": 0.0004657482715437644,
-      "std": 4.777799315268935e-05
-    },
-    {
-      "feature": "practice_improvement_vs_teammate",
-      "importance": 0.0004644661607908551,
-      "std": 4.889164449729715e-05
-    },
-    {
-      "feature": "qual_vs_constructor_avg",
-      "importance": 0.00046431009526125554,
-      "std": 3.317808433204438e-05
-    },
-    {
-      "feature": "constructor_reliability_x_form",
-      "importance": 0.00044542279245554097,
-      "std": 6.128384374919173e-05
-    },
-    {
-      "feature": "turns",
-      "importance": 0.0004334438723771483,
-      "std": 3.537533017178382e-05
-    },
-    {
-      "feature": "fp2PositionNumber",
-      "importance": 0.00042875687837888864,
-      "std": 4.903879390390629e-05
-    },
-    {
-      "feature": "practice_improvement_rate",
-      "importance": 0.00042691669465377835,
-      "std": 6.535040935795506e-05
-    },
-    {
-      "feature": "recent_vs_season",
-      "importance": 0.00040411491945928634,
-      "std": 8.941686477249318e-05
-    },
-    {
-      "feature": "practice_to_qual_improvement_rate",
-      "importance": 0.00040354822132925293,
-      "std": 4.447535972961687e-05
-    },
-    {
-      "feature": "driver_fuel_corrected_pace",
-      "importance": 0.00040344286264523135,
-      "std": 4.5903673068101915e-05
-    },
-    {
-      "feature": "fp3PositionNumber",
-      "importance": 0.00040220882138513047,
-      "std": 5.835502684478466e-05
-    },
-    {
-      "feature": "recent_form_x_qual",
-      "importance": 0.000385341904150871,
-      "std": 5.401329753568177e-05
-    },
-    {
-      "feature": "fp1_lap_time_delta_to_best",
-      "importance": 0.00037808484278617494,
-      "std": 4.9466531570797644e-05
-    },
-    {
-      "feature": "lap_time_std",
-      "importance": 0.0003774927973293596,
-      "std": 8.288682551560975e-05
-    },
-    {
-      "feature": "driver_teammate_qual_gap_3r",
-      "importance": 0.0003757961226564355,
-      "std": 4.896962160248426e-05
-    },
-    {
-      "feature": "qualifying_lap_time_consistency_vs_field",
-      "importance": 0.0003732190572089844,
-      "std": 3.757418043339036e-05
-    },
-    {
-      "feature": "qualifying_position_vs_field_recent_form",
-      "importance": 0.0003728124856164805,
-      "std": 5.336688142321388e-05
-    },
-    {
-      "feature": "SpeedI2_mph",
-      "importance": 0.00036680654526869414,
-      "std": 4.587708339027825e-05
-    },
-    {
-      "feature": "BestConstructorPracticeLap_sec",
-      "importance": 0.00036446201743216554,
-      "std": 4.959042967547655e-05
-    },
-    {
-      "feature": "qualifying_consistency_std",
-      "importance": 0.00036334677485865273,
-      "std": 5.694316085440017e-05
-    },
-    {
-      "feature": "fp2Interval",
-      "importance": 0.0003630568522897448,
-      "std": 3.160924453685061e-05
-    },
-    {
-      "feature": "practice_to_qualifying_delta",
-      "importance": 0.00035908091355162374,
-      "std": 4.413557487655048e-05
-    },
-    {
-      "feature": "driver_podium_rate_at_track",
-      "importance": 0.00035682253129943887,
-      "std": 4.109253011429266e-05
-    },
-    {
-      "feature": "driver_constructor_synergy",
-      "importance": 0.0003553181535370764,
-      "std": 4.069324045668646e-05
-    },
-    {
-      "feature": "constructorTotalRaceEntries",
-      "importance": 0.00035519872847010746,
-      "std": 7.139186996763231e-05
-    },
-    {
-      "feature": "SpeedST_mph",
-      "importance": 0.00035004540255191287,
-      "std": 3.0021326007054122e-05
-    },
-    {
-      "feature": "total_experience",
-      "importance": 0.0003488980271159625,
-      "std": 6.052275712443701e-05
-    },
-    {
-      "feature": "grandPrixName_Bahrain Grand Prix",
-      "importance": 0.00034738629920239017,
-      "std": 6.395367561812345e-05
-    },
-    {
-      "feature": "delta_lap_10_historical",
-      "importance": 0.0003437059902606676,
-      "std": 4.099353901491945e-05
-    },
-    {
-      "feature": "practice_position_improvement_2P_3P",
-      "importance": 0.00034072125862991685,
-      "std": 5.15594922178132e-05
-    },
-    {
-      "feature": "driver_avg_practice_pos_at_track",
-      "importance": 0.00034041159071684923,
-      "std": 3.1288815741086546e-05
-    },
-    {
-      "feature": "best_s2_sec",
-      "importance": 0.0003389012854275508,
-      "std": 7.235250827687254e-05
-    },
-    {
-      "feature": "constructor_points_x_grid",
-      "importance": 0.0003365624871469519,
-      "std": 1.594504602218211e-05
-    },
-    {
-      "feature": "practice_position_vs_constructor_worst_at_track",
-      "importance": 0.00033594993949092044,
-      "std": 4.988170678559314e-05
-    },
-    {
-      "feature": "dnf_rate_x_practice_std",
-      "importance": 0.00033430463984069904,
-      "std": 3.881054905774168e-05
-    },
-    {
-      "feature": "grandPrixName_Spanish Grand Prix",
-      "importance": 0.00033237625710104136,
-      "std": 5.309283423267949e-05
-    },
-    {
-      "feature": "avg_positions_gained_5r",
-      "importance": 0.0003292996370805268,
-      "std": 5.3928567257133765e-05
-    },
-    {
-      "feature": "practice_improvement_vs_field_avg",
-      "importance": 0.0003287262001599123,
-      "std": 4.231277332484193e-05
-    },
-    {
-      "feature": "practice_position_vs_constructor_recent_form",
-      "importance": 0.00032811648137008874,
-      "std": 5.9099935260993954e-05
-    },
-    {
-      "feature": "driver_qual_improvement_3r",
-      "importance": 0.00031024488226555347,
-      "std": 6.031623606880589e-05
-    },
-    {
-      "feature": "q2_pos",
-      "importance": 0.0003014177951340291,
-      "std": 4.338507957985038e-05
-    },
-    {
-      "feature": "practice_conversion_x_grid",
-      "importance": 0.0003004458771784568,
-      "std": 5.9584868650750706e-05
-    },
-    {
-      "feature": "Delta_FP1",
-      "importance": 0.00029966757930725005,
-      "std": 3.1093201113231864e-05
-    },
-    {
-      "feature": "sector3_std",
-      "importance": 0.0002953537404588591,
-      "std": 3.917180379062252e-05
-    },
-    {
-      "feature": "numberOfStops",
-      "importance": 0.0002885893215231139,
-      "std": 4.223241894063057e-05
-    },
-    {
-      "feature": "theoretical_best_lap",
-      "importance": 0.00028271273285664924,
-      "std": 5.516909159639497e-05
-    },
-    {
-      "feature": "finishing_position_std_constructor",
-      "importance": 0.000277752694334199,
-      "std": 4.4223859842806845e-05
-    },
-    {
-      "feature": "practice_improvement_vs_constructor_historical",
-      "importance": 0.0002725445736764809,
-      "std": 3.770510208612288e-05
-    },
-    {
-      "feature": "constructor_practice_improvement_3r",
-      "importance": 0.00026875715742313844,
-      "std": 3.862197698928994e-05
-    },
-    {
-      "feature": "driver_avg_tire_degradation",
-      "importance": 0.00026389637466397444,
-      "std": 3.4366059635722544e-05
-    },
-    {
-      "feature": "grandPrixName_Qatar Grand Prix",
-      "importance": 0.00025970415089445755,
-      "std": 4.160429252633667e-05
-    },
-    {
-      "feature": "constructorName_Toro Rosso",
-      "importance": 0.0002579006855322197,
-      "std": 6.822731309755291e-05
-    },
-    {
-      "feature": "driver_teammate_practice_gap_3r",
-      "importance": 0.000257190794074047,
-      "std": 4.037135764202069e-05
-    },
-    {
-      "feature": "best_theory_lap_sec",
-      "importance": 0.00025600710472334365,
-      "std": 4.589861184284629e-05
-    },
-    {
-      "feature": "practice_position_vs_field_median_at_track",
-      "importance": 0.00025360270021314025,
-      "std": 6.262937074507751e-05
-    },
-    {
-      "feature": "driver_rank_x_years_active",
-      "importance": 0.00024394700464405172,
-      "std": 2.951093080776849e-05
-    },
-    {
-      "feature": "constructorTotalFastestLaps",
-      "importance": 0.00024226666206867976,
-      "std": 3.800045841457456e-05
-    },
-    {
-      "feature": "practice_to_qualifying_delta_vs_constructor_historical",
-      "importance": 0.00023961829402217028,
-      "std": 2.840175272210334e-05
-    },
-    {
-      "feature": "finishing_position_std_driver",
-      "importance": 0.00023788897087766435,
-      "std": 3.525351036812509e-05
-    },
-    {
-      "feature": "constructor_avg_practice_pos_at_track",
-      "importance": 0.0002325612429193935,
-      "std": 4.92872034554175e-05
-    },
-    {
-      "feature": "pit_delta_x_driver_age",
-      "importance": 0.0002265522006081433,
-      "std": 2.84734737336992e-05
-    },
-    {
-      "feature": "power_to_corner_ratio",
-      "importance": 0.00022453984779505776,
-      "std": 5.4450605849205665e-05
-    },
-    {
-      "feature": "theoretical_gap",
-      "importance": 0.00022384456263292442,
-      "std": 2.9383169715363694e-05
-    },
-    {
-      "feature": "best_sector2_sec",
-      "importance": 0.00022197492511281114,
-      "std": 4.344309700333207e-05
-    },
-    {
-      "feature": "teammate_practice_delta",
-      "importance": 0.0002208880412002734,
-      "std": 3.3531310992512905e-05
-    },
-    {
-      "feature": "constructorName_AlphaTauri",
-      "importance": 0.00020385360051639045,
-      "std": 2.7250088260632376e-05
-    },
-    {
-      "feature": "constructor_practice_improvement_rate",
-      "importance": 0.00019537350872659288,
-      "std": 3.956679984185244e-05
-    },
-    {
-      "feature": "constructor_avg_grid_pos_at_track",
-      "importance": 0.0001945603022211584,
-      "std": 5.459004301881636e-05
-    },
-    {
-      "feature": "constructorName_Racing Bulls",
-      "importance": 0.0001930182932224467,
-      "std": 3.585456698164792e-05
-    },
-    {
-      "feature": "q1_pos",
-      "importance": 0.00019056811424609244,
-      "std": 3.6437904338681756e-05
-    },
-    {
-      "feature": "driverTotalRaceWins",
-      "importance": 0.00018245581454519045,
-      "std": 4.4327092970868306e-05
-    },
-    {
-      "feature": "grandPrixName_Brazilian Grand Prix",
-      "importance": 0.00018044741728397983,
-      "std": 1.0863513536511003e-05
-    },
-    {
-      "feature": "avg_sector2_sec",
-      "importance": 0.00017298226385561443,
-      "std": 1.3615144294024153e-05
-    },
-    {
-      "feature": "driverDNFCount",
-      "importance": 0.00016329383705183665,
-      "std": 3.005048127088709e-05
-    },
-    {
-      "feature": "best_sector1_sec",
-      "importance": 0.00015676059378072482,
-      "std": 2.3779276920470394e-05
-    },
-    {
-      "feature": "total_qualifying_laps",
-      "importance": 0.00015026297697618985,
-      "std": 3.5307610047101145e-05
-    },
-    {
-      "feature": "top_speed_rank",
-      "importance": 0.00014992800578437216,
-      "std": 3.0699382876661025e-05
-    },
-    {
-      "feature": "qualifying_consistency_vs_constructor_historical",
-      "importance": 0.00014805647499028797,
-      "std": 2.194207893955139e-05
-    },
-    {
-      "feature": "practice_position_vs_constructor_best_at_track",
-      "importance": 0.00014678006430280944,
-      "std": 2.4238599791865806e-05
-    },
-    {
-      "feature": "historical_avgLapPace",
-      "importance": 0.0001445166572424883,
-      "std": 4.096187678948012e-05
-    },
-    {
-      "feature": "practice_improvement_vs_field",
-      "importance": 0.00014332254663815825,
-      "std": 2.851461304327129e-05
-    },
-    {
-      "feature": "qualifying_position_vs_constructor_worst_at_track",
-      "importance": 0.00014220219741301054,
-      "std": 4.545940682594681e-05
-    },
-    {
-      "feature": "recent_wins_3_races",
-      "importance": 0.00013750382284739572,
-      "std": 1.433584188915398e-05
-    },
-    {
-      "feature": "street_experience",
-      "importance": 0.00013350533206210046,
-      "std": 1.3090679425759441e-05
-    },
-    {
-      "feature": "qualifying_position_vs_constructor_recent_form",
-      "importance": 0.00012690219312169181,
-      "std": 2.9524351846750117e-05
-    },
-    {
-      "feature": "driver_high_humidity_practice_avg",
-      "importance": 0.00012532284141107962,
-      "std": 2.8375890935138953e-05
-    },
-    {
-      "feature": "constructorTotalPodiumRaces",
-      "importance": 0.00012368313572602707,
-      "std": 3.1062585325308874e-05
-    },
-    {
-      "feature": "deleted_laps",
-      "importance": 0.00012019598859396297,
-      "std": 1.774172672982856e-05
-    },
-    {
-      "feature": "podium_potential",
-      "importance": 0.00011319690651945269,
-      "std": 3.117244007891026e-05
-    },
-    {
-      "feature": "pole_to_win_rate",
-      "importance": 0.00011116925414510481,
-      "std": 3.927544494857339e-05
-    },
-    {
-      "feature": "recent_positions_gained_3_races",
-      "importance": 0.00011075574865621052,
-      "std": 2.204915957005464e-05
-    },
-    {
-      "feature": "resultsStartingGridPositionNumber",
-      "importance": 0.00010706133439724042,
-      "std": 1.878414398517085e-05
-    },
-    {
-      "feature": "practice_position_improvement_1P_2P",
-      "importance": 0.0001049938324365507,
-      "std": 1.0633455116588575e-05
-    },
-    {
-      "feature": "qualifying_position_vs_race_pace_delta_by_track",
-      "importance": 0.00010064306860281258,
-      "std": 2.838355471672268e-05
-    },
-    {
-      "feature": "bestQualifyingTime",
-      "importance": 9.754006346512911e-05,
-      "std": 2.725549993551028e-05
-    },
-    {
-      "feature": "weather_pattern_analysis_by_location",
-      "importance": 9.41218668855548e-05,
-      "std": 2.177457011716487e-05
-    },
-    {
-      "feature": "track_experience",
-      "importance": 9.347810070182705e-05,
-      "std": 2.9352282780897202e-05
-    },
-    {
-      "feature": "delta_lap_10",
-      "importance": 8.983155437010115e-05,
-      "std": 2.8386862523164337e-05
-    },
-    {
-      "feature": "recent_dnf_rate_5_races",
-      "importance": 8.646594213267411e-05,
-      "std": 1.990551536722046e-05
-    },
-    {
-      "feature": "race_vs_qual_consistency",
-      "importance": 8.453996568604793e-05,
-      "std": 1.739367852844546e-05
-    },
-    {
-      "feature": "pit_stop_delta",
-      "importance": 7.847393321448459e-05,
-      "std": 1.3584879913546747e-05
-    },
-    {
-      "feature": "driver_track_qual_avg",
-      "importance": 7.828690076537859e-05,
-      "std": 2.549892696322307e-05
-    },
-    {
-      "feature": "qualifying_position_vs_field_worst_at_track",
-      "importance": 7.675519433140155e-05,
-      "std": 2.0826575666271515e-05
-    },
-    {
-      "feature": "average_practice_x_driver_podiums",
-      "importance": 7.395209966051252e-05,
-      "std": 9.501670188894856e-06
-    },
-    {
-      "feature": "constructorTotalRaceWins",
-      "importance": 7.129085266303071e-05,
-      "std": 1.894799964463248e-05
-    },
-    {
-      "feature": "driver_high_wind_qual_avg",
-      "importance": 6.78142116410152e-05,
-      "std": 3.2079226649455276e-05
-    },
-    {
-      "feature": "driver_performance_at_circuit_type",
-      "importance": 6.297111158658497e-05,
-      "std": 2.2452009728171954e-05
-    },
-    {
-      "feature": "delta_lap_2",
-      "importance": 6.182649082283608e-05,
-      "std": 1.8012037022968902e-05
-    },
-    {
-      "feature": "driver_high_humidity_qual_avg",
-      "importance": 6.09157478272504e-05,
-      "std": 2.5284371022295126e-05
-    },
-    {
-      "feature": "constructorName_Renault",
-      "importance": 5.821834294731376e-05,
-      "std": 1.2813345711324076e-05
-    },
-    {
-      "feature": "constructorName_Racing Point",
-      "importance": 5.386270470676413e-05,
-      "std": 1.0925250283978467e-05
-    },
-    {
-      "feature": "CleanAirAvg_FP2",
-      "importance": 5.234635963342615e-05,
-      "std": 1.1292281299749188e-05
-    },
-    {
-      "feature": "constructorName_Force India",
-      "importance": 4.653148368278792e-05,
-      "std": 1.6312648435936357e-05
-    },
-    {
-      "feature": "resultsQualificationPositionNumber",
-      "importance": 4.4276645236851485e-05,
-      "std": 1.8331814775956452e-05
-    },
-    {
-      "feature": "practice_position_improvement_1P_3P",
-      "importance": 4.3819699462877004e-05,
-      "std": 2.6102339066159388e-05
-    },
-    {
-      "feature": "delta_lap_2_historical",
-      "importance": 4.1571156054631686e-05,
-      "std": 1.1313485495511625e-05
-    },
-    {
-      "feature": "delta_lap_20_historical",
-      "importance": 4.127696154465621e-05,
-      "std": 1.8436414213488115e-05
-    },
-    {
-      "feature": "q1_sec",
-      "importance": 3.931873387073015e-05,
-      "std": 1.7656261393820328e-05
-    },
-    {
-      "feature": "constructor_recent_win_streak",
-      "importance": 3.7894441287666944e-05,
-      "std": 2.085707255599779e-05
-    },
-    {
-      "feature": "driverAge",
-      "importance": 3.66793557069145e-05,
-      "std": 9.384954353971858e-06
-    },
-    {
-      "feature": "teammate_practice_delta_at_track",
-      "importance": 3.387237955363442e-05,
-      "std": 1.0868404440523133e-05
-    },
-    {
-      "feature": "practice_position_vs_field_worst_at_track",
-      "importance": 2.7440813709012078e-05,
-      "std": 5.400575277114663e-06
-    },
-    {
-      "feature": "constructor_podium_ratio",
-      "importance": 2.59821768077817e-05,
-      "std": 1.0029777848482106e-05
-    },
-    {
-      "feature": "driverDNFAvg",
-      "importance": 2.2480956853299094e-05,
-      "std": 1.0943061440848477e-05
-    },
-    {
-      "feature": "constructor_avg_practice_position",
-      "importance": 1.7480096892930062e-05,
-      "std": 6.469664536265092e-06
-    },
-    {
-      "feature": "constructorTotalPolePositions",
-      "importance": 1.457045756704245e-05,
-      "std": 3.3662898274552373e-06
-    },
-    {
-      "feature": "delta_lap_5_historical",
-      "importance": 1.0077102932370962e-05,
-      "std": 4.650770036235439e-06
-    },
-    {
-      "feature": "constructor_recent_mechanical_dnf_rate",
-      "importance": 8.901911702186016e-06,
-      "std": 3.1626909731651206e-06
-    },
-    {
-      "feature": "driverTotalRaceEntries",
-      "importance": 6.103518450872869e-07,
-      "std": 1.0457230839419436e-06
-    },
-    {
-      "feature": "constructorTotalRaceStarts",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "constructorTotal1And2Finishes",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "driverBestStartingGridPosition",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "driverBestRaceResult",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "driverTotalChampionshipWins",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "driverTotalRaceStarts",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "driverTotalRaceLaps",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "driverTotalPodiums",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "fp1PositionNumber.1",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "fp2PositionNumber.1",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "fp3PositionNumber.1",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "lastFPPositionNumber",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "yearsActive",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "courseLength",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "DirtyAirAvg_FP2",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "driver_dnf_rate_5_races",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "best_qual_time",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "bestQualifyingTime_sec",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "best_sector3_sec",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "actual_best_lap",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "valid_laps",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "practice_time_improvement_1T_3T",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "practice_improvement",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "qual_vs_track_avg.1",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "recent_form_median_3_races",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "recent_form_best_3_races",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "recent_form_worst_3_races",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "recent_dnf_rate_3_races",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "constructor_win_rate_3y",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "driver_podium_rate_3y",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "practice_consistency_std",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "historical_avgLapPace.1",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "top_speed_rank.1",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "qualifying_consistency_std.1",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "driver_age_squared",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "constructor_qual_improvement_3r",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "driver_high_wind_practice_avg",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "driver_wet_qual_avg",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "driver_wet_practice_avg",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "is_first_season_with_constructor",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "driver_constructor_podium_rate",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "qualifying_position_percentile.1",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "practice_vs_track_median",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "practice_lap_time_improvement_rate",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "practice_to_qual_position_delta",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "qualifying_position_vs_teammate_historical",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "practice_position_vs_field_best_at_track",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "qualifying_position_vs_field_best_at_track",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "qualifying_position_vs_field_median_at_track",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "qualifying_position_vs_constructor_best_at_track",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "points_leader_gap",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "front_row_conversion",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "rolling_3_race_win_percentage",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "q1_q2_q3_sector_consistency",
-      "importance": 0.0,
-      "std": 0.0
+      "feature": "qual_vs_worst_at_track",
+      "importance": 0.03201847283299821,
+      "std": 0.0011383187664593644
     },
     {
       "feature": "practice_race_conversion",
-      "importance": 0.0,
-      "std": 0.0
+      "importance": 0.030432075231558785,
+      "std": 0.0014536016661655744
     },
     {
-      "feature": "driver_first_lap_incident_rate",
-      "importance": 0.0,
-      "std": 0.0
+      "feature": "race_pace_consistency",
+      "importance": 0.024509670784870173,
+      "std": 0.0015962100737889815
     },
     {
-      "feature": "altitude_m",
-      "importance": 0.0,
-      "std": 0.0
+      "feature": "driver_podium_rate_at_track",
+      "importance": 0.021226157645194966,
+      "std": 0.0012491360600893466
     },
     {
-      "feature": "air_density_index",
-      "importance": 0.0,
-      "std": 0.0
+      "feature": "recent_qualifying_improvement_trend",
+      "importance": 0.01933510823802308,
+      "std": 0.0009817814125907202
     },
     {
-      "feature": "is_high_altitude",
-      "importance": 0.0,
-      "std": 0.0
+      "feature": "practice_conversion_x_grid",
+      "importance": 0.019073830315237093,
+      "std": 0.0011343322157710686
     },
     {
-      "feature": "SafetyCarStatus",
-      "importance": 0.0,
-      "std": 0.0
+      "feature": "avg_positions_gained_5r",
+      "importance": 0.017788903645494836,
+      "std": 0.0008561589537643302
     },
     {
-      "feature": "resultsDriverName_Alexander Albon",
-      "importance": 0.0,
-      "std": 0.0
+      "feature": "weather_pattern_analysis_by_location",
+      "importance": 0.017147055393119847,
+      "std": 0.001006256735975027
     },
     {
-      "feature": "resultsDriverName_Antonio Giovinazzi",
-      "importance": 0.0,
-      "std": 0.0
+      "feature": "driver_performance_at_circuit_type",
+      "importance": 0.016673495620249112,
+      "std": 0.0010391207707018538
     },
     {
-      "feature": "resultsDriverName_Arvid Lindblad",
-      "importance": 0.0,
-      "std": 0.0
+      "feature": "overtaking_success_top10",
+      "importance": 0.015272870190197884,
+      "std": 0.0010229085822517391
     },
     {
-      "feature": "resultsDriverName_Brendon Hartley",
-      "importance": 0.0,
-      "std": 0.0
+      "feature": "practice_position_improvement_1P_3P",
+      "importance": 0.014241314767733182,
+      "std": 0.0006264519529663597
     },
     {
-      "feature": "resultsDriverName_Carlos Sainz Jr.",
-      "importance": 0.0,
-      "std": 0.0
+      "feature": "wet_skill_x_precip",
+      "importance": 0.01408353064715634,
+      "std": 0.0008684031061996221
     },
     {
-      "feature": "resultsDriverName_Charles Leclerc",
-      "importance": 0.0,
-      "std": 0.0
+      "feature": "track_exp_x_qual",
+      "importance": 0.011918299446210734,
+      "std": 0.0006097225764081619
     },
     {
-      "feature": "resultsDriverName_Daniel Ricciardo",
-      "importance": 0.0,
-      "std": 0.0
+      "feature": "points_leader_gap",
+      "importance": 0.01174872671792715,
+      "std": 0.0007744159411755596
     },
     {
-      "feature": "resultsDriverName_Daniil Kvyat",
-      "importance": 0.0,
-      "std": 0.0
+      "feature": "tire_management_score",
+      "importance": 0.010921536844580604,
+      "std": 0.0006665080696799249
     },
     {
-      "feature": "resultsDriverName_Esteban Guti\u00e9rrez",
-      "importance": 0.0,
-      "std": 0.0
+      "feature": "delta_lap_10_historical",
+      "importance": 0.009881950855383615,
+      "std": 0.0005135905941584731
     },
     {
-      "feature": "resultsDriverName_Esteban Ocon",
-      "importance": 0.0,
-      "std": 0.0
+      "feature": "constructor_reliability_x_form",
+      "importance": 0.008597163461487433,
+      "std": 0.0003608972320045279
     },
     {
-      "feature": "resultsDriverName_Felipe Massa",
-      "importance": 0.0,
-      "std": 0.0
+      "feature": "grid_penalty_x_constructor_rank",
+      "importance": 0.008583285729234003,
+      "std": 0.0007202014953697315
     },
     {
-      "feature": "resultsDriverName_Fernando Alonso",
-      "importance": 0.0,
-      "std": 0.0
+      "feature": "recent_form_median_3_races",
+      "importance": 0.008272648121853377,
+      "std": 0.0006212191046341379
     },
     {
-      "feature": "resultsDriverName_Franco Colapinto",
-      "importance": 0.0,
-      "std": 0.0
+      "feature": "resultsQualificationPositionNumber",
+      "importance": 0.006661400521531147,
+      "std": 0.0004200568354404727
     },
     {
-      "feature": "resultsDriverName_Gabriel Bortoleto",
-      "importance": 0.0,
-      "std": 0.0
+      "feature": "driverDNFAvg",
+      "importance": 0.005851250905361727,
+      "std": 0.0004851752211729585
     },
     {
-      "feature": "resultsDriverName_George Russell",
-      "importance": 0.0,
-      "std": 0.0
+      "feature": "constructor_dnf_rate_5_races",
+      "importance": 0.003198991959853348,
+      "std": 0.00039570885850516663
     },
     {
-      "feature": "resultsDriverName_Guanyu Zhou",
-      "importance": 0.0,
-      "std": 0.0
+      "feature": "grid_penalty",
+      "importance": 0.002764076012393024,
+      "std": 0.0002834509023558196
     },
     {
-      "feature": "resultsDriverName_Isack Hadjar",
-      "importance": 0.0,
-      "std": 0.0
+      "feature": "driver_dnf_rate_5_races",
+      "importance": 0.002721620010234771,
+      "std": 0.00027736062567548455
     },
     {
-      "feature": "resultsDriverName_Jack Aitken",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Jack Doohan",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Jenson Button",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Jolyon Palmer",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Kevin Magnussen",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Kimi Antonelli",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Kimi R\u00e4ikk\u00f6nen",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Lance Stroll",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Lando Norris",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Lewis Hamilton",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Liam Lawson",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Logan Sargeant",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Marcus Ericsson",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Max Verstappen",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Mick Schumacher",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Nicholas Latifi",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Nico H\u00fclkenberg",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Nico Rosberg",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Nikita Mazepin",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Nyck de Vries",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Oliver Bearman",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Oscar Piastri",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Pascal Wehrlein",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Pierre Gasly",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Pietro Fittipaldi",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Rio Haryanto",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Robert Kubica",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Romain Grosjean",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Sebastian Vettel",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Sergey Sirotkin",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Sergio P\u00e9rez",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Stoffel Vandoorne",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Valtteri Bottas",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "resultsDriverName_Yuki Tsunoda",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "constructorName_Alfa Romeo",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "constructorName_Alpine",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "constructorName_Aston Martin",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "constructorName_Audi",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "constructorName_Cadillac",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "constructorName_Ferrari",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "constructorName_Haas",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "constructorName_Kick Sauber",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "constructorName_Manor",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "constructorName_McLaren",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "constructorName_Mercedes",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "constructorName_RB",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "constructorName_Red Bull",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "constructorName_Sauber",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "constructorName_Williams",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_70th Anniversary Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_Abu Dhabi Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_Australian Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_Austrian Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_Azerbaijan Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_Belgian Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_British Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_Canadian Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_Chinese Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_Dutch Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_Eifel Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_Emilia Romagna Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_European Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_French Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_German Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_Italian Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_Japanese Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_Las Vegas Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_Malaysian Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_Mexican Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_Miami Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_Monaco Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_Portuguese Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_Russian Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_Sakhir Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_Saudi Arabian Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_Singapore Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_Styrian Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_S\u00e3o Paulo Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_Turkish Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "grandPrixName_Tuscan Grand Prix",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "engineManufacturerId_audi",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "engineManufacturerId_bwt-mercedes",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "engineManufacturerId_ferrari",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "engineManufacturerId_honda",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "engineManufacturerId_honda-rbpt",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "engineManufacturerId_mercedes",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "engineManufacturerId_rbpt",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "engineManufacturerId_red-bull-ford",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "engineManufacturerId_renault",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "engineManufacturerId_tag-heuer",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "engineManufacturerId_toro-rosso",
-      "importance": 0.0,
-      "std": 0.0
-    },
-    {
-      "feature": "driverTotalPolePositions",
-      "importance": -2.0513392251508833e-07,
-      "std": 9.126001322967381e-06
-    },
-    {
-      "feature": "resultsDriverName_Felipe Nasr",
-      "importance": -2.771447206062483e-07,
-      "std": 1.9170337803904608e-06
+      "feature": "constructor_dnf_rate_3_races",
+      "importance": 0.0007522822099056304,
+      "std": 0.00018465269966531298
     }
   ],
   "top_20": [
     {
-      "feature": "race_pace_vs_median",
-      "importance": 0.3106596226033263,
-      "std": 0.008313260445437193
-    },
-    {
-      "feature": "avg_final_position_per_track",
-      "importance": 0.08220770198700728,
-      "std": 0.0018562279677685441
-    },
-    {
-      "feature": "avgLapPace",
-      "importance": 0.041963447640223306,
-      "std": 0.0009231230645850011
-    },
-    {
-      "feature": "podium_form_3_races",
-      "importance": 0.0217013925453445,
-      "std": 0.0007998720877802598
-    },
-    {
-      "feature": "avg_final_position_per_track_constructor",
-      "importance": 0.019657640162661815,
-      "std": 0.0006490380477985045
-    },
-    {
-      "feature": "pit_stop_rate",
-      "importance": 0.015802491491068205,
-      "std": 0.0003631002779068103
-    },
-    {
-      "feature": "qualPos_x_avg_practicePos",
-      "importance": 0.010354899289258401,
-      "std": 0.0004679108985612903
-    },
-    {
-      "feature": "delta_from_race_avg",
-      "importance": 0.01017699168292091,
-      "std": 0.000370091783661938
+      "feature": "qualifying_position_vs_field_best_at_track",
+      "importance": 0.28782056270008766,
+      "std": 0.004191424179070976
     },
     {
       "feature": "last_final_position_per_track",
-      "importance": 0.009904860210178345,
-      "std": 0.0004698247011574143
-    },
-    {
-      "feature": "grid_x_avg_pit_time",
-      "importance": 0.009561609461312449,
-      "std": 0.00031630010849628476
-    },
-    {
-      "feature": "head_to_head_teammate_performance_delta",
-      "importance": 0.00943721913448502,
-      "std": 0.0004190138151018077
+      "importance": 0.14223651787833186,
+      "std": 0.004281707277884427
     },
     {
       "feature": "championship_position",
-      "importance": 0.008743797856637026,
-      "std": 0.00034971081549524174
+      "importance": 0.13339264380717097,
+      "std": 0.006471577517057543
     },
     {
-      "feature": "delta_lap_20",
-      "importance": 0.0058840431868724345,
-      "std": 0.00027157059562241115
+      "feature": "championship_position_pressure_factor",
+      "importance": 0.08062245711638125,
+      "std": 0.003412673758931691
     },
     {
       "feature": "pressure_x_recent_form",
-      "importance": 0.0058647645273985135,
-      "std": 0.00022078094245351807
-    },
-    {
-      "feature": "qual_vs_track_median",
-      "importance": 0.005755633741881571,
-      "std": 0.0003574353196650495
+      "importance": 0.051266797879117997,
+      "std": 0.0018148382746516116
     },
     {
       "feature": "qual_vs_worst_at_track",
-      "importance": 0.004810983937575586,
-      "std": 0.000229596920297272
+      "importance": 0.03201847283299821,
+      "std": 0.0011383187664593644
     },
     {
-      "feature": "last_race_vs_track_avg",
-      "importance": 0.0039631160138214215,
-      "std": 0.0002687703722224232
+      "feature": "practice_race_conversion",
+      "importance": 0.030432075231558785,
+      "std": 0.0014536016661655744
     },
     {
-      "feature": "driver_constructor_avg_final_position",
-      "importance": 0.0039001441870323396,
-      "std": 0.0002839889025951089
+      "feature": "race_pace_consistency",
+      "importance": 0.024509670784870173,
+      "std": 0.0015962100737889815
     },
     {
-      "feature": "qualifying_position_percentile",
-      "importance": 0.0035963763970557117,
-      "std": 0.0003309799217102876
+      "feature": "driver_podium_rate_at_track",
+      "importance": 0.021226157645194966,
+      "std": 0.0012491360600893466
     },
     {
-      "feature": "track_race_pace_std",
-      "importance": 0.003291523446529954,
-      "std": 0.00020912098923772516
+      "feature": "recent_qualifying_improvement_trend",
+      "importance": 0.01933510823802308,
+      "std": 0.0009817814125907202
+    },
+    {
+      "feature": "practice_conversion_x_grid",
+      "importance": 0.019073830315237093,
+      "std": 0.0011343322157710686
+    },
+    {
+      "feature": "avg_positions_gained_5r",
+      "importance": 0.017788903645494836,
+      "std": 0.0008561589537643302
+    },
+    {
+      "feature": "weather_pattern_analysis_by_location",
+      "importance": 0.017147055393119847,
+      "std": 0.001006256735975027
+    },
+    {
+      "feature": "driver_performance_at_circuit_type",
+      "importance": 0.016673495620249112,
+      "std": 0.0010391207707018538
+    },
+    {
+      "feature": "overtaking_success_top10",
+      "importance": 0.015272870190197884,
+      "std": 0.0010229085822517391
+    },
+    {
+      "feature": "practice_position_improvement_1P_3P",
+      "importance": 0.014241314767733182,
+      "std": 0.0006264519529663597
+    },
+    {
+      "feature": "wet_skill_x_precip",
+      "importance": 0.01408353064715634,
+      "std": 0.0008684031061996221
+    },
+    {
+      "feature": "track_exp_x_qual",
+      "importance": 0.011918299446210734,
+      "std": 0.0006097225764081619
+    },
+    {
+      "feature": "points_leader_gap",
+      "importance": 0.01174872671792715,
+      "std": 0.0007744159411755596
+    },
+    {
+      "feature": "tire_management_score",
+      "importance": 0.010921536844580604,
+      "std": 0.0006665080696799249
     }
   ]
 }

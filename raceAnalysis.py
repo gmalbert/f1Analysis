@@ -4890,6 +4890,94 @@ with tab5:
                     help="When checked, originally-missing cells are filled with values estimated by the model's IterativeImputer and highlighted in amber."
                 )
 
+                def _humanize_column(col: str) -> str:
+                    """Turn a raw column name into a readable display label."""
+                    mapping = {
+                        'resultsDriverName': 'Driver',
+                        'constructorName': 'Constructor',
+                        'grandPrixName': 'Grand Prix',
+                        'resultsFinalPositionNumber': 'Finish Position',
+                        'resultsGridPositionNumber': 'Grid Position',
+                        'resultsFastestLapTime': 'Fastest Lap',
+                        'raceId': 'Race ID',
+                        'driverId': 'Driver ID',
+                        'constructorId': 'Constructor ID',
+                        'Actual': 'Actual',
+                        'Predicted': 'Predicted',
+                        'Error': 'Error',
+                        'AbsError': 'Absolute Error',
+                        'SquaredError': 'Squared Error'
+                    }
+                    if col in mapping:
+                        return mapping[col]
+
+                    # Convert camelCase -> Title Case and underscores -> spaces
+                    import re
+                    human = re.sub(r'([a-z0-9])([A-Z])', r'\1 \2', col)
+                    human = human.replace('_', ' ')
+                    human = ' '.join(human.split())
+                    return human.strip().title()
+
+                def _reorder_for_display(df):
+                    """Bring the most relevant driver metadata columns to the front and humanize headings.
+
+                    Drops any columns that are clearly artifacts from joins (e.g., ending in _x/_y)
+                    to avoid duplication in the UI and confusion for users.
+                    """
+
+                    # Drop columns created by pandas merges (e.g., 'Points_x', 'Points_y')
+                    drop_suffixes = ('_x', '_y')
+                    df = df[[c for c in df.columns if not c.endswith(drop_suffixes)]].copy()
+
+                    # Drop known unhelpful ID columns from the UI
+                    drop_columns = {'engineManufacturerId', 'EngineManufacturerId', 'engineManufacturerID'}
+                    df = df[[c for c in df.columns if c not in drop_columns]]
+
+                    desired_first = [
+                        'resultsDriverName',
+                        'constructorName',
+                        'grandPrixName',
+                        'resultsFinalPositionNumber',
+                        'Actual',
+                        'Predicted',
+                        'Error',
+                        'AbsError',
+                        'SquaredError'
+                    ]
+                    leading = [c for c in desired_first if c in df.columns]
+                    remaining = [c for c in df.columns if c not in leading]
+                    df_out = df[leading + remaining].copy()
+
+                    # Convert binary columns (0/1/True/False) into checkmarks for display
+                    # so they render as a simple yes/blank indicator.
+                    binary_cols = []
+                    for c in df_out.columns:
+                        ser = df_out[c]
+                        if pd.api.types.is_bool_dtype(ser):
+                            binary_cols.append(c)
+                        elif pd.api.types.is_numeric_dtype(ser):
+                            uniq = set(ser.dropna().unique())
+                            if uniq <= {0, 1}:
+                                binary_cols.append(c)
+                    for c in binary_cols:
+                        df_out[c] = df_out[c].map(lambda v: "✓" if v in (1, 1.0, True) else "")
+
+                    # Rename columns for display, ensuring uniqueness to avoid pyarrow errors
+                    new_names = {}
+                    used = set()
+                    for c in df_out.columns:
+                        human = _humanize_column(c)
+                        if human in used:
+                            # Ensure unique names for display
+                            suffix = 2
+                            while f"{human} ({suffix})" in used:
+                                suffix += 1
+                            human = f"{human} ({suffix})"
+                        used.add(human)
+                        new_names[c] = human
+                    df_out = df_out.rename(columns=new_names)
+                    return df_out
+
                 if show_imputed:
                     # Build display DataFrame from post-imputation values
                     disp_imp = X_test_prep.copy()
@@ -4915,12 +5003,12 @@ with tab5:
 
                     st.caption("🟡 Amber cells were originally missing and have been imputed by the model's preprocessor (IterativeImputer). All other values are as recorded.")
                     st.dataframe(
-                        disp_imp.style.apply(_highlight_imputed, axis=None),
+                        _reorder_for_display(disp_imp).style.apply(_highlight_imputed, axis=None),
                         hide_index=True,
                         width='stretch'
                     )
                 else:
-                    st.dataframe(results_df, hide_index=True, width='stretch')
+                    st.dataframe(_reorder_for_display(results_df), hide_index=True, width='stretch')
 
                 # Feature importances
                 st.subheader("Feature Importances")
