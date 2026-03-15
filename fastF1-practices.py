@@ -19,8 +19,11 @@ results = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t')
 races = pd.read_json(path.join(DATA_DIR, 'f1db-races.json')) 
 active_drivers = pd.read_csv(path.join(DATA_DIR, 'active_drivers.csv'), sep='\t')
 
+# Ensure cache directory exists (FastF1 requires it to exist)
+cache_dir = path.join(DATA_DIR, 'f1_cache')
+os.makedirs(cache_dir, exist_ok=True)
 # Enable FastF1 caching
-fastf1.Cache.enable_cache(path.join(DATA_DIR, 'f1_cache'))
+fastf1.Cache.enable_cache(cache_dir)
 
 def km_to_miles(km):
     return km * 0.621371
