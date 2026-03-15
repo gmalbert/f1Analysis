@@ -12,8 +12,12 @@ DATA_DIR = 'data_files/'
 
 current_year = datetime.datetime.now().year
 
+# Ensure cache directory exists (FastF1 requires it)
+cache_dir = path.join(DATA_DIR, 'f1_cache')
+os.makedirs(cache_dir, exist_ok=True)
+
 # Enable FastF1 caching
-fastf1.Cache.enable_cache(path.join(DATA_DIR, 'f1_cache'))
+fastf1.Cache.enable_cache(cache_dir)
 
 # Initialize Ergast API
 ergast = Ergast(result_type='pandas', auto_cast=True)
@@ -123,9 +127,12 @@ for i in range(2018, current_year + 1):
 
         # Get the qualifying date for this round
         try:
-            race_row = season_schedule[season_schedule['round'].astype(int) == round_number]
+            # Some future-season schedule rows may have NaN for the round; coerce to numeric safely.
+            round_series = pd.to_numeric(season_schedule['round'], errors='coerce')
+            race_row = season_schedule[round_series == round_number]
             if race_row.empty:
                 continue
+
             qual_date_col = None
             # Try to find a qualifying date column
             for col in race_row.columns:
@@ -135,9 +142,16 @@ for i in range(2018, current_year + 1):
             if qual_date_col is None:
                 # Fallback to race date if qualifying date not present
                 qual_date_col = [col for col in race_row.columns if 'date' in col.lower()][0]
-            qual_date = pd.to_datetime(race_row.iloc[0][qual_date_col]).date()
+
+            qual_date_ts = pd.to_datetime(race_row.iloc[0][qual_date_col], errors='coerce')
+            if pd.isna(qual_date_ts):
+                print(f"Skipping round {round_number} for {i}: missing qualifying/race date in schedule")
+                continue
+
+            qual_date = qual_date_ts.date()
         except Exception as e:
-            print(f"Could not determine qualifying date for {i} round {round_number}: {e}")
+            # When the API returns unexpected data (e.g., NaN round numbers), skip gracefully.
+            print(f"Skipping round {round_number} for {i}: could not determine qualifying date ({e})")
             continue
 
         # Only process sessions more than 3 days in the future (allow upcoming sessions within 3 days)
@@ -504,10 +518,11 @@ qualifying_with_driverId.rename(columns={
 
 # qualifying_with_driverId.rename(columns={'Q1_sec': 'q1_sec', 'Q2_sec': 'q2_sec', 'Q3_sec': 'q3_sec'}, inplace=True)
 
-qualifying_with_driverId.to_csv(path.join(DATA_DIR, 'all_qualifying_races.csv'), sep='\t', index=False, columns=[
-    'Year', 'Round', 'Event', 'raceId', 'DriverNumber', 'Abbreviation', 'FullName', 
-    'LastName', 'driverId', 'constructorName', 'q1_sec', 'q1_pos', 'q2_sec', 'q2_pos', 'q3_sec', 'q3_pos', #'q1', 'q2', 'q3',
-    'best_qual_time', 'teammate_qual_delta', #'Position', 'Points',
+# Ensure expected output columns exist so exports remain stable across runs
+expected_columns = [
+    'Year', 'Round', 'Event', 'raceId', 'DriverNumber', 'Abbreviation', 'FullName',
+    'LastName', 'driverId', 'constructorName', 'q1_sec', 'q1_pos', 'q2_sec', 'q2_pos', 'q3_sec', 'q3_pos',
+    'best_qual_time', 'teammate_qual_delta',
     # Lap-level granular metrics (2018+ from FastF1)
     'total_qualifying_laps', 'valid_laps', 'deleted_laps',
     'best_sector1_sec', 'best_sector2_sec', 'best_sector3_sec',
@@ -515,9 +530,21 @@ qualifying_with_driverId.to_csv(path.join(DATA_DIR, 'all_qualifying_races.csv'),
     'lap_time_std', 'sector1_std', 'sector2_std', 'sector3_std',
     'avg_sector1_sec', 'avg_sector2_sec', 'avg_sector3_sec', 'primary_compound',
     # Driver career stats
-    'totalChampionshipPoints', 'totalChampionshipWins', 'totalFastestLaps', 'totalGrandSlams', 'totalPodiums', 
-    'totalPoints',  'totalPolePositions',  'totalRaceEntries',  'totalRaceLaps', 
-      'totalRaceStarts',  'totalRaceWins', 'bestChampionshipPosition',  'bestRaceResult', 'bestStartingGridPosition',  'constructorId', 
-])
+    'totalChampionshipPoints', 'totalChampionshipWins', 'totalFastestLaps', 'totalGrandSlams', 'totalPodiums',
+    'totalPoints', 'totalPolePositions', 'totalRaceEntries', 'totalRaceLaps',
+    'totalRaceStarts', 'totalRaceWins', 'bestChampionshipPosition', 'bestRaceResult', 'bestStartingGridPosition',
+    'constructorId',
+]
+
+for col in expected_columns:
+    if col not in qualifying_with_driverId.columns:
+        qualifying_with_driverId[col] = pd.NA
+
+qualifying_with_driverId.to_csv(
+    path.join(DATA_DIR, 'all_qualifying_races.csv'),
+    sep='\t',
+    index=False,
+    columns=expected_columns,
+)
 
 print("Qualifying results processed and saved to all_qualifying_races.csv")
