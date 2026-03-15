@@ -63,21 +63,14 @@ def add_teammate_delta(df, group_cols, value_col, new_col):
 # Load existing qualifying results if they exist
 if os.path.exists(csv_path):
     processed_df = pd.read_csv(csv_path, sep='\t')
-    # Build a set of already processed session keys (Year, Round)
-    # Only consider a session processed if it already has qualifying times (avoid placeholders)
-    def session_has_times(row):
-        for col in ['Q1', 'Q1_sec', 'Q1_sec', 'Q2_sec', 'Q3_sec', 'best_qual_time', 'q1_sec', 'q2_sec', 'q3_sec']:
-            if col in processed_df.columns and not processed_df[col].isna().all():
-                # we'll detect per-row below
-                break
-    # Build processed_sessions by selecting rows where at least one qualifying time exists
+    # Mark any (Year, Round) already present in the CSV as processed.
+    # We do NOT require qualifying times to be non-null — if the row exists we've already
+    # attempted that session and don't want to hit the API again. Sessions where times
+    # ended up null (e.g. due to a schema migration) will stay null until explicitly re-run.
     if not processed_df.empty:
-        has_time_mask = pd.Series([False] * len(processed_df), index=processed_df.index)
-        # Check both uppercase and lowercase variants since FastF1 uses Q1_sec, Q2_sec, Q3_sec
-        for col in ['q1_sec', 'q2_sec', 'q3_sec', 'best_qual_time', 'Q1_sec', 'Q2_sec', 'Q3_sec']:
-            if col in processed_df.columns:
-                has_time_mask |= processed_df[col].notna()
-        processed_sessions = set(zip(processed_df.loc[has_time_mask, 'Year'], processed_df.loc[has_time_mask, 'Round']))
+        processed_sessions = set(
+            zip(processed_df['Year'].astype(int), processed_df['Round'].astype(int))
+        )
     else:
         processed_sessions = set()
 else:
