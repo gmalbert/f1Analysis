@@ -40,7 +40,7 @@ jobs:
         env:
           STREAMLIT_SERVER_HEADLESS: '1'
       
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4.6.2
         with:
           name: race-predictions
           path: data_files/precomputed/predictions/

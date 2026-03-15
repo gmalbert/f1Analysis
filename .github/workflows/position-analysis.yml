@@ -50,7 +50,7 @@ jobs:
           STREAMLIT_SERVER_HEADLESS: '1'
         continue-on-error: true
       
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4.6.2
         with:
           name: position-analysis
           path: |

@@ -34,7 +34,7 @@ jobs:
         run: python scripts/precompute/hyperparameter_grid_search.py --output data_files/precomputed/hyperparam_grid.json
         env:
           STREAMLIT_SERVER_HEADLESS: '1'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4.6.2
         with:
           name: grid-search-results
           path: data_files/precomputed/hyperparam_grid.json
@@ -57,7 +57,7 @@ jobs:
             --output data_files/precomputed/hyperparam_bayesian.json
         env:
           STREAMLIT_SERVER_HEADLESS: '1'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4.6.2
         with:
           name: bayesian-results
           path: data_files/precomputed/hyperparam_bayesian.json
@@ -70,7 +70,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4.2.1
         with:
           path: data_files/precomputed/
           merge-multiple: true

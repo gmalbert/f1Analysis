@@ -51,7 +51,7 @@ jobs:
           LOCAL_RUN: '1'    # enables FastF1 disk cache
 
       - name: Upload practice data as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: practice-laps-${{ github.run_id }}
           path: data_files/all_practice_laps.csv

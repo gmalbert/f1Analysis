@@ -43,7 +43,7 @@ jobs:
           STREAMLIT_SERVER_HEADLESS: '1'
       
       - name: Upload model artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: trained-models
           path: data_files/models/

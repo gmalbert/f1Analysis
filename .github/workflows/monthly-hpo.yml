@@ -55,7 +55,7 @@ jobs:
 
       - name: Upload HPO results as artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: hpo-results-${{ github.run_id }}
           path: data_files/best_hyperparams_*.json

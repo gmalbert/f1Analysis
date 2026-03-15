@@ -21,7 +21,7 @@ jobs:
         run: python scripts/precompute/rfe_features.py --output data_files/precomputed/rfe_results.json
         env:
           STREAMLIT_SERVER_HEADLESS: '1'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4.6.2
         with:
           name: rfe-results
           path: data_files/precomputed/rfe_results.json
@@ -40,7 +40,7 @@ jobs:
         run: python scripts/precompute/boruta_features.py --max-iter 200 --output data_files/precomputed/boruta_results.json
         env:
           STREAMLIT_SERVER_HEADLESS: '1'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4.6.2
         with:
           name: boruta-results
           path: data_files/precomputed/boruta_results.json
@@ -59,7 +59,7 @@ jobs:
         run: python scripts/precompute/shap_analysis.py --output data_files/precomputed/shap_results.json
         env:
           STREAMLIT_SERVER_HEADLESS: '1'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4.6.2
         with:
           name: shap-results
           path: data_files/precomputed/shap_results.json
@@ -78,7 +78,7 @@ jobs:
         run: python scripts/precompute/permutation_importance.py --output data_files/precomputed/permutation_results.json
         env:
           STREAMLIT_SERVER_HEADLESS: '1'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4.6.2
         with:
           name: permutation-results
           path: data_files/precomputed/permutation_results.json
@@ -90,7 +90,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4.2.1
         with:
           pattern: '*-results'
           path: data_files/precomputed/
