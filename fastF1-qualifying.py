@@ -353,12 +353,20 @@ if qualifying.empty:
 
 # Rename FastF1 column names to match expected format for merging
 # FastF1 uses DriverId, TeamId (capitalized) while our data uses driverId, constructorId
+# Only rename a capitalized key if the lowercase version doesn't already exist,
+# to avoid creating duplicate column names which break pd.merge(on='driverId').
 column_mapping = {
     'DriverId': 'driverId',
     'TeamId': 'constructorId',
     'TeamName': 'constructorName'
 }
-qualifying = qualifying.rename(columns=column_mapping)
+for old_col, new_col in column_mapping.items():
+    if old_col in qualifying.columns:
+        if new_col in qualifying.columns:
+            # lowercase version already present — drop the mixed-case duplicate
+            qualifying = qualifying.drop(columns=[old_col])
+        else:
+            qualifying = qualifying.rename(columns={old_col: new_col})
 
 # Skip post-processing if required columns don't exist after renaming
 if 'driverId' not in qualifying.columns:

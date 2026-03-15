@@ -15,6 +15,7 @@ on:
 
 env:
   PYTHON_VERSION: '3.11'
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
   pull-practice:
@@ -24,11 +25,11 @@ jobs:
       contents: write     # needed to push the updated CSV back to main
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0  # full history so we can pull/rebase before pushing
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
