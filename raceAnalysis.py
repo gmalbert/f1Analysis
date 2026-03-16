@@ -1741,7 +1741,7 @@ data['DNF'] = data['DNF'].astype('boolean')
 data['championship_position'] = data['championship_position'].astype('Float64')
 data['practice_x_safetycar_bin'] = data['practice_x_safetycar_bin'].astype('Float64')
 data['positions_gained_first_lap_pct_bin'] = data['positions_gained_first_lap_pct_bin'].astype('Float64')
-data['is_first_season_with_constructor'] = data['is_first_season_with_constructor'].astype('boolean')
+data['is_first_season_with_constructor'] = data['is_first_season_with_constructor'].astype('Int64')
 data['grid_penalty_x_constructor_bin'] = data['grid_penalty_x_constructor_bin'].astype('Float64')
 data['SafetyCarStatus'] = data['SafetyCarStatus'].astype('Float64')
 
@@ -3830,25 +3830,38 @@ with tab4:
 
     # Narrow practices/qualifying to the relevant race.
     # Be defensive: `next_race_id` or `last_race` may be None or missing.
-    if next_race_id is None:
+    if next_race_id is None or nextRace.empty:
         practices = practices.iloc[0:0]
         qualifying = qualifying.iloc[0:0]
     else:
         try:
-            # If next race appears in practices dataset, use upcoming_race_id if available
-            if 'raceId' in practices.columns and next_race_id in practices['raceId'].values:
-                race_key = upcoming_race_id[0] if (isinstance(upcoming_race_id, (list, tuple)) and len(upcoming_race_id) > 0) else next_race_id
-                practices = practices[practices['raceId'] == race_key]
-                qualifying = qualifying[qualifying['raceId'] == race_key]
-            else:
-                # Fall back to last_race if available
-                if last_race is not None and 'raceId_results' in last_race and pd.notna(last_race['raceId_results']):
-                    lr = last_race['raceId_results']
-                    practices = practices[practices['raceId'] == lr]
-                    qualifying = qualifying[qualifying['raceId'] == lr]
+            # Use Year + Round as reliable join keys — grandPrixId is a string while
+            # practices/qualifying raceId is numeric, so direct ID comparison always fails.
+            next_year = int(nextRace['year'].iat[0]) if 'year' in nextRace.columns else None
+            next_round = int(nextRace['round'].iat[0]) if 'round' in nextRace.columns else None
+
+            if next_year is not None and next_round is not None:
+                # Practices dataset uses numeric raceId — map via f1db race id
+                next_numeric_race_id = int(nextRace['id_grandPrix'].iat[0]) if 'id_grandPrix' in nextRace.columns else None
+                if next_numeric_race_id is not None and 'raceId' in practices.columns:
+                    practices = practices[practices['raceId'] == next_numeric_race_id]
                 else:
                     practices = practices.iloc[0:0]
+
+                # Qualifying CSV has Year + Round columns — always use them
+                if 'Year' in qualifying.columns and 'Round' in qualifying.columns:
+                    qual_match = qualifying[
+                        (qualifying['Year'] == next_year) & (qualifying['Round'] == next_round)
+                    ]
+                    if qual_match.empty:
+                        # Fall back to most recent available qualifying (e.g. previous race)
+                        qual_match = qualifying[qualifying['Year'] == next_year].sort_values('Round', ascending=False).head(0)
+                    qualifying = qual_match
+                else:
                     qualifying = qualifying.iloc[0:0]
+            else:
+                practices = practices.iloc[0:0]
+                qualifying = qualifying.iloc[0:0]
         except Exception:
             practices = practices.iloc[0:0]
             qualifying = qualifying.iloc[0:0]
@@ -3860,7 +3873,7 @@ with tab4:
         else:
             practices = practices[practices['Session'] == 'FP2']
 
-    all_active_driver_inputs = input_data_next_race[feature_names + ['resultsDriverId', 'Abbreviation']]
+    all_active_driver_inputs = input_data_next_race[feature_names + ['resultsDriverId', 'Abbreviation']].copy()
 
     # Get latest stats for each active driver
     latest_stats = (
@@ -3925,22 +3938,37 @@ with tab4:
             if f"{col}{suffix}" in all_active_driver_inputs.columns:
                 rename_dict[f"{col}{suffix}"] = col
 
-    all_active_driver_inputs = all_active_driver_inputs.rename(columns=rename_dict)            
-    # st.write(all_active_driver_inputs.columns.tolist())
-    all_active_driver_inputs = pd.merge(
-        all_active_driver_inputs, 
-        qualifying, 
-        left_on='Abbreviation', 
-        right_on='Abbreviation', 
-        how='left',
-        suffixes=('_datamodel', '_qualifying')
-    )
-    
-    if 'best_qual_time_qualifying' in all_active_driver_inputs.columns:
-        all_active_driver_inputs.rename(columns={'best_qual_time_qualifying': 'best_qual_time'}, inplace=True)
+    all_active_driver_inputs = all_active_driver_inputs.rename(columns=rename_dict)
 
-    if 'teammate_qual_delta_qualifying' in all_active_driver_inputs.columns:
-        all_active_driver_inputs.rename(columns={'teammate_qual_delta_qualifying': 'teammate_qual_delta'}, inplace=True)
+    # Merge qualifying data via direct column update to avoid pandas suffix collisions.
+    # The qualifying CSV uses 'best_qual_time' and 'teammate_qual_delta', but the
+    # model's feature names are 'best_qual_time_qualifying' and
+    # 'teammate_qual_delta_qualifying' (the suffixes were applied in the generator).
+    # Using an explicit map-and-assign avoids _x/_y/_datamodel/_qualifying renaming
+    # that would break the expected feature names.
+    if not qualifying.empty and 'Abbreviation' in qualifying.columns and 'Abbreviation' in all_active_driver_inputs.columns:
+        # Rename qualifying columns to match model feature names before applying
+        qual_col_rename = {
+            'best_qual_time': 'best_qual_time_qualifying',
+            'teammate_qual_delta': 'teammate_qual_delta_qualifying',
+        }
+        qual_indexed = (
+            qualifying
+            .rename(columns=qual_col_rename)
+            .drop_duplicates(subset=['Abbreviation'])
+            .set_index('Abbreviation')
+        )
+        # Columns to skip when updating (metadata that could overwrite good values
+        # or that are genuinely not model features)
+        _qual_skip = {'Event', 'FullName', 'LastName',
+                      'driverId', 'raceId', 'primary_compound',
+                      'is_first_season_with_constructor'}
+        for col in qual_indexed.columns:
+            if col in _qual_skip:
+                continue
+            # Map Abbreviation → qualifying value and assign (overwrite historical)
+            val_map = qual_indexed[col].to_dict()
+            all_active_driver_inputs[col] = all_active_driver_inputs['Abbreviation'].map(val_map)
 
     if 'teammate_practice_delta_x' in all_active_driver_inputs.columns:
         all_active_driver_inputs.rename(columns={'teammate_practice_delta_x': 'teammate_practice_delta'}, inplace=True)
@@ -3950,7 +3978,25 @@ with tab4:
             all_active_driver_inputs.rename(columns={'BestConstructorPracticeLap_sec_x': 'BestConstructorPracticeLap_sec'}, inplace=True)
 
     all_active_driver_inputs = all_active_driver_inputs.rename(columns={'Points_datamodel': 'Points', 'totalChampionshipPoints_datamodel': 'totalChampionshipPoints',
-        'totalPolePositions_datamodel': 'totalPolePositions','totalFastestLaps_datamodel': 'totalFastestLaps'} )    
+        'totalPolePositions_datamodel': 'totalPolePositions','totalFastestLaps_datamodel': 'totalFastestLaps'} )
+
+    # If constructorName was clobbered to NaN by the qualifying assign (driver
+    # not in qualifying) restore it from the latest historical row for that driver.
+    if 'constructorName' in all_active_driver_inputs.columns:
+        _ctor_ref = (
+            data.sort_values('grandPrixYear')
+            .groupby('resultsDriverId')
+            .tail(1)[['resultsDriverId', 'constructorName']]
+            .rename(columns={'constructorName': '_constructorName_hist'})
+        )
+        all_active_driver_inputs = all_active_driver_inputs.merge(
+            _ctor_ref, on='resultsDriverId', how='left'
+        )
+        all_active_driver_inputs['constructorName'] = (
+            all_active_driver_inputs['constructorName']
+            .fillna(all_active_driver_inputs['_constructorName_hist'])
+        )
+        all_active_driver_inputs.drop(columns=['_constructorName_hist'], inplace=True)
 
     # Remove duplicate columns (if any)
     all_active_driver_inputs = all_active_driver_inputs.loc[:, ~all_active_driver_inputs.columns.duplicated()]
@@ -3974,14 +4020,16 @@ with tab4:
             )
         )
         # Merge current constructor onto prediction inputs
-        _tmp = all_active_driver_inputs[['resultsDriverId']].merge(
+        _tmp = all_active_driver_inputs[['resultsDriverId']].reset_index(drop=True).merge(
             _current_ctor, on='resultsDriverId', how='left'
         )
         # vectorised: 1 = first season with this constructor, 0 = has raced with them before
         _pairs = list(zip(_tmp['resultsDriverId'], _tmp['constructorId_results']))
-        all_active_driver_inputs['is_first_season_with_constructor'] = [
-            0 if p in _prior_pairs else 1 for p in _pairs
-        ]
+        _ifsc_values = pd.array(
+            [0 if p in _prior_pairs else 1 for p in _pairs], dtype='int64'
+        )
+        all_active_driver_inputs = all_active_driver_inputs.reset_index(drop=True)
+        all_active_driver_inputs['is_first_season_with_constructor'] = _ifsc_values
 
     existing_feature_names = [col for col in feature_names if col in all_active_driver_inputs.columns]
 
