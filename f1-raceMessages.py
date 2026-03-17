@@ -279,6 +279,10 @@ if all_race_control_messages:
     # df.rename(columns={'old_name': 'new_name'}, inplace=True)
     race_control_messages_with_grandprix.rename(columns={'id': 'raceId'}, inplace=True)
 
+    # Ensure raceId column exists (it may be missing for some legacy/partial datasets)
+    if 'raceId' not in race_control_messages_with_grandprix.columns:
+        race_control_messages_with_grandprix['raceId'] = pd.NA
+
     # Remove sector from the uniqueness so each flag per lap is only counted once
     race_control_messages_with_grandprix_nosector = race_control_messages_with_grandprix.drop_duplicates(
         subset=['raceId', 'Lap', 'Flag']
