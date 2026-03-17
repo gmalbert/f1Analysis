@@ -10,7 +10,8 @@ DATA_DIR = 'data_files/'
 
 current_year = datetime.datetime.now().year
 
-# Enable FastF1 caching
+# Enable FastF1 caching (create directory first so it works in CI/GitHub Actions)
+os.makedirs(path.join(DATA_DIR, 'f1_cache'), exist_ok=True)
 fastf1.Cache.enable_cache(path.join(DATA_DIR, 'f1_cache'))
 
 races = pd.read_json(path.join(DATA_DIR, 'f1db-races.json')) 

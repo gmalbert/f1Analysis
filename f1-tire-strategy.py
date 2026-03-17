@@ -23,7 +23,7 @@ os.environ['LOCAL_RUN'] = '1'  # Enable FastF1 cache
 DATA_DIR = Path('data_files')
 OUTPUT_FILE = DATA_DIR / 'tire_strategy_data.csv'
 CACHE_DIR = DATA_DIR / 'f1_cache'
-
+CACHE_DIR.mkdir(parents=True, exist_ok=True)
 fastf1.Cache.enable_cache(str(CACHE_DIR))
 
 
