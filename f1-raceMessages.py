@@ -197,7 +197,20 @@ if all_race_control_messages:
             race_control_messages_with_grandprix['grandPrixId'] = race_control_messages_with_grandprix['grand_prix']
 
     # If raceId is still missing, attempt to map it from races using (round, year)
-    if 'raceId' not in race_control_messages_with_grandprix.columns or race_control_messages_with_grandprix['raceId'].isnull().all():
+    race_id_exists = 'raceId' in race_control_messages_with_grandprix.columns
+    race_id_all_null = False
+    if race_id_exists:
+        race_id_col = race_control_messages_with_grandprix.loc[:, 'raceId']
+        # Pandas returns a DataFrame when duplicate columns exist.
+        if isinstance(race_id_col, pd.DataFrame):
+            race_id_col = race_id_col.iloc[:, 0]
+            # Drop any duplicate columns that remain to avoid ambiguous truth-value errors
+            dup_cols = [c for c in race_control_messages_with_grandprix.columns if c == 'raceId'][1:]
+            if dup_cols:
+                race_control_messages_with_grandprix.drop(columns=dup_cols, inplace=True)
+        race_id_all_null = race_id_col.isnull().all()
+
+    if not race_id_exists or race_id_all_null:
         mapping = races.set_index(['round', 'year'])['id'] if {'round', 'year', 'id'}.issubset(races.columns) else None
         if mapping is not None:
             # build tuple keys
