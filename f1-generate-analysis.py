@@ -359,6 +359,24 @@ pitstops = pitstops[pitstops['year'].between(raceNoEarlierThan, current_year)]
 pitstops = pd.merge(pitstops, races[['id', 'grandPrixId']], left_on='raceId', right_on='id', how='left')
 race_control = pd.read_csv(path.join(DATA_DIR, 'all_race_control_messages.csv'), sep='\t')
 
+# The raw race-control messages CSV currently does not include a canonical "raceId".
+# Map the Year+Round columns back to the races table to get the correct raceId.
+for col in ['Year', 'Round']:
+    if col in race_control.columns:
+        race_control[col] = pd.to_numeric(race_control[col], errors='coerce')
+
+if 'id' not in race_control.columns:
+    race_control = race_control.merge(
+        races[['id', 'year', 'round']],
+        left_on=['Year', 'Round'],
+        right_on=['year', 'round'],
+        how='left',
+        suffixes=('', '_race'),
+    )
+    if race_control['id'].isna().any():
+        missing = race_control.loc[race_control['id'].isna(), ['Year', 'Round', 'Event']].drop_duplicates()
+        print(f"Warning: could not map {len(missing)} race_control rows to raceId (Year/Round mismatch). Sample rows:\n{missing.head()}")
+
 # Rename columns first
 race_control.rename(columns={'Lap': 'red_flag_lap', 'id': 'raceId'}, inplace=True)
 
