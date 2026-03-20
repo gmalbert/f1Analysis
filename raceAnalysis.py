@@ -57,7 +57,13 @@ from boruta import BorutaPy
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.metrics import roc_auc_score
 import xgboost as xgb
-from lightgbm import LGBMRegressor
+try:
+    from lightgbm import LGBMRegressor
+    _LGBM_AVAILABLE = True
+except (ImportError, OSError):
+    # libgomp.so.1 (OpenMP) missing on this platform – LightGBM disabled.
+    LGBMRegressor = None  # type: ignore[assignment,misc]
+    _LGBM_AVAILABLE = False
 from catboost import CatBoostRegressor
 
 # Import the temporal leakage audit helper. The helper lives in `scripts/`.
@@ -2331,7 +2337,10 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
         return model, mse, r2, mae, mean_err, evals_result, preprocessor
 
     elif model_type == "LightGBM":
-        from lightgbm import LGBMRegressor
+        if not _LGBM_AVAILABLE:
+            st.error("LightGBM is not available on this platform (missing libgomp.so.1). "
+                     "Please select XGBoost or CatBoost.")
+            return None, None, None, None, None, {}, preprocessor
         
         model = LGBMRegressor(
             n_estimators=200,
@@ -2395,9 +2404,12 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
         return model, mse, r2, mae, mean_err, evals_result, preprocessor
 
     elif model_type == "Ensemble (XGBoost + LightGBM + CatBoost)":
+        if not _LGBM_AVAILABLE:
+            st.error("Ensemble requires LightGBM which is not available on this platform "
+                     "(missing libgomp.so.1). Please select XGBoost or CatBoost.")
+            return None, None, None, None, None, {}, preprocessor
         from sklearn.ensemble import StackingRegressor
         from sklearn.base import BaseEstimator, RegressorMixin
-        from lightgbm import LGBMRegressor
         from catboost import CatBoostRegressor
         
         # Wrapper to make CatBoost sklearn-compatible
@@ -2429,7 +2441,10 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
         return model, mse, r2, mae, mean_err, evals_result, preprocessor
 
     elif model_type == "Position Group":  # ROADMAP-3A
-        from lightgbm import LGBMRegressor
+        if not _LGBM_AVAILABLE:
+            st.error("Position Group model requires LightGBM which is not available on this "
+                     "platform (missing libgomp.so.1). Please select XGBoost or CatBoost.")
+            return None, None, None, None, None, {}, preprocessor
         from catboost import CatBoostRegressor
         from sklearn.model_selection import GroupKFold
 
@@ -2519,7 +2534,10 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
         return model, cv_mse, cv_r2, cv_mae, cv_merr, evals_result, preprocessor
 
     elif model_type == "Track-Weighted Ensemble":  # ROADMAP-3E
-        from lightgbm import LGBMRegressor
+        if not _LGBM_AVAILABLE:
+            st.error("Track-Weighted Ensemble requires LightGBM which is not available on "
+                     "this platform (missing libgomp.so.1). Please select XGBoost or CatBoost.")
+            return None, None, None, None, None, {}, preprocessor
         from catboost import CatBoostRegressor
 
         _xgb = XGBRegressor(
@@ -4676,16 +4694,17 @@ with tab5:
     st.write("Advanced machine learning models, hyperparameter tuning, and feature selection tools.")
     
     # Model type selection
+    _model_options = [
+        "XGBoost",
+        "LightGBM",
+        "CatBoost",
+        "Ensemble (XGBoost + LightGBM + CatBoost)",
+        "Position Group",         # ROADMAP-3A: podium / points / outside sub-models
+        "Track-Weighted Ensemble",  # ROADMAP-3E: circuit-type-specific blend weights
+    ]
     model_type = st.selectbox(
         "Select Model Type",
-        [
-            "XGBoost",
-            "LightGBM",
-            "CatBoost",
-            "Ensemble (XGBoost + LightGBM + CatBoost)",
-            "Position Group",         # ROADMAP-3A: podium / points / outside sub-models
-            "Track-Weighted Ensemble",  # ROADMAP-3E: circuit-type-specific blend weights
-        ],
+        _model_options,
         index=0,
         help="Choose the machine learning model to use for predictions"
     )
