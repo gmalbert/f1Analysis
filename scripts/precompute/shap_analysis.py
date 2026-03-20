@@ -53,9 +53,17 @@ def main():
     preprocessor = get_preprocessor_position(X_clean)
     X_prep = preprocessor.fit_transform(X_clean)
     
-    model = XGBRegressor(n_estimators=100, max_depth=4, n_jobs=-1, tree_method='hist', random_state=42)
+    # Explicitly set base_score=0.5 to prevent XGBoost 2.x from storing it in
+    # the '[9.xxE0]' bracketed string format that SHAP's TreeExplainer cannot parse.
+    model = XGBRegressor(n_estimators=100, max_depth=4, n_jobs=-1, tree_method='hist', random_state=42, base_score=0.5)
     model.fit(X_prep, y_clean)
     
+    # Densify sparse matrices (produced by OneHotEncoder) before SHAP — TreeExplainer
+    # requires dense numpy arrays in most SHAP versions.
+    import scipy.sparse
+    if scipy.sparse.issparse(X_prep):
+        X_prep = X_prep.toarray()
+
     # Limit samples for SHAP if dataset is large
     if len(X_prep) > args.max_samples:
         print(f"Sampling {args.max_samples} rows for SHAP analysis...")
@@ -65,19 +73,26 @@ def main():
         X_shap = X_prep
     
     print("Computing SHAP values...")
-    # XGBoost 2.x stores base_score as '[9.263952E0]' which older SHAP versions
-    # cannot parse.  Patch the booster config to normalise it before handing off.
+    # XGBoost 2.x may still store base_score as '[9.xxE0]' in the booster JSON
+    # config even when base_score was explicitly set.  Patch the config to
+    # normalise it before handing off to SHAP's TreeExplainer.
     import json as _json
     import re as _re
     try:
         booster = model.get_booster()
         config = _json.loads(booster.save_config())
         lmp = config.get('learner', {}).get('learner_model_param', {})
-        if isinstance(lmp.get('base_score', ''), str) and lmp['base_score'].startswith('['):
-            raw = lmp['base_score']
-            numeric_str = _re.search(r'\[([^\]]+)\]', raw).group(1)
-            lmp['base_score'] = str(float(numeric_str))
-            booster.load_config(_json.dumps(config))
+        raw_bs = lmp.get('base_score', '')
+        if isinstance(raw_bs, str):
+            # Strip any surrounding brackets/whitespace and parse the numeric token
+            cleaned = raw_bs.strip()
+            m = _re.search(r'[\[\(]?([0-9eE.+\-]+)[\]\)]?', cleaned)
+            if m:
+                try:
+                    lmp['base_score'] = str(float(m.group(1)))
+                    booster.load_config(_json.dumps(config))
+                except ValueError:
+                    pass  # leave as-is; TreeExplainer may still work
         explainer = shap.TreeExplainer(booster)
         shap_values = explainer.shap_values(X_shap)
     except Exception as e1:
