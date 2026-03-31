@@ -86,7 +86,12 @@ def run_step(label: str, cmd: list[str], *, critical: bool = True, env_extra: di
     if env_extra:
         env.update(env_extra)
 
-    result = subprocess.run(cmd, env=env)
+    try:
+        result = subprocess.run(cmd, env=env)
+    except KeyboardInterrupt:
+        elapsed = time.time() - t0
+        warn(f"{label} interrupted by user  ({elapsed:.0f}s)")
+        raise
     elapsed = time.time() - t0
 
     if result.returncode == 0:
@@ -353,4 +358,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nPipeline interrupted by user.")
+        sys.exit(130)

@@ -365,20 +365,22 @@ for col in ['Year', 'Round']:
     if col in race_control.columns:
         race_control[col] = pd.to_numeric(race_control[col], errors='coerce')
 
-if 'id' not in race_control.columns:
-    race_control = race_control.merge(
-        races[['id', 'year', 'round']],
-        left_on=['Year', 'Round'],
-        right_on=['year', 'round'],
-        how='left',
-        suffixes=('', '_race'),
-    )
-    if race_control['id'].isna().any():
-        missing = race_control.loc[race_control['id'].isna(), ['Year', 'Round', 'Event']].drop_duplicates()
-        print(f"Warning: could not map {len(missing)} race_control rows to raceId (Year/Round mismatch). Sample rows:\n{missing.head()}")
+if 'raceId' not in race_control.columns:
+    if 'id' not in race_control.columns:
+        race_control = race_control.merge(
+            races[['id', 'year', 'round']],
+            left_on=['Year', 'Round'],
+            right_on=['year', 'round'],
+            how='left',
+            suffixes=('', '_race'),
+        )
+        if race_control['id'].isna().any():
+            missing = race_control.loc[race_control['id'].isna(), ['Year', 'Round', 'Event']].drop_duplicates()
+            print(f"Warning: could not map {len(missing)} race_control rows to raceId (Year/Round mismatch). Sample rows:\n{missing.head()}")
+    race_control.rename(columns={'id': 'raceId'}, inplace=True)
 
-# Rename columns first
-race_control.rename(columns={'Lap': 'red_flag_lap', 'id': 'raceId'}, inplace=True)
+# Rename Lap column
+race_control.rename(columns={'Lap': 'red_flag_lap'}, inplace=True)
 
 # Now filter for red flags
 red_flags = race_control[
