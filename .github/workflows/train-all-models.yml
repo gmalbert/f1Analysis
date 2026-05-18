@@ -33,7 +33,7 @@ jobs:
         run: python scripts/precompute/train_xgboost.py
         env:
           MODEL_TYPE: XGBoost
-      - uses: actions/upload-artifact@v4.6.2
+      - uses: actions/upload-artifact@v6
         with:
           name: xgboost-models
           path: data_files/models/xgboost/
@@ -53,7 +53,7 @@ jobs:
         run: python scripts/precompute/train_lightgbm.py
         env:
           MODEL_TYPE: LightGBM
-      - uses: actions/upload-artifact@v4.6.2
+      - uses: actions/upload-artifact@v6
         with:
           name: lightgbm-models
           path: data_files/models/lightgbm/
@@ -73,7 +73,7 @@ jobs:
         run: python scripts/precompute/train_catboost.py
         env:
           MODEL_TYPE: CatBoost
-      - uses: actions/upload-artifact@v4.6.2
+      - uses: actions/upload-artifact@v6
         with:
           name: catboost-models
           path: data_files/models/catboost/
@@ -91,7 +91,7 @@ jobs:
       - run: pip install -r requirements.txt
       - name: Train Position Group Ensemble
         run: python scripts/precompute/train_position_group.py
-      - uses: actions/upload-artifact@v4.6.2
+      - uses: actions/upload-artifact@v6
         with:
           name: position-group-models
           path: data_files/models/position_group/
@@ -107,7 +107,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
-      - uses: actions/download-artifact@v4.2.1
+      - uses: actions/download-artifact@v7
         with:
           pattern: '*-models'
           path: data_files/models/
@@ -115,7 +115,7 @@ jobs:
       - run: pip install -r requirements.txt
       - name: Train Ensemble Model
         run: python scripts/precompute/train_ensemble.py
-      - uses: actions/upload-artifact@v4.6.2
+      - uses: actions/upload-artifact@v6
         with:
           name: ensemble-models
           path: data_files/models/ensemble/
@@ -133,7 +133,7 @@ jobs:
       - run: pip install -r requirements.txt
       - name: Train Track-Weighted Ensemble Model
         run: python scripts/precompute/train_track_weighted.py
-      - uses: actions/upload-artifact@v4.6.2
+      - uses: actions/upload-artifact@v6
         with:
           name: track-weighted-models
           path: data_files/models/track_weighted/
@@ -146,27 +146,27 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v4.2.1
+      - uses: actions/download-artifact@v7
         with:
           name: xgboost-models
           path: data_files/models/xgboost/
-      - uses: actions/download-artifact@v4.2.1
+      - uses: actions/download-artifact@v7
         with:
           name: lightgbm-models
           path: data_files/models/lightgbm/
-      - uses: actions/download-artifact@v4.2.1
+      - uses: actions/download-artifact@v7
         with:
           name: catboost-models
           path: data_files/models/catboost/
-      - uses: actions/download-artifact@v4.2.1
+      - uses: actions/download-artifact@v7
         with:
           name: ensemble-models
           path: data_files/models/ensemble/
-      - uses: actions/download-artifact@v4.2.1
+      - uses: actions/download-artifact@v7
         with:
           name: position-group-models
           path: data_files/models/position_group/
-      - uses: actions/download-artifact@v4.2.1
+      - uses: actions/download-artifact@v7
         with:
           name: track-weighted-models
           path: data_files/models/track_weighted/
