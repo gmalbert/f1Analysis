@@ -121,8 +121,26 @@ jobs:
           path: data_files/models/ensemble/
           retention-days: 90
 
+  train-track-weighted:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+      - name: Train Track-Weighted Ensemble Model
+        run: python scripts/precompute/train_track_weighted.py
+      - uses: actions/upload-artifact@v4.6.2
+        with:
+          name: track-weighted-models
+          path: data_files/models/track_weighted/
+          retention-days: 90
+
   commit-models:
-    needs: [train-ensemble, train-position-group]
+    needs: [train-ensemble, train-position-group, train-track-weighted]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -148,6 +166,10 @@ jobs:
         with:
           name: position-group-models
           path: data_files/models/position_group/
+      - uses: actions/download-artifact@v4.2.1
+        with:
+          name: track-weighted-models
+          path: data_files/models/track_weighted/
       - name: Show git status at start
         run: |
           echo "Job started at $(date -u)"

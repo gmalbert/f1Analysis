@@ -2453,21 +2453,22 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
         y_arr = np.asarray(y, dtype=np.float64)  # force plain ndarray (LightGBM rejects FloatingArray)
 
         # Helper: build and predict with a fresh PGE on one fold
+        # n_jobs=1 in CV folds to reduce parallel-worker memory pressure on Cloud
         def _fold_pge(X_tr, y_tr, X_te, sw):
             pw  = np.where(y_tr <= 3, 8.0, 0.5) * sw
             pow = np.where((y_tr >= 4) & (y_tr <= 10), 5.0, 0.5) * sw
             ow  = np.where(y_tr > 10, 5.0, 0.5) * sw
-            r   = XGBRegressor(n_estimators=200, learning_rate=0.1, max_depth=5,
+            r   = XGBRegressor(n_estimators=150, learning_rate=0.1, max_depth=5,
                                subsample=0.8, colsample_bytree=0.8,
-                               random_state=42, verbosity=0, n_jobs=-1)
-            pm  = LGBMRegressor(n_estimators=300, learning_rate=0.05, num_leaves=63,
+                               random_state=42, verbosity=0, n_jobs=1)
+            pm  = LGBMRegressor(n_estimators=150, learning_rate=0.05, num_leaves=63,
                                 subsample=0.8, colsample_bytree=0.8,
-                                random_state=42, verbose=-1, n_jobs=-1)
-            cm  = CatBoostRegressor(iterations=300, learning_rate=0.05, depth=6,
-                                    random_seed=42, verbose=0)
-            om  = XGBRegressor(n_estimators=300, learning_rate=0.05, max_depth=6,
+                                random_state=42, verbose=-1, n_jobs=1)
+            cm  = CatBoostRegressor(iterations=150, learning_rate=0.05, depth=6,
+                                    random_seed=42, verbose=0, thread_count=1)
+            om  = XGBRegressor(n_estimators=150, learning_rate=0.05, max_depth=6,
                                subsample=0.8, colsample_bytree=0.8,
-                               random_state=42, verbosity=0, n_jobs=-1)
+                               random_state=42, verbosity=0, n_jobs=1)
             r.fit(X_tr, y_tr, sample_weight=sw)
             pm.fit(X_tr, y_tr, sample_weight=pw)
             cm.fit(X_tr, y_tr, sample_weight=pow)
@@ -2475,8 +2476,8 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
             return PositionGroupEnsemble(podium_model=pm, points_model=cm,
                                          outside_model=om, router_model=r).predict(X_te)
 
-        # 5-fold GroupKFold CV — collect OOF predictions for honest metrics
-        cv = GroupKFold(n_splits=5)
+        # 3-fold GroupKFold CV (reduced from 5 to lower live-retrain memory usage)
+        cv = GroupKFold(n_splits=3)
         oof_pred = np.zeros(len(y_arr))
         for tr_idx, te_idx in cv.split(X, y_arr, groups=groups_arr):
             X_ftr, y_ftr = X.iloc[tr_idx], y_arr[tr_idx]
@@ -2542,11 +2543,11 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
 
         _xgb = XGBRegressor(
             n_estimators=200, learning_rate=0.1, max_depth=4,
-            random_state=42, n_jobs=-1, verbosity=0,
+            random_state=42, n_jobs=1, verbosity=0,
         )
         _lgbm = LGBMRegressor(
             n_estimators=200, learning_rate=0.1, max_depth=4,
-            random_state=42, n_jobs=-1, verbose=-1,
+            random_state=42, n_jobs=1, verbose=-1,
         )
         _cat = SklearnCompatibleCatBoost(
             iterations=200, depth=4, learning_rate=0.1,
@@ -2663,12 +2664,13 @@ def load_pretrained_model(model_name='position_model', CACHE_VERSION='v2.3', mod
     
     return None
 
-@st.cache_data
+@st.cache_data(max_entries=2)
 def _train_model_cached(early_stopping_rounds, CACHE_VERSION, csv_mtime=None, model_type='XGBoost'):
     """Live-train the position prediction model (cached).
 
     csv_mtime is included so the cache key changes when f1ForAnalysis.csv updates.
     model_type is part of the cache key so switching models retrain correctly.
+    max_entries=2 caps simultaneous cached models to avoid OOM on Streamlit Cloud.
 
     Returns (model, mse, r2, mae, mean_err, evals_result, preprocessor)."""
     model, mse, r2, mae, mean_err, evals_result, preprocessor = train_and_evaluate_model(
