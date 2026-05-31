@@ -1,8 +1,8 @@
 {
   "metadata": {
-    "generated_at": "2026-05-31T07:39:43.511954",
+    "generated_at": "2026-05-31T16:28:06.439815",
     "max_iter": 200,
-    "total_features": 322,
+    "total_features": 324,
     "n_selected": 33
   },
   "selected_features": [
@@ -13,10 +13,10 @@
     "delta_lap_20",
     "avg_final_position_per_track",
     "last_final_position_per_track",
+    "q2_pos",
     "avg_final_position_per_track_constructor",
     "qual_vs_track_avg",
     "constructor_avg_practice_position",
-    "qualPos_x_last_practicePos",
     "qualPos_x_avg_practicePos",
     "grid_x_avg_pit_time",
     "pit_stop_rate",
@@ -77,6 +77,11 @@
       "selected": true
     },
     {
+      "feature": "q2_pos",
+      "rank": 1,
+      "selected": true
+    },
+    {
       "feature": "avg_final_position_per_track_constructor",
       "rank": 1,
       "selected": true
@@ -88,11 +93,6 @@
     },
     {
       "feature": "constructor_avg_practice_position",
-      "rank": 1,
-      "selected": true
-    },
-    {
-      "feature": "qualPos_x_last_practicePos",
       "rank": 1,
       "selected": true
     },
@@ -207,17 +207,22 @@
       "selected": true
     },
     {
-      "feature": "q2_pos",
+      "feature": "actual_best_lap",
+      "rank": 2,
+      "selected": false
+    },
+    {
+      "feature": "practice_std_x_qual",
+      "rank": 2,
+      "selected": false
+    },
+    {
+      "feature": "qualPos_x_last_practicePos",
       "rank": 2,
       "selected": false
     },
     {
       "feature": "driver_high_wind_qual_avg",
-      "rank": 2,
-      "selected": false
-    },
-    {
-      "feature": "qual_vs_constructor_avg_at_track",
       "rank": 2,
       "selected": false
     },
@@ -232,317 +237,327 @@
       "selected": false
     },
     {
-      "feature": "actual_best_lap",
-      "rank": 3,
-      "selected": false
-    },
-    {
-      "feature": "practice_std_x_qual",
-      "rank": 3,
-      "selected": false
-    },
-    {
       "feature": "totalStopTime",
-      "rank": 4,
-      "selected": false
-    },
-    {
-      "feature": "qualifying_position_percentile",
-      "rank": 5,
-      "selected": false
-    },
-    {
-      "feature": "theoretical_best_lap",
-      "rank": 6,
-      "selected": false
-    },
-    {
-      "feature": "teammate_practice_delta_at_track",
-      "rank": 7,
-      "selected": false
-    },
-    {
-      "feature": "recent_form_best_3_races",
-      "rank": 8,
+      "rank": 3,
       "selected": false
     },
     {
       "feature": "last_race_vs_track_avg",
-      "rank": 9,
-      "selected": false
-    },
-    {
-      "feature": "driver_wet_practice_avg",
-      "rank": 11,
-      "selected": false
-    },
-    {
-      "feature": "constructor_dnf_rate_3_races",
-      "rank": 11,
+      "rank": 3,
       "selected": false
     },
     {
       "feature": "driver_constructor_avg_qual_position",
-      "rank": 12,
+      "rank": 3,
       "selected": false
     },
     {
-      "feature": "driver_track_qual_avg",
-      "rank": 13,
-      "selected": false
-    },
-    {
-      "feature": "practice_position_vs_field_median_at_track",
-      "rank": 14,
-      "selected": false
-    },
-    {
-      "feature": "recent_form_3_races",
-      "rank": 15,
-      "selected": false
-    },
-    {
-      "feature": "q2_sec",
-      "rank": 16,
-      "selected": false
-    },
-    {
-      "feature": "delta_lap_5",
-      "rank": 18,
-      "selected": false
-    },
-    {
-      "feature": "qual_x_constructor_wins",
-      "rank": 18,
-      "selected": false
-    },
-    {
-      "feature": "qualifying_position_vs_field_median_at_track",
-      "rank": 19,
-      "selected": false
-    },
-    {
-      "feature": "CleanAirAvg_FP1",
-      "rank": 21,
-      "selected": false
-    },
-    {
-      "feature": "DirtyAirAvg_FP3",
-      "rank": 21,
-      "selected": false
-    },
-    {
-      "feature": "grid_penalty_x_constructor",
-      "rank": 21,
-      "selected": false
-    },
-    {
-      "feature": "pit_count_x_pit_delta",
-      "rank": 24,
-      "selected": false
-    },
-    {
-      "feature": "practice_x_safetycar",
-      "rank": 24,
-      "selected": false
-    },
-    {
-      "feature": "fp1_lap_delta_vs_best",
-      "rank": 25,
-      "selected": false
-    },
-    {
-      "feature": "yearsActive",
-      "rank": 26,
-      "selected": false
-    },
-    {
-      "feature": "driver_avg_grid_pos_at_track",
-      "rank": 28,
-      "selected": false
-    },
-    {
-      "feature": "driver_avg_num_stints",
-      "rank": 28,
-      "selected": false
-    },
-    {
-      "feature": "BestConstructorPracticeLap_sec",
-      "rank": 29,
-      "selected": false
-    },
-    {
-      "feature": "resultsStartingGridPositionNumber",
-      "rank": 31,
-      "selected": false
-    },
-    {
-      "feature": "top_speed_x_turns",
-      "rank": 31,
-      "selected": false
-    },
-    {
-      "feature": "qual_vs_constructor_avg",
-      "rank": 32,
-      "selected": false
-    },
-    {
-      "feature": "constructor_recent_form_3_races",
-      "rank": 33,
-      "selected": false
-    },
-    {
-      "feature": "fp1_lap_time_delta_to_best",
-      "rank": 34,
-      "selected": false
-    },
-    {
-      "feature": "driverFastestPracticeLap_sec",
-      "rank": 36,
-      "selected": false
-    },
-    {
-      "feature": "constructor_recent_x_track_exp",
-      "rank": 36,
-      "selected": false
-    },
-    {
-      "feature": "practice_gap_to_teammate",
-      "rank": 38,
-      "selected": false
-    },
-    {
-      "feature": "practice_vs_worst_at_track",
-      "rank": 38,
-      "selected": false
-    },
-    {
-      "feature": "tire_management_score",
-      "rank": 39,
-      "selected": false
-    },
-    {
-      "feature": "qualifying_position_vs_field_recent_form",
-      "rank": 40,
-      "selected": false
-    },
-    {
-      "feature": "delta_lap_15",
-      "rank": 41,
-      "selected": false
-    },
-    {
-      "feature": "weather_pattern_analysis_by_location",
-      "rank": 42,
-      "selected": false
-    },
-    {
-      "feature": "driver_constructor_synergy",
-      "rank": 43,
-      "selected": false
-    },
-    {
-      "feature": "sector1_std",
-      "rank": 44,
-      "selected": false
-    },
-    {
-      "feature": "grandPrixLaps",
-      "rank": 45,
-      "selected": false
-    },
-    {
-      "feature": "pole_to_win_rate",
-      "rank": 46,
-      "selected": false
-    },
-    {
-      "feature": "driver_wet_qual_avg",
-      "rank": 47,
-      "selected": false
-    },
-    {
-      "feature": "driver_avg_qual_pos_at_track",
-      "rank": 49,
-      "selected": false
-    },
-    {
-      "feature": "grandPrixName",
-      "rank": 49,
-      "selected": false
-    },
-    {
-      "feature": "best_qual_time",
-      "rank": 51,
-      "selected": false
-    },
-    {
-      "feature": "constructor_avg_qual_pos_at_track",
-      "rank": 51,
-      "selected": false
-    },
-    {
-      "feature": "pit_lane_time_constant",
-      "rank": 52,
-      "selected": false
-    },
-    {
-      "feature": "grid_penalty_x_constructor_rank",
-      "rank": 54,
-      "selected": false
-    },
-    {
-      "feature": "qual_lap_time_consistency",
-      "rank": 54,
-      "selected": false
-    },
-    {
-      "feature": "fp3_vs_constructor_avg",
-      "rank": 55,
-      "selected": false
-    },
-    {
-      "feature": "SpeedFL_mph",
-      "rank": 56,
-      "selected": false
-    },
-    {
-      "feature": "driver_starting_position_5_races",
-      "rank": 57,
+      "feature": "qual_vs_constructor_avg_at_track",
+      "rank": 3,
       "selected": false
     },
     {
       "feature": "points_leader_gap",
-      "rank": 58,
+      "rank": 3,
       "selected": false
     },
     {
-      "feature": "practice_qual_consistency_5r",
-      "rank": 59,
+      "feature": "qualifying_position_percentile",
+      "rank": 6,
       "selected": false
     },
     {
-      "feature": "driverTotalRaceEntries",
-      "rank": 60,
+      "feature": "practice_position_vs_field_best_at_track",
+      "rank": 6,
       "selected": false
     },
     {
-      "feature": "DirtyAirAvg_FP1",
-      "rank": 61,
+      "feature": "constructor_dnf_rate_3_races",
+      "rank": 8,
       "selected": false
     },
     {
-      "feature": "last_final_position_per_track_constructor",
-      "rank": 62,
+      "feature": "theoretical_best_lap",
+      "rank": 9,
       "selected": false
     },
     {
-      "feature": "driver_practice_improvement_3r",
-      "rank": 63,
+      "feature": "pole_to_win_rate",
+      "rank": 10,
+      "selected": false
+    },
+    {
+      "feature": "grid_penalty_x_constructor_rank",
+      "rank": 11,
+      "selected": false
+    },
+    {
+      "feature": "driver_wet_qual_avg",
+      "rank": 12,
+      "selected": false
+    },
+    {
+      "feature": "q2_sec",
+      "rank": 14,
+      "selected": false
+    },
+    {
+      "feature": "constructor_dnf_rate_5_races",
+      "rank": 14,
+      "selected": false
+    },
+    {
+      "feature": "teammate_practice_delta_at_track",
+      "rank": 14,
+      "selected": false
+    },
+    {
+      "feature": "weather_pattern_analysis_by_location",
+      "rank": 14,
+      "selected": false
+    },
+    {
+      "feature": "pit_count_x_pit_delta",
+      "rank": 18,
+      "selected": false
+    },
+    {
+      "feature": "driver_track_qual_avg",
+      "rank": 18,
+      "selected": false
+    },
+    {
+      "feature": "practice_vs_worst_at_track",
+      "rank": 18,
       "selected": false
     },
     {
       "feature": "courseLength",
+      "rank": 20,
+      "selected": false
+    },
+    {
+      "feature": "driverFastestPracticeLap_sec",
+      "rank": 21,
+      "selected": false
+    },
+    {
+      "feature": "driver_avg_num_stints",
+      "rank": 22,
+      "selected": false
+    },
+    {
+      "feature": "grandPrixName",
+      "rank": 23,
+      "selected": false
+    },
+    {
+      "feature": "driver_wet_practice_avg",
+      "rank": 24,
+      "selected": false
+    },
+    {
+      "feature": "delta_lap_5",
+      "rank": 25,
+      "selected": false
+    },
+    {
+      "feature": "practice_position_vs_teammate_historical",
+      "rank": 25,
+      "selected": false
+    },
+    {
+      "feature": "driver_high_wind_practice_avg",
+      "rank": 27,
+      "selected": false
+    },
+    {
+      "feature": "tire_management_score",
+      "rank": 27,
+      "selected": false
+    },
+    {
+      "feature": "qual_vs_constructor_avg",
+      "rank": 29,
+      "selected": false
+    },
+    {
+      "feature": "recent_form_3_races",
+      "rank": 30,
+      "selected": false
+    },
+    {
+      "feature": "qualifying_position_vs_field_recent_form",
+      "rank": 30,
+      "selected": false
+    },
+    {
+      "feature": "finishing_position_std_driver",
+      "rank": 32,
+      "selected": false
+    },
+    {
+      "feature": "practice_x_safetycar",
+      "rank": 33,
+      "selected": false
+    },
+    {
+      "feature": "driver_practice_improvement_3r",
+      "rank": 34,
+      "selected": false
+    },
+    {
+      "feature": "practice_vs_track_median",
+      "rank": 35,
+      "selected": false
+    },
+    {
+      "feature": "best_sector2_sec",
+      "rank": 36,
+      "selected": false
+    },
+    {
+      "feature": "DirtyAirAvg_FP3",
+      "rank": 37,
+      "selected": false
+    },
+    {
+      "feature": "qualifying_position_vs_constructor_recent_form",
+      "rank": 38,
+      "selected": false
+    },
+    {
+      "feature": "grid_penalty_x_constructor",
+      "rank": 39,
+      "selected": false
+    },
+    {
+      "feature": "fp1_lap_time_delta_to_best",
+      "rank": 40,
+      "selected": false
+    },
+    {
+      "feature": "constructor_recent_x_track_exp",
+      "rank": 41,
+      "selected": false
+    },
+    {
+      "feature": "yearsActive",
+      "rank": 42,
+      "selected": false
+    },
+    {
+      "feature": "q1_pos",
+      "rank": 42,
+      "selected": false
+    },
+    {
+      "feature": "delta_lap_15",
+      "rank": 44,
+      "selected": false
+    },
+    {
+      "feature": "practice_time_improvement_1T_2T",
+      "rank": 44,
+      "selected": false
+    },
+    {
+      "feature": "grid_penalty",
+      "rank": 46,
+      "selected": false
+    },
+    {
+      "feature": "historical_avgLapPace",
+      "rank": 47,
+      "selected": false
+    },
+    {
+      "feature": "top_speed_x_turns",
+      "rank": 47,
+      "selected": false
+    },
+    {
+      "feature": "qual_x_constructor_wins",
+      "rank": 49,
+      "selected": false
+    },
+    {
+      "feature": "grandPrixLaps",
+      "rank": 50,
+      "selected": false
+    },
+    {
+      "feature": "practice_qual_consistency_5r",
+      "rank": 51,
+      "selected": false
+    },
+    {
+      "feature": "qual_lap_time_consistency",
+      "rank": 52,
+      "selected": false
+    },
+    {
+      "feature": "track_exp_x_qual",
+      "rank": 53,
+      "selected": false
+    },
+    {
+      "feature": "constructorTotalFastestLaps",
+      "rank": 55,
+      "selected": false
+    },
+    {
+      "feature": "delta_lap_15_historical",
+      "rank": 55,
+      "selected": false
+    },
+    {
+      "feature": "last_final_position_per_track_constructor",
+      "rank": 55,
+      "selected": false
+    },
+    {
+      "feature": "practice_gap_to_teammate",
+      "rank": 55,
+      "selected": false
+    },
+    {
+      "feature": "avg_sector1_sec",
+      "rank": 58,
+      "selected": false
+    },
+    {
+      "feature": "practice_time_improvement_time_time",
+      "rank": 59,
+      "selected": false
+    },
+    {
+      "feature": "driver_starting_position_5_races",
+      "rank": 61,
+      "selected": false
+    },
+    {
+      "feature": "constructor_practice_improvement_3r",
+      "rank": 61,
+      "selected": false
+    },
+    {
+      "feature": "practice_lap_time_consistency",
+      "rank": 61,
+      "selected": false
+    },
+    {
+      "feature": "CleanAirAvg_FP1",
+      "rank": 63,
+      "selected": false
+    },
+    {
+      "feature": "delta_lap_20_historical",
+      "rank": 65,
+      "selected": false
+    },
+    {
+      "feature": "best_sector3_sec",
       "rank": 65,
       "selected": false
     },
@@ -552,1103 +567,1098 @@
       "selected": false
     },
     {
-      "feature": "qualifying_position_vs_constructor_recent_form",
-      "rank": 66,
-      "selected": false
-    },
-    {
-      "feature": "practice_time_improvement_time_time",
+      "feature": "dnf_rate_x_practice_std",
       "rank": 67,
       "selected": false
     },
     {
-      "feature": "practice_time_improvement_1T_2T",
+      "feature": "constructor_recent_form_3_races",
       "rank": 68,
       "selected": false
     },
     {
-      "feature": "SpeedI1_mph",
+      "feature": "fp3_position_percentile",
+      "rank": 69,
+      "selected": false
+    },
+    {
+      "feature": "qual_gap_to_teammate",
       "rank": 70,
-      "selected": false
-    },
-    {
-      "feature": "avg_sector2_sec",
-      "rank": 70,
-      "selected": false
-    },
-    {
-      "feature": "constructor_practice_improvement_3r",
-      "rank": 71,
-      "selected": false
-    },
-    {
-      "feature": "practice_improvement_x_qual",
-      "rank": 72,
-      "selected": false
-    },
-    {
-      "feature": "delta_lap_15_historical",
-      "rank": 73,
-      "selected": false
-    },
-    {
-      "feature": "constructor_reliability_x_form",
-      "rank": 74,
       "selected": false
     },
     {
       "feature": "practice_position_percentile_vs_constructor",
+      "rank": 70,
+      "selected": false
+    },
+    {
+      "feature": "driver_avg_qual_pos_at_track",
+      "rank": 72,
+      "selected": false
+    },
+    {
+      "feature": "resultsStartingGridPositionNumber",
+      "rank": 73,
+      "selected": false
+    },
+    {
+      "feature": "grid_x_constructor_rank",
+      "rank": 73,
+      "selected": false
+    },
+    {
+      "feature": "fp3_vs_constructor_avg",
       "rank": 75,
       "selected": false
     },
     {
-      "feature": "historical_race_pace_vs_median",
+      "feature": "pit_lane_time_constant",
       "rank": 76,
       "selected": false
     },
     {
-      "feature": "pit_delta_x_driver_age",
+      "feature": "driver_high_humidity_qual_avg",
       "rank": 77,
       "selected": false
     },
     {
-      "feature": "recent_form_x_qual",
+      "feature": "overtaking_difficulty_index",
+      "rank": 77,
+      "selected": false
+    },
+    {
+      "feature": "CleanAirAvg_FP2",
       "rank": 79,
       "selected": false
     },
     {
-      "feature": "driver_avg_completion_pct",
-      "rank": 79,
-      "selected": false
-    },
-    {
-      "feature": "track_familiarity",
+      "feature": "averagePracticePosition",
       "rank": 80,
       "selected": false
     },
     {
-      "feature": "Delta_FP3",
-      "rank": 82,
-      "selected": false
-    },
-    {
-      "feature": "qual_to_final_delta_5yr",
-      "rank": 82,
-      "selected": false
-    },
-    {
-      "feature": "constructor_qual_improvement_3r",
-      "rank": 83,
-      "selected": false
-    },
-    {
-      "feature": "driver_teammate_practice_gap_3r",
-      "rank": 84,
+      "feature": "resultsQualificationPositionNumber",
+      "rank": 80,
       "selected": false
     },
     {
       "feature": "best_s3_sec",
+      "rank": 82,
+      "selected": false
+    },
+    {
+      "feature": "driver_avg_grid_pos_at_track",
+      "rank": 82,
+      "selected": false
+    },
+    {
+      "feature": "practice_conversion_x_grid",
+      "rank": 84,
+      "selected": false
+    },
+    {
+      "feature": "driver_avg_completion_pct",
       "rank": 85,
       "selected": false
     },
     {
-      "feature": "track_exp_x_qual",
+      "feature": "best_s2_sec",
       "rank": 86,
       "selected": false
     },
     {
-      "feature": "practice_vs_best_at_track",
+      "feature": "qual_to_final_delta_3yr",
+      "rank": 87,
+      "selected": false
+    },
+    {
+      "feature": "driver_soft_tendency",
       "rank": 87,
       "selected": false
     },
     {
       "feature": "practice_position_vs_constructor_worst_at_track",
-      "rank": 88,
+      "rank": 89,
       "selected": false
     },
     {
-      "feature": "driver_positionsGained_5_races",
+      "feature": "total_experience",
       "rank": 90,
       "selected": false
     },
     {
-      "feature": "driver_qual_improvement_3r",
+      "feature": "constructor_avg_practice_pos_at_track",
       "rank": 90,
       "selected": false
     },
     {
-      "feature": "driver_teammate_qual_gap_3r",
+      "feature": "fp1_lap_delta_vs_best",
       "rank": 92,
       "selected": false
     },
     {
-      "feature": "altitude_m",
-      "rank": 92,
-      "selected": false
-    },
-    {
-      "feature": "practice_conversion_x_grid",
+      "feature": "DirtyAirAvg_FP1",
       "rank": 93,
       "selected": false
     },
     {
-      "feature": "best_s1_sec",
+      "feature": "practice_position_vs_constructor_best_at_track",
       "rank": 94,
       "selected": false
     },
     {
-      "feature": "best_s2_sec",
+      "feature": "qualifying_lap_time_consistency_vs_field",
+      "rank": 95,
+      "selected": false
+    },
+    {
+      "feature": "constructor_avg_grid_pos_at_track",
       "rank": 96,
       "selected": false
     },
     {
-      "feature": "driver_avg_practice_pos_at_track",
-      "rank": 96,
-      "selected": false
-    },
-    {
-      "feature": "qual_to_final_delta_3yr",
+      "feature": "sector1_std",
       "rank": 97,
       "selected": false
     },
     {
-      "feature": "qualifying_lap_time_consistency_vs_field",
+      "feature": "driver_positionsGained_3_races",
       "rank": 98,
       "selected": false
     },
     {
-      "feature": "constructor_qual_consistency_5r",
+      "feature": "driver_constructor_synergy",
+      "rank": 99,
+      "selected": false
+    },
+    {
+      "feature": "practice_vs_best_at_track",
       "rank": 100,
+      "selected": false
+    },
+    {
+      "feature": "driverTotalRaceEntries",
+      "rank": 101,
+      "selected": false
+    },
+    {
+      "feature": "power_to_corner_ratio",
+      "rank": 102,
+      "selected": false
+    },
+    {
+      "feature": "constructor_qual_improvement_3r",
+      "rank": 103,
       "selected": false
     },
     {
       "feature": "overtaking_success_top10",
-      "rank": 100,
-      "selected": false
-    },
-    {
-      "feature": "driver_positionsGained_3_races",
-      "rank": 102,
-      "selected": false
-    },
-    {
-      "feature": "track_experience",
-      "rank": 102,
-      "selected": false
-    },
-    {
-      "feature": "CleanAirAvg_FP3",
       "rank": 104,
       "selected": false
     },
     {
-      "feature": "track_tire_degradation",
-      "rank": 104,
+      "feature": "averageStopTime",
+      "rank": 105,
       "selected": false
     },
     {
-      "feature": "race_vs_qual_consistency",
-      "rank": 104,
-      "selected": false
-    },
-    {
-      "feature": "grid_x_constructor_rank",
+      "feature": "pit_delta_x_driver_age",
       "rank": 106,
       "selected": false
     },
     {
-      "feature": "historical_avgLapPace",
-      "rank": 108,
+      "feature": "driver_avg_practice_pos_at_track",
+      "rank": 107,
       "selected": false
     },
     {
-      "feature": "driver_soft_tendency",
-      "rank": 108,
-      "selected": false
-    },
-    {
-      "feature": "fp3_position_percentile",
-      "rank": 109,
-      "selected": false
-    },
-    {
-      "feature": "tire_deg_x_track_deg",
-      "rank": 110,
-      "selected": false
-    },
-    {
-      "feature": "grid_penalty",
-      "rank": 112,
-      "selected": false
-    },
-    {
-      "feature": "practice_to_qualifying_delta",
-      "rank": 112,
-      "selected": false
-    },
-    {
-      "feature": "qualifying_consistency_std",
-      "rank": 113,
-      "selected": false
-    },
-    {
-      "feature": "qual_gap_to_teammate",
-      "rank": 115,
-      "selected": false
-    },
-    {
-      "feature": "recent_form_ratio",
-      "rank": 115,
+      "feature": "race_vs_qual_consistency",
+      "rank": 107,
       "selected": false
     },
     {
       "feature": "practice_lap_time_consistency_vs_field",
+      "rank": 109,
+      "selected": false
+    },
+    {
+      "feature": "sector2_std",
+      "rank": 110,
+      "selected": false
+    },
+    {
+      "feature": "practice_lap_time_delta_to_constructor_best",
+      "rank": 110,
+      "selected": false
+    },
+    {
+      "feature": "historical_race_pace_vs_median",
+      "rank": 112,
+      "selected": false
+    },
+    {
+      "feature": "constructor_points_x_grid",
+      "rank": 113,
+      "selected": false
+    },
+    {
+      "feature": "track_familiarity",
+      "rank": 113,
+      "selected": false
+    },
+    {
+      "feature": "tire_deg_x_track_deg",
+      "rank": 115,
+      "selected": false
+    },
+    {
+      "feature": "recent_qualifying_improvement_trend",
       "rank": 116,
       "selected": false
     },
     {
       "feature": "q1_sec",
-      "rank": 118,
-      "selected": false
-    },
-    {
-      "feature": "sector2_std",
-      "rank": 118,
-      "selected": false
-    },
-    {
-      "feature": "best_sector3_sec",
-      "rank": 119,
-      "selected": false
-    },
-    {
-      "feature": "constructor_practice_improvement_rate",
-      "rank": 120,
-      "selected": false
-    },
-    {
-      "feature": "practice_lap_time_consistency",
-      "rank": 121,
-      "selected": false
-    },
-    {
-      "feature": "constructor_avg_practice_pos_at_track",
-      "rank": 123,
-      "selected": false
-    },
-    {
-      "feature": "resultsDriverName",
-      "rank": 123,
-      "selected": false
-    },
-    {
-      "feature": "avg_sector3_sec",
-      "rank": 124,
-      "selected": false
-    },
-    {
-      "feature": "recent_form_5_races",
-      "rank": 125,
-      "selected": false
-    },
-    {
-      "feature": "practice_improvement_vs_teammate",
-      "rank": 126,
-      "selected": false
-    },
-    {
-      "feature": "theoretical_gap",
-      "rank": 127,
-      "selected": false
-    },
-    {
-      "feature": "constructor_form_ratio",
-      "rank": 129,
-      "selected": false
-    },
-    {
-      "feature": "practice_to_qual_improvement_rate",
-      "rank": 129,
-      "selected": false
-    },
-    {
-      "feature": "finishing_position_std_driver",
-      "rank": 131,
-      "selected": false
-    },
-    {
-      "feature": "qualifying_position_percentile_vs_constructor",
-      "rank": 131,
-      "selected": false
-    },
-    {
-      "feature": "constructor_dnf_rate_5_races",
-      "rank": 132,
-      "selected": false
-    },
-    {
-      "feature": "dnf_rate_x_practice_std",
-      "rank": 133,
-      "selected": false
-    },
-    {
-      "feature": "practice_time_improvement_2T_3T",
-      "rank": 134,
-      "selected": false
-    },
-    {
-      "feature": "power_to_corner_ratio",
-      "rank": 136,
-      "selected": false
-    },
-    {
-      "feature": "driver_race_pace_std",
-      "rank": 136,
-      "selected": false
-    },
-    {
-      "feature": "constructorTotalFastestLaps",
-      "rank": 138,
-      "selected": false
-    },
-    {
-      "feature": "wet_skill_x_precip",
-      "rank": 138,
+      "rank": 117,
       "selected": false
     },
     {
       "feature": "constructorName",
-      "rank": 139,
-      "selected": false
-    },
-    {
-      "feature": "practice_consistency_vs_teammate",
-      "rank": 141,
-      "selected": false
-    },
-    {
-      "feature": "qualifying_consistency_vs_constructor_historical",
-      "rank": 141,
-      "selected": false
-    },
-    {
-      "feature": "top_speed_rank",
-      "rank": 142,
-      "selected": false
-    },
-    {
-      "feature": "driverDNFCount",
-      "rank": 143,
-      "selected": false
-    },
-    {
-      "feature": "practice_position_std",
-      "rank": 144,
-      "selected": false
-    },
-    {
-      "feature": "qualifying_lap_time_delta_to_constructor_best",
-      "rank": 145,
-      "selected": false
-    },
-    {
-      "feature": "Delta_FP1",
-      "rank": 146,
-      "selected": false
-    },
-    {
-      "feature": "avg_sector1_sec",
-      "rank": 148,
+      "rank": 117,
       "selected": false
     },
     {
       "feature": "driver_performance_at_circuit_type",
-      "rank": 148,
+      "rank": 119,
       "selected": false
     },
     {
-      "feature": "driverDNFAvg",
-      "rank": 149,
+      "feature": "constructor_form_ratio",
+      "rank": 120,
       "selected": false
     },
     {
-      "feature": "lap_time_std",
-      "rank": 150,
+      "feature": "best_s1_sec",
+      "rank": 121,
       "selected": false
     },
     {
-      "feature": "teammate_qual_delta",
-      "rank": 151,
-      "selected": false
-    },
-    {
-      "feature": "driverTotalRaceLaps",
-      "rank": 153,
-      "selected": false
-    },
-    {
-      "feature": "finishing_position_std_constructor",
-      "rank": 153,
-      "selected": false
-    },
-    {
-      "feature": "driver_avg_tire_degradation",
-      "rank": 153,
-      "selected": false
-    },
-    {
-      "feature": "delta_lap_2_historical",
-      "rank": 155,
-      "selected": false
-    },
-    {
-      "feature": "practice_lap_time_delta_to_constructor_best",
-      "rank": 157,
-      "selected": false
-    },
-    {
-      "feature": "recent_qualifying_improvement_trend",
-      "rank": 157,
-      "selected": false
-    },
-    {
-      "feature": "lastFPPositionNumber",
-      "rank": 158,
-      "selected": false
-    },
-    {
-      "feature": "track_fp1_fp3_improvement",
-      "rank": 159,
-      "selected": false
-    },
-    {
-      "feature": "recent_form_median_5_races",
-      "rank": 161,
-      "selected": false
-    },
-    {
-      "feature": "practice_position_vs_teammate_historical",
-      "rank": 161,
-      "selected": false
-    },
-    {
-      "feature": "constructor_recent_mechanical_dnf_rate",
-      "rank": 162,
-      "selected": false
-    },
-    {
-      "feature": "driver_fuel_corrected_pace",
-      "rank": 163,
-      "selected": false
-    },
-    {
-      "feature": "constructor_podium_rate_at_track",
-      "rank": 164,
-      "selected": false
-    },
-    {
-      "feature": "practice_improvement_vs_field",
-      "rank": 166,
-      "selected": false
-    },
-    {
-      "feature": "driver_high_wind_practice_avg",
-      "rank": 166,
-      "selected": false
-    },
-    {
-      "feature": "averageStopTime",
-      "rank": 167,
-      "selected": false
-    },
-    {
-      "feature": "best_theory_lap_sec",
-      "rank": 168,
-      "selected": false
-    },
-    {
-      "feature": "SpeedST_mph",
-      "rank": 170,
-      "selected": false
-    },
-    {
-      "feature": "practice_position_vs_constructor_best_at_track",
-      "rank": 170,
-      "selected": false
-    },
-    {
-      "feature": "best_sector1_sec",
-      "rank": 172,
-      "selected": false
-    },
-    {
-      "feature": "wet_race_vs_quali_delta",
-      "rank": 172,
-      "selected": false
-    },
-    {
-      "feature": "avg_positions_gained_5r",
-      "rank": 173,
-      "selected": false
-    },
-    {
-      "feature": "delta_lap_20_historical",
-      "rank": 174,
-      "selected": false
-    },
-    {
-      "feature": "practice_position_improvement_2P_3P",
-      "rank": 175,
-      "selected": false
-    },
-    {
-      "feature": "constructor_win_rate_3y",
-      "rank": 176,
-      "selected": false
-    },
-    {
-      "feature": "fp3Interval",
-      "rank": 177,
-      "selected": false
-    },
-    {
-      "feature": "podium_potential",
-      "rank": 178,
-      "selected": false
-    },
-    {
-      "feature": "driverBestRaceResult",
-      "rank": 179,
-      "selected": false
-    },
-    {
-      "feature": "fp3Gap",
-      "rank": 181,
-      "selected": false
-    },
-    {
-      "feature": "qualifying_position_vs_race_pace_delta_by_track",
-      "rank": 181,
-      "selected": false
-    },
-    {
-      "feature": "tire_mgmt_x_turns",
-      "rank": 182,
-      "selected": false
-    },
-    {
-      "feature": "driver_starting_position_3_races",
-      "rank": 183,
-      "selected": false
-    },
-    {
-      "feature": "qualifying_position_vs_constructor_worst_at_track",
-      "rank": 184,
-      "selected": false
-    },
-    {
-      "feature": "practice_position_vs_field_recent_form",
-      "rank": 186,
-      "selected": false
-    },
-    {
-      "feature": "engineManufacturerId",
-      "rank": 186,
-      "selected": false
-    },
-    {
-      "feature": "constructorTotalRaceEntries",
-      "rank": 187,
-      "selected": false
-    },
-    {
-      "feature": "average_practice_x_driver_podiums",
-      "rank": 189,
-      "selected": false
-    },
-    {
-      "feature": "driver_podium_rate_3y",
-      "rank": 189,
-      "selected": false
-    },
-    {
-      "feature": "bestQualifyingTime",
-      "rank": 191,
-      "selected": false
-    },
-    {
-      "feature": "driverAge",
-      "rank": 191,
-      "selected": false
-    },
-    {
-      "feature": "practice_consistency_vs_constructor_historical",
-      "rank": 191,
-      "selected": false
-    },
-    {
-      "feature": "averagePracticePosition",
-      "rank": 193,
+      "feature": "driver_race_pace_std",
+      "rank": 122,
       "selected": false
     },
     {
       "feature": "delta_lap_10_historical",
-      "rank": 195,
+      "rank": 123,
       "selected": false
     },
     {
-      "feature": "overtake_potential_5yr",
-      "rank": 195,
-      "selected": false
-    },
-    {
-      "feature": "Delta_FP2",
-      "rank": 196,
-      "selected": false
-    },
-    {
-      "feature": "fp2Interval",
-      "rank": 198,
-      "selected": false
-    },
-    {
-      "feature": "sector3_std",
-      "rank": 198,
-      "selected": false
-    },
-    {
-      "feature": "overtake_potential_3yr",
-      "rank": 198,
-      "selected": false
-    },
-    {
-      "feature": "constructor_points_x_grid",
-      "rank": 200,
-      "selected": false
-    },
-    {
-      "feature": "CleanAirAvg_FP2",
-      "rank": 201,
-      "selected": false
-    },
-    {
-      "feature": "race_pace_consistency",
-      "rank": 202,
-      "selected": false
-    },
-    {
-      "feature": "practice_position_vs_field_worst_at_track",
-      "rank": 203,
-      "selected": false
-    },
-    {
-      "feature": "delta_lap_5_historical",
-      "rank": 204,
-      "selected": false
-    },
-    {
-      "feature": "overtaking_difficulty_index",
-      "rank": 205,
-      "selected": false
-    },
-    {
-      "feature": "SpeedI2_mph",
-      "rank": 208,
-      "selected": false
-    },
-    {
-      "feature": "q1_pos",
-      "rank": 208,
-      "selected": false
-    },
-    {
-      "feature": "teammate_practice_delta",
-      "rank": 208,
-      "selected": false
-    },
-    {
-      "feature": "recent_vs_season",
-      "rank": 208,
-      "selected": false
-    },
-    {
-      "feature": "practice_position_vs_constructor_recent_form",
-      "rank": 211,
-      "selected": false
-    },
-    {
-      "feature": "air_density_index",
-      "rank": 211,
-      "selected": false
-    },
-    {
-      "feature": "delta_lap_10",
-      "rank": 213,
-      "selected": false
-    },
-    {
-      "feature": "constructor_avg_grid_pos_at_track",
-      "rank": 213,
-      "selected": false
-    },
-    {
-      "feature": "practice_position_vs_constructor_median_at_track",
-      "rank": 214,
-      "selected": false
-    },
-    {
-      "feature": "resultsQualificationPositionNumber",
-      "rank": 215,
-      "selected": false
-    },
-    {
-      "feature": "fp2Gap",
-      "rank": 216,
-      "selected": false
-    },
-    {
-      "feature": "fp1Interval",
-      "rank": 217,
-      "selected": false
-    },
-    {
-      "feature": "turns",
-      "rank": 219,
-      "selected": false
-    },
-    {
-      "feature": "pit_stop_delta",
-      "rank": 219,
-      "selected": false
-    },
-    {
-      "feature": "practice_to_qualifying_delta_vs_constructor_historical",
-      "rank": 219,
-      "selected": false
-    },
-    {
-      "feature": "best_sector2_sec",
-      "rank": 221,
-      "selected": false
-    },
-    {
-      "feature": "practice_vs_track_median",
-      "rank": 222,
-      "selected": false
-    },
-    {
-      "feature": "driver_track_practice_avg",
-      "rank": 223,
-      "selected": false
-    },
-    {
-      "feature": "practice_position_improvement_1P_2P",
-      "rank": 224,
-      "selected": false
-    },
-    {
-      "feature": "total_qualifying_laps",
-      "rank": 225,
-      "selected": false
-    },
-    {
-      "feature": "practice_improvement_vs_constructor_historical",
-      "rank": 226,
-      "selected": false
-    },
-    {
-      "feature": "practice_position_improvement_1P_3P",
-      "rank": 227,
-      "selected": false
-    },
-    {
-      "feature": "recent_positions_gained_3_races",
-      "rank": 228,
-      "selected": false
-    },
-    {
-      "feature": "recent_form_worst_3_races",
-      "rank": 229,
-      "selected": false
-    },
-    {
-      "feature": "valid_laps",
-      "rank": 230,
-      "selected": false
-    },
-    {
-      "feature": "fp1Gap",
-      "rank": 232,
-      "selected": false
-    },
-    {
-      "feature": "fp2PositionNumber",
-      "rank": 232,
-      "selected": false
-    },
-    {
-      "feature": "driverTotalRaceWins",
-      "rank": 233,
-      "selected": false
-    },
-    {
-      "feature": "practice_position_vs_field_best_at_track",
-      "rank": 234,
-      "selected": false
-    },
-    {
-      "feature": "deleted_laps",
-      "rank": 236,
-      "selected": false
-    },
-    {
-      "feature": "constructor_podium_ratio",
-      "rank": 236,
-      "selected": false
-    },
-    {
-      "feature": "driverBestStartingGridPosition",
-      "rank": 237,
-      "selected": false
-    },
-    {
-      "feature": "practice_improvement_vs_field_avg",
-      "rank": 238,
-      "selected": false
-    },
-    {
-      "feature": "fp1PositionNumber",
-      "rank": 239,
-      "selected": false
-    },
-    {
-      "feature": "fp3PositionNumber",
-      "rank": 240,
-      "selected": false
-    },
-    {
-      "feature": "constructorTotalPodiumRaces",
-      "rank": 241,
-      "selected": false
-    },
-    {
-      "feature": "DirtyAirAvg_FP2",
-      "rank": 242,
-      "selected": false
-    },
-    {
-      "feature": "recent_dnf_rate_5_races",
-      "rank": 243,
-      "selected": false
-    },
-    {
-      "feature": "street_experience",
-      "rank": 244,
-      "selected": false
-    },
-    {
-      "feature": "qualifying_position_vs_field_worst_at_track",
-      "rank": 245,
-      "selected": false
-    },
-    {
-      "feature": "total_experience",
-      "rank": 247,
+      "feature": "qualifying_position_percentile_vs_constructor",
+      "rank": 124,
       "selected": false
     },
     {
       "feature": "driver_constructor_podium_rate",
-      "rank": 247,
+      "rank": 125,
       "selected": false
     },
     {
-      "feature": "constructorTotalRaceWins",
-      "rank": 248,
+      "feature": "driver_teammate_qual_gap_3r",
+      "rank": 126,
       "selected": false
     },
     {
-      "feature": "recent_dnf_rate_3_races",
-      "rank": 249,
+      "feature": "constructor_qual_consistency_5r",
+      "rank": 127,
       "selected": false
     },
     {
-      "feature": "delta_lap_2",
-      "rank": 250,
+      "feature": "SpeedFL_mph",
+      "rank": 128,
       "selected": false
     },
     {
-      "feature": "driverTotalPodiums",
-      "rank": 251,
+      "feature": "overtake_potential_5yr",
+      "rank": 129,
       "selected": false
     },
     {
-      "feature": "driverTotalChampionshipWins",
-      "rank": 252,
+      "feature": "altitude_m",
+      "rank": 130,
+      "selected": false
+    },
+    {
+      "feature": "best_theory_lap_sec",
+      "rank": 131,
+      "selected": false
+    },
+    {
+      "feature": "resultsDriverName",
+      "rank": 132,
+      "selected": false
+    },
+    {
+      "feature": "practice_improvement_x_qual",
+      "rank": 134,
+      "selected": false
+    },
+    {
+      "feature": "practice_to_qualifying_delta_vs_constructor_historical",
+      "rank": 134,
+      "selected": false
+    },
+    {
+      "feature": "avg_positions_gained_5r",
+      "rank": 134,
+      "selected": false
+    },
+    {
+      "feature": "pit_stop_delta",
+      "rank": 136,
+      "selected": false
+    },
+    {
+      "feature": "CleanAirAvg_FP3",
+      "rank": 137,
+      "selected": false
+    },
+    {
+      "feature": "practice_improvement_vs_teammate",
+      "rank": 138,
+      "selected": false
+    },
+    {
+      "feature": "practice_position_vs_constructor_recent_form",
+      "rank": 138,
+      "selected": false
+    },
+    {
+      "feature": "Delta_FP3",
+      "rank": 140,
+      "selected": false
+    },
+    {
+      "feature": "driver_qual_improvement_3r",
+      "rank": 140,
+      "selected": false
+    },
+    {
+      "feature": "recent_form_ratio",
+      "rank": 142,
+      "selected": false
+    },
+    {
+      "feature": "driver_teammate_practice_gap_3r",
+      "rank": 142,
+      "selected": false
+    },
+    {
+      "feature": "teammate_qual_delta",
+      "rank": 144,
+      "selected": false
+    },
+    {
+      "feature": "driver_positionsGained_5_races",
+      "rank": 145,
+      "selected": false
+    },
+    {
+      "feature": "SpeedI1_mph",
+      "rank": 146,
+      "selected": false
+    },
+    {
+      "feature": "track_tire_degradation",
+      "rank": 147,
+      "selected": false
+    },
+    {
+      "feature": "engineManufacturerId",
+      "rank": 147,
+      "selected": false
+    },
+    {
+      "feature": "overtake_potential_3yr",
+      "rank": 149,
+      "selected": false
+    },
+    {
+      "feature": "driverDNFAvg",
+      "rank": 151,
+      "selected": false
+    },
+    {
+      "feature": "best_qual_time",
+      "rank": 151,
+      "selected": false
+    },
+    {
+      "feature": "qualifying_position_vs_race_pace_delta_by_track",
+      "rank": 151,
+      "selected": false
+    },
+    {
+      "feature": "driverDNFCount",
+      "rank": 153,
+      "selected": false
+    },
+    {
+      "feature": "wet_skill_x_precip",
+      "rank": 153,
+      "selected": false
+    },
+    {
+      "feature": "recent_form_5_races",
+      "rank": 155,
+      "selected": false
+    },
+    {
+      "feature": "driver_fuel_corrected_pace",
+      "rank": 155,
+      "selected": false
+    },
+    {
+      "feature": "wet_race_vs_quali_delta",
+      "rank": 157,
+      "selected": false
+    },
+    {
+      "feature": "qual_to_final_delta_5yr",
+      "rank": 158,
+      "selected": false
+    },
+    {
+      "feature": "constructor_practice_improvement_rate",
+      "rank": 159,
+      "selected": false
+    },
+    {
+      "feature": "qualifying_lap_time_delta_to_constructor_best",
+      "rank": 160,
+      "selected": false
+    },
+    {
+      "feature": "fp2Gap",
+      "rank": 161,
+      "selected": false
+    },
+    {
+      "feature": "driverTotalRaceWins",
+      "rank": 163,
+      "selected": false
+    },
+    {
+      "feature": "bestQualifyingTime",
+      "rank": 163,
+      "selected": false
+    },
+    {
+      "feature": "practice_time_improvement_2T_3T",
+      "rank": 163,
+      "selected": false
+    },
+    {
+      "feature": "practice_to_qualifying_delta",
+      "rank": 165,
+      "selected": false
+    },
+    {
+      "feature": "fp3Interval",
+      "rank": 166,
+      "selected": false
+    },
+    {
+      "feature": "delta_lap_10",
+      "rank": 166,
+      "selected": false
+    },
+    {
+      "feature": "constructor_reliability_x_form",
+      "rank": 168,
+      "selected": false
+    },
+    {
+      "feature": "driver_starting_position_3_races",
+      "rank": 169,
+      "selected": false
+    },
+    {
+      "feature": "practice_position_vs_constructor_median_at_track",
+      "rank": 169,
+      "selected": false
+    },
+    {
+      "feature": "avg_sector2_sec",
+      "rank": 172,
+      "selected": false
+    },
+    {
+      "feature": "track_experience",
+      "rank": 172,
+      "selected": false
+    },
+    {
+      "feature": "tire_mgmt_x_turns",
+      "rank": 172,
+      "selected": false
+    },
+    {
+      "feature": "Delta_FP1",
+      "rank": 174,
+      "selected": false
+    },
+    {
+      "feature": "practice_improvement_vs_field",
+      "rank": 174,
+      "selected": false
+    },
+    {
+      "feature": "avg_sector3_sec",
+      "rank": 176,
+      "selected": false
+    },
+    {
+      "feature": "teammate_practice_delta",
+      "rank": 177,
+      "selected": false
+    },
+    {
+      "feature": "practice_to_qual_improvement_rate",
+      "rank": 178,
+      "selected": false
+    },
+    {
+      "feature": "practice_position_vs_field_recent_form",
+      "rank": 179,
+      "selected": false
+    },
+    {
+      "feature": "SpeedST_mph",
+      "rank": 180,
+      "selected": false
+    },
+    {
+      "feature": "driver_podium_rate_3y",
+      "rank": 181,
       "selected": false
     },
     {
       "feature": "driver_dnf_rate_5_races",
-      "rank": 253,
+      "rank": 182,
       "selected": false
     },
     {
-      "feature": "practice_improvement",
-      "rank": 254,
+      "feature": "qualifying_consistency_vs_constructor_historical",
+      "rank": 182,
       "selected": false
     },
     {
-      "feature": "driverTotalPolePositions",
-      "rank": 255,
+      "feature": "practice_position_improvement_1P_2P",
+      "rank": 184,
       "selected": false
     },
     {
-      "feature": "constructorTotalPolePositions",
-      "rank": 256,
+      "feature": "top_speed_rank",
+      "rank": 184,
+      "selected": false
+    },
+    {
+      "feature": "sector3_std",
+      "rank": 186,
+      "selected": false
+    },
+    {
+      "feature": "qualifying_position_vs_field_worst_at_track",
+      "rank": 187,
+      "selected": false
+    },
+    {
+      "feature": "finishing_position_std_constructor",
+      "rank": 188,
+      "selected": false
+    },
+    {
+      "feature": "constructor_avg_qual_pos_at_track",
+      "rank": 188,
+      "selected": false
+    },
+    {
+      "feature": "driverAge",
+      "rank": 190,
+      "selected": false
+    },
+    {
+      "feature": "qualifying_consistency_std",
+      "rank": 190,
+      "selected": false
+    },
+    {
+      "feature": "delta_lap_2_historical",
+      "rank": 192,
+      "selected": false
+    },
+    {
+      "feature": "SpeedI2_mph",
+      "rank": 193,
+      "selected": false
+    },
+    {
+      "feature": "driver_avg_tire_degradation",
+      "rank": 193,
+      "selected": false
+    },
+    {
+      "feature": "lap_time_std",
+      "rank": 195,
+      "selected": false
+    },
+    {
+      "feature": "practice_consistency_vs_teammate",
+      "rank": 195,
+      "selected": false
+    },
+    {
+      "feature": "lastFPPositionNumber",
+      "rank": 197,
+      "selected": false
+    },
+    {
+      "feature": "driver_high_humidity_practice_avg",
+      "rank": 198,
+      "selected": false
+    },
+    {
+      "feature": "practice_consistency_vs_constructor_historical",
+      "rank": 198,
+      "selected": false
+    },
+    {
+      "feature": "recent_form_x_qual",
+      "rank": 200,
+      "selected": false
+    },
+    {
+      "feature": "recent_positions_gained_3_races",
+      "rank": 201,
+      "selected": false
+    },
+    {
+      "feature": "recent_form_median_5_races",
+      "rank": 202,
+      "selected": false
+    },
+    {
+      "feature": "recent_dnf_rate_5_races",
+      "rank": 202,
+      "selected": false
+    },
+    {
+      "feature": "fp2Interval",
+      "rank": 204,
+      "selected": false
+    },
+    {
+      "feature": "track_fp1_fp3_improvement",
+      "rank": 204,
+      "selected": false
+    },
+    {
+      "feature": "fp3Gap",
+      "rank": 206,
+      "selected": false
+    },
+    {
+      "feature": "average_practice_x_driver_podiums",
+      "rank": 206,
+      "selected": false
+    },
+    {
+      "feature": "practice_improvement_vs_constructor_historical",
+      "rank": 208,
+      "selected": false
+    },
+    {
+      "feature": "practice_position_improvement_2P_3P",
+      "rank": 209,
+      "selected": false
+    },
+    {
+      "feature": "recent_vs_season",
+      "rank": 209,
+      "selected": false
+    },
+    {
+      "feature": "Delta_FP2",
+      "rank": 211,
+      "selected": false
+    },
+    {
+      "feature": "fp1Interval",
+      "rank": 212,
+      "selected": false
+    },
+    {
+      "feature": "theoretical_gap",
+      "rank": 213,
+      "selected": false
+    },
+    {
+      "feature": "practice_position_std",
+      "rank": 213,
+      "selected": false
+    },
+    {
+      "feature": "practice_position_improvement_1P_3P",
+      "rank": 215,
+      "selected": false
+    },
+    {
+      "feature": "best_sector1_sec",
+      "rank": 216,
+      "selected": false
+    },
+    {
+      "feature": "driver_track_practice_avg",
+      "rank": 217,
+      "selected": false
+    },
+    {
+      "feature": "constructorTotalRaceEntries",
+      "rank": 218,
+      "selected": false
+    },
+    {
+      "feature": "fp1Gap",
+      "rank": 219,
+      "selected": false
+    },
+    {
+      "feature": "delta_lap_5_historical",
+      "rank": 219,
+      "selected": false
+    },
+    {
+      "feature": "air_density_index",
+      "rank": 221,
+      "selected": false
+    },
+    {
+      "feature": "fp3PositionNumber",
+      "rank": 222,
+      "selected": false
+    },
+    {
+      "feature": "race_pace_consistency",
+      "rank": 223,
+      "selected": false
+    },
+    {
+      "feature": "recent_dnf_rate_3_races",
+      "rank": 224,
+      "selected": false
+    },
+    {
+      "feature": "constructor_podium_ratio",
+      "rank": 224,
+      "selected": false
+    },
+    {
+      "feature": "fp1PositionNumber",
+      "rank": 226,
+      "selected": false
+    },
+    {
+      "feature": "podium_potential",
+      "rank": 227,
       "selected": false
     },
     {
       "feature": "recent_form_median_3_races",
-      "rank": 257,
+      "rank": 228,
       "selected": false
     },
     {
       "feature": "constructorTotal1And2Finishes",
-      "rank": 258,
+      "rank": 229,
       "selected": false
     },
     {
-      "feature": "driverTotalRaceStarts",
-      "rank": 259,
+      "feature": "practice_improvement_vs_field_avg",
+      "rank": 230,
+      "selected": false
+    },
+    {
+      "feature": "street_experience",
+      "rank": 231,
+      "selected": false
+    },
+    {
+      "feature": "fp2PositionNumber",
+      "rank": 233,
+      "selected": false
+    },
+    {
+      "feature": "driverTotalPolePositions",
+      "rank": 233,
+      "selected": false
+    },
+    {
+      "feature": "valid_laps",
+      "rank": 233,
+      "selected": false
+    },
+    {
+      "feature": "DirtyAirAvg_FP2",
+      "rank": 235,
+      "selected": false
+    },
+    {
+      "feature": "constructorTotalPodiumRaces",
+      "rank": 236,
+      "selected": false
+    },
+    {
+      "feature": "recent_form_worst_3_races",
+      "rank": 237,
+      "selected": false
+    },
+    {
+      "feature": "driverBestStartingGridPosition",
+      "rank": 238,
+      "selected": false
+    },
+    {
+      "feature": "practice_position_vs_field_worst_at_track",
+      "rank": 238,
+      "selected": false
+    },
+    {
+      "feature": "practice_improvement",
+      "rank": 240,
+      "selected": false
+    },
+    {
+      "feature": "constructor_podium_rate_at_track",
+      "rank": 241,
+      "selected": false
+    },
+    {
+      "feature": "qualifying_position_vs_constructor_worst_at_track",
+      "rank": 241,
+      "selected": false
+    },
+    {
+      "feature": "total_qualifying_laps",
+      "rank": 243,
+      "selected": false
+    },
+    {
+      "feature": "turns",
+      "rank": 244,
+      "selected": false
+    },
+    {
+      "feature": "driverTotalPodiums",
+      "rank": 245,
+      "selected": false
+    },
+    {
+      "feature": "qualifying_position_vs_field_median_at_track",
+      "rank": 246,
+      "selected": false
+    },
+    {
+      "feature": "driverBestRaceResult",
+      "rank": 247,
+      "selected": false
+    },
+    {
+      "feature": "BestConstructorPracticeLap_sec",
+      "rank": 248,
+      "selected": false
+    },
+    {
+      "feature": "constructorTotalRaceWins",
+      "rank": 249,
+      "selected": false
+    },
+    {
+      "feature": "recent_form_best_3_races",
+      "rank": 250,
+      "selected": false
+    },
+    {
+      "feature": "constructor_win_rate_3y",
+      "rank": 251,
+      "selected": false
+    },
+    {
+      "feature": "deleted_laps",
+      "rank": 252,
+      "selected": false
+    },
+    {
+      "feature": "constructor_recent_mechanical_dnf_rate",
+      "rank": 253,
+      "selected": false
+    },
+    {
+      "feature": "delta_lap_2",
+      "rank": 254,
+      "selected": false
+    },
+    {
+      "feature": "driverTotalRaceLaps",
+      "rank": 255,
       "selected": false
     },
     {
       "feature": "constructor_recent_win_streak",
-      "rank": 260,
+      "rank": 256,
       "selected": false
     },
     {
-      "feature": "is_first_season_with_constructor",
-      "rank": 261,
+      "feature": "practice_position_vs_field_median_at_track",
+      "rank": 256,
       "selected": false
     },
     {
-      "feature": "constructorTotalRaceStarts",
-      "rank": 274,
+      "feature": "constructorTotalPolePositions",
+      "rank": 258,
       "selected": false
     },
     {
-      "feature": "fp1PositionNumber.1",
-      "rank": 274,
-      "selected": false
-    },
-    {
-      "feature": "fp2PositionNumber.1",
-      "rank": 274,
-      "selected": false
-    },
-    {
-      "feature": "fp3PositionNumber.1",
-      "rank": 274,
-      "selected": false
-    },
-    {
-      "feature": "bestQualifyingTime_sec",
-      "rank": 274,
-      "selected": false
-    },
-    {
-      "feature": "practice_time_improvement_1T_3T",
-      "rank": 274,
-      "selected": false
-    },
-    {
-      "feature": "qual_vs_track_avg.1",
-      "rank": 274,
-      "selected": false
-    },
-    {
-      "feature": "practice_consistency_std",
-      "rank": 274,
-      "selected": false
-    },
-    {
-      "feature": "historical_avgLapPace.1",
-      "rank": 274,
-      "selected": false
-    },
-    {
-      "feature": "top_speed_rank.1",
-      "rank": 274,
-      "selected": false
-    },
-    {
-      "feature": "qualifying_consistency_std.1",
-      "rank": 274,
-      "selected": false
-    },
-    {
-      "feature": "driver_age_squared",
-      "rank": 274,
-      "selected": false
-    },
-    {
-      "feature": "qualifying_position_percentile.1",
-      "rank": 274,
-      "selected": false
-    },
-    {
-      "feature": "practice_lap_time_improvement_rate",
-      "rank": 274,
-      "selected": false
-    },
-    {
-      "feature": "practice_to_qual_position_delta",
-      "rank": 274,
-      "selected": false
-    },
-    {
-      "feature": "qualifying_position_vs_teammate_historical",
-      "rank": 274,
-      "selected": false
-    },
-    {
-      "feature": "qualifying_position_vs_field_best_at_track",
-      "rank": 274,
+      "feature": "driverTotalChampionshipWins",
+      "rank": 259,
       "selected": false
     },
     {
       "feature": "front_row_conversion",
-      "rank": 274,
+      "rank": 260,
+      "selected": false
+    },
+    {
+      "feature": "driverTotalRaceStarts",
+      "rank": 262,
+      "selected": false
+    },
+    {
+      "feature": "is_first_season_with_constructor",
+      "rank": 262,
       "selected": false
     },
     {
       "feature": "recent_wins_3_races",
-      "rank": 274,
+      "rank": 262,
       "selected": false
     },
     {
       "feature": "rolling_3_race_win_percentage",
-      "rank": 274,
+      "rank": 264,
+      "selected": false
+    },
+    {
+      "feature": "constructorTotalRaceStarts",
+      "rank": 275,
+      "selected": false
+    },
+    {
+      "feature": "fp1PositionNumber.1",
+      "rank": 275,
+      "selected": false
+    },
+    {
+      "feature": "fp2PositionNumber.1",
+      "rank": 275,
+      "selected": false
+    },
+    {
+      "feature": "fp3PositionNumber.1",
+      "rank": 275,
+      "selected": false
+    },
+    {
+      "feature": "bestQualifyingTime_sec",
+      "rank": 275,
+      "selected": false
+    },
+    {
+      "feature": "practice_time_improvement_1T_3T",
+      "rank": 275,
+      "selected": false
+    },
+    {
+      "feature": "qual_vs_track_avg.1",
+      "rank": 275,
+      "selected": false
+    },
+    {
+      "feature": "practice_consistency_std",
+      "rank": 275,
+      "selected": false
+    },
+    {
+      "feature": "historical_avgLapPace.1",
+      "rank": 275,
+      "selected": false
+    },
+    {
+      "feature": "top_speed_rank.1",
+      "rank": 275,
+      "selected": false
+    },
+    {
+      "feature": "qualifying_consistency_std.1",
+      "rank": 275,
+      "selected": false
+    },
+    {
+      "feature": "driver_age_squared",
+      "rank": 275,
+      "selected": false
+    },
+    {
+      "feature": "qualifying_position_percentile.1",
+      "rank": 275,
+      "selected": false
+    },
+    {
+      "feature": "practice_lap_time_improvement_rate",
+      "rank": 275,
+      "selected": false
+    },
+    {
+      "feature": "practice_to_qual_position_delta",
+      "rank": 275,
+      "selected": false
+    },
+    {
+      "feature": "qualifying_position_vs_teammate_historical",
+      "rank": 275,
+      "selected": false
+    },
+    {
+      "feature": "qualifying_position_vs_field_best_at_track",
+      "rank": 275,
       "selected": false
     },
     {
       "feature": "q1_q2_q3_sector_consistency",
-      "rank": 274,
+      "rank": 275,
       "selected": false
     },
     {
       "feature": "practice_race_conversion",
-      "rank": 274,
+      "rank": 275,
       "selected": false
     },
     {
       "feature": "driver_first_lap_incident_rate",
-      "rank": 274,
+      "rank": 275,
       "selected": false
     },
     {
       "feature": "is_high_altitude",
-      "rank": 274,
+      "rank": 275,
       "selected": false
     }
   ]
