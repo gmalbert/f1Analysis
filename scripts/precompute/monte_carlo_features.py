@@ -16,7 +16,30 @@ os.environ['STREAMLIT_LOG_LEVEL'] = 'error'  # Minimize Streamlit logging
 
 import warnings
 import logging
-warnings.filterwarnings("ignore")
+
+warnings.filterwarnings("ignore", message=".*missing ScriptRunContext.*")
+warnings.filterwarnings("ignore", message=".*No runtime found, using MemoryCacheStorageManager.*")
+warnings.filterwarnings("ignore", message=".*Session state does not function.*")
+
+class StreamlitWarningFilter(logging.Filter):
+    def filter(self, record):
+        suppressed = [
+            "missing ScriptRunContext",
+            "No runtime found, using MemoryCacheStorageManager",
+            "Session state does not function",
+            "to view this Streamlit app on a browser",
+        ]
+        return not any(msg in record.getMessage() for msg in suppressed)
+
+for logger_name in [
+    'streamlit',
+    'streamlit.runtime.scriptrunner_utils.script_run_context',
+    'streamlit.runtime.caching.cache_data_api',
+    'streamlit.runtime.state.session_state_proxy',
+]:
+    logger = logging.getLogger(logger_name)
+    logger.addFilter(StreamlitWarningFilter())
+    logger.setLevel(logging.ERROR)
 
 import numpy as np
 import pandas as pd

@@ -621,6 +621,16 @@ def create_constructor_compatibility_features(data):
     except Exception as e:
         return data
 
+def _safe_numeric(value, default=10.0):
+    """Convert nullable or non-numeric values to a float, falling back to a default."""
+    if pd.isna(value):
+        return float(default)
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float(default)
+
+
 def simulate_rookie_predictions(data, all_active_driver_inputs, current_year, n_simulations=1000):
     """
     Adjust rookie driver predictions using Monte Carlo simulation based on historical rookie results,
@@ -665,13 +675,14 @@ def simulate_rookie_predictions(data, all_active_driver_inputs, current_year, n_
         sampled_positions = truncnorm.rvs(a, b, loc=mu, scale=sigma, size=n_simulations)
 
         # Adjust by constructor strength (lower rank = better team)
-        constructor_rank = rookie.get('constructorRank', 10)
+        constructor_rank = _safe_numeric(rookie.get('constructorRank', 10), default=10.0)
         constructor_adj = np.clip(1 + (constructor_rank - 10) * 0.2, 0.7, 1.3)
 
         # Adjust by practice position (if available)
         practice_adj = 1.0
-        if not pd.isna(rookie.get('averagePracticePosition', np.nan)):
-            practice_adj = np.clip(rookie['averagePracticePosition'] / 10, 0.7, 1.3)
+        practice_position = _safe_numeric(rookie.get('averagePracticePosition', np.nan), default=np.nan)
+        if not pd.isna(practice_position):
+            practice_adj = np.clip(practice_position / 10, 0.7, 1.3)
 
         # Simulate predicted position
         simulated_positions = sampled_positions * constructor_adj * practice_adj
@@ -736,12 +747,13 @@ def simulate_rookie_dnf(data, all_active_driver_inputs, current_year, n_simulati
         # Monte Carlo simulation
         sampled_dnfs = np.random.choice(hist_dnfs, size=n_simulations, replace=True)
         # Adjust by constructor reliability (lower rank = better team)
-        constructor_rank = rookie.get('constructorRank', 10)
+        constructor_rank = _safe_numeric(rookie.get('constructorRank', 10), default=10.0)
         constructor_adj = np.clip(1 - (constructor_rank - 10) * 0.03, 0.85, 1.05)
         # Adjust by practice reliability (if available)
         practice_adj = 1.0
-        if not pd.isna(rookie.get('averagePracticePosition', np.nan)):
-            practice_adj = np.clip(1 - (rookie['averagePracticePosition'] / 100), 0.85, 1.05)
+        practice_position = _safe_numeric(rookie.get('averagePracticePosition', np.nan), default=np.nan)
+        if not pd.isna(practice_position):
+            practice_adj = np.clip(1 - (practice_position / 100), 0.85, 1.05)
         # Simulate DNF probability
         simulated_dnf_proba = sampled_dnfs * constructor_adj * practice_adj
         predicted_dnf = np.mean(simulated_dnf_proba)
