@@ -141,7 +141,7 @@ def main():
     # run teammate-delta check (scripts/check_teammate_delta.py)
     try:
         import subprocess
-        res = subprocess.run(['python', 'scripts/check_teammate_delta.py'], check=False)
+        res = subprocess.run([sys.executable, 'scripts/check_teammate_delta.py'], check=False)
         if res.returncode != 0:
             print('WARNING: teammate-delta check failed')
             failures.append(('teammate_delta_check', {'returncode': res.returncode}))
@@ -152,7 +152,8 @@ def main():
         failures.append(('teammate_delta_check', 'run_error'))
 
     if failures:
-        print('\nSummary: FAILURES DETECTED')
+        summary_label = 'FAILURES DETECTED' if args.strict else 'WARNINGS DETECTED (non-strict mode)'
+        print(f'\nSummary: {summary_label}')
         for t, info in failures:
             print(f" - {t}: {info}")
         if args.strict:
