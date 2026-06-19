@@ -199,14 +199,14 @@ def stage_feature_selection(py: str) -> dict:
 def stage_position_analysis(py: str) -> dict:
     header("Stage 6 · Position Group Analysis")
     results = {}
-    results["position_group_analysis"] = run_step(
-        "position_group_analysis.py",
-        [py, "scripts/position_group_analysis.py"],
-        critical=False,
-    )
     results["position_group_analysis_precompute"] = run_step(
         "position_group_analysis_precompute.py",
         [py, "scripts/precompute/position_group_analysis_precompute.py"],
+        critical=False,
+    )
+    results["position_group_analysis"] = run_step(
+        "position_group_analysis.py",
+        [py, "scripts/position_group_analysis.py"],
         critical=False,
     )
     return results

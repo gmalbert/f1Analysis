@@ -294,7 +294,7 @@ from model_classes import SklearnCompatibleCatBoost  # noqa: F401 – re-exporte
 DATA_DIR = 'data_files/'
 
 # Cache version - increment this when preprocessor logic changes
-CACHE_VERSION = "v3.0"  # Bumped: Position Group now uses GroupKFold CV MAE + trains on all data
+CACHE_VERSION = "v3.3"  # Bumped: Drop NaN/inf rows instead of filling (matches precompute script)
 
 # Preprocessor used when training the main position model. Set during training so
 # prediction uses the exact same feature ordering and transforms (prevents
@@ -2276,23 +2276,21 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
         st.error(f"These columns are missing from your data and required by the preprocessor: {missing_cols}")
         st.stop()
 
-    if y.isnull().any():
-        y = y.fillna(y.mean())
-    # ROADMAP-3D: cap target at 20 (max classificatory finishers) so DNF-coded
-    # positions >20 don't pull the model toward extreme outliers.
-    y = y.clip(upper=20)
+    # Match precompute script: drop NaN/inf rows instead of filling them
+    # (filling with mean degrades MAE performance)
+    valid_y = y.replace([np.inf, -np.inf], np.nan).dropna().index
+    X = X.loc[valid_y]
+    y = y.loc[valid_y].astype(np.float64)
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
      # ADD THIS: Create sample weights favoring top positions
-    # sample_weights_train = np.where(y_train <= 3, 3.0,     # 3x weight for podium
-    #                       np.where(y_train <= 10, 2.0,     # 2x weight for points
-    #                               1.0))                     # Normal weight for others
-    # In your train_and_evaluate_model function, try lighter weights:
-    sample_weights_train = np.where(y_train == 1, 2.0,      # 2x weight for winners only
-                      np.where(y_train <= 3, 1.5,       # 1.5x weight for podium
-                      np.where(y_train <= 10, 1.2,      # 1.2x weight for points
-                              1.0)))
+    # Sample weights removed to match precompute script and minimize overall MAE
+    # (weighting top positions can increase test MAE while improving specific position accuracy)
+    # sample_weights_train = np.where(y_train == 1, 2.0,
+    #                   np.where(y_train <= 3, 1.5,
+    #                   np.where(y_train <= 10, 1.2,
+    #                           1.0)))
 
     # Preprocess manually and store the fitted preprocessor globally so prediction
     # uses identical feature ordering and transforms (important on Streamlit Cloud).
@@ -2310,32 +2308,22 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
     X_test_prep  = _prep_as_df(X_test_prep,  preprocessor)
 
     if model_type == "XGBoost":
-        # Use XGBRegressor for better compatibility with early stopping on Streamlit Cloud
-        
+        # Hyperparameters matched to precompute script for consistency (MAE ~0.65)
+        # No early stopping - trains all 500 estimators like the precompute script
         model = XGBRegressor(
-            n_estimators=200,
-            learning_rate=0.1,
-            max_depth=4,
+            n_estimators=500,
+            learning_rate=0.05,
+            max_depth=6,
+            subsample=0.8,
+            colsample_bytree=0.8,
             random_state=42,
-            n_jobs=-1,
-            early_stopping_rounds=early_stopping_rounds,
-            eval_metric='mae'
+            n_jobs=-1
         )
         
         model.fit(
             X_train_prep, y_train,
-            sample_weight=sample_weights_train,
-            eval_set=[(X_test_prep, y_test)],
             verbose=False
         )
-        
-        # Get evaluation results
-        evals_result = {}
-        if hasattr(model, 'evals_result_'):
-            evals_result = model.evals_result_
-        else:
-            # Fallback for older versions
-            evals_result = {'eval': {'mae': [getattr(model, 'best_score', 0)]}}
         
         # Predict
         y_pred = model.predict(X_test_prep)
@@ -2345,6 +2333,9 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
         r2 = r2_score(y_test, y_pred)
         mae = mean_absolute_error(y_test, y_pred)
         mean_err = np.mean(y_pred - y_test)
+        
+        # No eval_set used, so create simple evals_result for compatibility
+        evals_result = {'validation': {'mae': [mae]}}
         
         return model, mse, r2, mae, mean_err, evals_result, preprocessor
 
@@ -2365,7 +2356,6 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
         
         model.fit(
             X_train_prep, y_train,
-            sample_weight=sample_weights_train,
             eval_set=[(X_test_prep, y_test)],
             eval_metric='mae'
         )
@@ -2397,7 +2387,6 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
         
         model.fit(
             X_train_prep, y_train,
-            sample_weight=sample_weights_train,
             eval_set=[(X_test_prep, y_test)],
             verbose=False
         )
@@ -2438,7 +2427,7 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
             n_jobs=-1
         )
         
-        model.fit(X_train_prep, y_train, sample_weight=sample_weights_train)
+        model.fit(X_train_prep, y_train)
         y_pred = model.predict(X_test_prep)
         
         # Compute metrics
@@ -2566,9 +2555,9 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
             random_state=42, verbose=False,
         )
 
-        _xgb.fit(X_train_prep, y_train, sample_weight=sample_weights_train)
-        _lgbm.fit(X_train_prep, y_train, sample_weight=sample_weights_train)
-        _cat.fit(X_train_prep, y_train, sample_weight=sample_weights_train)
+        _xgb.fit(X_train_prep, y_train)
+        _lgbm.fit(X_train_prep, y_train)
+        _cat.fit(X_train_prep, y_train)
 
         model = TrackWeightedEnsemble(
             xgb_model=_xgb,
@@ -4839,6 +4828,8 @@ with tab5:
                 st.write(f"Boosting rounds used: {model.best_iteration_}")
             elif hasattr(model, 'get_best_iteration'):
                 st.write(f"Boosting rounds used: {model.get_best_iteration()}")
+            elif hasattr(model, 'n_estimators'):
+                st.write(f"Boosting rounds used: {model.n_estimators} (all estimators, no early stopping)")
             else:
                 st.write("Model type: Ensemble or other (no boosting rounds info)")
 
@@ -5123,6 +5114,8 @@ with tab5:
                     st.write(f"Boosting rounds used: {model.best_iteration + 1}")
                 elif hasattr(model, 'get_best_iteration'):  # CatBoost
                     st.write(f"Boosting rounds used: {model.get_best_iteration()}")
+                elif hasattr(model, 'n_estimators'):  # XGBoost without early stopping
+                    st.write(f"Boosting rounds used: {model.n_estimators} (all estimators, no early stopping)")
                 else:  # Ensemble or other
                     st.write("Boosting rounds information not available for this model type")
 
@@ -5998,13 +5991,120 @@ with tab5:
                     ts = datetime.datetime.fromtimestamp(report_path.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')
 
                 st.header('Position Group Analysis')
-                st.write(f'Generated: {ts}')
+                st.write(f'Based on current UI test set (same as Model Performance tab)')
+
+                # Calculate position-specific MAE from current UI test set (matches Model Performance tab)
+                X, y = get_features_and_target(data)
+                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+                
+                preprocessor = st.session_state.get('training_preprocessor')
+                if preprocessor is not None and model is not None:
+                    # Align X_test columns to preprocessor
+                    if hasattr(preprocessor, 'feature_names_in_'):
+                        expected = list(preprocessor.feature_names_in_)
+                        for c in expected:
+                            if c not in X_test.columns:
+                                X_test[c] = np.nan
+                        X_test = X_test[expected]
+                    
+                    X_test_prep = _prep_as_df(preprocessor.transform(X_test), preprocessor)
+                    
+                    # Predict
+                    if isinstance(model, xgb.Booster):
+                        y_pred = model.predict(xgb.DMatrix(X_test_prep))
+                    else:
+                        y_pred = model.predict(X_test_prep)
+                    
+                    # Calculate position-specific MAE
+                    # Create results dataframe - do NOT filter NaN to match Model Performance tab calculation
+                    results_analysis = pd.DataFrame({'Actual': y_test.values, 'Predicted': y_pred})
+                    
+                    st.subheader('📊 Position Group MAE Summary')
+                    
+                    # Use same overall MAE as Model Performance tab (from session state)
+                    overall_mae = st.session_state.get('global_mae')
+                    if overall_mae is not None:
+                        st.metric("Overall Model MAE", f"{overall_mae:.3f}")
+                    else:
+                        # Fallback: calculate if not in session state
+                        overall_mae = mean_absolute_error(y_test, y_pred)
+                        st.metric("Overall Model MAE", f"{overall_mae:.3f}")
+                    
+                    # Define position groups
+                    group_definitions = [
+                        ('🏆 Winners (P1)', results_analysis[results_analysis['Actual'] == 1]),
+                        ('🥇 Podium (P1-3)', results_analysis[results_analysis['Actual'] <= 3]),
+                        ('⭐ Top 5', results_analysis[results_analysis['Actual'] <= 5]),
+                        ('🎯 Points (P1-10)', results_analysis[results_analysis['Actual'] <= 10]),
+                        ('🏎️ Midfield (P11-15)', results_analysis[(results_analysis['Actual'] >= 11) & (results_analysis['Actual'] <= 15)]),
+                        ('🔚 Backmarkers (P16+)', results_analysis[results_analysis['Actual'] >= 16])
+                    ]
+                    
+                    group_data = []
+                    for label, group_df in group_definitions:
+                        if len(group_df) > 0:
+                            # Drop NaN/inf for position-specific MAE calculation
+                            group_clean = group_df.replace([np.inf, -np.inf], np.nan).dropna()
+                            if len(group_clean) > 0:
+                                mae_val = mean_absolute_error(group_clean['Actual'], group_clean['Predicted'])
+                                errors = group_clean['Actual'] - group_clean['Predicted']
+                                group_data.append({
+                                    'Position Group': label,
+                                    'MAE': f"{mae_val:.3f}",
+                                    'Count': len(group_clean),
+                                'Median Error': f"{errors.median():.3f}",
+                                'Std Error': f"{errors.std():.3f}"
+                            })
+                    
+                    if group_data:
+                        df_groups = pd.DataFrame(group_data)
+                        st.dataframe(df_groups, hide_index=True, use_container_width=True)
+                        st.caption("Lower MAE indicates better prediction accuracy for that position group. These values match the Model Performance tab.")
+                    
+                    # Show example predictions for winners to verify the MAE calculation
+                    with st.expander("🔍 Example Predictions for Winners (P1)"):
+                        winners_data = results_analysis[results_analysis['Actual'] == 1].copy()
+                        if len(winners_data) > 0:
+                            winners_data = winners_data.replace([np.inf, -np.inf], np.nan).dropna()
+                            winners_data['Error'] = winners_data['Actual'] - winners_data['Predicted']
+                            winners_data['AbsError'] = winners_data['Error'].abs()
+                            
+                            st.write(f"**Total P1 finishers in test set:** {len(winners_data)}")
+                            st.write(f"**MAE for P1 predictions:** {mean_absolute_error(winners_data['Actual'], winners_data['Predicted']):.3f}")
+                            st.write(f"**Mean predicted position for P1 finishers:** {winners_data['Predicted'].mean():.3f}")
+                            st.write(f"**Median predicted position for P1 finishers:** {winners_data['Predicted'].median():.3f}")
+                            
+                            # Show distribution stats
+                            st.write("**Distribution of predictions for actual P1 finishers:**")
+                            pred_under_1_5 = (winners_data['Predicted'] <= 1.5).sum()
+                            pred_under_2 = (winners_data['Predicted'] <= 2.0).sum()
+                            pred_under_3 = (winners_data['Predicted'] <= 3.0).sum()
+                            pred_over_3 = (winners_data['Predicted'] > 3.0).sum()
+                            
+                            st.write(f"- Predicted ≤1.5: {pred_under_1_5} ({pred_under_1_5/len(winners_data)*100:.1f}%)")
+                            st.write(f"- Predicted ≤2.0: {pred_under_2} ({pred_under_2/len(winners_data)*100:.1f}%)")
+                            st.write(f"- Predicted ≤3.0: {pred_under_3} ({pred_under_3/len(winners_data)*100:.1f}%)")
+                            st.write(f"- Predicted >3.0: {pred_over_3} ({pred_over_3/len(winners_data)*100:.1f}%)")
+                            
+                            # Show some examples
+                            st.write("**Sample predictions (first 10):**")
+                            sample_display = winners_data[['Actual', 'Predicted', 'Error', 'AbsError']].head(10).round(3)
+                            st.dataframe(sample_display, hide_index=True, use_container_width=True)
+                    
+                    st.divider()
+                else:
+                    st.info("Train a model to see position-specific analysis.")
+                    st.divider()
 
                 # MAE by season: only show when multiple seasons are present
                 mae_csv = OUT_DIR / 'mae_by_season.csv'
                 if mae_csv.exists():
                     try:
                         mae_df = pd.read_csv(mae_csv)
+                        # Filter out invalid seasons (e.g., 0 from missing data)
+                        if 'season' in mae_df.columns:
+                            mae_df = mae_df[mae_df['season'] >= raceNoEarlierThan].copy()
+                        
                         if 'season' in mae_df.columns and mae_df['season'].nunique() > 1:
                             mae_img = OUT_DIR / 'mae_trends.png'
                             if mae_img.exists():

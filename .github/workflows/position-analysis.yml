@@ -59,6 +59,7 @@ jobs:
             scripts/output/confid_int_*.csv
             scripts/output/heatmap_*.png
             data_files/precomputed/position_mae_detailed.json
+            data_files/precomputed/position_evaluation_residuals.csv
       
       - name: Commit analysis results
         run: |
