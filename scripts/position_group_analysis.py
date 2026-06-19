@@ -50,9 +50,26 @@ def load_predictions(paths):
     return pd.concat(frames, ignore_index=True, sort=False)
 
 
+def load_analysis_data():
+    """Prefer historical holdout residuals, falling back to race exports."""
+    evaluation_path = DATA_DIR / 'precomputed' / 'position_evaluation_residuals.csv'
+    if evaluation_path.exists():
+        evaluation = pd.read_csv(evaluation_path)
+        required = {'season', 'actual', 'predicted'}
+        if required.issubset(evaluation.columns) and not evaluation.empty:
+            print('Using historical model evaluation data from', evaluation_path)
+            return evaluation
+
+    files = find_prediction_files()
+    if not files:
+        return pd.DataFrame()
+    print('Historical evaluation data not found; using per-race prediction exports')
+    return load_predictions(files)
+
+
 def guess_columns(df):
     preds = ['PredictedFinalPosition','predictedPosition','predicted_position','prediction','pred','y_pred','predicted']
-    actuals = ['Rank','resultsFinalPositionNumber','final_position','actual_position','resultPosition','position','fin_pos']
+    actuals = ['actual','Rank','resultsFinalPositionNumber','final_position','actual_position','resultPosition','position','fin_pos']
     driver_cols = ['resultsDriverName','DriverId','driverId','driver_id','driver','Driver','driverName','ResultsDriver']
     constructor_cols = ['constructorName','constructorId','ConstructorId','constructor_id','constructor','Constructor']
     circuit_cols = ['grandPrixName','circuitName','shortCircuitName','grandPrix','circuit']
@@ -81,8 +98,10 @@ def extract_year_from_filename(name):
 
 def compute_mae_by_season(df):
     if 'season' in df.columns:
-        df['season'] = df['season'].astype(int)
+        df = df.copy()
+        df['season'] = pd.to_numeric(df['season'], errors='coerce')
     else:
+        df = df.copy()
         df['_year'] = df['_source_file'].map(lambda x: extract_year_from_filename(x) or 0)
         df['season'] = df['_year']
 
@@ -91,15 +110,33 @@ def compute_mae_by_season(df):
     mae = df.groupby('season')['residual'].agg(lambda x: np.mean(np.abs(x)) if len(x) > 0 else np.nan)
     mae = mae.reset_index()
     mae.columns = ['season', 'mae']
+    
+    # Filter out invalid seasons (e.g., 0 from missing data) - F1 started in 1950
+    mae = mae[mae['season'] > 1900].copy()
+    mae['season'] = mae['season'].astype(int)
+    
     return mae.sort_values('season')
 
 
 def make_mae_plot(mae_df, outpath):
+    # Filter out invalid seasons (e.g., 0 from missing data)
+    mae_df = mae_df[mae_df['season'] > 1900].copy()  # F1 started in 1950, so anything before 1900 is invalid
+    
+    if len(mae_df) == 0:
+        print("Warning: No valid season data to plot")
+        return
+    
     plt.figure(figsize=(8,4))
     sns.lineplot(data=mae_df, x='season', y='mae', marker='o')
     plt.title('MAE by Season')
     plt.ylabel('MAE (positions)')
     plt.xlabel('Season')
+    
+    # One tick per available season avoids repeated labels such as several
+    # "2025" ticks when only two adjacent years are present.
+    seasons = sorted(mae_df['season'].astype(int).unique())
+    plt.xticks(seasons, [str(season) for season in seasons], rotation=45 if len(seasons) > 8 else 0)
+    
     plt.grid(True, alpha=0.25)
     plt.tight_layout()
     plt.savefig(outpath)
@@ -149,14 +186,9 @@ def heatmap_for_pivot(pivot, outpath, title):
 
 
 def main():
-    files = find_prediction_files()
-    if not files:
-        print('No prediction files found in', DATA_DIR)
-        return
-
-    df = load_predictions(files)
+    df = load_analysis_data()
     if df.empty:
-        print('No data loaded from prediction files')
+        print('No historical evaluation data or prediction files found')
         return
 
     cols = guess_columns(df)

@@ -9,6 +9,7 @@ import pickle
 import sys
 from datetime import datetime
 from pathlib import Path
+import numpy as np
 
 os.environ['STREAMLIT_SERVER_HEADLESS'] = 'true'
 os.environ['STREAMLIT_LOG_LEVEL'] = 'error'  # Minimize Streamlit logging
@@ -115,56 +116,39 @@ def main():
     
     data = pd.read_csv('data_files/f1ForAnalysis.csv', sep='\t', low_memory=False)
     
-    # Load model
-    model_path = Path('data_files/models/position_model.pkl')
-    if not model_path.exists():
-        model_path = Path('data_files/models/xgboost/position_model.pkl')
+    # Get features and target first (needed for both loading and training)
+    from raceAnalysis import get_features_and_target, _build_advanced_preprocessor
     
-    if not model_path.exists():
-        print("[ERROR] No model found! Run model training first.")
-        sys.exit(1)
-    
-    # Load model with encoding fallback for cross-platform compatibility
-    try:
-        with open(model_path, 'rb') as f:
-            model_data = pickle.load(f)
-    except UnicodeDecodeError:
-        # Fallback for Windows-generated pickles loaded on Linux (or vice versa)
-        with open(model_path, 'rb') as f:
-            model_data = pickle.load(f, encoding='latin1')
-
-    model = model_data['model']
-    preprocessor = model_data['preprocessor']
-
-    # Get features and target
-    from raceAnalysis import get_features_and_target, get_preprocessor_position
-
     # Suppress Streamlit headless mode warnings AFTER streamlit is imported
     logging.getLogger('streamlit.runtime.scriptrunner_utils.script_run_context').setLevel(logging.ERROR)
     logging.getLogger('streamlit.runtime.caching.cache_data_api').setLevel(logging.ERROR)
     logging.getLogger('streamlit').setLevel(logging.ERROR)
     logging.getLogger('streamlit.runtime.state.session_state_proxy').setLevel(logging.ERROR)
-
+    
+    # Get features and target
     X, y = get_features_and_target(data)
-
-    # Detect preprocessor/feature-set mismatch (stale pickle) and retrain inline.
-    # This happens when the CSV schema has changed since the pickle was built.
-    _expected = set(getattr(preprocessor, 'feature_names_in_', []))
-    _actual   = set(X.columns)
-    _missing  = _expected - _actual
-    _extra    = _actual  - _expected
-    if _missing or _extra:
-        print(f"[WARN] Stale preprocessor detected "
-              f"({len(_missing)} missing cols, {len(_extra)} extra cols). "
-              f"Retraining inline on current data …")
+    
+    # Clean data: Drop all-NaN columns, then drop rows where label is NaN/inf
+    X = X.dropna(axis=1, how='all')
+    valid_idx = y.replace([np.inf, -np.inf], np.nan).dropna().index
+    X = X.loc[valid_idx]
+    y = y.loc[valid_idx].astype(np.float64)
+    
+    # Do train/test split ONCE for entire script (same as UI)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    # Load or train model
+    model_path = Path('data_files/models/position_model.pkl')
+    if not model_path.exists():
+        model_path = Path('data_files/models/xgboost/position_model.pkl')
+    
+    if not model_path.exists():
+        print("[INFO] No model found. Training fresh model...")
         import xgboost as xgb
-        # Drop all-NaN columns, then drop rows where label is NaN/inf
-        X_clean = X.dropna(axis=1, how='all')
-        valid_idx = y.replace([np.inf, -np.inf], np.nan).dropna().index
-        X_clean = X_clean.loc[valid_idx]
-        y_clean = y.loc[valid_idx].astype(np.float64)
-        preprocessor = get_preprocessor_position(X_clean)
-        X_prep_full = preprocessor.fit_transform(X_clean, y_clean)
+        
+        preprocessor = _build_advanced_preprocessor(X_train)
+        X_train_prep = preprocessor.fit_transform(X_train, y_train)
+        
         model = xgb.XGBRegressor(
             n_estimators=500,
             learning_rate=0.05,
@@ -174,29 +158,98 @@ def main():
             random_state=42,
             n_jobs=-1,
         )
-        model.fit(X_prep_full, y_clean)
-        # Persist freshly-trained artefact so next run loads it immediately
+        model.fit(X_train_prep, y_train)
+        
+        # Compute metrics on test set
+        X_test_prep_fresh = preprocessor.transform(X_test)
+        y_pred_fresh = model.predict(X_test_prep_fresh)
+        from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+        mae_fresh = mean_absolute_error(y_test, y_pred_fresh)
+        mse_fresh = mean_squared_error(y_test, y_pred_fresh)
+        r2_fresh = r2_score(y_test, y_pred_fresh)
+        mean_err_fresh = np.mean(y_test - y_pred_fresh)  # Mean error (not absolute)
+        
+        # Save the model for future runs
+        model_path.parent.mkdir(parents=True, exist_ok=True)
+        model_data = {
+            'model': model,
+            'preprocessor': preprocessor,
+            'mae': mae_fresh,
+            'mse': mse_fresh,
+            'r2': r2_fresh,
+            'mean_err': mean_err_fresh,
+            'evals_result': {},  # No early stopping in precompute, so empty dict
+            'timestamp': datetime.now().isoformat(),
+            'cache_version': 'v3.3'  # Match raceAnalysis.py CACHE_VERSION
+        }
+        with open(model_path, 'wb') as f:
+            pickle.dump(model_data, f)
+        print(f"[INFO] Fresh model trained and saved to {model_path} (MAE={mae_fresh:.3f}, MSE={mse_fresh:.3f}, R²={r2_fresh:.3f})")
+    else:
+        # Load model with encoding fallback for cross-platform compatibility
         try:
-            fresh = dict(model_data)
-            fresh['model'] = model
-            fresh['preprocessor'] = preprocessor
-            with open(model_path, 'wb') as _f:
-                pickle.dump(fresh, _f)
-            print(f"[INFO] Retrained model saved to {model_path}")
-        except Exception as _e:
-            print(f"[WARN] Could not persist retrained model: {_e}")
-        # Re-derive X and y with the cleaned rows/columns
-        X = X_clean
-        y = y_clean
+            with open(model_path, 'rb') as f:
+                model_data = pickle.load(f)
+        except UnicodeDecodeError:
+            # Fallback for Windows-generated pickles loaded on Linux (or vice versa)
+            with open(model_path, 'rb') as f:
+                model_data = pickle.load(f, encoding='latin1')
 
-    # Train/test split (same as in app)
-    # Drop rows where the label is NaN/inf (defensive, handles both retrain and normal paths)
-    valid_y = y.replace([np.inf, -np.inf], np.nan).dropna().index
-    X = X.loc[valid_y]
-    y = y.loc[valid_y].astype(np.float64)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        model = model_data['model']
+        preprocessor = model_data['preprocessor']
+        
+        # Detect preprocessor/feature-set mismatch (stale pickle) and retrain inline
+        _expected = set(getattr(preprocessor, 'feature_names_in_', []))
+        _actual   = set(X_train.columns)
+        _missing  = _expected - _actual
+        _extra    = _actual  - _expected
+        if _missing or _extra:
+            print(f"[WARN] Stale preprocessor detected "
+                  f"({len(_missing)} missing cols, {len(_extra)} extra cols). "
+                  f"Retraining inline on current data …")
+            import xgboost as xgb
+            
+            preprocessor = _build_advanced_preprocessor(X_train)
+            X_train_prep = preprocessor.fit_transform(X_train, y_train)
+            
+            model = xgb.XGBRegressor(
+                n_estimators=500,
+                learning_rate=0.05,
+                max_depth=6,
+                subsample=0.8,
+                colsample_bytree=0.8,
+                random_state=42,
+                n_jobs=-1,
+            )
+            model.fit(X_train_prep, y_train)
+            
+            # Compute metrics on test set
+            X_test_prep_retrain = preprocessor.transform(X_test)
+            y_pred_retrain = model.predict(X_test_prep_retrain)
+            from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+            mae_retrain = mean_absolute_error(y_test, y_pred_retrain)
+            mse_retrain = mean_squared_error(y_test, y_pred_retrain)
+            r2_retrain = r2_score(y_test, y_pred_retrain)
+            mean_err_retrain = np.mean(y_test - y_pred_retrain)
+            
+            # Save retrained model
+            try:
+                fresh = dict(model_data)
+                fresh['model'] = model
+                fresh['preprocessor'] = preprocessor
+                fresh['mae'] = mae_retrain
+                fresh['mse'] = mse_retrain
+                fresh['r2'] = r2_retrain
+                fresh['mean_err'] = mean_err_retrain
+                fresh['evals_result'] = {}
+                fresh['cache_version'] = 'v3.3'  # Match raceAnalysis.py CACHE_VERSION
+                with open(model_path, 'wb') as _f:
+                    pickle.dump(fresh, _f)
+                print(f"[INFO] Retrained model saved to {model_path} (MAE={mae_retrain:.3f}, MSE={mse_retrain:.3f}, R²={r2_retrain:.3f})")
+            except Exception as _e:
+                print(f"[WARN] Could not persist retrained model: {_e}")
 
-    # Transform and predict
+    # Transform and predict (X_train and X_test already created above)
     print("Generating predictions...")
     X_test_prep = preprocessor.transform(X_test)
     
@@ -205,6 +258,36 @@ def main():
     else:
         import xgboost as xgb
         y_pred = model.predict(xgb.DMatrix(X_test_prep))
+
+    # Persist the row-level holdout predictions for the reporting script.  The
+    # per-race predictions_*.csv files only cover races for which an export was
+    # made (often just the current season); this evaluation set carries the
+    # historical season attached to every model residual.
+    evaluation = data.loc[y_test.index].copy()
+    season_col = next(
+        (column for column in ('resultsYear', 'grandPrixYear', 'season', 'year')
+         if column in evaluation.columns),
+        None,
+    )
+    evaluation_out = pd.DataFrame({
+        'season': pd.to_numeric(evaluation[season_col], errors='coerce') if season_col else np.nan,
+        'actual': y_test.to_numpy(),
+        'predicted': np.asarray(y_pred),
+    }, index=y_test.index)
+    for column in (
+        'resultsDriverName', 'DriverId', 'driverId',
+        'constructorName', 'constructorId',
+        'grandPrixName', 'circuitName', 'shortCircuitName',
+    ):
+        if column in evaluation.columns:
+            evaluation_out[column] = evaluation[column]
+    evaluation_out['residual'] = evaluation_out['predicted'] - evaluation_out['actual']
+    evaluation_out = evaluation_out.dropna(subset=['season', 'actual', 'predicted'])
+    evaluation_out['season'] = evaluation_out['season'].astype(int)
+    residuals_path = Path('data_files/precomputed/position_evaluation_residuals.csv')
+    residuals_path.parent.mkdir(parents=True, exist_ok=True)
+    evaluation_out.to_csv(residuals_path, index=False)
+    print(f"Wrote {residuals_path} ({evaluation_out['season'].nunique()} seasons)")
     
     print("Computing position-specific MAE...")
     position_mae = compute_position_specific_mae(y_test.values, y_pred)
@@ -220,7 +303,8 @@ def main():
         'metadata': {
             'generated_at': datetime.now().isoformat(),
             'model_mae': float(model_data.get('mae', 0)),
-            'test_set_size': len(y_test)
+            'test_set_size': len(y_test),
+            'seasons': sorted(evaluation_out['season'].unique().astype(int).tolist()),
         },
         'position_groups': position_mae,
         'by_driver': driver_mae,

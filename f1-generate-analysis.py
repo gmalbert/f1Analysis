@@ -3250,11 +3250,19 @@ else:
         elif datetime.datetime.strptime(params['start_date'], '%Y-%m-%d') >= datetime.datetime.now() and datetime.datetime.strptime(params['start_date'], '%Y-%m-%d') <= (datetime.datetime.now() + timedelta(days=16)):
             url = "https://api.open-meteo.com/v1/forecast"
         else:
-            print("Break!")
-            print(datetime.datetime.strptime(params['start_date'], '%Y-%m-%d'))
-            break
+            print(f"Skipping weather fetch for {short_date} - beyond forecast window (>16 days in future)")
+            continue
 
-        responses = openmeteo.weather_api(url, params=params)
+        try:
+            responses = openmeteo.weather_api(url, params=params)
+        except Exception as e:
+            # Handle dates outside API's allowed range
+            if "out of allowed range" in str(e):
+                print(f"Skipping {short_date} - outside API's allowed date range")
+                continue
+            else:
+                # Re-raise other errors
+                raise
         response = responses[0]
 
         # Process hourly data. The order of variables needs to be the same as requested.
