@@ -1,18 +1,17 @@
 name: Send F1 Predictions Email (scheduled)
 
 on:
-  # Schedule to run at 8:00 PM America/New_York on Fridays.
-  # GitHub Actions cron uses UTC, so we schedule equivalent UTC times for
-  # typical DST/standard-time ranges:
-  # - EDT (UTC-4): Mar-Nov => 20:00 EDT on Fri == 00:00 UTC on Sat
-  # - EST (UTC-5): Dec-Feb => 20:00 EST on Fri == 01:00 UTC on Sat
-  schedule:
-    - cron: '0 0 * 3-11 sat'    # Mar-Nov (EDT)
-    - cron: '0 1 * 12,1,2 sat'  # Dec-Feb (EST)
+  # Send only after the weekly precompute workflow completes successfully.
+  workflow_run:
+    workflows: ["Weekly Full Precomputation"]
+    types: [completed]
   workflow_dispatch: {}
 
 jobs:
   send_predictions:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
 
     steps:
