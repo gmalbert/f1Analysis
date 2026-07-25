@@ -73,40 +73,19 @@ def main():
         X_shap = X_prep
     
     print("Computing SHAP values...")
-    # XGBoost 2.x may still store base_score as '[9.xxE0]' in the booster JSON
-    # config even when base_score was explicitly set.  Patch the config to
-    # normalise it before handing off to SHAP's TreeExplainer.
-    import json as _json
-    import re as _re
-    try:
-        booster = model.get_booster()
-        config = _json.loads(booster.save_config())
-        lmp = config.get('learner', {}).get('learner_model_param', {})
-        raw_bs = lmp.get('base_score', '')
-        if isinstance(raw_bs, str):
-            # Strip any surrounding brackets/whitespace and parse the numeric token
-            cleaned = raw_bs.strip()
-            m = _re.search(r'[\[\(]?([0-9eE.+\-]+)[\]\)]?', cleaned)
-            if m:
-                try:
-                    lmp['base_score'] = str(float(m.group(1)))
-                    booster.load_config(_json.dumps(config))
-                except ValueError:
-                    pass  # leave as-is; TreeExplainer may still work
-        explainer = shap.TreeExplainer(booster)
-        shap_values = explainer.shap_values(X_shap)
-    except Exception as e1:
-        print(f"  TreeExplainer (patched booster) failed: {e1}")
-        try:
-            # Second fallback: pass raw XGBRegressor with check_additivity off
-            explainer = shap.TreeExplainer(model, feature_perturbation='tree_path_dependent')
-            shap_values = explainer.shap_values(X_shap, check_additivity=False)
-        except Exception as e2:
-            print(f"  TreeExplainer fallback also failed: {e2}")
-            # Final fallback: model-agnostic permutation explainer (slow but always works)
-            background = X_shap[:min(50, len(X_shap))]
-            explainer = shap.Explainer(model.predict, shap.maskers.Independent(background, max_samples=50))
-            shap_values = explainer(X_shap[:min(200, len(X_shap))]).values
+    # XGBoost 2.x/3.x stores base_score as '[9.xxE0]' or '[5E-1]' in the
+    # booster's internal UBJSON representation (save_raw), which SHAP's
+    # XGBTreeModelLoader reads directly.  Neither save_config patching nor
+    # load_config help because the UBJSON binary format is independent.
+    #
+    # Use a model-agnostic permutation explainer, which calls model.predict
+    # and never touches the booster's serialised config.
+    background = X_shap[:min(50, len(X_shap))]
+    explainer = shap.Explainer(
+        model.predict,
+        shap.maskers.Independent(background, max_samples=50),
+    )
+    shap_values = explainer(X_shap[:min(200, len(X_shap))]).values
     
     # Get feature names
     feature_names = preprocessor.get_feature_names_out()
