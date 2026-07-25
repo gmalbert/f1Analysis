@@ -142,8 +142,8 @@ def main():
     if not model_path.exists():
         model_path = Path('data_files/models/xgboost/position_model.pkl')
     
-    if not model_path.exists():
-        print("[INFO] No model found. Training fresh model...")
+    def _train_fresh_model():
+        """Train a fresh position model and return (model, preprocessor, model_data dict)."""
         import xgboost as xgb
         
         preprocessor = _build_advanced_preprocessor(X_train)
@@ -160,16 +160,14 @@ def main():
         )
         model.fit(X_train_prep, y_train)
         
-        # Compute metrics on test set
         X_test_prep_fresh = preprocessor.transform(X_test)
         y_pred_fresh = model.predict(X_test_prep_fresh)
         from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
         mae_fresh = mean_absolute_error(y_test, y_pred_fresh)
         mse_fresh = mean_squared_error(y_test, y_pred_fresh)
         r2_fresh = r2_score(y_test, y_pred_fresh)
-        mean_err_fresh = np.mean(y_test - y_pred_fresh)  # Mean error (not absolute)
+        mean_err_fresh = np.mean(y_test - y_pred_fresh)
         
-        # Save the model for future runs
         model_path.parent.mkdir(parents=True, exist_ok=True)
         model_data = {
             'model': model,
@@ -178,76 +176,48 @@ def main():
             'mse': mse_fresh,
             'r2': r2_fresh,
             'mean_err': mean_err_fresh,
-            'evals_result': {},  # No early stopping in precompute, so empty dict
+            'evals_result': {},
             'timestamp': datetime.now().isoformat(),
-            'cache_version': 'v3.3'  # Match raceAnalysis.py CACHE_VERSION
+            'cache_version': 'v3.3'
         }
-        with open(model_path, 'wb') as f:
-            pickle.dump(model_data, f)
-        print(f"[INFO] Fresh model trained and saved to {model_path} (MAE={mae_fresh:.3f}, MSE={mse_fresh:.3f}, R²={r2_fresh:.3f})")
+        try:
+            with open(model_path, 'wb') as f:
+                pickle.dump(model_data, f)
+            print(f"[INFO] Fresh model trained and saved to {model_path} (MAE={mae_fresh:.3f}, MSE={mse_fresh:.3f}, R²={r2_fresh:.3f})")
+        except Exception as _e:
+            print(f"[WARN] Could not persist fresh model: {_e}")
+        return model, preprocessor, model_data
+
+    model_loaded = False
+    if not model_path.exists():
+        model, preprocessor, model_data = _train_fresh_model()
+        model_loaded = True
     else:
-        # Load model with encoding fallback for cross-platform compatibility
         try:
             with open(model_path, 'rb') as f:
                 model_data = pickle.load(f)
         except UnicodeDecodeError:
-            # Fallback for Windows-generated pickles loaded on Linux (or vice versa)
             with open(model_path, 'rb') as f:
                 model_data = pickle.load(f, encoding='latin1')
+        except Exception as _e:
+            print(f"[WARN] Failed to load model pickle: {_e}. Training fresh model...")
+            model, preprocessor, model_data = _train_fresh_model()
+            model_loaded = True
 
-        model = model_data['model']
-        preprocessor = model_data['preprocessor']
-        
-        # Detect preprocessor/feature-set mismatch (stale pickle) and retrain inline
-        _expected = set(getattr(preprocessor, 'feature_names_in_', []))
-        _actual   = set(X_train.columns)
-        _missing  = _expected - _actual
-        _extra    = _actual  - _expected
-        if _missing or _extra:
-            print(f"[WARN] Stale preprocessor detected "
-                  f"({len(_missing)} missing cols, {len(_extra)} extra cols). "
-                  f"Retraining inline on current data …")
-            import xgboost as xgb
+        if not model_loaded:
+            model = model_data['model']
+            preprocessor = model_data['preprocessor']
             
-            preprocessor = _build_advanced_preprocessor(X_train)
-            X_train_prep = preprocessor.fit_transform(X_train, y_train)
-            
-            model = xgb.XGBRegressor(
-                n_estimators=500,
-                learning_rate=0.05,
-                max_depth=6,
-                subsample=0.8,
-                colsample_bytree=0.8,
-                random_state=42,
-                n_jobs=-1,
-            )
-            model.fit(X_train_prep, y_train)
-            
-            # Compute metrics on test set
-            X_test_prep_retrain = preprocessor.transform(X_test)
-            y_pred_retrain = model.predict(X_test_prep_retrain)
-            from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-            mae_retrain = mean_absolute_error(y_test, y_pred_retrain)
-            mse_retrain = mean_squared_error(y_test, y_pred_retrain)
-            r2_retrain = r2_score(y_test, y_pred_retrain)
-            mean_err_retrain = np.mean(y_test - y_pred_retrain)
-            
-            # Save retrained model
-            try:
-                fresh = dict(model_data)
-                fresh['model'] = model
-                fresh['preprocessor'] = preprocessor
-                fresh['mae'] = mae_retrain
-                fresh['mse'] = mse_retrain
-                fresh['r2'] = r2_retrain
-                fresh['mean_err'] = mean_err_retrain
-                fresh['evals_result'] = {}
-                fresh['cache_version'] = 'v3.3'  # Match raceAnalysis.py CACHE_VERSION
-                with open(model_path, 'wb') as _f:
-                    pickle.dump(fresh, _f)
-                print(f"[INFO] Retrained model saved to {model_path} (MAE={mae_retrain:.3f}, MSE={mse_retrain:.3f}, R²={r2_retrain:.3f})")
-            except Exception as _e:
-                print(f"[WARN] Could not persist retrained model: {_e}")
+            # Detect preprocessor/feature-set mismatch (stale pickle) and retrain inline
+            _expected = set(getattr(preprocessor, 'feature_names_in_', []))
+            _actual   = set(X_train.columns)
+            _missing  = _expected - _actual
+            _extra    = _actual  - _expected
+            if _missing or _extra:
+                print(f"[WARN] Stale preprocessor detected "
+                      f"({len(_missing)} missing cols, {len(_extra)} extra cols). "
+                      f"Retraining inline on current data …")
+                model, preprocessor, model_data = _train_fresh_model()
 
     # Transform and predict (X_train and X_test already created above)
     print("Generating predictions...")
