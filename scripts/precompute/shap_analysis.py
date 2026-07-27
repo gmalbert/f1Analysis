@@ -85,7 +85,8 @@ def main():
         model.predict,
         shap.maskers.Independent(background, max_samples=50),
     )
-    shap_values = explainer(X_shap[:min(200, len(X_shap))]).values
+    max_evals = 2 * X_shap.shape[1] + 1
+    shap_values = explainer(X_shap[:min(200, len(X_shap))], max_evals=max_evals).values
     
     # Get feature names
     feature_names = preprocessor.get_feature_names_out()
