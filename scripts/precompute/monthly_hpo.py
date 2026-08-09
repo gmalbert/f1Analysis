@@ -58,6 +58,7 @@ def load_data():
     # Lazy import so raceAnalysis Streamlit side-effects run only here
     from raceAnalysis import (  # noqa: PLC0415
         load_data as ra_load_data,
+        get_data_fingerprint,
         get_features_and_target,
         _build_advanced_preprocessor,
         CACHE_VERSION,
@@ -81,7 +82,7 @@ def load_data():
     data, _ = ra_load_data(
         10000,
         CACHE_VERSION,
-        csv_path.stat().st_mtime,
+        get_data_fingerprint()['data_sha256'],
     )
 
     X, y = get_features_and_target(data)

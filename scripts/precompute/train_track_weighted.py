@@ -23,6 +23,7 @@ warnings.filterwarnings("ignore")
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 import json_helpers
+from model_artifacts import build_data_fingerprint, stamp_artifact
 
 DATA_DIR = 'data_files/'
 
@@ -50,10 +51,11 @@ def train_track_weighted_models():
     logging.getLogger('streamlit.runtime.state.session_state_proxy').setLevel(logging.ERROR)
 
     print(f"\nLoading data (CACHE_VERSION={CACHE_VERSION})...")
+    analysis_fingerprint = build_data_fingerprint(Path(DATA_DIR) / 'f1ForAnalysis.csv')
     data, _ = load_data(
         10000,
         CACHE_VERSION,
-        os.path.getmtime(os.path.join(DATA_DIR, 'f1ForAnalysis.csv'))
+        analysis_fingerprint['data_sha256']
     )
 
     # Apply column renaming logic (mirrors other train_*.py scripts)
@@ -88,7 +90,7 @@ def train_track_weighted_models():
         print("[ERROR] Training returned None — LightGBM may not be available in this environment.")
         return None
 
-    position_artifact = {
+    position_artifact = stamp_artifact({
         'model': model,
         'preprocessor': preprocessor,
         'mse': float(mse) if mse is not None else None,
@@ -99,13 +101,13 @@ def train_track_weighted_models():
         'cache_version': CACHE_VERSION,
         'model_type': 'Track-Weighted Ensemble',
         'trained_at': datetime.now().isoformat(),
-    }
+    }, analysis_fingerprint)
 
     with open(output_dir / 'position_model.pkl', 'wb') as f:
         pickle.dump(position_artifact, f)
     print(f"[OK] Position model saved (MAE: {mae:.4f})")
 
-    metadata = {
+    metadata = stamp_artifact({
         'cache_version': CACHE_VERSION,
         'trained_at': datetime.now().isoformat(),
         'model_type': 'Track-Weighted Ensemble',
@@ -117,7 +119,7 @@ def train_track_weighted_models():
                 'r2': float(r2) if r2 is not None else None,
             }
         }
-    }
+    }, analysis_fingerprint)
 
     json_helpers.safe_dump(metadata, output_dir / 'metadata.json', indent=2)
 

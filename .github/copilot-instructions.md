@@ -45,9 +45,9 @@ Short, actionable guidance for AI coding agents working on the Formula 1 Analysi
   - Weather fetching logic updated to pull data for all missing races, not just the most recent one.
   - Optional post-run smoke checks: pass `--check-smoke` to run `scripts/check_generation_smoke.py` (see helper scripts). Forward `--smoke-strict`, `--smoke-qual-threshold`, and `--smoke-tolerance-days` to control behavior.
   - Recent fixes batch high-cardinality bin creation to reduce DataFrame fragmentation and silence PerformanceWarnings.
-  - All data loading functions use `@st.cache_data` decorator for performance.
-  - Uses CACHE_VERSION="v2.3" for version-based cache invalidation to prevent stale cached models on Streamlit Cloud.
-  - Four prediction models: XGBoost, LightGBM, CatBoost, and Ensemble stacking (XGBoost + LightGBM + CatBoost).
+  - Data loading functions use bounded `@st.cache_data` caches; ML artifacts use bounded `@st.cache_resource` so sessions share one model instance.
+  - Uses `CACHE_VERSION="v3.3"` plus SHA-256 dataset fingerprints for model compatibility. Never use Git checkout mtimes to decide whether a model is current.
+  - Six prediction models: XGBoost, LightGBM, CatBoost, Ensemble, Position Group, and Track-Weighted Ensemble.
   - Hyperparameter optimization with Bayesian optimization (Optuna) and grid search.
   - Season-stratified cross-validation to prevent data leakage.
   - Model-specific feature importance extraction and prediction handling.
@@ -144,8 +144,9 @@ Additional preferred practice-best filenames:
 - **Leakage prevention**: All features use `.shift()` or filtering to avoid using future data. Safety car features (line 2224+) are specifically designed to be available before race starts.
  - **Leakage prevention**: All features use `.shift()` or filtering to avoid using future data. Safety car features (line 2224+) are specifically designed to be available before race starts. A temporal leakage audit script (`scripts/audit_temporal_leakage.py`) was added and runs as part of smoke checks to flag suspicious columns; `points_leader_gap` was updated to compute the per-race snapshot leader gap (grouped by `grandPrixYear` + `round`/`raceId`/`short_date`) to avoid season-wide leakage.
 - **Incremental data pulls**: Scripts like `f1-raceMessages.py` track previously processed sessions and only pull new data to avoid API rate limits and reduce runtime.
-- **Streamlit caching**: All heavy data operations use `@st.cache_data` to avoid recomputation on every widget interaction.
-- **Cache invalidation**: Uses CACHE_VERSION system for all cached functions to prevent feature shape mismatches on Streamlit Cloud deployments.
+- **Streamlit caching**: Use bounded `@st.cache_data` for serializable data and bounded `@st.cache_resource` for shared, thread-safe ML artifacts. Do not put models in `st.cache_data` or mutate globally shared models during prediction.
+- **Cache invalidation**: Use `CACHE_VERSION` for code/schema compatibility and the SHA-256 helpers in `model_artifacts.py` for dataset compatibility. Filesystem mtimes may be used only to invalidate fingerprint/model-loading caches, never to determine artifact freshness.
+- **No request-time training**: Production page loads must use GitHub-workflow-generated artifacts. If an artifact is temporarily stale, serve the latest precomputed model with a freshness warning; do not train in Streamlit Community Cloud.
 
 ## External integrations
 - **F1DB**: Source JSON files from github.com/f1db/f1db (all `f1db-*.json` files in `data_files/`)
@@ -373,16 +374,16 @@ Practical tips / QC checks
   ```
 - **Cache invalidation pattern**:
   ```python
-  # Always include CACHE_VERSION in cached functions to prevent stale models
-  @st.cache_data
-  def load_and_preprocess_data(CACHE_VERSION):
+  # Include CACHE_VERSION and the stable data digest in bounded data caches.
+  @st.cache_data(max_entries=1)
+  def load_and_preprocess_data(CACHE_VERSION, data_sha256):
       # Data loading and preprocessing logic
       return processed_data
-  
-  @st.cache_data  
-  def train_model(X, y, model_type, CACHE_VERSION):
-      # Model training logic
-      return trained_model
+
+  # Workflow-generated ML objects are shared resources, not copied data.
+  @st.cache_resource(max_entries=8)
+  def load_model(model_type, CACHE_VERSION, data_sha256, artifact_signature):
+      return load_precomputed_artifact(model_type)
   ```
 - **Model-specific prediction handling**:
   ```python

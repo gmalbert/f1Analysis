@@ -169,7 +169,8 @@ def main():
         mean_err_fresh = np.mean(y_test - y_pred_fresh)
         
         model_path.parent.mkdir(parents=True, exist_ok=True)
-        model_data = {
+        from model_artifacts import build_data_fingerprint, stamp_artifact
+        model_data = stamp_artifact({
             'model': model,
             'preprocessor': preprocessor,
             'mae': mae_fresh,
@@ -179,7 +180,7 @@ def main():
             'evals_result': {},
             'timestamp': datetime.now().isoformat(),
             'cache_version': 'v3.3'
-        }
+        }, build_data_fingerprint(Path('data_files/f1ForAnalysis.csv')))
         try:
             with open(model_path, 'wb') as f:
                 pickle.dump(model_data, f)

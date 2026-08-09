@@ -83,8 +83,27 @@ jobs:
           name: permutation-results
           path: data_files/precomputed/permutation_results.json
 
+  historical-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+      - name: Run Historical Validation
+        run: python scripts/precompute/historical_validation.py --output data_files/precomputed/historical_validation.json
+        env:
+          STREAMLIT_SERVER_HEADLESS: '1'
+      - uses: actions/upload-artifact@v6
+        with:
+          name: historical-validation-results
+          path: data_files/precomputed/historical_validation.json
+
   commit-all:
-    needs: [rfe-selection, boruta-selection, shap-analysis, permutation-importance]
+    needs: [rfe-selection, boruta-selection, shap-analysis, permutation-importance, historical-validation]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
