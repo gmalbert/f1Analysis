@@ -11,6 +11,13 @@ import streamlit as st
 import numpy as np
 from pathlib import Path
 import warnings
+from model_artifacts import artifact_matches_fingerprint, build_data_fingerprint
+
+# Pickled custom estimators refer to this module as ``raceAnalysis``. Streamlit
+# executes the entrypoint as ``__main__``; aliasing it prevents pickle from
+# importing and executing the complete app a second time during model loading.
+if __name__ == "__main__":
+    sys.modules.setdefault("raceAnalysis", sys.modules[__name__])
 # suppress pandas FutureWarning about silent downcasting on fillna; prefer
 # explicit infer_objects where possible, otherwise silence the noisy warning
 warnings.filterwarnings(
@@ -42,7 +49,6 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
-from sklearn.inspection import permutation_importance
 from sklearn.impute import SimpleImputer
 from sklearn.experimental import enable_iterative_imputer  # noqa: F401 – must import before IterativeImputer
 from sklearn.impute import IterativeImputer
@@ -222,8 +228,8 @@ class PositionGroupEnsemble(BaseEstimator, RegressorMixin):
 class TrackWeightedEnsemble(BaseEstimator, RegressorMixin):
     """Three sub-models (XGB / LGBM / CAT) blended with track-type-specific weights.
 
-    Call `set_circuit_type(circuit_type)` before `predict()` to apply the
-    appropriate weights from CIRCUIT_ENSEMBLE_WEIGHTS.
+    Use `predict_for_circuit(X, circuit_type)` for shared cached instances so
+    predictions do not mutate cross-session state.
     """
 
     def __init__(self, xgb_model=None, lgbm_model=None, cat_model=None,
@@ -239,8 +245,12 @@ class TrackWeightedEnsemble(BaseEstimator, RegressorMixin):
         return self
 
     def predict(self, X):
+        return self.predict_for_circuit(X, self.circuit_type)
+
+    def predict_for_circuit(self, X, circuit_type: str):
+        """Predict with per-call weights without mutating the shared model."""
         weights = CIRCUIT_ENSEMBLE_WEIGHTS.get(
-            self.circuit_type, CIRCUIT_ENSEMBLE_WEIGHTS['mixed']
+            circuit_type, CIRCUIT_ENSEMBLE_WEIGHTS['mixed']
         )
         pred_xgb  = self.xgb_model.predict(X)
         pred_lgbm = self.lgbm_model.predict(X)
@@ -296,6 +306,20 @@ DATA_DIR = 'data_files/'
 # Cache version - increment this when preprocessor logic changes
 CACHE_VERSION = "v3.3"  # Bumped: Drop NaN/inf rows instead of filling (matches precompute script)
 
+
+@st.cache_data(max_entries=4, show_spinner=False)
+def _cached_data_fingerprint(file_path, file_size, file_mtime_ns):
+    """Hash a local data file, using stat fields only to invalidate this cache."""
+    del file_size, file_mtime_ns
+    return build_data_fingerprint(file_path)
+
+
+def get_data_fingerprint(file_name='f1ForAnalysis.csv'):
+    """Return a stable content fingerprint without using mtime as validity."""
+    file_path = Path(DATA_DIR) / file_name
+    stat = file_path.stat()
+    return _cached_data_fingerprint(str(file_path), stat.st_size, stat.st_mtime_ns)
+
 # Preprocessor used when training the main position model. Set during training so
 # prediction uses the exact same feature ordering and transforms (prevents
 # feature-shape mismatches between training and prediction environments).
@@ -316,7 +340,7 @@ def is_preprocessor_valid(preprocessor, X):
         if hasattr(preprocessor, 'feature_names_in_'):
             missing = set(preprocessor.feature_names_in_) - set(X.columns)
             if missing:
-                print(f"INFO: Preprocessor is stale — missing columns: {missing}. Will retrain.")
+                print(f"INFO: Preprocessor is incompatible — missing columns: {missing}. Will reload artifact.")
                 return False
             return True
         # Fallback: inspect each transformer's column list
@@ -325,7 +349,7 @@ def is_preprocessor_valid(preprocessor, X):
                 if isinstance(cols, list):
                     missing = set(cols) - set(X.columns)
                     if missing:
-                        print(f"INFO: Preprocessor is stale — missing columns: {missing}. Will retrain.")
+                        print(f"INFO: Preprocessor is incompatible — missing columns: {missing}. Will reload artifact.")
                         return False
         return True
     except Exception:
@@ -1042,14 +1066,14 @@ raceNoEarlierThan = current_year - 10
 
 # start = time.time()
 
-@st.cache_data
+@st.cache_data(max_entries=1)
 def load_correlation(nrows, CACHE_VERSION):
     correlation_matrix = pd.read_csv(path.join(DATA_DIR, 'f1PositionCorrelation.csv'), sep='\t', nrows=nrows)
     return correlation_matrix
 
 correlation_matrix = load_correlation(10000, CACHE_VERSION)
 
-@st.cache_data
+@st.cache_data(max_entries=1)
 def load_data_schedule(nrows, CACHE_VERSION):
     raceSchedule = pd.read_json(path.join(DATA_DIR, 'f1db-races.json'))
     grandPrix = pd.read_json(path.join(DATA_DIR, 'f1db-grands-prix.json'))
@@ -1059,14 +1083,14 @@ def load_data_schedule(nrows, CACHE_VERSION):
 
 raceSchedule = load_data_schedule(10000, CACHE_VERSION)
 
-@st.cache_data
+@st.cache_data(max_entries=1)
 def load_drivers(nrows, CACHE_VERSION):
     drivers = pd.read_json(path.join(DATA_DIR, 'f1db-drivers.json'))
     return drivers
 
 drivers = load_drivers(10000, CACHE_VERSION)
 
-@st.cache_data
+@st.cache_data(max_entries=1)
 def load_qualifying(nrows):
     # Include cache version to invalidate when preprocessor changes
     _ = CACHE_VERSION
@@ -1075,7 +1099,7 @@ def load_qualifying(nrows):
 
 qualifying = load_qualifying(10000)
 
-@st.cache_data
+@st.cache_data(max_entries=1)
 def load_practices(nrows, CACHE_VERSION):
     practices = pd.read_csv(path.join(DATA_DIR, 'all_practice_laps.csv'), sep='\t', dtype={'PitOutTime': str}) 
     practices = practices[practices['Driver'] != 'ERROR']  # Remove rows where Driver is 'ERROR'
@@ -1083,7 +1107,7 @@ def load_practices(nrows, CACHE_VERSION):
 
 practices = load_practices(10000, CACHE_VERSION)
 
-@st.cache_data
+@st.cache_data(max_entries=1)
 def load_data_race_messages(nrows, CACHE_VERSION):
     race_messages = pd.read_csv(path.join(DATA_DIR, 'race_control_messages_grouped_with_dnf.csv'),sep='\t')
     return race_messages
@@ -1145,7 +1169,7 @@ schedule_columns_to_display = {
     'sprintQualifyingTime': None,   
 }
 
-@st.cache_data
+@st.cache_data(max_entries=1)
 def load_weather_data(nrows, CACHE_VERSION):
     weather = pd.read_csv(path.join(DATA_DIR, 'f1WeatherData_Grouped.csv'), sep='\t', nrows=nrows, usecols=['grandPrixId', 'short_date', 'average_temp', 'total_precipitation', 'average_humidity', 'average_wind_speed', 'id_races'])
     grandPrix = pd.read_json(path.join(DATA_DIR, 'f1db-grands-prix.json'))
@@ -1155,7 +1179,7 @@ def load_weather_data(nrows, CACHE_VERSION):
 weatherData = load_weather_data(10000, CACHE_VERSION)
 
 # Precomputed analysis loaders
-@st.cache_data
+@st.cache_data(max_entries=1)
 def load_precomputed_monte_carlo(CACHE_VERSION):
     """Load precomputed Monte Carlo feature selection results."""
     try:
@@ -1167,7 +1191,7 @@ def load_precomputed_monte_carlo(CACHE_VERSION):
         st.warning(f"Could not load precomputed Monte Carlo results: {e}")
     return None
 
-@st.cache_data
+@st.cache_data(max_entries=1)
 def load_precomputed_shap(CACHE_VERSION):
     """Load precomputed SHAP analysis results."""
     try:
@@ -1179,7 +1203,7 @@ def load_precomputed_shap(CACHE_VERSION):
         st.warning(f"Could not load precomputed SHAP results: {e}")
     return None
 
-@st.cache_data
+@st.cache_data(max_entries=1)
 def load_precomputed_rfe(CACHE_VERSION):
     """Load precomputed RFE results."""
     try:
@@ -1191,7 +1215,7 @@ def load_precomputed_rfe(CACHE_VERSION):
         st.warning(f"Could not load precomputed RFE results: {e}")
     return None
 
-@st.cache_data
+@st.cache_data(max_entries=1)
 def load_precomputed_boruta(CACHE_VERSION):
     """Load precomputed Boruta results."""
     try:
@@ -1203,7 +1227,7 @@ def load_precomputed_boruta(CACHE_VERSION):
         st.warning(f"Could not load precomputed Boruta results: {e}")
     return None
 
-@st.cache_data
+@st.cache_data(max_entries=1)
 def load_precomputed_permutation(CACHE_VERSION):
     """Load precomputed permutation importance results."""
     try:
@@ -1215,7 +1239,19 @@ def load_precomputed_permutation(CACHE_VERSION):
         st.warning(f"Could not load precomputed permutation results: {e}")
     return None
 
-@st.cache_data
+@st.cache_data(max_entries=1)
+def load_precomputed_historical_validation(CACHE_VERSION):
+    """Load workflow-generated cross-validation and holdout results."""
+    try:
+        precomputed_path = path.join(DATA_DIR, 'precomputed', 'historical_validation.json')
+        if path.exists(precomputed_path):
+            with open(precomputed_path, 'r') as f:
+                return json.load(f)
+    except Exception as e:
+        st.warning(f"Could not load precomputed historical validation: {e}")
+    return None
+
+@st.cache_data(max_entries=2)
 def load_precomputed_hyperparams(method='bayesian', CACHE_VERSION=None):
     """Load precomputed hyperparameter optimization results.
     
@@ -1233,7 +1269,7 @@ def load_precomputed_hyperparams(method='bayesian', CACHE_VERSION=None):
         st.warning(f"Could not load precomputed hyperparameters ({method}): {e}")
     return None
 
-@st.cache_data
+@st.cache_data(max_entries=1)
 def load_precomputed_position_mae(CACHE_VERSION):
     """Load precomputed position group MAE analysis."""
     try:
@@ -1245,7 +1281,7 @@ def load_precomputed_position_mae(CACHE_VERSION):
         st.warning(f"Could not load precomputed position MAE: {e}")
     return None
 
-@st.cache_data
+@st.cache_data(max_entries=8)
 def load_precomputed_predictions(race_name=None, year=None, CACHE_VERSION=None):
     """Load precomputed next race predictions.
     
@@ -1280,7 +1316,7 @@ def load_precomputed_predictions(race_name=None, year=None, CACHE_VERSION=None):
     return None
 
 
-@st.cache_data
+@st.cache_data(max_entries=2)
 def load_tire_strategy_data(CACHE_VERSION, csv_mtime=None):
     """Load tire strategy data from FastF1 backfill (2018–present).
 
@@ -1544,16 +1580,13 @@ season_summary_columns_to_display = {
     'total_podiums': st.column_config.NumberColumn("Total Podiums", format="%d")
 }
 
-@st.cache_data
-def load_data(nrows, CACHE_VERSION, csv_mtime=None):
-    # Note: csv_mtime is included as a cache key so updating the CSV file
-    # will automatically invalidate the cache. Callers should pass
-    # os.path.getmtime(DATA_DIR/"f1ForAnalysis.csv"). If None, compute it.
-    if csv_mtime is None:
-        try:
-            csv_mtime = os.path.getmtime(path.join(DATA_DIR, 'f1ForAnalysis.csv'))
-        except Exception:
-            csv_mtime = 0
+@st.cache_data(max_entries=1)
+def load_data(nrows, CACHE_VERSION, data_sha256=None):
+    # data_sha256 is a stable cache key. Unlike a checkout mtime, it changes
+    # only when file content changes, so hot updates do not accumulate large
+    # cached DataFrames for identical data.
+    if data_sha256 is None:
+        data_sha256 = get_data_fingerprint()['data_sha256']
     # Read the header only to get all column names
     all_columns = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t', nrows=0).columns.tolist()
     selected_columns = ['grandPrixYear', 'grandPrixName', 'resultsDriverName', 'resultsPodium', 'resultsTop5', 'resultsTop10', 'constructorName',  'resultsStartingGridPositionNumber', 'resultsFinalPositionNumber', 
@@ -1657,7 +1690,7 @@ def load_data(nrows, CACHE_VERSION, csv_mtime=None):
 data, pitStops = load_data(
     10000,
     CACHE_VERSION,
-    os.path.getmtime(path.join(DATA_DIR, 'f1ForAnalysis.csv'))
+    get_data_fingerprint()['data_sha256']
 )
 
 # Debug: Check what columns were actually loaded
@@ -2217,7 +2250,7 @@ def get_preprocessor_safety_car():
     )
     return preprocessor
 
-@st.cache_data
+@st.cache_data(max_entries=1)
 def load_safetycars(nrows, CACHE_VERSION):
     safety_cars = pd.read_csv(path.join(DATA_DIR, 'f1SafetyCarFeatures.csv'), sep='\t', nrows=nrows)
     safety_cars = safety_cars.drop_duplicates()
@@ -2576,7 +2609,6 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
         return model, mse, r2, mae, mean_err, evals_result, preprocessor
 
 
-@st.cache_data
 def train_and_evaluate_dnf_model(data, CACHE_VERSION):
     from sklearn.linear_model import LogisticRegression
     X, y = get_features_and_target_dnf(data)
@@ -2589,7 +2621,6 @@ def train_and_evaluate_dnf_model(data, CACHE_VERSION):
     return model
 
 
-@st.cache_data
 def train_and_evaluate_safetycar_model(data, CACHE_VERSION):
     from sklearn.linear_model import LogisticRegression
     X, y = get_features_and_target_safety_car(data)
@@ -2605,101 +2636,143 @@ def train_and_evaluate_safetycar_model(data, CACHE_VERSION):
 
     return model
 
-def load_pretrained_model(model_name='position_model', CACHE_VERSION='v2.3', model_type=None):
-    """Load a pre-trained model from disk if available.
+_MODEL_TYPE_TO_DIR = {
+    'XGBoost': 'xgboost',
+    'LightGBM': 'lightgbm',
+    'CatBoost': 'catboost',
+    'Ensemble (XGBoost + LightGBM + CatBoost)': 'ensemble',
+    'Position Group': 'position_group',
+    'Track-Weighted Ensemble': 'track_weighted',
+}
 
-    When *model_type* is provided the matching sub-directory is searched first
-    (and exclusively for position models) so the right model is always returned.
-    """
+_MODEL_TYPE_ARTIFACT_LABELS = {
+    'XGBoost': {'XGBoost'},
+    'LightGBM': {'LightGBM'},
+    'CatBoost': {'CatBoost'},
+    'Ensemble (XGBoost + LightGBM + CatBoost)': {
+        'Ensemble', 'Ensemble (XGBoost + LightGBM + CatBoost)'
+    },
+    'Position Group': {'Position Group'},
+    'Track-Weighted Ensemble': {'Track-Weighted Ensemble'},
+}
+
+
+class PretrainedModelUnavailableError(RuntimeError):
+    """Raised when a compatible workflow-generated artifact is unavailable."""
+
+
+def _model_search_paths(model_name, model_type=None):
+    if model_type and model_type in _MODEL_TYPE_TO_DIR:
+        subdir = _MODEL_TYPE_TO_DIR[model_type]
+        return [
+            Path(DATA_DIR) / 'models' / subdir / f'{model_name}.pkl',
+            Path(DATA_DIR) / 'models' / f'{model_name}.pkl',
+        ]
+    return [
+        Path(DATA_DIR) / 'models' / 'xgboost' / f'{model_name}.pkl',
+        Path(DATA_DIR) / 'models' / 'lightgbm' / f'{model_name}.pkl',
+        Path(DATA_DIR) / 'models' / 'catboost' / f'{model_name}.pkl',
+        Path(DATA_DIR) / 'models' / 'ensemble' / f'{model_name}.pkl',
+        Path(DATA_DIR) / 'models' / f'{model_name}.pkl',
+    ]
+
+
+@st.cache_resource(max_entries=8, show_spinner=False)
+def _load_pretrained_model_resource(
+    model_name,
+    cache_version,
+    model_type,
+    data_fingerprint,
+    artifact_signature,
+):
+    """Load one shared model object; signatures invalidate changed files."""
+    del artifact_signature
     import pickle
-    from pathlib import Path
 
-    # Map UI drop-down label → directory name
-    _type_to_dir = {
-        'XGBoost': 'xgboost',
-        'LightGBM': 'lightgbm',
-        'CatBoost': 'catboost',
-        'Ensemble (XGBoost + LightGBM + CatBoost)': 'ensemble',
-        'Position Group': 'position_group',       # ROADMAP-3A
-        'Track-Weighted Ensemble': 'track_weighted',  # ROADMAP-3E
-    }
+    stale_fallback = None
+    for model_file in _model_search_paths(model_name, model_type):
+        if not model_file.exists():
+            continue
+        try:
+            with model_file.open('rb') as source:
+                artifact = pickle.load(source)
+        except Exception as exc:
+            print(f"WARNING: Could not load pre-trained {model_name} from {model_file}: {exc}")
+            continue
 
-    csv_path = Path(path.join(DATA_DIR, 'f1ForAnalysis.csv'))
-    csv_mtime = csv_path.stat().st_mtime if csv_path.exists() else 0
-
-    # Build search list.  If model_type is given, look ONLY in its directory
-    # (plus the legacy root as a fallback).  If not given, preserve the old
-    # behaviour of trying all four directories in order.
-    if model_type and model_type in _type_to_dir:
-        subdir = _type_to_dir[model_type]
-        search_paths = [
-            Path(f'data_files/models/{subdir}') / f'{model_name}.pkl',
-            Path('data_files/models') / f'{model_name}.pkl',  # legacy fallback
-        ]
-    else:
-        search_paths = [
-            Path('data_files/models/xgboost') / f'{model_name}.pkl',
-            Path('data_files/models/lightgbm') / f'{model_name}.pkl',
-            Path('data_files/models/catboost') / f'{model_name}.pkl',
-            Path('data_files/models/ensemble') / f'{model_name}.pkl',
-            Path('data_files/models') / f'{model_name}.pkl',  # Legacy location
-        ]
-    
-    for model_file in search_paths:
-        if model_file.exists():
-            # Reject pkl that is older than the CSV (stale model)
-            if model_file.stat().st_mtime < csv_mtime:
-                print(f"INFO: Skipping stale pre-trained model at {model_file} (older than CSV). Will retrain.")
+        if not isinstance(artifact, dict) or artifact.get('cache_version') != cache_version:
+            print(f"INFO: Ignoring incompatible pre-trained model at {model_file}.")
+            continue
+        if model_name == 'position_model' and model_type:
+            allowed_labels = _MODEL_TYPE_ARTIFACT_LABELS.get(model_type, {model_type})
+            if artifact.get('model_type') not in allowed_labels:
+                print(f"INFO: Ignoring wrong model type at {model_file}.")
                 continue
-            try:
-                with open(model_file, 'rb') as f:
-                    artifact = pickle.load(f)
-                
-                # Check cache version compatibility
-                if artifact.get('cache_version') == CACHE_VERSION:
-                    return artifact
-                else:
-                    st.info(f"Pre-trained {model_name} found at {model_file} but cache version mismatch. Will retrain.")
-            except Exception as e:
-                st.warning(f"Error loading pre-trained {model_name} from {model_file}: {e}. Will retrain.")
-    
-    return None
 
-@st.cache_data(max_entries=2)
-def _train_model_cached(early_stopping_rounds, CACHE_VERSION, csv_mtime=None, model_type='XGBoost'):
-    """Live-train the position prediction model (cached).
+        artifact = dict(artifact)
+        artifact['_artifact_path'] = str(model_file)
+        fingerprint_match = artifact_matches_fingerprint(artifact, data_fingerprint)
+        if fingerprint_match is True:
+            artifact['_artifact_status'] = 'current'
+            return artifact
+        if fingerprint_match is None:
+            # Backward compatibility until the next model-training workflow
+            # stamps the already committed artifacts with content hashes.
+            artifact['_artifact_status'] = 'legacy'
+            return artifact
 
-    csv_mtime is included so the cache key changes when f1ForAnalysis.csv updates.
-    model_type is part of the cache key so switching models retrain correctly.
-    max_entries=2 caps simultaneous cached models to avoid OOM on Streamlit Cloud.
+        artifact['_artifact_status'] = 'stale'
+        stale_fallback = stale_fallback or artifact
 
-    Returns (model, mse, r2, mae, mean_err, evals_result, preprocessor)."""
-    model, mse, r2, mae, mean_err, evals_result, preprocessor = train_and_evaluate_model(
-        data, early_stopping_rounds=early_stopping_rounds, model_type=model_type)
-    return model, mse, r2, mae, mean_err, evals_result, preprocessor
+    return stale_fallback
 
 
-def get_trained_model(early_stopping_rounds, CACHE_VERSION, csv_mtime=None, force_retrain=False, model_type='XGBoost'):
-    """Load or train the position prediction model.
+def load_pretrained_model(model_name='position_model', CACHE_VERSION='v2.3', model_type=None):
+    """Load a workflow-generated artifact shared across all user sessions."""
+    data_file = 'f1SafetyCarFeatures.csv' if model_name == 'safetycar_model' else 'f1ForAnalysis.csv'
+    fingerprint = get_data_fingerprint(data_file)
+    search_paths = _model_search_paths(model_name, model_type)
+    artifact_signature = tuple(
+        (str(model_file), model_file.stat().st_size, model_file.stat().st_mtime_ns)
+        for model_file in search_paths
+        if model_file.exists()
+    )
+    return _load_pretrained_model_resource(
+        model_name,
+        CACHE_VERSION,
+        model_type,
+        fingerprint,
+        artifact_signature,
+    )
 
-    The pkl load is intentionally performed OUTSIDE @st.cache_data so that
-    pickle.load (which may re-import raceAnalysis to resolve class references)
-    never runs inside a cached context — which would raise CachedWidgetWarning
-    due to top-level st.* calls in this module.
 
-    Returns (model, mse, r2, mae, mean_err, evals_result, preprocessor)."""
-    # Try to load pre-trained model first (outside cache to avoid CachedWidgetWarning)
-    if not force_retrain:
-        pretrained = load_pretrained_model('position_model', CACHE_VERSION, model_type=model_type)
-        if pretrained is not None:
-            return (pretrained['model'], pretrained['mse'], pretrained['r2'],
-                    pretrained['mae'], pretrained['mean_err'], pretrained['evals_result'],
-                    pretrained.get('preprocessor'))
+def _warn_if_stale_artifact(artifact, label):
+    if artifact.get('_artifact_status') == 'stale':
+        st.warning(
+            f"{label} is using the most recent precomputed model while GitHub Actions "
+            "rebuilds it for the latest dataset. Runtime training is disabled to keep "
+            "the app responsive."
+        )
 
-    # Fall back to live training (cached); clear cache if forced
+
+def get_trained_model(early_stopping_rounds, CACHE_VERSION, data_sha256=None, force_retrain=False, model_type='XGBoost'):
+    """Return a shared pre-trained position model; never train in a page request."""
+    del early_stopping_rounds, data_sha256
     if force_retrain:
-        _train_model_cached.clear()
-    return _train_model_cached(early_stopping_rounds, CACHE_VERSION, csv_mtime, model_type)
+        raise PretrainedModelUnavailableError(
+            "Runtime retraining is disabled. Run the Train All Models GitHub workflow instead."
+        )
+
+    pretrained = load_pretrained_model('position_model', CACHE_VERSION, model_type=model_type)
+    if pretrained is None:
+        raise PretrainedModelUnavailableError(
+            f"No compatible pre-trained {model_type} position model is available. "
+            "Run the Train All Models GitHub workflow."
+        )
+    _warn_if_stale_artifact(pretrained, model_type)
+    return (pretrained['model'], pretrained['mse'], pretrained['r2'],
+            pretrained['mae'], pretrained['mean_err'], pretrained['evals_result'],
+            pretrained.get('preprocessor'))
 
 # Lazy-load models (only when accessed, not at module load)
 def get_main_model():
@@ -2707,12 +2780,12 @@ def get_main_model():
         model, mse, r2, mae, mean_err, evals_result, preprocessor = get_trained_model(
             20,
             CACHE_VERSION,
-            os.path.getmtime(path.join(DATA_DIR, 'f1ForAnalysis.csv'))
+            get_data_fingerprint()['data_sha256']
         )
         st.session_state['main_model'] = model
         st.session_state['global_mae'] = mae
-        # Use a dedicated key so Tab5 re-trains don't overwrite the preprocessor
-        # that is paired with this specific model object.
+        # Use a dedicated key so selecting another precomputed model in Tab5
+        # does not desynchronize this model/preprocessor pair.
         st.session_state['main_model_preprocessor'] = preprocessor
         st.session_state['training_preprocessor'] = preprocessor  # backward compat
         # Also set global for backward compatibility
@@ -2722,7 +2795,7 @@ def get_main_model():
 
 data['DNF'] = data['DNF'].astype(int)
 
-@st.cache_data
+@st.cache_data(max_entries=1)
 def get_dnf_diagnostic_probs(CACHE_VERSION):
     """Lazy-load DNF diagnostic logistic regression probabilities."""
     from sklearn.linear_model import LogisticRegression
@@ -2739,30 +2812,30 @@ def get_dnf_diagnostic_probs(CACHE_VERSION):
         clf.fit(X_dnf_prep, y_dnf)
         return clf.predict_proba(X_dnf_prep)[:, 1]
 
-@st.cache_data
 def get_dnf_model(CACHE_VERSION, force_retrain=False):
-    """Load or train the DNF prediction model."""
-    if not force_retrain:
-        pretrained = load_pretrained_model('dnf_model', CACHE_VERSION)
-        if pretrained is not None:
-            return pretrained['model']
-    return train_and_evaluate_dnf_model(data, CACHE_VERSION)
-
-@st.cache_data
-def _train_safetycar_cached(CACHE_VERSION):
-    return train_and_evaluate_safetycar_model(safety_cars, CACHE_VERSION)
+    """Load the shared workflow-generated DNF model."""
+    if force_retrain:
+        raise PretrainedModelUnavailableError(
+            "Runtime retraining is disabled. Run the Train All Models GitHub workflow instead."
+        )
+    pretrained = load_pretrained_model('dnf_model', CACHE_VERSION)
+    if pretrained is None:
+        raise PretrainedModelUnavailableError("No compatible pre-trained DNF model is available.")
+    _warn_if_stale_artifact(pretrained, 'DNF predictions')
+    return pretrained['model']
 
 
 def get_safetycar_model(CACHE_VERSION, force_retrain=False):
-    """Load or train the safety car prediction model.
-
-    pkl load is outside @st.cache_data for the same reason as get_trained_model
-    (avoids CachedWidgetWarning when pickle.load re-imports raceAnalysis)."""
-    if not force_retrain:
-        pretrained = load_pretrained_model('safetycar_model', CACHE_VERSION)
-        if pretrained is not None:
-            return pretrained['model']
-    return _train_safetycar_cached(CACHE_VERSION)
+    """Load the shared workflow-generated safety-car model."""
+    if force_retrain:
+        raise PretrainedModelUnavailableError(
+            "Runtime retraining is disabled. Run the Train All Models GitHub workflow instead."
+        )
+    pretrained = load_pretrained_model('safetycar_model', CACHE_VERSION)
+    if pretrained is None:
+        raise PretrainedModelUnavailableError("No compatible pre-trained safety-car model is available.")
+    _warn_if_stale_artifact(pretrained, 'Safety-car predictions')
+    return pretrained['model']
 
 # Module-level execution guarded for headless imports
 import os
@@ -2911,11 +2984,11 @@ if _cached_pp is not None:
 
 if 'training_preprocessor' not in st.session_state:
     try:
-        # Use default early stopping for initial load
+        # Load the default workflow-generated XGBoost artifact.
         model, mse, r2, mae, mean_err, evals_result, preprocessor = get_trained_model(
             20,
             CACHE_VERSION,
-            os.path.getmtime(path.join(DATA_DIR, 'f1ForAnalysis.csv'))
+            get_data_fingerprint()['data_sha256']
         )
         st.session_state['main_model'] = model
         st.session_state['global_mae'] = mae
@@ -4161,16 +4234,20 @@ with tab4:
             if model is None:
                 get_main_model()  # trigger lazy load
                 model = st.session_state['main_model']
-            # ROADMAP-3E: for TrackWeightedEnsemble, set the circuit type from
-            # the next race so predictions use the appropriate blend weights.
+            # ROADMAP-3E: choose weights per call. The cached model is shared
+            # across sessions and must remain immutable/thread-safe.
             if isinstance(model, TrackWeightedEnsemble) and not nextRace.empty:
                 _cref = None
                 for _col in ('circuitRef', 'circuitId', 'circuit_ref', 'circuit'):
                     if _col in nextRace.columns:
                         _cref = nextRace[_col].iat[0]
                         break
-                model.set_circuit_type(get_circuit_type(_cref))
-            predicted_position = model.predict(_prep_as_df(X_predict_prep, preprocessor))
+                predicted_position = model.predict_for_circuit(
+                    _prep_as_df(X_predict_prep, preprocessor),
+                    get_circuit_type(_cref),
+                )
+            else:
+                predicted_position = model.predict(_prep_as_df(X_predict_prep, preprocessor))
 
             # Get DNF feature names
             dnf_features, _ = get_features_and_target_dnf(data)
@@ -4203,53 +4280,6 @@ with tab4:
                 predicted_dnf_proba = get_dnf_model(CACHE_VERSION).predict_proba(X_predict_dnf)[:, 1]  # Probability of DNF=True
 
     
-            # Holdout year evaluation for Safety Car Model
-            # Use current year if it has data, otherwise use most recent year with data
-            max_year_with_data = safety_cars['grandPrixYear'].max()
-            holdout_test_year = current_year if current_year <= max_year_with_data else max_year_with_data
-            
-            train = safety_cars[safety_cars['grandPrixYear'] < holdout_test_year]
-            test = safety_cars[safety_cars['grandPrixYear'] == holdout_test_year]
-            X_train, y_train = get_features_and_target_safety_car(train)
-            X_test, y_test = get_features_and_target_safety_car(test)
-
-            holdout_model = train_and_evaluate_safetycar_model(train, CACHE_VERSION)
-            # Now use holdout_model for predictions:
-            # y_pred = holdout_model.predict_proba(X_test)[:, 1]
-            if X_test.shape[0] == 0:
-                st.warning(f"Safety Car holdout test set for year {holdout_test_year} is empty; skipping predictions.")
-                y_pred = np.array([])
-            else:
-                if X_test.isnull().any().any():
-                    X_test = X_test.fillna(X_test.mean(numeric_only=True))
-                y_pred = holdout_model.predict_proba(X_test)[:, 1]
-   
-            # Find the most recent year with both classes present in test set
-            holdout_year = None
-            for year in sorted(safety_cars['grandPrixYear'].unique(), reverse=True):
-                test = safety_cars[safety_cars['grandPrixYear'] == year]
-                if len(test['SafetyCarStatus'].unique()) > 1:
-                    holdout_year = year
-                    break
-
-            if holdout_year is not None:
-                train = safety_cars[safety_cars['grandPrixYear'] < holdout_year]
-                test = safety_cars[safety_cars['grandPrixYear'] == holdout_year]
-                X_train, y_train = get_features_and_target_safety_car(train)
-                X_test, y_test = get_features_and_target_safety_car(test)
-
-                # Do NOT re-fit safetycar_model! Instead, create a new model for holdout/test:
-                holdout_model = train_and_evaluate_safetycar_model(train, CACHE_VERSION)
-                if X_test.shape[0] == 0:
-                    st.warning(f"Safety Car holdout evaluation for year {holdout_year} skipped: test set is empty.")
-                    y_pred = np.array([])
-                else:
-                    y_pred = holdout_model.predict_proba(X_test)[:, 1]
-                    from sklearn.metrics import roc_auc_score
-                    # st.write(f"Safety Car ROC AUC (holdout year {holdout_year}):", roc_auc_score(y_test, y_pred))
-            else:
-                st.write("No valid holdout year with both classes present.")
-
             # Get race-level features for the next race (should be one row)
             race_level = detailsOfNextRace.drop_duplicates(subset=['grandPrixYear', 'grandPrixName'])
 
@@ -4712,10 +4742,6 @@ with tab5:
         help="Choose the machine learning model to use for predictions"
     )
 
-    # explicit retrain button to clear cache and force fresh training
-    #if st.button("Retrain Model (clear cache)"):
-    #    st.session_state['force_retrain'] = True
-
     # Model information expander
     with st.expander("ℹ️ Model Information & Recommendations", expanded=False):
         st.markdown("""
@@ -4771,24 +4797,19 @@ with tab5:
         - **ROADMAP-3 preprocessor** (IterativeImputer + TargetEncoder + RobustScaler) is applied to all model types, providing a shared preprocessing improvement baseline
         """)
     
-    # Early stopping rounds - always visible at top
-    early_stopping_rounds = st.number_input(
-        "Early stopping rounds", min_value=1, max_value=100, value=20, step=1, 
-        help="Number of rounds with no improvement to stop training"
+    st.caption(
+        "Models are pre-trained by GitHub Actions; training controls are kept out "
+        "of the live app to protect responsiveness."
     )
 
-    # Store for use in Tab 4
-    st.session_state['early_stopping_rounds'] = early_stopping_rounds
-
-    # Train model once at the top level for reuse (lazy loading with cache)
-    # determine if user has requested a forced retrain
-    force_flag = st.session_state.pop('force_retrain', False)
+    # Load one shared workflow-generated model for reuse. Discard any legacy
+    # retrain flag left in an existing session after a hot deployment.
+    st.session_state.pop('force_retrain', None)
     try:
         model, mse, r2, mae, mean_err, evals_result, preprocessor = get_trained_model(
-            early_stopping_rounds,
+            20,
             CACHE_VERSION,
-            os.path.getmtime(path.join(DATA_DIR, 'f1ForAnalysis.csv')),
-            force_retrain=force_flag,
+            get_data_fingerprint()['data_sha256'],
             model_type=model_type,
         )
         
@@ -5218,30 +5239,41 @@ with tab5:
             
             # Permutation Importance
             st.write("### Permutation Importance (Feature Impact on Model Error)")
-            from sklearn.inspection import permutation_importance
-
-            X_feat, y_feat = get_features_and_target(data)
-            mask = y_feat.notnull() & np.isfinite(y_feat)
-            X_feat, y_feat = X_feat[mask], y_feat[mask]
-            preprocessor_feat = get_preprocessor_position(X_feat)
-            X_prep_feat = preprocessor_feat.fit_transform(X_feat)
-            model_feat = XGBRegressor(n_estimators=100, max_depth=4, n_jobs=-1, tree_method='hist', random_state=42)
-            model_feat.fit(X_prep_feat, y_feat)
-
-            result = permutation_importance(model_feat, X_prep_feat, y_feat, n_repeats=10, random_state=42)
-            importances = result.importances_mean
-            feature_names_perm = preprocessor_feat.get_feature_names_out()
-            feature_names_perm = [name.replace('num__', '').replace('cat__', '') for name in feature_names_perm]
-
-            perm_df = pd.DataFrame({
-                'Feature': feature_names_perm,
-                'Permutation Importance': importances
-            }).sort_values(by='Permutation Importance', ascending=True)
-
-            st.write("Features with lowest permutation importance (least helpful):")
-            st.dataframe(perm_df.head(100), hide_index=True, width=800)
-            st.write("Features with highest permutation importance (most helpful):")
-            st.dataframe(perm_df.tail(100).sort_values(by='Permutation Importance', ascending=False), hide_index=True, width=800)
+            precomputed_permutation_analysis = load_precomputed_permutation(CACHE_VERSION)
+            if precomputed_permutation_analysis:
+                permutation_metadata = precomputed_permutation_analysis.get('metadata', {})
+                generated_at = permutation_metadata.get('generated_at') or permutation_metadata.get('timestamp', 'Unknown')
+                st.caption(
+                    f"Precomputed by GitHub Actions: {generated_at} · "
+                    f"{permutation_metadata.get('n_repeats', 'N/A')} repeats"
+                )
+                permutation_rows = (
+                    precomputed_permutation_analysis.get('feature_importance')
+                    or precomputed_permutation_analysis.get('importances')
+                    or []
+                )
+                if permutation_rows:
+                    perm_df = pd.DataFrame(permutation_rows).rename(columns={
+                        'feature': 'Feature',
+                        'importance': 'Permutation Importance',
+                        'std': 'Standard Deviation',
+                    })
+                    perm_df = perm_df.sort_values(by='Permutation Importance', ascending=True)
+                    st.write("Features with lowest permutation importance (least helpful):")
+                    st.dataframe(perm_df.head(100), hide_index=True, width=800)
+                    st.write("Features with highest permutation importance (most helpful):")
+                    st.dataframe(
+                        perm_df.tail(100).sort_values(by='Permutation Importance', ascending=False),
+                        hide_index=True,
+                        width=800,
+                    )
+                else:
+                    st.info("The precomputed permutation artifact contains no feature rows.")
+            else:
+                st.info(
+                    "Permutation importance is generated by the Feature Selection Suite "
+                    "GitHub workflow and is not computed in the live app."
+                )
 
             # High-Cardinality Features
             st.write("### High-Cardinality Features (Potential Overfitting Risk)")
@@ -5377,9 +5409,13 @@ with tab5:
                     if precomputed_permutation:
                         st.write("### Permutation Importance (Precomputed)")
                         metadata = precomputed_permutation.get('metadata', {})
-                        st.write(f"**Computed:** {metadata.get('timestamp', 'Unknown')}")
+                        st.write(f"**Computed:** {metadata.get('generated_at') or metadata.get('timestamp', 'Unknown')}")
                         
-                        importances = precomputed_permutation.get('importances', [])
+                        importances = (
+                            precomputed_permutation.get('feature_importance')
+                            or precomputed_permutation.get('importances')
+                            or []
+                        )
                         if importances:
                             perm_df = pd.DataFrame(importances)
                             st.dataframe(perm_df.head(30), hide_index=True)
@@ -6058,7 +6094,7 @@ with tab5:
                     
                     if group_data:
                         df_groups = pd.DataFrame(group_data)
-                        st.dataframe(df_groups, hide_index=True, use_container_width=True)
+                        st.dataframe(df_groups, hide_index=True, width='stretch')
                         st.caption("Lower MAE indicates better prediction accuracy for that position group. These values match the Model Performance tab.")
                     
                     # Show example predictions for winners to verify the MAE calculation
@@ -6089,7 +6125,7 @@ with tab5:
                             # Show some examples
                             st.write("**Sample predictions (first 10):**")
                             sample_display = winners_data[['Actual', 'Predicted', 'Error', 'AbsError']].head(10).round(3)
-                            st.dataframe(sample_display, hide_index=True, use_container_width=True)
+                            st.dataframe(sample_display, hide_index=True, width='stretch')
                     
                     st.divider()
                 else:
@@ -6332,132 +6368,98 @@ with tab5:
         
         with tab_hist:
             st.subheader("Historical Validation")
-            
-            # Model Evaluation Metrics
-            st.write("### Model Evaluation Metrics (Cross-Validation)")
-            X_eval, y_eval = get_features_and_target(data)
-            mask_eval = y_eval.notnull() & np.isfinite(y_eval)
-            X_eval, y_eval = X_eval[mask_eval], y_eval[mask_eval]
-            
-            # Wrap preprocessor + model in a Pipeline so the preprocessor is
-            # refitted on each training fold — prevents the scaler from seeing
-            # validation-fold statistics (pre-existing preprocessing leakage fix).
-            model_cv = XGBRegressor(n_estimators=100, max_depth=4, n_jobs=-1, tree_method='hist', random_state=42)
-            cv_pipeline = Pipeline([
-                ('pre', get_preprocessor_position(X_eval)),
-                ('model', model_cv),
-            ])
-            scores = cross_val_score(cv_pipeline, X_eval, y_eval, cv=5, scoring='neg_mean_squared_error')
-            avg_mse = -scores.mean()
-            std_mse = scores.std()
-            st.write(f"Final Position Model - Cross-validated MSE: {avg_mse:.3f} (± {std_mse:.3f})")
-
-            X_dnf_eval, y_dnf_eval = get_features_and_target_dnf(data)
-            mask_dnf = y_dnf_eval.notnull() & np.isfinite(y_dnf_eval)
-            X_dnf_eval, y_dnf_eval = X_dnf_eval[mask_dnf], y_dnf_eval[mask_dnf]
-            if X_dnf_eval.shape[0] == 0:
-                st.warning("No data for DNF evaluation; skipping DNF test/CV metrics.")
+            historical_validation = load_precomputed_historical_validation(CACHE_VERSION)
+            if not historical_validation:
+                st.info(
+                    "Historical validation is generated by the Feature Selection Suite "
+                    "GitHub workflow and is not computed in the live app."
+                )
             else:
-                X_train_dnf, X_test_dnf, y_train_dnf, y_test_dnf = train_test_split(X_dnf_eval, y_dnf_eval, test_size=0.2, random_state=42)
-                if X_test_dnf.shape[0] == 0:
-                    st.warning("DNF test split is empty; skipping MAE calculation.")
-                else:
-                    y_pred_dnf_proba = get_dnf_model(CACHE_VERSION).predict_proba(X_test_dnf)[:, 1]
-                    mae_dnf = mean_absolute_error(y_test_dnf, y_pred_dnf_proba)
-                    st.write(f"Mean Absolute Error (MAE) for DNF Probability (test set): {mae_dnf:.3f}")
-                scores_dnf = cross_val_score(get_dnf_model(CACHE_VERSION), X_dnf_eval, y_dnf_eval, cv=5, scoring='roc_auc')
-                st.write(f"DNF Model - Cross-validated ROC AUC: {scores_dnf.mean():.3f} (± {scores_dnf.std():.3f})")
+                validation_metadata = historical_validation.get('metadata', {})
+                generated_at = validation_metadata.get('generated_at', 'Unknown')
+                validation_model_type = validation_metadata.get('model_type', 'XGBoost')
+                st.caption(
+                    f"Precomputed by GitHub Actions: {generated_at} · "
+                    f"validation model: {validation_model_type}"
+                )
 
-            X_sc_eval, y_sc_eval = get_features_and_target_safety_car(safety_cars)
-            mask_sc = y_sc_eval.notnull() & np.isfinite(y_sc_eval)
-            X_sc_eval, y_sc_eval = X_sc_eval[mask_sc], y_sc_eval[mask_sc]
-            if X_sc_eval.shape[0] == 0:
-                st.warning("No safety-car data for CV evaluation; skipping safety car CV metrics.")
-            else:
-                scores_sc = cross_val_score(get_safetycar_model(CACHE_VERSION), X_sc_eval, y_sc_eval, cv=5, scoring='roc_auc')
-                st.write(f"Safety Car Model - Cross-validated ROC AUC (unique rows): {scores_sc.mean():.3f} (± {scores_sc.std():.3f})")
+                st.write("### Model Evaluation Metrics (Cross-Validation)")
+                position_cv = historical_validation.get('position_cv', {})
+                if position_cv:
+                    st.write(
+                        "Final Position Model - Cross-validated MSE: "
+                        f"{position_cv.get('mse_mean', float('nan')):.3f} "
+                        f"(± {position_cv.get('mse_std', float('nan')):.3f})"
+                    )
 
-            # Model Accuracy for All Races
-            st.write("### Model Accuracy Across All Races")
-            X_all, y_all = get_features_and_target(data)
-            X_train_all, X_test_all, y_train_all, y_test_all = train_test_split(X_all, y_all, test_size=0.2, random_state=42)
+                dnf_validation = historical_validation.get('dnf_validation', {})
+                if dnf_validation:
+                    if dnf_validation.get('test_mae') is not None:
+                        st.write(
+                            "Mean Absolute Error (MAE) for DNF Probability (test set): "
+                            f"{dnf_validation['test_mae']:.3f}"
+                        )
+                    st.write(
+                        "DNF Model - Cross-validated ROC AUC: "
+                        f"{dnf_validation.get('roc_auc_mean', float('nan')):.3f} "
+                        f"(± {dnf_validation.get('roc_auc_std', float('nan')):.3f})"
+                    )
 
-            # Use the training preprocessor from session state (ensures feature consistency)
-            preprocessor_all = st.session_state.get('training_preprocessor')
-            if preprocessor_all is None:
-                st.error("Training preprocessor not found. Please train a model first.")
-            else:
-                # Align X_test_all columns to match what the preprocessor was fit on
-                # (handles cases where columns were dropped as all-NaN since training)
-                expected_cols = preprocessor_all.feature_names_in_ if hasattr(preprocessor_all, 'feature_names_in_') else None
-                if expected_cols is not None:
-                    missing_cols = [c for c in expected_cols if c not in X_test_all.columns]
-                    for c in missing_cols:
-                        X_test_all[c] = np.nan
-                    X_test_all = X_test_all[expected_cols]
-                X_test_prep_all = _prep_as_df(preprocessor_all.transform(X_test_all), preprocessor_all)
-                
-                # Predict based on model type
-                if isinstance(model, xgb.Booster):  # XGBoost
-                    y_pred_all = model.predict(xgb.DMatrix(X_test_prep_all))
-                else:  # LightGBM, CatBoost, sklearn models
-                    y_pred_all = model.predict(X_test_prep_all)
+                safety_car_validation = historical_validation.get('safety_car_validation', {})
+                if safety_car_validation:
+                    st.write(
+                        "Safety Car Model - Cross-validated ROC AUC (unique rows): "
+                        f"{safety_car_validation.get('roc_auc_mean', float('nan')):.3f} "
+                        f"(± {safety_car_validation.get('roc_auc_std', float('nan')):.3f})"
+                    )
 
-            results_df_all = X_test_all.copy()
-            results_df_all['ActualFinalPosition'] = y_test_all.values
-            results_df_all['PredictedFinalPosition'] = y_pred_all
-            results_df_all['Error'] = results_df_all['ActualFinalPosition'] - results_df_all['PredictedFinalPosition']
-
-            results_df_pos = pd.DataFrame({
-                'Actual': y_test_all.values,
-                'Predicted': y_pred_all
-            })
-
-            podium_actual_hist = results_df_pos[results_df_pos['Actual'] <= 3]
-            points_actual_hist = results_df_pos[results_df_pos['Actual'] <= 10]
-            winners_actual_hist = results_df_pos[results_df_pos['Actual'] == 1]
-
-            if len(podium_actual_hist) > 0:
-                podium_mae_hist = mean_absolute_error(podium_actual_hist['Actual'], podium_actual_hist['Predicted'])
-                
-            if len(winners_actual_hist) > 0:
-                winner_mae_hist = mean_absolute_error(winners_actual_hist['Actual'], winners_actual_hist['Predicted'])
-
-            if len(points_actual_hist) > 0:
-                points_mae_hist = mean_absolute_error(points_actual_hist['Actual'], points_actual_hist['Predicted'])
-
-            # Render a compact metrics + position MAE table
-            metrics = {
-                'Mean Squared Error': mse,
-                'R^2 Score': r2,
-                'Mean Absolute Error': mae,
-                'Mean Error': mean_err
-            }
-            position_mae_hist = {}
-            if 'podium_mae_hist' in locals():
-                position_mae_hist['Podium (1-3)'] = podium_mae_hist
-            if 'winner_mae_hist' in locals():
-                position_mae_hist['Winners'] = winner_mae_hist
-            if 'points_mae_hist' in locals():
-                position_mae_hist['Points (1-10)'] = points_mae_hist
-
-            display_model_performance(metrics=metrics, position_mae=position_mae_hist if position_mae_hist else None)
-
-            st.dataframe(
-                results_df_all[['constructorName', 'resultsDriverName', 'ActualFinalPosition', 'PredictedFinalPosition', 'Error']].sort_values(by=['ActualFinalPosition']),
-                hide_index=True,
-                width=1000,
-                column_config={
-                    'constructorName': st.column_config.TextColumn("Constructor"),
-                    'resultsDriverName': st.column_config.TextColumn("Driver"),
-                    'ActualFinalPosition': st.column_config.NumberColumn("Actual", format="%d"),
-                    'PredictedFinalPosition': st.column_config.NumberColumn("Predicted", format="%.2f"),
-                    'Error': st.column_config.NumberColumn("Error", format="%.2f"),
+                st.write("### Model Accuracy Across All Races")
+                holdout = historical_validation.get('holdout', {})
+                holdout_metrics = holdout.get('metrics', {})
+                metrics = {
+                    'Mean Squared Error': holdout_metrics.get('mse'),
+                    'R^2 Score': holdout_metrics.get('r2'),
+                    'Mean Absolute Error': holdout_metrics.get('mae'),
+                    'Mean Error': holdout_metrics.get('mean_error'),
                 }
-            )
+                metrics = {label: value for label, value in metrics.items() if value is not None}
+                position_mae_hist = holdout.get('position_mae', {})
+                if metrics:
+                    display_model_performance(
+                        metrics=metrics,
+                        position_mae=position_mae_hist if position_mae_hist else None,
+                    )
 
-            st.subheader("Actual vs Predicted Final Position (All Races)")
-            st.scatter_chart(results_df_all, x='ActualFinalPosition', y='PredictedFinalPosition', width='stretch')
+                results_df_all = pd.DataFrame(holdout.get('rows', []))
+                expected_result_columns = [
+                    'constructorName',
+                    'resultsDriverName',
+                    'ActualFinalPosition',
+                    'PredictedFinalPosition',
+                    'Error',
+                ]
+                if not results_df_all.empty and set(expected_result_columns).issubset(results_df_all.columns):
+                    results_df_all = results_df_all.sort_values(by=['ActualFinalPosition'])
+                    st.dataframe(
+                        results_df_all[expected_result_columns],
+                        hide_index=True,
+                        width=1000,
+                        column_config={
+                            'constructorName': st.column_config.TextColumn("Constructor"),
+                            'resultsDriverName': st.column_config.TextColumn("Driver"),
+                            'ActualFinalPosition': st.column_config.NumberColumn("Actual", format="%d"),
+                            'PredictedFinalPosition': st.column_config.NumberColumn("Predicted", format="%.2f"),
+                            'Error': st.column_config.NumberColumn("Error", format="%.2f"),
+                        },
+                    )
+
+                    st.subheader("Actual vs Predicted Final Position (All Races)")
+                    st.scatter_chart(
+                        results_df_all,
+                        x='ActualFinalPosition',
+                        y='PredictedFinalPosition',
+                        width='stretch',
+                    )
         
         with tab_debug:
             st.subheader("Debug & Experiments")

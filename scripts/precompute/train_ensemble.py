@@ -29,6 +29,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 # helper for robust json serialization of numpy/pandas scalars used by precompute scripts
 import json_helpers
+from model_artifacts import build_data_fingerprint, stamp_artifact
 
 DATA_DIR = 'data_files/'
 
@@ -52,10 +53,11 @@ def train_ensemble_model():
     )
     
     print(f"\nLoading data (CACHE_VERSION={CACHE_VERSION})...")
+    analysis_fingerprint = build_data_fingerprint(Path(DATA_DIR) / 'f1ForAnalysis.csv')
     data, _ = load_data(
         10000,
         CACHE_VERSION,
-        os.path.getmtime(os.path.join(DATA_DIR, 'f1ForAnalysis.csv'))
+        analysis_fingerprint['data_sha256']
     )
     
     # Apply column renaming
@@ -77,7 +79,7 @@ def train_ensemble_model():
         model_type="Ensemble (XGBoost + LightGBM + CatBoost)"
     )
     
-    position_artifact = {
+    position_artifact = stamp_artifact({
         'model': model,
         'preprocessor': preprocessor,
         'mse': mse,
@@ -88,14 +90,14 @@ def train_ensemble_model():
         'cache_version': CACHE_VERSION,
         'model_type': 'Ensemble',
         'trained_at': datetime.now().isoformat()
-    }
+    }, analysis_fingerprint)
     
     with open(output_dir / 'position_model.pkl', 'wb') as f:
         pickle.dump(position_artifact, f)
     print(f"[OK] Ensemble model saved (MAE: {mae:.4f})")
     
     # Save metadata
-    metadata = {
+    metadata = stamp_artifact({
         'cache_version': CACHE_VERSION,
         'trained_at': datetime.now().isoformat(),
         'model_type': 'Ensemble',
@@ -107,7 +109,7 @@ def train_ensemble_model():
                 'r2': float(r2)
             }
         }
-    }
+    }, analysis_fingerprint)
     
     json_helpers.safe_dump(metadata, output_dir / 'metadata.json', indent=2)
     

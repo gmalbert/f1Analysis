@@ -30,6 +30,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 # helper for robust json serialization of numpy/pandas scalars used by precompute scripts
 import json_helpers
+from model_artifacts import build_data_fingerprint, stamp_artifact
 
 def train_xgboost_models():
     """Train all XGBoost models and save to data_files/models/xgboost/"""
@@ -58,10 +59,11 @@ def train_xgboost_models():
     logging.getLogger('streamlit.runtime.state.session_state_proxy').setLevel(logging.ERROR)
     
     print(f"\nLoading data (CACHE_VERSION={CACHE_VERSION})...")
+    analysis_fingerprint = build_data_fingerprint(Path(DATA_DIR) / 'f1ForAnalysis.csv')
     data, _ = load_data(
         10000,
         CACHE_VERSION,
-        os.path.getmtime(os.path.join(DATA_DIR, 'f1ForAnalysis.csv'))
+        analysis_fingerprint['data_sha256']
     )
     
     # Apply column renaming logic
@@ -94,7 +96,7 @@ def train_xgboost_models():
         model_type="XGBoost"
     )
     
-    position_artifact = {
+    position_artifact = stamp_artifact({
         'model': model,
         'preprocessor': preprocessor,
         'mse': mse,
@@ -105,7 +107,7 @@ def train_xgboost_models():
         'cache_version': CACHE_VERSION,
         'model_type': 'XGBoost',
         'trained_at': datetime.now().isoformat()
-    }
+    }, analysis_fingerprint)
     
     with open(output_dir / 'position_model.pkl', 'wb') as f:
         pickle.dump(position_artifact, f)
@@ -118,11 +120,11 @@ def train_xgboost_models():
     
     dnf_model = train_and_evaluate_dnf_model(data, CACHE_VERSION)
     
-    dnf_artifact = {
+    dnf_artifact = stamp_artifact({
         'model': dnf_model,
         'cache_version': CACHE_VERSION,
         'trained_at': datetime.now().isoformat()
-    }
+    }, analysis_fingerprint)
     
     with open(output_dir / 'dnf_model.pkl', 'wb') as f:
         pickle.dump(dnf_artifact, f)
@@ -135,14 +137,15 @@ def train_xgboost_models():
     
     safety_cars_file = Path('data_files/f1SafetyCarFeatures.csv')
     if safety_cars_file.exists():
+        safetycar_fingerprint = build_data_fingerprint(safety_cars_file)
         safety_cars = pd.read_csv(safety_cars_file, sep='\t')
         safetycar_model = train_and_evaluate_safetycar_model(safety_cars, CACHE_VERSION)
         
-        safetycar_artifact = {
+        safetycar_artifact = stamp_artifact({
             'model': safetycar_model,
             'cache_version': CACHE_VERSION,
             'trained_at': datetime.now().isoformat()
-        }
+        }, safetycar_fingerprint)
         
         with open(output_dir / 'safetycar_model.pkl', 'wb') as f:
             pickle.dump(safetycar_artifact, f)
@@ -151,7 +154,7 @@ def train_xgboost_models():
         print("[WARN] Safety car data not found - skipping")
     
     # Save metadata
-    metadata = {
+    metadata = stamp_artifact({
         'cache_version': CACHE_VERSION,
         'trained_at': datetime.now().isoformat(),
         'model_type': 'XGBoost',
@@ -165,7 +168,7 @@ def train_xgboost_models():
             'dnf': {'trained': True},
             'safetycar': {'trained': safety_cars_file.exists()}
         }
-    }
+    }, analysis_fingerprint)
     
     json_helpers.safe_dump(metadata, output_dir / 'metadata.json', indent=2)
     

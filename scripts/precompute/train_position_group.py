@@ -32,6 +32,7 @@ DATA_DIR = 'data_files/'
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 import json_helpers
+from model_artifacts import build_data_fingerprint, stamp_artifact
 
 
 def train_position_group():
@@ -53,10 +54,11 @@ def train_position_group():
     logging.getLogger('streamlit.runtime.caching.cache_data_api').setLevel(logging.ERROR)
 
     print(f"\nLoading data (CACHE_VERSION={CACHE_VERSION})...")
+    analysis_fingerprint = build_data_fingerprint(Path(DATA_DIR) / 'f1ForAnalysis.csv')
     data, _ = load_data(
         10000,
         CACHE_VERSION,
-        os.path.getmtime(os.path.join(DATA_DIR, 'f1ForAnalysis.csv'))
+        analysis_fingerprint['data_sha256']
     )
 
     # Apply standard column renames (matches other train scripts)
@@ -86,7 +88,7 @@ def train_position_group():
         model_type="Position Group",
     )
 
-    artifact = {
+    artifact = stamp_artifact({
         'model':        model,
         'preprocessor': preprocessor,
         'mse':          float(mse),
@@ -97,14 +99,14 @@ def train_position_group():
         'cache_version': CACHE_VERSION,
         'model_type':   'Position Group',
         'trained_at':   datetime.now().isoformat(),
-    }
+    }, analysis_fingerprint)
 
     pkl_path = output_dir / 'position_model.pkl'
     with open(pkl_path, 'wb') as f:
         pickle.dump(artifact, f)
     print(f"[OK] Position Group model saved → {pkl_path}  (OOF MAE: {mae:.4f})")
 
-    metadata = {
+    metadata = stamp_artifact({
         'cache_version': CACHE_VERSION,
         'trained_at':    datetime.now().isoformat(),
         'model_type':    'Position Group',
@@ -112,7 +114,7 @@ def train_position_group():
         'models': {
             'position': {'mae': float(mae), 'mse': float(mse), 'r2': float(r2)},
         },
-    }
+    }, analysis_fingerprint)
     json_helpers.safe_dump(metadata, output_dir / 'metadata.json', indent=2)
 
     print("\n" + "=" * 60)

@@ -1,0 +1,31 @@
+name: Streamlit API Compatibility
+
+on:
+  pull_request:
+    paths:
+      - '*.py'
+      - '**/*.py'
+      - '.github/workflows/streamlit-api-compat.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - '*.py'
+      - '**/*.py'
+      - '.github/workflows/streamlit-api-compat.yml'
+
+jobs:
+  deprecated-api-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Reject deprecated Streamlit keywords
+        run: python scripts/check_streamlit_deprecations.py
+
+      - name: Test model artifact and runtime cache policy
+        run: python -m unittest discover -s tests

@@ -51,6 +51,8 @@ warnings.filterwarnings("ignore", message=".*No runtime found, using MemoryCache
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from model_artifacts import build_data_fingerprint, stamp_artifact
+
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -79,10 +81,11 @@ def train_all_models():
     )
     
     print(f"Loading data with CACHE_VERSION={CACHE_VERSION}...")
+    analysis_fingerprint = build_data_fingerprint(Path(DATA_DIR) / 'f1ForAnalysis.csv')
     data, _ = load_data(
         10000,
         CACHE_VERSION,
-        os.path.getmtime(path.join(DATA_DIR, 'f1ForAnalysis.csv'))
+        analysis_fingerprint['data_sha256']
     )
     
     # Apply the same column renaming logic as in raceAnalysis.py
@@ -125,7 +128,7 @@ def train_all_models():
     )
     
     # Save model and metrics
-    model_artifact = {
+    model_artifact = stamp_artifact({
         'model': model,
         'preprocessor': preprocessor,
         'mse': mse,
@@ -135,7 +138,7 @@ def train_all_models():
         'evals_result': evals_result,
         'cache_version': CACHE_VERSION,
         'model_type': 'XGBoost'
-    }
+    }, analysis_fingerprint)
     
     with open(models_dir / 'position_model.pkl', 'wb') as f:
         pickle.dump(model_artifact, f)
@@ -146,7 +149,10 @@ def train_all_models():
     dnf_model = train_and_evaluate_dnf_model(data, CACHE_VERSION)
     
     with open(models_dir / 'dnf_model.pkl', 'wb') as f:
-        pickle.dump({'model': dnf_model, 'cache_version': CACHE_VERSION}, f)
+        pickle.dump(stamp_artifact(
+            {'model': dnf_model, 'cache_version': CACHE_VERSION},
+            analysis_fingerprint,
+        ), f)
     print("   [OK] Saved DNF model")
     
     # Train safety car prediction model
@@ -154,17 +160,21 @@ def train_all_models():
         print("\n3. Training safety car prediction model...")
         safetycar_model = train_and_evaluate_safetycar_model(safety_cars, CACHE_VERSION)
         
+        safetycar_fingerprint = build_data_fingerprint(safety_cars_file)
         with open(models_dir / 'safetycar_model.pkl', 'wb') as f:
-            pickle.dump({'model': safetycar_model, 'cache_version': CACHE_VERSION}, f)
+            pickle.dump(stamp_artifact(
+                {'model': safetycar_model, 'cache_version': CACHE_VERSION},
+                safetycar_fingerprint,
+            ), f)
         print("   [OK] Saved safety car model")
     
     # Save metadata
-    metadata = {
+    metadata = stamp_artifact({
         'cache_version': CACHE_VERSION,
         'trained_at': pd.Timestamp.now().isoformat(),
         'data_rows': len(data),
         'models': ['position_model', 'dnf_model', 'safetycar_model' if safety_cars is not None else None]
-    }
+    }, analysis_fingerprint)
     
     with open(models_dir / 'metadata.pkl', 'wb') as f:
         pickle.dump(metadata, f)

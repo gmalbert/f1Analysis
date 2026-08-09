@@ -8,11 +8,10 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from raceAnalysis import load_data, CACHE_VERSION, DATA_DIR
+from raceAnalysis import load_data, get_data_fingerprint, CACHE_VERSION, DATA_DIR
 
 print("Loading data...")
-csv_mtime = os.path.getmtime(path.join(DATA_DIR, 'f1ForAnalysis.csv'))
-data, _ = load_data(10000, CACHE_VERSION, csv_mtime)
+data, _ = load_data(10000, CACHE_VERSION, get_data_fingerprint()['data_sha256'])
 
 print(f"Data shape: {data.shape}")
 print(f"Columns: {len(data.columns)}\n")
