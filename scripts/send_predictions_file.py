@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Send the latest predictions_*.csv (or a specified file) as an email attachment.
+r"""Send the latest predictions_*.csv (or a specified file) as an email attachment.
 
 Usage:
   python scripts\send_predictions_file.py              # send latest predictions_*.csv

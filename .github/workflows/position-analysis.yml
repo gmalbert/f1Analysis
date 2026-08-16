@@ -1,5 +1,12 @@
 name: Position Group Analysis
 
+permissions:
+  contents: read
+
+concurrency:
+  group: f1-generated-artifact-writes
+  cancel-in-progress: false
+
 on:
   workflow_run:
     workflows: ["Train All Models (Multi-Type)"]
@@ -14,18 +21,21 @@ jobs:
   position-analysis:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    permissions:
+      actions: read
+      contents: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.11'
           cache: 'pip'
       - run: pip install -r requirements.txt
       
       - name: Download XGBoost models from previous workflow
-        uses: dawidd6/action-download-artifact@v3
+        uses: dawidd6/action-download-artifact@09f2f74827fd3a8607589e5ad7f9398816f540fe # v3
         with:
           name: xgboost-models
           path: data_files/models/xgboost/
@@ -50,7 +60,7 @@ jobs:
           STREAMLIT_SERVER_HEADLESS: '1'
         continue-on-error: true
       
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: position-analysis
           path: |

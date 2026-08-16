@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create a baseline predictions CSV for a specified race name/date.
+r"""Create a baseline predictions CSV for a specified race name/date.
 
 If rows for the specified `grandPrixName` or `short_date` exist in
 `data_files/f1ForAnalysis.csv`, those rows are used as the base. Otherwise

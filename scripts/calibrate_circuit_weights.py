@@ -8,8 +8,8 @@ using out-of-fold predictions from XGBoost, LightGBM, and CatBoost.
 Algorithm
 ---------
 1. Load f1ForAnalysis.csv and build the same feature set used in training.
-2. Collect out-of-fold (OOF) predictions from XGB / LGBM / CAT via
-   GroupKFold(n_splits=5, group=grandPrixYear).
+2. Collect out-of-fold (OOF) predictions from XGB / LGBM / CAT via five
+   race-grouped expanding-window folds with a one-event embargo.
 3. For each circuit type (street / high_speed / technical / mixed + individual
    circuit overrides), solve:
 
@@ -47,12 +47,12 @@ import pandas as pd
 from scipy.optimize import nnls
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
-from sklearn.model_selection import GroupKFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, RobustScaler, StandardScaler, TargetEncoder
 from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
 from catboost import CatBoostRegressor
+from f1bet.validation import sklearn_model_selection_cv
 
 # ── Config ────────────────────────────────────────────────────────────────────
 DATA_DIR = pathlib.Path("data_files")
@@ -154,7 +154,6 @@ print(f"Features: {len(numeric_cols)} numeric ({len(pos_num)} pos/rank), "
 feature_cols = numeric_cols + HIGH_CARD + LOW_CARD
 X = df[feature_cols].copy()
 y = df[TARGET].astype(float).values
-groups = df["grandPrixYear"].fillna(0).astype(int).values
 circuit_types = df["_circuit_type"].values
 
 
@@ -189,13 +188,16 @@ def build_preprocessor():
 # ── OOF prediction collection ─────────────────────────────────────────────────
 def collect_oof_predictions():
     """Return (oof_xgb, oof_lgbm, oof_cat, y_oof, ct_oof) arrays."""
-    gkf = GroupKFold(n_splits=N_SPLITS)
+    cv, final_test_index, final_test_season = sklearn_model_selection_cv(
+        df, n_splits=N_SPLITS, embargo_events=1
+    )
+    print(f"  calibration excludes final season {final_test_season} ({len(final_test_index)} rows)")
     n   = len(y)
     oof_xgb  = np.full(n, np.nan)
     oof_lgbm = np.full(n, np.nan)
     oof_cat  = np.full(n, np.nan)
 
-    for fold, (tr_idx, va_idx) in enumerate(gkf.split(X, y, groups), 1):
+    for fold, (tr_idx, va_idx) in enumerate(cv, 1):
         t0 = time.perf_counter()
         X_tr, X_va = X.iloc[tr_idx], X.iloc[va_idx]
         y_tr, y_va = y[tr_idx],       y[va_idx]

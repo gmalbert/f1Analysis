@@ -1,5 +1,12 @@
 name: Train and Save Models
 
+permissions:
+  contents: read
+
+concurrency:
+  group: f1-generated-artifact-writes
+  cancel-in-progress: false
+
 on:
   # Run after data generation completes
   workflow_run:
@@ -20,13 +27,15 @@ env:
 jobs:
   train-models:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
@@ -43,7 +52,7 @@ jobs:
           STREAMLIT_SERVER_HEADLESS: '1'
       
       - name: Upload model artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: trained-models
           path: data_files/models/

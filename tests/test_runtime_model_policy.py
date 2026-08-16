@@ -68,11 +68,11 @@ class RuntimeModelPolicyTests(unittest.TestCase):
         self.assertTrue(any("st.cache_resource" in decorator for decorator in decorators))
         self.assertTrue(any("max_entries=8" in decorator for decorator in decorators))
 
-    def test_main_dataframe_cache_is_bounded(self) -> None:
+    def test_main_dataframe_cache_is_shared(self) -> None:
         loader = self.functions["load_data"]
         decorators = [ast.unparse(decorator) for decorator in loader.decorator_list]
-        self.assertTrue(any("st.cache_data" in decorator for decorator in decorators))
-        self.assertTrue(any("max_entries=1" in decorator for decorator in decorators))
+        self.assertTrue(any("st.cache_resource" in decorator for decorator in decorators))
+        self.assertTrue(any("show_spinner=False" in decorator for decorator in decorators))
 
     def test_diagnostic_tabs_do_not_run_training_or_validation(self) -> None:
         forbidden = {"fit", "fit_transform", "permutation_importance", "cross_val_score"}

@@ -1,5 +1,12 @@
 name: Monthly Hyperparameter Optimisation (ROADMAP-3F)
 
+permissions:
+  contents: read
+
+concurrency:
+  group: f1-generated-artifact-writes
+  cancel-in-progress: false
+
 # Runs on the 1st of every month at 02:00 UTC, or on-demand.
 # Runs Optuna for XGBoost, LightGBM, and CatBoost against the full
 # ROADMAP-3 feature set and commits updated best_hyperparams_*.json files.
@@ -26,15 +33,17 @@ jobs:
   monthly-hpo:
     runs-on: ubuntu-latest
     timeout-minutes: 300   # 5 hours max
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 1
 
       - name: Set up Python 3.11
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -55,14 +64,14 @@ jobs:
 
       - name: Upload HPO results as artifacts
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: hpo-results-${{ github.run_id }}
           path: data_files/best_hyperparams_*.json
           if-no-files-found: warn
 
       - name: Commit updated hyperparameters
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@b863ae1933cb653a53c021fe36dbb774e1fb9403 # v5
         with:
           commit_message: 'chore: monthly hyperparameter refresh [skip ci]'
           file_pattern: 'data_files/best_hyperparams_*.json'

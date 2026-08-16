@@ -6,9 +6,10 @@ import pandas as pd
 import numpy as np
 import warnings
 warnings.filterwarnings('ignore')
-from sklearn.model_selection import GroupKFold, cross_val_score
+from sklearn.model_selection import cross_val_score
 from sklearn.impute import SimpleImputer
 from xgboost import XGBRegressor
+from f1bet.validation import sklearn_model_selection_cv
 
 print("Loading f1ForAnalysis.csv...")
 df = pd.read_csv('data_files/f1ForAnalysis.csv', sep='\t', low_memory=False)
@@ -17,7 +18,6 @@ print(f"  Loaded {len(df)} rows x {len(df.columns)} columns")
 target = 'resultsFinalPositionNumber'
 valid = df.dropna(subset=[target]).copy()
 y = valid[target].astype(float)
-groups = valid['grandPrixYear'].astype(int)
 print(f"  Valid rows (non-NaN target): {len(valid)}")
 
 # ---- BASELINE feature set (as existed before ROADMAP_1 edits) ----
@@ -114,7 +114,10 @@ model = XGBRegressor(
     n_estimators=300, max_depth=6, learning_rate=0.05,
     subsample=0.8, colsample_bytree=0.8, random_state=42, verbosity=0,
 )
-cv = GroupKFold(n_splits=5)
+cv, final_test_index, final_test_season = sklearn_model_selection_cv(
+    valid, n_splits=5, embargo_events=1
+)
+print(f"  Reserved untouched final season: {final_test_season} ({len(final_test_index)} rows)")
 
 
 def evaluate(feature_list, label):
@@ -122,7 +125,7 @@ def evaluate(feature_list, label):
     imp = SimpleImputer(strategy='mean')
     X_imp = imp.fit_transform(X)
     scores = cross_val_score(
-        model, X_imp, y, groups=groups,
+        model, X_imp, y,
         cv=cv, scoring='neg_mean_absolute_error', n_jobs=-1,
     )
     mae = float(-scores.mean())
@@ -132,7 +135,7 @@ def evaluate(feature_list, label):
 
 
 print()
-print("=== ROADMAP_1 MAE Impact Measurement (5-fold GroupKFold by season) ===")
+print("=== ROADMAP_1 MAE Impact Measurement (5-fold embargoed expanding window) ===")
 print()
 mae_old = evaluate(OLD_FEATURES, "BEFORE  (baseline feature set)")
 

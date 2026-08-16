@@ -54,7 +54,7 @@ log = logging.getLogger('monthly_hpo')
 # ─────────────────────────────────────────────────────────────────────────────
 
 def load_data():
-    """Return (X, y, season_groups) ready for GroupKFold cross-validation."""
+    """Return features, target, and event metadata for temporal validation."""
     # Lazy import so raceAnalysis Streamlit side-effects run only here
     from raceAnalysis import (  # noqa: PLC0415
         load_data as ra_load_data,
@@ -87,28 +87,31 @@ def load_data():
 
     X, y = get_features_and_target(data)
     y = y.fillna(y.mean()).clip(upper=20)
-    season_groups = data['grandPrixYear'].values[y.index]
+    validation_frame = data.loc[y.index]
 
-    return X, y, season_groups, _build_advanced_preprocessor
+    return X, y, validation_frame, _build_advanced_preprocessor
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Objective functions
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _cv_mae(pipeline, X_num, y, groups, n_splits: int) -> float:
-    from sklearn.model_selection import cross_val_score, GroupKFold
-    cv = GroupKFold(n_splits=n_splits)
+def _cv_mae(pipeline, X_num, y, validation_frame, n_splits: int) -> float:
+    from sklearn.model_selection import cross_val_score
+    from f1bet.validation import sklearn_model_selection_cv
+    cv, _, _ = sklearn_model_selection_cv(
+        validation_frame, n_splits=n_splits, embargo_events=1
+    )
     scores = cross_val_score(
         pipeline, X_num, y,
-        cv=cv, groups=groups,
+        cv=cv,
         scoring='neg_mean_absolute_error',
         n_jobs=1,
     )
     return float(-scores.mean())
 
 
-def objective_xgb(trial, X_num, y, groups, n_splits: int):
+def objective_xgb(trial, X_num, y, validation_frame, n_splits: int):
     from sklearn.pipeline import Pipeline
     from sklearn.impute import SimpleImputer
     from sklearn.preprocessing import StandardScaler
@@ -130,10 +133,10 @@ def objective_xgb(trial, X_num, y, groups, n_splits: int):
         ('scale', StandardScaler()),
         ('reg',   XGBRegressor(**params)),
     ])
-    return _cv_mae(pipe, X_num, y, groups, n_splits)
+    return _cv_mae(pipe, X_num, y, validation_frame, n_splits)
 
 
-def objective_lgbm(trial, X_num, y, groups, n_splits: int):
+def objective_lgbm(trial, X_num, y, validation_frame, n_splits: int):
     from sklearn.pipeline import Pipeline
     from sklearn.impute import SimpleImputer
     from sklearn.preprocessing import StandardScaler
@@ -155,10 +158,10 @@ def objective_lgbm(trial, X_num, y, groups, n_splits: int):
         ('scale', StandardScaler()),
         ('reg',   LGBMRegressor(**params)),
     ])
-    return _cv_mae(pipe, X_num, y, groups, n_splits)
+    return _cv_mae(pipe, X_num, y, validation_frame, n_splits)
 
 
-def objective_cat(trial, X_num, y, groups, n_splits: int):
+def objective_cat(trial, X_num, y, validation_frame, n_splits: int):
     from sklearn.pipeline import Pipeline
     from sklearn.impute import SimpleImputer
     from catboost import CatBoostRegressor
@@ -174,7 +177,7 @@ def objective_cat(trial, X_num, y, groups, n_splits: int):
         ('imp', SimpleImputer(strategy='median')),
         ('reg', CatBoostRegressor(**params)),
     ])
-    return _cv_mae(pipe, X_num, y, groups, n_splits)
+    return _cv_mae(pipe, X_num, y, validation_frame, n_splits)
 
 
 _OBJECTIVES = {
@@ -188,7 +191,7 @@ _OBJECTIVES = {
 # Main driver
 # ─────────────────────────────────────────────────────────────────────────────
 
-def run_hpo(model_key: str, X, y, groups, n_trials: int, cv_folds: int):
+def run_hpo(model_key: str, X, y, validation_frame, n_trials: int, cv_folds: int):
     """Run an Optuna study for *model_key* and persist best params to JSON."""
     obj_fn = _OBJECTIVES[model_key]
 
@@ -196,14 +199,14 @@ def run_hpo(model_key: str, X, y, groups, n_trials: int, cv_folds: int):
     X_num = X.select_dtypes(include='number').fillna(X.select_dtypes(include='number').median())
 
     log.info(f"[{model_key.upper()}] starting {n_trials}-trial study "
-             f"(GroupKFold cv={cv_folds}, {X_num.shape[1]} numeric features) …")
+             f"(embargoed expanding-window cv={cv_folds}, {X_num.shape[1]} numeric features) …")
 
     study = optuna.create_study(
         direction='minimize',
         study_name=f'monthly_hpo_{model_key}',
     )
     study.optimize(
-        lambda t: obj_fn(t, X_num, y, groups, cv_folds),
+        lambda t: obj_fn(t, X_num, y, validation_frame, cv_folds),
         n_trials=n_trials,
         show_progress_bar=True,
     )
@@ -236,7 +239,7 @@ def run_hpo(model_key: str, X, y, groups, n_trials: int, cv_folds: int):
 def main():
     parser = argparse.ArgumentParser(description='Monthly Optuna HPO refresh (ROADMAP-3F)')
     parser.add_argument('--trials',  type=int, default=200,          help='Optuna trials per model (default: 200)')
-    parser.add_argument('--cv-folds', type=int, default=5,           help='GroupKFold folds (default: 5)')
+    parser.add_argument('--cv-folds', type=int, default=5,           help='temporal folds (default: 5)')
     parser.add_argument('--models',  type=str, default='xgb,lgbm,cat',
                         help='Comma-separated list of models to optimise (default: xgb,lgbm,cat)')
     args = parser.parse_args()
@@ -246,11 +249,11 @@ def main():
     if unknown:
         parser.error(f"Unknown model keys: {unknown}. Valid: {list(_OBJECTIVES)}")
 
-    X, y, groups, _ = load_data()
+    X, y, validation_frame, _ = load_data()
 
     results = {}
     for model_key in models_to_run:
-        best_mae = run_hpo(model_key, X, y, groups, args.trials, args.cv_folds)
+        best_mae = run_hpo(model_key, X, y, validation_frame, args.trials, args.cv_folds)
         results[model_key] = best_mae
 
     log.info("=" * 55)

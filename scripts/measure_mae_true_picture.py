@@ -1,12 +1,12 @@
 """
-Measure MAE true picture - matches the exact split and model params used in raceAnalysis.py.
+Measure MAE with the same model parameters and production temporal policy.
 
 Methodology:
   - Same model: XGBRegressor(n_estimators=200, lr=0.1, max_depth=4, random_state=42)
-  - Same split:  train_test_split(test_size=0.2, random_state=42)            [matches the 2.08 baseline]
+  - Final 20% of race events as a chronological holdout with a one-event embargo
   - Same sample weights: 2x winners, 1.5x podium, 1.2x points, 1.0 rest
   - Same early stopping: early_stopping_rounds=20, eval_set on test split
-  - Also shows 5-fold GroupKFold by season for a leakage-free reference
+  - Also shows five embargoed expanding-window race-event folds
 
 The script simulates all ROADMAP-1 bug-fixed and new features *inline* on the existing
 CSV so we don't need to wait for a full generator re-run.
@@ -288,22 +288,31 @@ def make_preprocessor(feature_cols, df):
 # ════════════════════════════════════════════════════════════════════════════
 from xgboost import XGBRegressor
 from sklearn.metrics import mean_absolute_error
-from sklearn.model_selection import train_test_split, GroupKFold
+from f1bet.validation import final_event_holdout_indices, sklearn_model_selection_cv
 
 def sample_weights(y):
     return np.where(y == 1, 2.0,
            np.where(y <= 3, 1.5,
            np.where(y <= 10, 1.2, 1.0)))
 
-def evaluate_80_20(df, feature_cols, label=""):
-    """Evaluate using exact app split: 80/20 random, random_state=42."""
+def _final_temporal_holdout(frame, test_fraction=0.2, embargo_events=1):
+    train_idx, test_idx, _ = final_event_holdout_indices(
+        frame,
+        test_fraction=test_fraction,
+        embargo_events=embargo_events,
+    )
+    return train_idx, test_idx
+
+
+def evaluate_temporal_holdout(df, feature_cols, label=""):
+    """Evaluate on the final 20% of events with a one-event embargo."""
     X = df[feature_cols]
     y = df[target_col]
     preprocessor = make_preprocessor(feature_cols, df)
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
+    train_idx, test_idx = _final_temporal_holdout(df)
+    X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
+    y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
     sw = sample_weights(y_train.values)
 
     Xtr = preprocessor.fit_transform(X_train)
@@ -327,21 +336,21 @@ def evaluate_80_20(df, feature_cols, label=""):
     print(f"  [{label}]  MAE={mae:.4f}  rounds={rounds}  features={len(feature_cols)}")
     return mae
 
-def evaluate_groupkfold(df, feature_cols, label="", n_splits=5):
-    """Evaluate using 5-fold GroupKFold by season (leakage-free reference)."""
+def evaluate_temporal_cv(df, feature_cols, label="", n_splits=5):
+    """Evaluate using embargoed expanding-window race-event folds."""
     year_col = next((c for c in ['grandPrixYear', 'year'] if c in df.columns), None)
     if year_col is None:
         return None
 
     X = df[feature_cols].values
     y = df[target_col].values
-    groups = df[year_col].values
-
-    preprocessor = make_preprocessor(feature_cols, df)
-    gkf = GroupKFold(n_splits=n_splits)
+    cv, _, final_season = sklearn_model_selection_cv(
+        df, n_splits=n_splits, embargo_events=1
+    )
+    print(f"    model-selection folds exclude final season {final_season}")
     maes = []
 
-    for fold, (train_idx, test_idx) in enumerate(gkf.split(X, y, groups)):
+    for fold, (train_idx, test_idx) in enumerate(cv):
         X_tr_raw = df[feature_cols].iloc[train_idx]
         X_te_raw = df[feature_cols].iloc[test_idx]
         y_tr = y[train_idx]
@@ -363,19 +372,19 @@ def evaluate_groupkfold(df, feature_cols, label="", n_splits=5):
 
     mean_mae = np.mean(maes)
     std_mae = np.std(maes)
-    print(f"  [{label}]  MAE={mean_mae:.4f} ± {std_mae:.4f}  (GroupKFold {n_splits}-fold)")
+    print(f"  [{label}]  MAE={mean_mae:.4f} ± {std_mae:.4f}  (temporal {n_splits}-fold)")
     return mean_mae
 
 # ════════════════════════════════════════════════════════════════════════════
 # 5.  RUN EVALUATIONS
 # ════════════════════════════════════════════════════════════════════════════
-print("\n── Method A: 80/20 random split (matches the app's 2.08 baseline) ──")
-mae_old_80 = evaluate_80_20(df, available_old, label="BASELINE (old features)")
-mae_new_80 = evaluate_80_20(df, available_new, label="ROADMAP-1  (new features)")
+print("\n── Method A: final 20% chronological event holdout ──")
+mae_old_80 = evaluate_temporal_holdout(df, available_old, label="BASELINE (old features)")
+mae_new_80 = evaluate_temporal_holdout(df, available_new, label="ROADMAP-1  (new features)")
 
-print("\n── Method B: 5-fold GroupKFold by season (leakage-free reference) ──")
-mae_old_gkf = evaluate_groupkfold(df, available_old, label="BASELINE (old features)")
-mae_new_gkf = evaluate_groupkfold(df, available_new, label="ROADMAP-1  (new features)")
+print("\n── Method B: 5-fold embargoed expanding window by race event ──")
+mae_old_gkf = evaluate_temporal_cv(df, available_old, label="BASELINE (old features)")
+mae_new_gkf = evaluate_temporal_cv(df, available_new, label="ROADMAP-1  (new features)")
 
 # ════════════════════════════════════════════════════════════════════════════
 # 6.  SUMMARY
@@ -388,11 +397,11 @@ print("-" * 70)
 if mae_old_80 and mae_new_80:
     delta_80 = mae_new_80 - mae_old_80
     sign = "▼ BETTER" if delta_80 < 0 else "▲ WORSE"
-    print(f"{'MAE (80/20 random split)':<40} {mae_old_80:>10.4f} {mae_new_80:>10.4f} {delta_80:>+10.4f}  {sign}")
+    print(f"{'MAE (final 20% temporal holdout)':<40} {mae_old_80:>10.4f} {mae_new_80:>10.4f} {delta_80:>+10.4f}  {sign}")
 if mae_old_gkf and mae_new_gkf:
     delta_gkf = mae_new_gkf - mae_old_gkf
     sign = "▼ BETTER" if delta_gkf < 0 else "▲ WORSE"
-    print(f"{'MAE (GroupKFold by season)':<40} {mae_old_gkf:>10.4f} {mae_new_gkf:>10.4f} {delta_gkf:>+10.4f}  {sign}")
+    print(f"{'MAE (embargoed expanding window)':<40} {mae_old_gkf:>10.4f} {mae_new_gkf:>10.4f} {delta_gkf:>+10.4f}  {sign}")
 print("-" * 70)
 print(f"Feature count old → new: {len(available_old)} → {len(available_new)}")
 print()
@@ -408,6 +417,5 @@ if mae_new_80:
         print("TARGET REACHED! ✓")
 
 print()
-print("Note: 80/20 random split can include future races in training set (data leakage).")
-print("      GroupKFold by season is a stricter, more realistic evaluation.")
-print("      The 2.08 figure reported in the app was measured with the 80/20 split.")
+print("Note: every reported score keeps complete race events together and trains only on")
+print("      earlier events. A one-event embargo separates training from evaluation.")

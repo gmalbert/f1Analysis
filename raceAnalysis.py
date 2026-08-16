@@ -40,10 +40,8 @@ from scipy.stats import linregress
 from scipy.stats import truncnorm
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
-from sklearn.model_selection import train_test_split
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import GroupKFold
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.pipeline import Pipeline
@@ -1066,14 +1064,14 @@ raceNoEarlierThan = current_year - 10
 
 # start = time.time()
 
-@st.cache_data(max_entries=1)
+@st.cache_resource(show_spinner=False)
 def load_correlation(nrows, CACHE_VERSION):
     correlation_matrix = pd.read_csv(path.join(DATA_DIR, 'f1PositionCorrelation.csv'), sep='\t', nrows=nrows)
     return correlation_matrix
 
 correlation_matrix = load_correlation(10000, CACHE_VERSION)
 
-@st.cache_data(max_entries=1)
+@st.cache_resource(show_spinner=False)
 def load_data_schedule(nrows, CACHE_VERSION):
     raceSchedule = pd.read_json(path.join(DATA_DIR, 'f1db-races.json'))
     grandPrix = pd.read_json(path.join(DATA_DIR, 'f1db-grands-prix.json'))
@@ -1083,14 +1081,14 @@ def load_data_schedule(nrows, CACHE_VERSION):
 
 raceSchedule = load_data_schedule(10000, CACHE_VERSION)
 
-@st.cache_data(max_entries=1)
+@st.cache_resource(show_spinner=False)
 def load_drivers(nrows, CACHE_VERSION):
     drivers = pd.read_json(path.join(DATA_DIR, 'f1db-drivers.json'))
     return drivers
 
 drivers = load_drivers(10000, CACHE_VERSION)
 
-@st.cache_data(max_entries=1)
+@st.cache_resource(show_spinner=False)
 def load_qualifying(nrows):
     # Include cache version to invalidate when preprocessor changes
     _ = CACHE_VERSION
@@ -1099,7 +1097,7 @@ def load_qualifying(nrows):
 
 qualifying = load_qualifying(10000)
 
-@st.cache_data(max_entries=1)
+@st.cache_resource(show_spinner=False)
 def load_practices(nrows, CACHE_VERSION):
     practices = pd.read_csv(path.join(DATA_DIR, 'all_practice_laps.csv'), sep='\t', dtype={'PitOutTime': str}) 
     practices = practices[practices['Driver'] != 'ERROR']  # Remove rows where Driver is 'ERROR'
@@ -1107,7 +1105,7 @@ def load_practices(nrows, CACHE_VERSION):
 
 practices = load_practices(10000, CACHE_VERSION)
 
-@st.cache_data(max_entries=1)
+@st.cache_resource(show_spinner=False)
 def load_data_race_messages(nrows, CACHE_VERSION):
     race_messages = pd.read_csv(path.join(DATA_DIR, 'race_control_messages_grouped_with_dnf.csv'),sep='\t')
     return race_messages
@@ -1169,7 +1167,7 @@ schedule_columns_to_display = {
     'sprintQualifyingTime': None,   
 }
 
-@st.cache_data(max_entries=1)
+@st.cache_resource(show_spinner=False)
 def load_weather_data(nrows, CACHE_VERSION):
     weather = pd.read_csv(path.join(DATA_DIR, 'f1WeatherData_Grouped.csv'), sep='\t', nrows=nrows, usecols=['grandPrixId', 'short_date', 'average_temp', 'total_precipitation', 'average_humidity', 'average_wind_speed', 'id_races'])
     grandPrix = pd.read_json(path.join(DATA_DIR, 'f1db-grands-prix.json'))
@@ -1379,13 +1377,14 @@ if CLEAN_TABLE_BORDERS:
     """, unsafe_allow_html=True)
 
 # Create main tabs
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "📊 Data Explorer", 
     "📈 Analytics & Visualizations", 
     "🏎️ Schedule",
     "🏁 Next Race",
     "🤖 Predictive Models",
-    "💾 Data & Debug"
+    "💾 Data & Debug",
+    "📐 Betting Research"
 ])
 
 columns_to_display = {
@@ -1580,7 +1579,7 @@ season_summary_columns_to_display = {
     'total_podiums': st.column_config.NumberColumn("Total Podiums", format="%d")
 }
 
-@st.cache_data(max_entries=1)
+@st.cache_resource(show_spinner=False)
 def load_data(nrows, CACHE_VERSION, data_sha256=None):
     # data_sha256 is a stable cache key. Unlike a checkout mtime, it changes
     # only when file content changes, so hot updates do not accumulate large
@@ -1589,7 +1588,7 @@ def load_data(nrows, CACHE_VERSION, data_sha256=None):
         data_sha256 = get_data_fingerprint()['data_sha256']
     # Read the header only to get all column names
     all_columns = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t', nrows=0).columns.tolist()
-    selected_columns = ['grandPrixYear', 'grandPrixName', 'resultsDriverName', 'resultsPodium', 'resultsTop5', 'resultsTop10', 'constructorName',  'resultsStartingGridPositionNumber', 'resultsFinalPositionNumber', 
+    selected_columns = ['grandPrixYear', 'round', 'grandPrixName', 'resultsDriverName', 'resultsPodium', 'resultsTop5', 'resultsTop10', 'constructorName',  'resultsStartingGridPositionNumber', 'resultsFinalPositionNumber', 
     'positionsGained', 'short_date', 'raceId_results', 'grandPrixRaceId', 'DNF', 'averagePracticePosition', 'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'q1End', 'q2End', 'q3Top10', 'resultsDriverId', 
     'grandPrixLaps', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 'resultsReasonRetired', 'constructorId_results', 
     'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'activeDriver', 'streetRace', 'trackRace', 'recent_form_3_races', 'recent_form_5_races', #'Points',
@@ -1687,114 +1686,131 @@ def load_data(nrows, CACHE_VERSION, data_sha256=None):
 
     return fullResults, pitStops
 
-data, pitStops = load_data(
+@st.cache_resource(max_entries=1, show_spinner=False)
+def get_shared_dataset(nrows, CACHE_VERSION, data_sha256=None):
+    """Load and fully prepare the analysis dataset exactly once, shared by every session.
+
+    ``st.cache_resource`` returns the same object by reference to all user sessions,
+    so concurrent sessions no longer each receive a private deep copy of the
+    ~500-column DataFrame.  (With ``st.cache_data`` every session was handed a
+    pickled copy, so memory grew linearly with the number of open sessions and
+    drove the Community Cloud over-capacity / OOM restarts.)  All of the
+    post-processing that used to run at module scope on every session is done here
+    a single time instead.
+    """
+    fullResults, pitStops = load_data(nrows, CACHE_VERSION, data_sha256)
+
+    # Debug: Check what columns were actually loaded
+    print(f"[DEBUG] Loaded data with {len(fullResults.columns)} columns")
+    lap_level_in_data = [c for c in fullResults.columns if any(x in c for x in ['sector1_sec', 'sector2_sec', 'sector3_sec', 'theoretical_best_lap', 'sector_consistency'])]
+    print(f"[DEBUG] Lap-level/engineered columns in loaded data: {lap_level_in_data}")
+
+    # Check for duplicate columns and remove them
+    dupes = [col for col in fullResults.columns if fullResults.columns.tolist().count(col) > 1]
+    if dupes:
+        st.warning(f"Duplicate columns found in your data: {dupes}")
+        fullResults = fullResults.loc[:, ~fullResults.columns.duplicated()]
+
+    if 'constructorName_results_with_qualifying' in fullResults.columns:
+        fullResults.rename(columns={'constructorName_results_with_qualifying': 'constructorName'}, inplace=True)
+    elif 'constructorName_qualifying' in fullResults.columns:
+        fullResults.rename(columns={'constructorName_qualifying': 'constructorName'}, inplace=True)
+
+    if 'best_qual_time_results_with_qualifying' in fullResults.columns:
+        fullResults.rename(columns={'best_qual_time_results_with_qualifying': 'best_qual_time'}, inplace=True)
+    elif 'best_qual_time_qualifying' in fullResults.columns:
+        fullResults.rename(columns={'best_qual_time_qualifying': 'best_qual_time'}, inplace=True)  
+
+    if 'teammate_qual_delta_results_with_qualifying' in fullResults.columns:
+        fullResults.rename(columns={'teammate_qual_delta_results_with_qualifying': 'teammate_qual_delta'}, inplace=True)
+    elif 'teammate_qual_delta_qualifying' in fullResults.columns:
+        fullResults.rename(columns={'teammate_qual_delta_qualifying': 'teammate_qual_delta'}, inplace=True)
+
+    # Apply team-aware feature engineering (after column renaming)
+    try:
+        fullResults = create_constructor_adjusted_driver_features(fullResults)
+        fullResults = create_recent_performance_features(fullResults, recent_races=5)
+        fullResults = create_constructor_compatibility_features(fullResults)
+    except Exception as e:
+        st.warning(f"Could not create some team-aware features: {e}")
+        # Continue with original data if feature creation fails
+
+    # Round averagePracticePosition to 2 decimal places
+    fullResults['averagePracticePosition'] = fullResults['averagePracticePosition'].round(2)
+
+    # Convert columns to appropriate types to allow for NaN values
+    fullResults['resultsStartingGridPositionNumber'] = fullResults['resultsStartingGridPositionNumber'].astype('Float64')
+    fullResults['resultsFinalPositionNumber'] = fullResults['resultsFinalPositionNumber'].astype('Float64')
+    fullResults['positionsGained'] = fullResults['positionsGained'].astype('Int64')
+    fullResults['averagePracticePosition'] = fullResults['averagePracticePosition'].astype('Float64')
+    fullResults['lastFPPositionNumber'] = fullResults['lastFPPositionNumber'].astype('Float64')
+    fullResults['resultsQualificationPositionNumber'] = fullResults['resultsQualificationPositionNumber'].astype('Int64')
+    fullResults['short_date'] = pd.to_datetime(fullResults['short_date'])
+    fullResults['numberOfStops'] = fullResults['numberOfStops'].astype('Int64')
+    fullResults['averageStopTime'] = fullResults['averageStopTime'].astype('Float64')
+    fullResults['totalStopTime'] = fullResults['totalStopTime'].astype('Float64')
+    fullResults['driverBestStartingGridPosition'] = fullResults['driverBestStartingGridPosition'].astype('Int64')
+    fullResults['driverBestRaceResult'] = fullResults['driverBestRaceResult'].astype('Int64')
+    fullResults['constructorRank'] = fullResults['constructorRank'].astype('Int64')
+    if 'Points' in fullResults.columns:
+        fullResults['Points'] = fullResults['Points'].astype('Int64')
+    fullResults['driverRank'] = fullResults['driverRank'].astype('Int64')
+    # if 'bestQualifyingTime_sec' in fullResults.columns:
+    #     fullResults['bestQualifyingTime_sec'] = fullResults['bestQualifyingTime_sec'].astype('Float64')
+    # else:
+    #     st.warning("'bestQualifyingTime_sec' column not found in data.")
+    fullResults['driverTotalChampionshipWins'] = fullResults['driverTotalChampionshipWins'].astype('Int64')
+    fullResults['driverTotalRaceEntries'] = fullResults['driverTotalRaceEntries'].astype('Int64')
+
+    # Handle columns that may or may not exist (legacy suffixes from older data structure)
+    if 'bestChampionshipPosition_results_with_qualifying' in fullResults.columns:
+        fullResults['bestChampionshipPosition'] = fullResults['bestChampionshipPosition_results_with_qualifying'].astype('Int64')
+    if 'bestStartingGridPosition_results_with_qualifying' in fullResults.columns:
+        fullResults['bestStartingGridPosition'] = fullResults['bestStartingGridPosition_results_with_qualifying'].astype('Int64')
+    if 'bestRaceResult_results_with_qualifying' in fullResults.columns:
+        fullResults['bestRaceResult'] = fullResults['bestRaceResult_results_with_qualifying'].astype('Int64')
+    if 'totalChampionshipWins_results_with_qualifying' in fullResults.columns:
+        fullResults['totalChampionshipWins'] = fullResults['totalChampionshipWins_results_with_qualifying'].astype('Int64')
+    if 'totalRaceStarts_results_with_qualifying' in fullResults.columns:
+        fullResults['totalRaceStarts'] = fullResults['totalRaceStarts_results_with_qualifying'].astype('Int64')
+    if 'totalRaceWins_results_with_qualifying' in fullResults.columns:
+        fullResults['totalRaceWins'] = fullResults['totalRaceWins_results_with_qualifying'].astype('Int64')
+    if 'total1And2Finishes' in fullResults.columns:
+        fullResults['total1And2Finishes'] = fullResults['total1And2Finishes'].astype('Int64')
+    if 'totalRaceLaps_results_with_qualifying' in fullResults.columns:
+        fullResults['totalRaceLaps'] = fullResults['totalRaceLaps_results_with_qualifying'].astype('Int64')
+    if 'totalPodiums_results_with_qualifying' in fullResults.columns:
+        fullResults['totalPodiums'] = fullResults['totalPodiums_results_with_qualifying'].astype('Int64')
+    if 'totalPodiumRaces' in fullResults.columns:
+        fullResults['totalPodiumRaces'] = fullResults['totalPodiumRaces'].astype('Int64')
+    if 'totalPoints_results_with_qualifying' in fullResults.columns:
+        fullResults['totalPoints'] = fullResults['totalPoints_results_with_qualifying'].astype('Float64')
+    if 'totalChampionshipPoints_results_with_qualifying' in fullResults.columns:
+        fullResults['totalChampionshipPoints'] = fullResults['totalChampionshipPoints_results_with_qualifying'].astype('Float64')
+    # fullResults['totalPolePositions'] = fullResults['totalPolePositions_results_with_qualifying'].astype('Int64')
+    if 'totalFastestLaps_results_with_qualifying' in fullResults.columns:
+        fullResults['totalFastestLaps'] = fullResults['totalFastestLaps_results_with_qualifying'].astype('Int64')
+    if 'totalRaceEntries_results_with_qualifying' in fullResults.columns:
+        fullResults['totalRaceEntries'] = fullResults['totalRaceEntries_results_with_qualifying'].astype('Int64')
+    fullResults['driverAge'] = fullResults['driverAge'].astype('Int64')
+    # fullResults['delta_from_race_avg'] = fullResults['delta_from_race_avg'].astype('Float64')
+    fullResults['driverAge'] = fullResults['driverAge'].astype('Int64')
+    fullResults['DNF'] = fullResults['DNF'].astype('boolean')
+    fullResults['championship_position'] = fullResults['championship_position'].astype('Float64')
+    fullResults['practice_x_safetycar_bin'] = fullResults['practice_x_safetycar_bin'].astype('Float64')
+    fullResults['positions_gained_first_lap_pct_bin'] = fullResults['positions_gained_first_lap_pct_bin'].astype('Float64')
+    fullResults['is_first_season_with_constructor'] = fullResults['is_first_season_with_constructor'].astype('Int64')
+    fullResults['grid_penalty_x_constructor_bin'] = fullResults['grid_penalty_x_constructor_bin'].astype('Float64')
+    fullResults['SafetyCarStatus'] = fullResults['SafetyCarStatus'].astype('Float64')
+
+    return fullResults, pitStops
+
+
+data, pitStops = get_shared_dataset(
     10000,
     CACHE_VERSION,
     get_data_fingerprint()['data_sha256']
 )
-
-# Debug: Check what columns were actually loaded
-print(f"[DEBUG] Loaded data with {len(data.columns)} columns")
-lap_level_in_data = [c for c in data.columns if any(x in c for x in ['sector1_sec', 'sector2_sec', 'sector3_sec', 'theoretical_best_lap', 'sector_consistency'])]
-print(f"[DEBUG] Lap-level/engineered columns in loaded data: {lap_level_in_data}")
-
-# Check for duplicate columns and remove them
-dupes = [col for col in data.columns if data.columns.tolist().count(col) > 1]
-if dupes:
-    st.warning(f"Duplicate columns found in your data: {dupes}")
-    data = data.loc[:, ~data.columns.duplicated()]
-
-if 'constructorName_results_with_qualifying' in data.columns:
-    data.rename(columns={'constructorName_results_with_qualifying': 'constructorName'}, inplace=True)
-elif 'constructorName_qualifying' in data.columns:
-    data.rename(columns={'constructorName_qualifying': 'constructorName'}, inplace=True)
-
-if 'best_qual_time_results_with_qualifying' in data.columns:
-    data.rename(columns={'best_qual_time_results_with_qualifying': 'best_qual_time'}, inplace=True)
-elif 'best_qual_time_qualifying' in data.columns:
-    data.rename(columns={'best_qual_time_qualifying': 'best_qual_time'}, inplace=True)  
-
-if 'teammate_qual_delta_results_with_qualifying' in data.columns:
-    data.rename(columns={'teammate_qual_delta_results_with_qualifying': 'teammate_qual_delta'}, inplace=True)
-elif 'teammate_qual_delta_qualifying' in data.columns:
-    data.rename(columns={'teammate_qual_delta_qualifying': 'teammate_qual_delta'}, inplace=True)
-
-# Apply team-aware feature engineering (after column renaming)
-try:
-    data = create_constructor_adjusted_driver_features(data)
-    data = create_recent_performance_features(data, recent_races=5)
-    data = create_constructor_compatibility_features(data)
-except Exception as e:
-    st.warning(f"Could not create some team-aware features: {e}")
-    # Continue with original data if feature creation fails
-
-# Round averagePracticePosition to 2 decimal places
-data['averagePracticePosition'] = data['averagePracticePosition'].round(2)
-
-# Convert columns to appropriate types to allow for NaN values
-data['resultsStartingGridPositionNumber'] = data['resultsStartingGridPositionNumber'].astype('Float64')
-data['resultsFinalPositionNumber'] = data['resultsFinalPositionNumber'].astype('Float64')
-data['positionsGained'] = data['positionsGained'].astype('Int64')
-data['averagePracticePosition'] = data['averagePracticePosition'].astype('Float64')
-data['lastFPPositionNumber'] = data['lastFPPositionNumber'].astype('Float64')
-data['resultsQualificationPositionNumber'] = data['resultsQualificationPositionNumber'].astype('Int64')
-data['short_date'] = pd.to_datetime(data['short_date'])
-data['numberOfStops'] = data['numberOfStops'].astype('Int64')
-data['averageStopTime'] = data['averageStopTime'].astype('Float64')
-data['totalStopTime'] = data['totalStopTime'].astype('Float64')
-data['driverBestStartingGridPosition'] = data['driverBestStartingGridPosition'].astype('Int64')
-data['driverBestRaceResult'] = data['driverBestRaceResult'].astype('Int64')
-data['constructorRank'] = data['constructorRank'].astype('Int64')
-if 'Points' in data.columns:
-    data['Points'] = data['Points'].astype('Int64')
-data['driverRank'] = data['driverRank'].astype('Int64')
-# if 'bestQualifyingTime_sec' in data.columns:
-#     data['bestQualifyingTime_sec'] = data['bestQualifyingTime_sec'].astype('Float64')
-# else:
-#     st.warning("'bestQualifyingTime_sec' column not found in data.")
-data['driverTotalChampionshipWins'] = data['driverTotalChampionshipWins'].astype('Int64')
-data['driverTotalRaceEntries'] = data['driverTotalRaceEntries'].astype('Int64')
-
-# Handle columns that may or may not exist (legacy suffixes from older data structure)
-if 'bestChampionshipPosition_results_with_qualifying' in data.columns:
-    data['bestChampionshipPosition'] = data['bestChampionshipPosition_results_with_qualifying'].astype('Int64')
-if 'bestStartingGridPosition_results_with_qualifying' in data.columns:
-    data['bestStartingGridPosition'] = data['bestStartingGridPosition_results_with_qualifying'].astype('Int64')
-if 'bestRaceResult_results_with_qualifying' in data.columns:
-    data['bestRaceResult'] = data['bestRaceResult_results_with_qualifying'].astype('Int64')
-if 'totalChampionshipWins_results_with_qualifying' in data.columns:
-    data['totalChampionshipWins'] = data['totalChampionshipWins_results_with_qualifying'].astype('Int64')
-if 'totalRaceStarts_results_with_qualifying' in data.columns:
-    data['totalRaceStarts'] = data['totalRaceStarts_results_with_qualifying'].astype('Int64')
-if 'totalRaceWins_results_with_qualifying' in data.columns:
-    data['totalRaceWins'] = data['totalRaceWins_results_with_qualifying'].astype('Int64')
-if 'total1And2Finishes' in data.columns:
-    data['total1And2Finishes'] = data['total1And2Finishes'].astype('Int64')
-if 'totalRaceLaps_results_with_qualifying' in data.columns:
-    data['totalRaceLaps'] = data['totalRaceLaps_results_with_qualifying'].astype('Int64')
-if 'totalPodiums_results_with_qualifying' in data.columns:
-    data['totalPodiums'] = data['totalPodiums_results_with_qualifying'].astype('Int64')
-if 'totalPodiumRaces' in data.columns:
-    data['totalPodiumRaces'] = data['totalPodiumRaces'].astype('Int64')
-if 'totalPoints_results_with_qualifying' in data.columns:
-    data['totalPoints'] = data['totalPoints_results_with_qualifying'].astype('Float64')
-if 'totalChampionshipPoints_results_with_qualifying' in data.columns:
-    data['totalChampionshipPoints'] = data['totalChampionshipPoints_results_with_qualifying'].astype('Float64')
-# data['totalPolePositions'] = data['totalPolePositions_results_with_qualifying'].astype('Int64')
-if 'totalFastestLaps_results_with_qualifying' in data.columns:
-    data['totalFastestLaps'] = data['totalFastestLaps_results_with_qualifying'].astype('Int64')
-if 'totalRaceEntries_results_with_qualifying' in data.columns:
-    data['totalRaceEntries'] = data['totalRaceEntries_results_with_qualifying'].astype('Int64')
-data['driverAge'] = data['driverAge'].astype('Int64')
-# data['delta_from_race_avg'] = data['delta_from_race_avg'].astype('Float64')
-data['driverAge'] = data['driverAge'].astype('Int64')
-data['DNF'] = data['DNF'].astype('boolean')
-data['championship_position'] = data['championship_position'].astype('Float64')
-data['practice_x_safetycar_bin'] = data['practice_x_safetycar_bin'].astype('Float64')
-data['positions_gained_first_lap_pct_bin'] = data['positions_gained_first_lap_pct_bin'].astype('Float64')
-data['is_first_season_with_constructor'] = data['is_first_season_with_constructor'].astype('Int64')
-data['grid_penalty_x_constructor_bin'] = data['grid_penalty_x_constructor_bin'].astype('Float64')
-data['SafetyCarStatus'] = data['SafetyCarStatus'].astype('Float64')
 
 column_names = data.columns.tolist()
 
@@ -1931,7 +1947,22 @@ def get_features_and_target(data):
 
     return X, y
 
-features, _ = get_features_and_target(data)
+
+@st.cache_resource(max_entries=1, show_spinner=False)
+def get_shared_features(data_sha256=None):
+    """Compute the shared model feature matrix once per dataset (not per session).
+
+    The module-level ``features`` frame is consumed read-only throughout the app,
+    so it can be shared across sessions by reference instead of being rebuilt and
+    deep-copied for every open session.
+    """
+    global data
+    if data_sha256 is None:
+        data_sha256 = get_data_fingerprint()['data_sha256']
+    return get_features_and_target(data)
+
+
+features, _ = get_shared_features(get_data_fingerprint()['data_sha256'])
 missing = [col for col in features.columns if col not in data.columns]
 if missing:
     st.write(f"The following feature columns are missing from your data: {missing}")
@@ -2263,7 +2294,7 @@ safety_cars = load_safetycars(10000, CACHE_VERSION)
 
 ###### Training model for final racing position prediction
 
-features, _ = get_features_and_target(data)
+features, _ = get_shared_features(get_data_fingerprint()['data_sha256'])
 missing = [col for col in features.columns if col not in data.columns]
 if missing:
     st.error(f"The following feature columns are missing from your data: {missing}")
@@ -2288,10 +2319,20 @@ def _prep_as_df(arr, preprocessor):
         return arr  # fall back to numpy if feature names are unavailable
 
 
+def _temporal_holdout_positions(data, index, test_fraction=0.2, embargo_events=1):
+    """Return a final-event holdout with a conservative event embargo."""
+    from f1bet.validation import final_event_holdout_indices
+
+    return final_event_holdout_indices(
+        data.loc[index],
+        test_fraction=test_fraction,
+        embargo_events=embargo_events,
+    )
+
+
 def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost", preprocessor_version="v2"):
     import xgboost as xgb
     from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
-    from sklearn.model_selection import train_test_split
     import numpy as np
 
     X, y = get_features_and_target(data)
@@ -2315,7 +2356,20 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
     X = X.loc[valid_y]
     y = y.loc[valid_y].astype(np.float64)
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    train_positions, test_positions, embargoed_events = _temporal_holdout_positions(
+        data, X.index, test_fraction=0.2, embargo_events=1
+    )
+    X_train, X_test = X.iloc[train_positions], X.iloc[test_positions]
+    y_train, y_test = y.iloc[train_positions], y.iloc[test_positions]
+    _training_meta = data.loc[X_train.index].copy()
+    if 'event_id' not in _training_meta.columns:
+        from f1bet.contracts import add_event_identity as _add_event_identity
+        _training_meta = _add_event_identity(_training_meta)
+    from f1bet.validation import event_order as _event_order
+    _training_events = _event_order(_training_meta)
+    preprocessor.f1bet_training_start_event_ = _training_events[0]
+    preprocessor.f1bet_training_end_event_ = _training_events[-1]
+    preprocessor.f1bet_embargoed_events_ = embargoed_events
 
      # ADD THIS: Create sample weights favoring top positions
     # Sample weights removed to match precompute script and minimize overall MAE
@@ -2480,10 +2534,13 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
                      "platform (missing libgomp.so.1). Please select XGBoost or CatBoost.")
             return None, None, None, None, None, {}, preprocessor
         from catboost import CatBoostRegressor
-        from sklearn.model_selection import GroupKFold
+        from f1bet.validation import (
+            final_season_holdout_indices,
+            sklearn_model_selection_cv,
+            with_event_identity,
+        )
 
-        # Season-stratified groups so CV never leaks future-season data into eval
-        groups_arr = data.loc[X.index, 'grandPrixYear'].fillna(0).astype(int).values
+        validation_metadata = with_event_identity(data.loc[X.index])
         y_arr = np.asarray(y, dtype=np.float64)  # force plain ndarray (LightGBM rejects FloatingArray)
 
         # Helper: build and predict with a fresh PGE on one fold
@@ -2510,10 +2567,15 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
             return PositionGroupEnsemble(podium_model=pm, points_model=cm,
                                          outside_model=om, router_model=r).predict(X_te)
 
-        # 3-fold GroupKFold CV (reduced from 5 to lower live-retrain memory usage)
-        cv = GroupKFold(n_splits=3)
-        oof_pred = np.zeros(len(y_arr))
-        for tr_idx, te_idx in cv.split(X, y_arr, groups=groups_arr):
+        # Expanding race-event folds. Every validation row is strictly later
+        # than training and a one-event embargo separates the partitions.
+        folds, final_test_index, final_test_season = sklearn_model_selection_cv(
+            validation_metadata, n_splits=5, embargo_events=1
+        )
+        if not folds:
+            raise ValueError("insufficient events for position-group walk-forward validation")
+        oof_pred = np.full(len(y_arr), np.nan)
+        for tr_idx, te_idx in folds:
             X_ftr, y_ftr = X.iloc[tr_idx], y_arr[tr_idx]
             X_fte, y_fte = X.iloc[te_idx], y_arr[te_idx]
             _pp = _build_advanced_preprocessor(X_ftr)
@@ -2524,15 +2586,35 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
                     np.where(y_ftr <= 10, 1.2, 1.0)))
             oof_pred[te_idx] = _fold_pge(Xtr_p, y_ftr, Xte_p, sw_f)
 
-        # OOF-based metrics (honest, consistent with benchmark)
-        cv_mae   = float(mean_absolute_error(y_arr, oof_pred))
-        cv_mse   = float(mean_squared_error(y_arr, oof_pred))
-        cv_r2    = float(r2_score(y_arr, oof_pred))
-        cv_merr  = float(np.mean(oof_pred - y_arr))
+        # Development OOF is reported separately from the untouched final season.
+        evaluated = np.isfinite(oof_pred)
+        development_mae = float(mean_absolute_error(y_arr[evaluated], oof_pred[evaluated]))
+
+        development_index, final_test_index, final_embargo, _ = final_season_holdout_indices(
+            validation_metadata, embargo_events=1
+        )
+        X_dev, y_dev = X.iloc[development_index], y_arr[development_index]
+        X_final, y_final = X.iloc[final_test_index], y_arr[final_test_index]
+        final_preprocessor = _build_advanced_preprocessor(X_dev)
+        X_dev_p = _prep_as_df(final_preprocessor.fit_transform(X_dev, y_dev), final_preprocessor)
+        X_final_p = _prep_as_df(final_preprocessor.transform(X_final), final_preprocessor)
+        final_weights = np.where(y_dev == 1, 2.0,
+                        np.where(y_dev <= 3, 1.5,
+                        np.where(y_dev <= 10, 1.2, 1.0)))
+        final_pred = _fold_pge(X_dev_p, y_dev, X_final_p, final_weights)
+        cv_mae = float(mean_absolute_error(y_final, final_pred))
+        cv_mse = float(mean_squared_error(y_final, final_pred))
+        cv_r2 = float(r2_score(y_final, final_pred))
+        cv_merr = float(np.mean(final_pred - y_final))
 
         # Final model: refit preprocessor and models on ALL data
         X_all_prep = _prep_as_df(preprocessor.fit_transform(X, y), preprocessor)
         TRAINING_PREPROCESSOR = preprocessor
+        from f1bet.validation import event_order as _event_order_all
+        _all_events = _event_order_all(validation_metadata)
+        preprocessor.f1bet_training_start_event_ = _all_events[0]
+        preprocessor.f1bet_training_end_event_ = _all_events[-1]
+        preprocessor.f1bet_embargoed_events_ = ()
 
         sw_all     = np.where(y_arr == 1, 2.0,
                      np.where(y_arr <= 3, 1.5,
@@ -2565,7 +2647,14 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
             router_model=_router,
         )
 
-        evals_result = {'eval': {'mae': [cv_mae]}}
+        evals_result = {
+            'development': {'walk_forward_mae': [development_mae]},
+            'final': {
+                'mae': [cv_mae],
+                'season': [int(final_test_season)],
+                'embargoed_events': [list(final_embargo)],
+            },
+        }
         return model, cv_mse, cv_r2, cv_mae, cv_merr, evals_result, preprocessor
 
     elif model_type == "Track-Weighted Ensemble":  # ROADMAP-3E
@@ -2711,6 +2800,25 @@ def _load_pretrained_model_resource(
 
         artifact = dict(artifact)
         artifact['_artifact_path'] = str(model_file)
+        manifest_file = model_file.parent / 'manifest.json'
+        if manifest_file.exists() and model_name == 'position_model':
+            try:
+                from f1bet.artifacts import ModelManifest
+                manifest = ModelManifest.load(manifest_file)
+                preprocessor = artifact.get('preprocessor')
+                feature_names = tuple(str(value) for value in getattr(preprocessor, 'feature_names_in_', ()))
+                if manifest.schema_version != 'legacy-wide-v1':
+                    raise ValueError(f"unsupported schema {manifest.schema_version!r}")
+                if manifest.data_sha256 != data_fingerprint.get('data_sha256'):
+                    raise ValueError('dataset SHA-256 mismatch')
+                if manifest.feature_names != feature_names:
+                    raise ValueError('feature order mismatch')
+                artifact['_manifest_status'] = 'verified'
+            except Exception as exc:
+                print(f"INFO: Ignoring model with incompatible manifest at {manifest_file}: {exc}")
+                continue
+        else:
+            artifact['_manifest_status'] = 'legacy-missing'
         fingerprint_match = artifact_matches_fingerprint(artifact, data_fingerprint)
         if fingerprint_match is True:
             artifact['_artifact_status'] = 'current'
@@ -2733,9 +2841,10 @@ def load_pretrained_model(model_name='position_model', CACHE_VERSION='v2.3', mod
     fingerprint = get_data_fingerprint(data_file)
     search_paths = _model_search_paths(model_name, model_type)
     artifact_signature = tuple(
-        (str(model_file), model_file.stat().st_size, model_file.stat().st_mtime_ns)
+        (str(path), path.stat().st_size, path.stat().st_mtime_ns)
         for model_file in search_paths
-        if model_file.exists()
+        for path in (model_file, model_file.parent / 'manifest.json')
+        if path.exists()
     )
     return _load_pretrained_model_resource(
         model_name,
@@ -2752,6 +2861,11 @@ def _warn_if_stale_artifact(artifact, label):
             f"{label} is using the most recent precomputed model while GitHub Actions "
             "rebuilds it for the latest dataset. Runtime training is disabled to keep "
             "the app responsive."
+        )
+    elif artifact.get('_manifest_status') == 'legacy-missing':
+        st.info(
+            f"{label} is a grandfathered legacy artifact without a v2 manifest. "
+            "It remains loadable, but it is ineligible for promotion until the training workflow rebuilds it."
         )
 
 
@@ -2933,9 +3047,8 @@ def run_boruta_feature_selection(X, y, max_iter=200):
     ranking = boruta_selector.ranking_
     return selected_features, ranking
 
-def rfe_minimize_mae(X, y, min_features=3, max_features=20, step=1, random_state=42):
+def rfe_minimize_mae(X, y, metadata, min_features=3, max_features=20, step=1, random_state=42):
     """Run RFE for a range of feature counts and return the subset with the lowest MAE."""
-    from sklearn.model_selection import train_test_split
     from sklearn.metrics import mean_absolute_error
 
     # Convert object columns to category codes
@@ -2943,7 +3056,11 @@ def rfe_minimize_mae(X, y, min_features=3, max_features=20, step=1, random_state
     for col in X_rfe.select_dtypes(include='object').columns:
         X_rfe[col] = X_rfe[col].astype('category').cat.codes
 
-    X_train, X_test, y_train, y_test = train_test_split(X_rfe, y, test_size=0.2, random_state=random_state)
+    train_positions, test_positions, _ = _temporal_holdout_positions(
+        metadata, X_rfe.index, test_fraction=0.2, embargo_events=1
+    )
+    X_train, X_test = X_rfe.iloc[train_positions], X_rfe.iloc[test_positions]
+    y_train, y_test = y.iloc[train_positions], y.iloc[test_positions]
     best_mae = float('inf')
     best_features = None
     best_ranking = None
@@ -3555,7 +3672,11 @@ with tab2:
             }
             display_model_performance(metrics=metrics)
                    
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+            _valid = y.notnull() & np.isfinite(y)
+            X, y = X.loc[_valid], y.loc[_valid]
+            _train, _test, _ = _temporal_holdout_positions(filtered_data, X.index)
+            X_train, X_test = X.iloc[_train], X.iloc[_test]
+            y_train, y_test = y.iloc[_train], y.iloc[_test]
 
             preprocessor = get_preprocessor_position(X)
             preprocessor.fit(X_train)  # Fit on training data
@@ -3578,7 +3699,7 @@ with tab2:
             for col in meta_cols:
                 if col not in results_df.columns and 'filtered_data' in globals() and col in filtered_data.columns:
                     try:
-                        # Align by index from the split (train_test_split preserves the DataFrame index)
+                        # Align by index from the chronological holdout.
                         results_df[col] = filtered_data.loc[results_df.index, col]
                     except Exception:
                         # If alignment fails, fall back to adding a column of NaNs so later display logic can ignore it
@@ -4420,7 +4541,11 @@ with tab4:
 
             # Calculate MAE by individual positions for mapping to predicted positions
             X_mae, y_mae = get_features_and_target(data)
-            X_train_mae, X_test_mae, y_train_mae, y_test_mae = train_test_split(X_mae, y_mae, test_size=0.2, random_state=42)
+            _valid_mae = y_mae.notnull() & np.isfinite(y_mae)
+            X_mae, y_mae = X_mae.loc[_valid_mae], y_mae.loc[_valid_mae]
+            _train_mae, _test_mae, _ = _temporal_holdout_positions(data, X_mae.index)
+            X_train_mae, X_test_mae = X_mae.iloc[_train_mae], X_mae.iloc[_test_mae]
+            y_train_mae, y_test_mae = y_mae.iloc[_train_mae], y_mae.iloc[_test_mae]
             
             # Use the same preprocessor that was used to train the model
             preprocessor_mae = st.session_state.get('training_preprocessor')
@@ -4822,995 +4947,1047 @@ with tab5:
         st.error(f"CRITICAL ERROR in get_trained_model: {e}")
         import traceback
         st.code(traceback.format_exc())
-        st.stop()
+        model = None
     
-    # Single expander with 6 tabs inside
-    with st.expander("🔧 Advanced Options", expanded=True):
-        tab_perf, tab_feat, tab_select, tab_position, tab_hyper, tab_hist, tab_debug = st.tabs([
-            "📊 Model Performance",
-            "🔍 Feature Analysis", 
-            "🎯 Feature Selection",
-            "🏎️ Position-Specific Analysis",
-            "⚙️ Hyperparameters",
-            "📈 Historical Validation",
-            "🛠️ Debug & Experiments"
-        ])
+    if model is not None:
+        # Single expander with 6 tabs inside
+        with st.expander("🔧 Advanced Options", expanded=True):
+            tab_perf, tab_feat, tab_select, tab_position, tab_hyper, tab_hist, tab_debug = st.tabs([
+                "📊 Model Performance",
+                "🔍 Feature Analysis", 
+                "🎯 Feature Selection",
+                "🏎️ Position-Specific Analysis",
+                "⚙️ Hyperparameters",
+                "📈 Historical Validation",
+                "🛠️ Debug & Experiments"
+            ])
         
-        with tab_perf:
-            st.subheader("Predictive Data Model Metrics")
+            with tab_perf:
+                st.subheader("Predictive Data Model Metrics")
             
-            # Metrics and position-MAE are rendered together later (see `display_model_performance`)
+                # Metrics and position-MAE are rendered together later (see `display_model_performance`)
             
             
-            # Display boosting rounds used (model-specific)
-            if hasattr(model, 'best_iteration'):
-                st.write(f"Boosting rounds used: {model.best_iteration + 1}")
-            elif hasattr(model, 'best_iteration_'):
-                st.write(f"Boosting rounds used: {model.best_iteration_}")
-            elif hasattr(model, 'get_best_iteration'):
-                st.write(f"Boosting rounds used: {model.get_best_iteration()}")
-            elif hasattr(model, 'n_estimators'):
-                st.write(f"Boosting rounds used: {model.n_estimators} (all estimators, no early stopping)")
-            else:
-                st.write("Model type: Ensemble or other (no boosting rounds info)")
-
-
-            # Combine predictions and actuals for comparison
-            X, y = get_features_and_target(data)
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-            # Use the training preprocessor from session state (ensures feature consistency)
-            preprocessor = st.session_state.get('training_preprocessor')
-            if preprocessor is None:
-                st.error("Training preprocessor not found in session. Please reload the page — the model will retrain automatically.")
-                preprocessor = None
-            else:
-                # Align X_test columns to what the preprocessor was fit on.
-                # Needed when features are added/removed between training and display
-                # (e.g. all-NaN columns like championship_fight_performance get dropped).
-                if hasattr(preprocessor, 'feature_names_in_'):
-                    expected = list(preprocessor.feature_names_in_)
-                    for c in expected:
-                        if c not in X_test.columns:
-                            X_test[c] = np.nan
-                    X_test = X_test[expected]
-            if preprocessor is not None:
-                X_test_prep = _prep_as_df(preprocessor.transform(X_test), preprocessor)
-                # Record which cells were originally missing BEFORE imputation
-                # (used later to highlight imputed cells in the results table)
-                null_mask_test = X_test.isnull()
-                
-                # Predict based on actual model type
-                if isinstance(model, xgb.Booster):
-                    y_pred = model.predict(xgb.DMatrix(X_test_prep))
-                else:
-                    y_pred = model.predict(X_test_prep)
-
-
-                results_df = X_test.copy()
-                results_df['Actual'] = y_test.values
-                results_df['Predicted'] = y_pred
-                results_df['Error'] = results_df['Actual'] - results_df['Predicted']
-
-                # Position-specific MAE analysis
-                results_df_analysis = pd.DataFrame({
-                    'Actual': y_test.values,
-                    'Predicted': y_pred
-                })
-
-                podium_actual = results_df_analysis[results_df_analysis['Actual'] <= 3]
-                points_actual = results_df_analysis[results_df_analysis['Actual'] <= 10]
-                winners_actual = results_df_analysis[results_df_analysis['Actual'] == 1]
-                bottom_10_actual = results_df_analysis[results_df_analysis['Actual'] >= 11]
-                
-                if len(podium_actual) > 0:
-                    podium_mae = mean_absolute_error(podium_actual['Actual'], podium_actual['Predicted'])
-                    
-                if len(winners_actual) > 0:
-                    winner_mae = mean_absolute_error(winners_actual['Actual'], winners_actual['Predicted'])
-
-                if len(points_actual) > 0:
-                    points_mae = mean_absolute_error(points_actual['Actual'], points_actual['Predicted'])
-
-                # Compose metrics + position-MAE summary and render with helper
-                metrics = {
-                    'Mean Squared Error': mse,
-                    'R^2 Score': r2,
-                    'Mean Absolute Error': mae,
-                    'Mean Error': mean_err
-                }
-
-                position_mae = {}
-                if 'podium_mae' in locals():
-                    position_mae['Podium (1-3)'] = podium_mae
-                if 'winner_mae' in locals():
-                    position_mae['Winners'] = winner_mae
-                if 'points_mae' in locals():
-                    position_mae['Points (1-10)'] = points_mae
-                if len(bottom_10_actual) > 0:
-                    bottom_10_mae = mean_absolute_error(bottom_10_actual['Actual'], bottom_10_actual['Predicted'])
-                    position_mae['Bottom 10 (11-20)'] = bottom_10_mae
-
-                display_model_performance(metrics=metrics, position_mae=position_mae if position_mae else None)
-
-            # Driver error stats — only shown after model has been trained
-            if 'results_df' not in dir() and 'results_df' not in locals():
-                st.info("Train a model above to see per-driver error statistics and feature importances.")
-            else:
-                results_df['Error'] = results_df['Actual'] - results_df['Predicted']
-                results_df['AbsError'] = results_df['Error'].abs()
-                results_df['SquaredError'] = results_df['Error'] ** 2
-
-                driver_error_stats = results_df.groupby('resultsDriverName').agg(
-                    MeanError=('Error', 'mean'),
-                    MeanAbsoluteError=('AbsError', 'mean'),
-                    RMSE=('SquaredError', lambda x: np.sqrt(np.mean(x))),
-                    MedianAbsoluteError=('AbsError', 'median'),
-                    MaxError=('Error', 'max'),
-                    MinError=('Error', 'min'),
-                    Count=('Error', 'count')
-                ).reset_index()
-
-                st.subheader("Mean Error (ME) and Mean Absolute Error (MAE) per Driver")
-                st.write(f"Total number of drivers: {len(driver_error_stats)}")
-                st.write(f"Total number of results: {len(results_df)}")
-                driver_error_stats = driver_error_stats.sort_values(by='MeanAbsoluteError', ascending=False)
-                driver_error_stats['MeanError'] = driver_error_stats['MeanError'].round(3)
-                driver_error_stats['MeanAbsoluteError'] = driver_error_stats['MeanAbsoluteError'].round(3)
-                driver_error_stats['RMSE'] = driver_error_stats['RMSE'].round(3)
-                driver_error_stats['MedianAbsoluteError'] = driver_error_stats['MedianAbsoluteError'].round(3)
-                driver_error_stats['MaxError'] = driver_error_stats['MaxError'].round(3)
-                driver_error_stats['MinError'] = driver_error_stats['MinError'].round(3)
-                driver_error_stats['Count'] = driver_error_stats['Count'].astype(int)
-                driver_error_stats = driver_error_stats.rename(columns={
-                    'resultsDriverName': 'Driver',
-                    'MeanError': 'Mean Error',
-                    'MeanAbsoluteError': 'Mean Absolute Error',
-                    'RMSE': 'Root Mean Squared Error',
-                    'MedianAbsoluteError': 'Median Absolute Error',
-                    'MaxError': 'Max Error',
-                    'MinError': 'Min Error',
-                    'Count': 'Number of Results'
-                })
-                st.subheader("Error Metrics per Driver")
-                st.dataframe(driver_error_stats, hide_index=True, width=1000)
-
-                st.subheader("Predictive Results with Features")
-                show_imputed = st.checkbox(
-                    "Show imputed values (as seen by model)",
-                    value=False,
-                    key="show_imputed_values",
-                    help="When checked, originally-missing cells are filled with values estimated by the model's IterativeImputer and highlighted in amber."
-                )
-
-                def _humanize_column(col: str) -> str:
-                    """Turn a raw column name into a readable display label."""
-                    mapping = {
-                        'resultsDriverName': 'Driver',
-                        'constructorName': 'Constructor',
-                        'grandPrixName': 'Grand Prix',
-                        'resultsFinalPositionNumber': 'Finish Position',
-                        'resultsGridPositionNumber': 'Grid Position',
-                        'resultsFastestLapTime': 'Fastest Lap',
-                        'raceId': 'Race ID',
-                        'driverId': 'Driver ID',
-                        'constructorId': 'Constructor ID',
-                        'Actual': 'Actual',
-                        'Predicted': 'Predicted',
-                        'Error': 'Error',
-                        'AbsError': 'Absolute Error',
-                        'SquaredError': 'Squared Error'
-                    }
-                    if col in mapping:
-                        return mapping[col]
-
-                    # Convert camelCase -> Title Case and underscores -> spaces
-                    import re
-                    human = re.sub(r'([a-z0-9])([A-Z])', r'\1 \2', col)
-                    human = human.replace('_', ' ')
-                    human = ' '.join(human.split())
-                    return human.strip().title()
-
-                def _reorder_for_display(df):
-                    """Bring the most relevant driver metadata columns to the front and humanize headings.
-
-                    Drops any columns that are clearly artifacts from joins (e.g., ending in _x/_y)
-                    to avoid duplication in the UI and confusion for users.
-                    """
-
-                    # Drop columns created by pandas merges (e.g., 'Points_x', 'Points_y')
-                    drop_suffixes = ('_x', '_y')
-                    df = df[[c for c in df.columns if not c.endswith(drop_suffixes)]].copy()
-
-                    # Drop known unhelpful ID columns from the UI
-                    drop_columns = {'engineManufacturerId', 'EngineManufacturerId', 'engineManufacturerID'}
-                    df = df[[c for c in df.columns if c not in drop_columns]]
-
-                    desired_first = [
-                        'resultsDriverName',
-                        'constructorName',
-                        'grandPrixName',
-                        'resultsFinalPositionNumber',
-                        'Actual',
-                        'Predicted',
-                        'Error',
-                        'AbsError',
-                        'SquaredError'
-                    ]
-                    leading = [c for c in desired_first if c in df.columns]
-                    remaining = [c for c in df.columns if c not in leading]
-                    df_out = df[leading + remaining].copy()
-
-                    # Convert binary columns (0/1/True/False) into checkmarks for display
-                    # so they render as a simple yes/blank indicator.
-                    binary_cols = []
-                    for c in df_out.columns:
-                        ser = df_out[c]
-                        if pd.api.types.is_bool_dtype(ser):
-                            binary_cols.append(c)
-                        elif pd.api.types.is_numeric_dtype(ser):
-                            uniq = set(ser.dropna().unique())
-                            if uniq <= {0, 1}:
-                                binary_cols.append(c)
-                    for c in binary_cols:
-                        df_out[c] = df_out[c].map(lambda v: "✓" if v in (1, 1.0, True) else "")
-
-                    # Rename columns for display, ensuring uniqueness to avoid pyarrow errors
-                    new_names = {}
-                    used = set()
-                    for c in df_out.columns:
-                        human = _humanize_column(c)
-                        if human in used:
-                            # Ensure unique names for display
-                            suffix = 2
-                            while f"{human} ({suffix})" in used:
-                                suffix += 1
-                            human = f"{human} ({suffix})"
-                        used.add(human)
-                        new_names[c] = human
-                    df_out = df_out.rename(columns=new_names)
-                    return df_out
-
-                if show_imputed:
-                    # Build display DataFrame from post-imputation values
-                    disp_imp = X_test_prep.copy()
-                    # Re-attach the outcome columns
-                    for _col in ['Actual', 'Predicted', 'Error', 'AbsError', 'SquaredError']:
-                        if _col in results_df.columns:
-                            disp_imp[_col] = results_df[_col].values
-                    # Re-attach metadata columns if present
-                    for _meta in ['resultsDriverName', 'constructorName', 'grandPrixName']:
-                        if _meta in results_df.columns:
-                            disp_imp[_meta] = results_df[_meta].values
-
-                    # Styler: highlight cells that were originally NaN in amber
-                    def _highlight_imputed(df):
-                        styles = pd.DataFrame('', index=df.index, columns=df.columns)
-                        for col in df.columns:
-                            if col in null_mask_test.columns:
-                                imputed_idx = null_mask_test.index[null_mask_test[col]]
-                                valid_idx = imputed_idx[imputed_idx.isin(df.index)]
-                                if len(valid_idx):
-                                    styles.loc[valid_idx, col] = 'background-color: #ffe599; color: #7a5800'
-                        return styles
-
-                    st.caption("🟡 Amber cells were originally missing and have been imputed by the model's preprocessor (IterativeImputer). All other values are as recorded.")
-                    st.dataframe(
-                        _reorder_for_display(disp_imp).style.apply(_highlight_imputed, axis=None),
-                        hide_index=True,
-                        width='stretch'
-                    )
-                else:
-                    st.dataframe(_reorder_for_display(results_df), hide_index=True, width='stretch')
-
-                # Feature importances
-                st.subheader("Feature Importances")
-                feature_names = get_features_and_target(data)[0].columns.tolist()
-                feature_names = preprocessor.get_feature_names_out()
-                feature_names = [name.replace('num__', '').replace('cat__', '') for name in feature_names]
-
-                # Get importances based on model type
-                if hasattr(model, 'get_booster'):  # XGBoost (XGBRegressor)
-                    importances_dict = model.get_booster().get_score(importance_type='weight')
-                    importances = []
-                    for i, name in enumerate(feature_names):
-                        importances.append(importances_dict.get(f'f{i}', 0))
-                elif hasattr(model, 'feature_importances_'):  # LightGBM, CatBoost, sklearn models
-                    importances = model.feature_importances_
-                elif hasattr(model, 'get_feature_importance'):  # CatBoost
-                    importances = model.get_feature_importance()
-                else:  # Ensemble or other
-                    importances = [0] * len(feature_names)  # Default to zero
-
-                feature_importances_df = pd.DataFrame({
-                    'Feature': feature_names,
-                    'Importance': importances,
-                    'Percentage': np.array(importances) / (np.sum(importances) or 1) * 100
-                }).sort_values(by='Importance', ascending=False)
-
-                # Display boosting rounds used (conditional on model type)
-                if hasattr(model, 'best_iteration_'):  # LightGBM
-                    st.write(f"Boosting rounds used: {model.best_iteration_}")
-                elif hasattr(model, 'best_iteration'):  # XGBoost
+                # Display boosting rounds used (model-specific)
+                if hasattr(model, 'best_iteration'):
                     st.write(f"Boosting rounds used: {model.best_iteration + 1}")
-                elif hasattr(model, 'get_best_iteration'):  # CatBoost
+                elif hasattr(model, 'best_iteration_'):
+                    st.write(f"Boosting rounds used: {model.best_iteration_}")
+                elif hasattr(model, 'get_best_iteration'):
                     st.write(f"Boosting rounds used: {model.get_best_iteration()}")
-                elif hasattr(model, 'n_estimators'):  # XGBoost without early stopping
+                elif hasattr(model, 'n_estimators'):
                     st.write(f"Boosting rounds used: {model.n_estimators} (all estimators, no early stopping)")
-                else:  # Ensemble or other
-                    st.write("Boosting rounds information not available for this model type")
-
-                st.dataframe(feature_importances_df, hide_index=True, width=800)
-
-                # MAE by Position Groups
-                st.subheader("MAE by Position Groups")
-                st.info("📊 This analysis uses a 20% test set. Some position ranges may not have data in the test set due to random sampling. This is normal and doesn't affect the overall model performance.")
-
-                # Define position groups
-                mid_field_actual = results_df_analysis[(results_df_analysis['Actual'] >= 11) & (results_df_analysis['Actual'] <= 15)]
-                back_actual = results_df_analysis[results_df_analysis['Actual'] >= 16]
-
-                position_groups = [
-                    ("Winner (P1)", winners_actual),
-                    ("Top 3 (P1-3)", podium_actual),
-                    ("Top 10 (P1-10)", points_actual),
-                    ("Mid-field (P11-15)", mid_field_actual),
-                    ("Back (P16-20)", back_actual),
-                    ("Bottom 10 (P11-20)", bottom_10_actual)
-                ]
-
-                mae_data = []
-                for group_name, group_data in position_groups:
-                    if len(group_data) > 0:
-                        mae = mean_absolute_error(group_data['Actual'], group_data['Predicted'])
-                        mae_data.append({
-                            'Position Group': group_name,
-                            'MAE': mae,
-                            'Sample Size': len(group_data)
-                        })
-
-                mae_df = pd.DataFrame(mae_data)
-                st.dataframe(mae_df, hide_index=True, width=600)
-                st.bar_chart(mae_df.set_index('Position Group')['MAE'], width='stretch')
-
-                # Individual positions MAE
-                st.subheader("MAE by Individual Positions")
-                individual_mae = []
-                for pos in range(1, 21):
-                    pos_data = results_df_analysis[results_df_analysis['Actual'] == pos]
-                    if len(pos_data) > 0:
-                        mae = mean_absolute_error(pos_data['Actual'], pos_data['Predicted'])
-                        individual_mae.append({
-                            'Position': pos,
-                            'MAE': mae,
-                            'Sample Size': len(pos_data)
-                        })
-
-                individual_mae_df = pd.DataFrame(individual_mae)
-                st.dataframe(individual_mae_df, hide_index=True, width=600, height=750)
-                st.line_chart(individual_mae_df.set_index('Position')['MAE'], width='stretch')
-
-                # Store for use in Tab 4
-                st.session_state['position_mae_dict'] = dict(zip(individual_mae_df['Position'], individual_mae_df['MAE']))
-
-                # Position group summary
-                st.subheader("Position Group Summary")
-                summary_data = []
-                for group_name, group_data in position_groups:
-                    if len(group_data) > 0:
-                        mae = mean_absolute_error(group_data['Actual'], group_data['Predicted'])
-                        avg_error = (group_data['Predicted'] - group_data['Actual']).mean()
-                        median_error = (group_data['Predicted'] - group_data['Actual']).median()
-                        summary_data.append({
-                            'Position Group': group_name,
-                            'Sample Size': len(group_data),
-                            'MAE': mae,
-                            'Average Error': avg_error,
-                            'Median Error': median_error
-                        })
-
-                summary_df = pd.DataFrame(summary_data)
-                st.dataframe(summary_df, hide_index=True, width=1000)
-
-                # Error Distribution
-                st.subheader("Prediction Error Distribution by Position Groups")
-                results_df_analysis['AbsError'] = abs(results_df_analysis['Actual'] - results_df_analysis['Predicted'])
-                results_df_analysis['Position_Group'] = pd.cut(
-                    results_df_analysis['Actual'],
-                    bins=[0, 1, 3, 10, 15, 20],
-                    labels=['Winner', 'Podium', 'Points', 'Mid-field', 'Back'],
-                    include_lowest=True
-                )
-
-                import matplotlib.pyplot as plt
-                fig, ax = plt.subplots(figsize=(10, 6))
-                position_groups_cat = results_df_analysis['Position_Group'].cat.categories
-                error_data = [results_df_analysis[results_df_analysis['Position_Group'] == group]['AbsError'].values
-                              for group in position_groups_cat]
-                ax.boxplot(error_data, tick_labels=position_groups_cat)
-                ax.set_ylabel('Absolute Error')
-                ax.set_xlabel('Position Group')
-                ax.set_title('Prediction Error Distribution by Position Group')
-                st.pyplot(fig, width=1000)
-
-
-        with tab_feat:
-            st.subheader("Feature Analysis")
-            
-            # Permutation Importance
-            st.write("### Permutation Importance (Feature Impact on Model Error)")
-            precomputed_permutation_analysis = load_precomputed_permutation(CACHE_VERSION)
-            if precomputed_permutation_analysis:
-                permutation_metadata = precomputed_permutation_analysis.get('metadata', {})
-                generated_at = permutation_metadata.get('generated_at') or permutation_metadata.get('timestamp', 'Unknown')
-                st.caption(
-                    f"Precomputed by GitHub Actions: {generated_at} · "
-                    f"{permutation_metadata.get('n_repeats', 'N/A')} repeats"
-                )
-                permutation_rows = (
-                    precomputed_permutation_analysis.get('feature_importance')
-                    or precomputed_permutation_analysis.get('importances')
-                    or []
-                )
-                if permutation_rows:
-                    perm_df = pd.DataFrame(permutation_rows).rename(columns={
-                        'feature': 'Feature',
-                        'importance': 'Permutation Importance',
-                        'std': 'Standard Deviation',
-                    })
-                    perm_df = perm_df.sort_values(by='Permutation Importance', ascending=True)
-                    st.write("Features with lowest permutation importance (least helpful):")
-                    st.dataframe(perm_df.head(100), hide_index=True, width=800)
-                    st.write("Features with highest permutation importance (most helpful):")
-                    st.dataframe(
-                        perm_df.tail(100).sort_values(by='Permutation Importance', ascending=False),
-                        hide_index=True,
-                        width=800,
-                    )
                 else:
-                    st.info("The precomputed permutation artifact contains no feature rows.")
-            else:
-                st.info(
-                    "Permutation importance is generated by the Feature Selection Suite "
-                    "GitHub workflow and is not computed in the live app."
-                )
+                    st.write("Model type: Ensemble or other (no boosting rounds info)")
 
-            # High-Cardinality Features
-            st.write("### High-Cardinality Features (Potential Overfitting Risk)")
-            X_card, _ = get_features_and_target(data)
-            cardinality = X_card.nunique().sort_values(ascending=False)
-            cardinality_df = pd.DataFrame({
-                'Feature': cardinality.index,
-                'Unique Values': cardinality.values
-            })
-            cardinality_df['Risk'] = np.where(cardinality_df['Unique Values'] > 50, 'High', 'Low')
-            st.write("Features with high cardinality (many unique values) are more likely to cause overfitting, especially if they are IDs or post-event info.")
-            st.dataframe(cardinality_df, hide_index=True, width=800)
 
-            # Safety Car Data Importances
-            st.write("### Safety Car Feature Importance")
-            safetycar_model_loaded = get_safetycar_model(CACHE_VERSION)
-            preprocessor_sc = safetycar_model_loaded.named_steps['preprocessor']
-            feature_names_sc = preprocessor_sc.get_feature_names_out()
-            feature_names_sc = [name.replace('num__', '').replace('cat__', '') for name in feature_names_sc]
-            importances_sc = safetycar_model_loaded.named_steps['classifier'].coef_[0]
+                # Combine predictions and actuals for comparison
+                X, y = get_features_and_target(data)
+                _valid = y.notnull() & np.isfinite(y)
+                X, y = X.loc[_valid], y.loc[_valid]
+                _train, _test, _ = _temporal_holdout_positions(data, X.index)
+                X_train, X_test = X.iloc[_train], X.iloc[_test]
+                y_train, y_test = y.iloc[_train], y.iloc[_test]
 
-            odds_ratios = np.exp(importances_sc)
-            prob_change = (1 / (1 + np.exp(-importances_sc))) - 0.5
-
-            df_sc = pd.DataFrame({
-                'Feature': feature_names_sc,
-                'Coefficient': importances_sc,
-                'Odds Ratio': odds_ratios,
-                'Prob Change (per unit)': prob_change
-            }).sort_values('Coefficient', key=np.abs, ascending=False, ignore_index=True)
-
-            st.dataframe(df_sc, width=1000, hide_index=True)
-
-            # Correlations
-            st.write("### Correlation Matrix")
-            # Get the original DataFrame from the Styler object
-            if hasattr(correlation_matrix, 'data'):
-                corr_df = correlation_matrix.data
-            else:
-                corr_df = correlation_matrix
-            
-            # Rename the index
-            correlation_matrix_display = corr_df.rename(
-                index={
-                    'resultsPodium': 'Podium',
-                    'resultsTop5': 'Top 5',
-                    'resultsTop10': 'Top 10',
-                    'resultsStartingGridPositionNumber': 'Starting Grid Position',
-                    'resultsFinalPositionNumber': 'Final Position',
-                    'positionsGained': 'Positions Gained',
-                    'DNF': 'DNF',
-                    'averagePracticePosition': 'Avg Practice Pos.',
-                    'grandPrixLaps': 'Laps',
-                    'lastFPPositionNumber': 'Last FP Pos.',
-                    'resultsQualificationPositionNumber': 'Qual. Pos.',
-                    'constructorTotalRaceStarts': 'Constructor Race Starts',
-                    'constructorTotalRaceWins': 'Constructor Race Wins',
-                    'constructorTotalPolePositions': 'Constructor Pole Pos.',
-                    'turns': 'Turns',
-                    'q1End': 'Out at Q1',
-                    'q2End': 'Out at Q2',
-                    'q3Top10': 'Q3 Top 10',
-                    'numberOfStops': 'Number of Stops',
-                    'positionsGained': 'Positions Gained',
-                    'avgLapTime': 'Avg Lap Time',
-                    'finishingTime': 'Finishing Time',
-                }
-            )
-            # Apply styling after rename
-            correlation_matrix_display = correlation_matrix_display.style.map(highlight_correlation, subset=correlation_matrix_display.columns[1:])
-            st.dataframe(correlation_matrix_display, column_config=correlation_columns_to_display, hide_index=True, height=600)
-        
-        with tab_select:
-            st.subheader("Feature Selection Tools")
-            
-            # Check for precomputed results
-            precomputed_monte_carlo = load_precomputed_monte_carlo(CACHE_VERSION)
-            precomputed_shap = load_precomputed_shap(CACHE_VERSION)
-            precomputed_rfe = load_precomputed_rfe(CACHE_VERSION)
-            precomputed_boruta = load_precomputed_boruta(CACHE_VERSION)
-            precomputed_permutation = load_precomputed_permutation(CACHE_VERSION)
-            
-            # Show availability status
-            has_precomputed = any([precomputed_monte_carlo, precomputed_shap, precomputed_rfe, precomputed_boruta, precomputed_permutation])
-            
-            if has_precomputed:
-                st.info("📦 Precomputed feature selection results available from GitHub Actions!")
+                # Use the training preprocessor from session state (ensures feature consistency)
+                preprocessor = st.session_state.get('training_preprocessor')
+                if preprocessor is None:
+                    st.error("Training preprocessor not found in session. Please reload the page — the model will retrain automatically.")
+                    preprocessor = None
+                else:
+                    # Align X_test columns to what the preprocessor was fit on.
+                    # Needed when features are added/removed between training and display
+                    # (e.g. all-NaN columns like championship_fight_performance get dropped).
+                    if hasattr(preprocessor, 'feature_names_in_'):
+                        expected = list(preprocessor.feature_names_in_)
+                        for c in expected:
+                            if c not in X_test.columns:
+                                X_test[c] = np.nan
+                        X_test = X_test[expected]
+                if preprocessor is not None:
+                    X_test_prep = _prep_as_df(preprocessor.transform(X_test), preprocessor)
+                    # Record which cells were originally missing BEFORE imputation
+                    # (used later to highlight imputed cells in the results table)
+                    null_mask_test = X_test.isnull()
                 
-                with st.expander("📊 View Precomputed Results", expanded=True):
-                    if precomputed_monte_carlo:
-                        st.write("### Monte Carlo Results (Precomputed)")
-                        metadata = precomputed_monte_carlo.get('metadata', {})
-                        st.write(f"**Computed:** {metadata.get('timestamp', 'Unknown')}")
-                        st.write(f"**Trials:** {metadata.get('n_trials', 'N/A')}")
-                        
-                        best_result = precomputed_monte_carlo.get('best_result', {})
-                        st.write(f"**Best MAE:** {best_result.get('mae', 'N/A')}")
-                        st.write("**Best Features:**", ", ".join([f"`{f}`" for f in best_result.get('features', [])]))
-                        
-                        # Show top results if available
-                        top_results = precomputed_monte_carlo.get('top_20_results', [])
-                        if top_results:
-                            st.dataframe(pd.DataFrame(top_results), hide_index=True)
-                    
-                    if precomputed_shap:
-                        st.write("### SHAP Analysis (Precomputed)")
-                        metadata = precomputed_shap.get('metadata', {})
-                        st.write(f"**Computed:** {metadata.get('timestamp', 'Unknown')}")
-                        
-                        feature_importance = precomputed_shap.get('feature_importance', [])
-                        if feature_importance:
-                            shap_df = pd.DataFrame(feature_importance)
-                            st.dataframe(shap_df.head(30), hide_index=True)
-                    
-                    if precomputed_rfe:
-                        st.write("### RFE Results (Precomputed)")
-                        metadata = precomputed_rfe.get('metadata', {})
-                        st.write(f"**Computed:** {metadata.get('timestamp', 'Unknown')}")
-                        st.write(f"**Features selected:** {metadata.get('n_features_selected', 'N/A')}")
-                        
-                        selected = precomputed_rfe.get('selected_features', [])
-                        st.write("**Selected Features:**", ", ".join([f"`{f}`" for f in selected]))
-                    
-                    if precomputed_boruta:
-                        st.write("### Boruta Results (Precomputed)")
-                        metadata = precomputed_boruta.get('metadata', {})
-                        st.write(f"**Computed:** {metadata.get('timestamp', 'Unknown')}")
-                        st.write(f"**Iterations:** {metadata.get('max_iter', 'N/A')}")
-                        
-                        selected = precomputed_boruta.get('selected_features', [])
-                        st.write("**Selected Features:**", ", ".join([f"`{f}`" for f in selected]))
-                    
-                    if precomputed_permutation:
-                        st.write("### Permutation Importance (Precomputed)")
-                        metadata = precomputed_permutation.get('metadata', {})
-                        st.write(f"**Computed:** {metadata.get('generated_at') or metadata.get('timestamp', 'Unknown')}")
-                        
-                        importances = (
-                            precomputed_permutation.get('feature_importance')
-                            or precomputed_permutation.get('importances')
-                            or []
-                        )
-                        if importances:
-                            perm_df = pd.DataFrame(importances)
-                            st.dataframe(perm_df.head(30), hide_index=True)
-            
-            st.write("---")
-            
-            # Monte Carlo Feature Subset Search
-            st.write("### Monte Carlo Feature Subset Search")
-            X_mc, y_mc = get_features_and_target(data)
-            feature_names_mc = X_mc.columns.tolist()
+                    # Predict based on actual model type
+                    if isinstance(model, xgb.Booster):
+                        y_pred = model.predict(xgb.DMatrix(X_test_prep))
+                    else:
+                        y_pred = model.predict(X_test_prep)
 
-            n_trials = st.number_input("Number of random trials", min_value=10, max_value=100000, value=50, step=10)
-            min_features = st.number_input("Minimum features per trial", min_value=3, max_value=len(feature_names_mc)-1, value=8, step=1)
-            max_features = st.number_input(
-                "Maximum features per trial",
-                min_value=min_features+1,
-                max_value=len(feature_names_mc),
-                value=min(min_features+1, len(feature_names_mc)),
-                step=1
-            )
-            
-            if st.button("Run Monte Carlo Search"):
-                with st.spinner("Running Monte Carlo feature subset search..."):
-                    results_mc = monte_carlo_feature_selection(
-                        X_mc, y_mc,
-                        model_class=lambda: XGBRegressor(n_estimators=100, max_depth=4, n_jobs=-1, tree_method='hist'),
-                        n_trials=int(n_trials),
-                        min_features=int(min_features),
-                        max_features=int(max_features),
-                        random_state=123,
-                        cv=10
+
+                    results_df = X_test.copy()
+                    results_df['Actual'] = y_test.values
+                    results_df['Predicted'] = y_pred
+                    results_df['Error'] = results_df['Actual'] - results_df['Predicted']
+
+                    # Position-specific MAE analysis
+                    results_df_analysis = pd.DataFrame({
+                        'Actual': y_test.values,
+                        'Predicted': y_pred
+                    })
+
+                    podium_actual = results_df_analysis[results_df_analysis['Actual'] <= 3]
+                    points_actual = results_df_analysis[results_df_analysis['Actual'] <= 10]
+                    winners_actual = results_df_analysis[results_df_analysis['Actual'] == 1]
+                    bottom_10_actual = results_df_analysis[results_df_analysis['Actual'] >= 11]
+                
+                    if len(podium_actual) > 0:
+                        podium_mae = mean_absolute_error(podium_actual['Actual'], podium_actual['Predicted'])
+                    
+                    if len(winners_actual) > 0:
+                        winner_mae = mean_absolute_error(winners_actual['Actual'], winners_actual['Predicted'])
+
+                    if len(points_actual) > 0:
+                        points_mae = mean_absolute_error(points_actual['Actual'], points_actual['Predicted'])
+
+                    # Compose metrics + position-MAE summary and render with helper
+                    metrics = {
+                        'Mean Squared Error': mse,
+                        'R^2 Score': r2,
+                        'Mean Absolute Error': mae,
+                        'Mean Error': mean_err
+                    }
+
+                    position_mae = {}
+                    if 'podium_mae' in locals():
+                        position_mae['Podium (1-3)'] = podium_mae
+                    if 'winner_mae' in locals():
+                        position_mae['Winners'] = winner_mae
+                    if 'points_mae' in locals():
+                        position_mae['Points (1-10)'] = points_mae
+                    if len(bottom_10_actual) > 0:
+                        bottom_10_mae = mean_absolute_error(bottom_10_actual['Actual'], bottom_10_actual['Predicted'])
+                        position_mae['Bottom 10 (11-20)'] = bottom_10_mae
+
+                    display_model_performance(metrics=metrics, position_mae=position_mae if position_mae else None)
+
+                # Driver error stats — only shown after model has been trained
+                if 'results_df' not in dir() and 'results_df' not in locals():
+                    st.info("Train a model above to see per-driver error statistics and feature importances.")
+                else:
+                    results_df['Error'] = results_df['Actual'] - results_df['Predicted']
+                    results_df['AbsError'] = results_df['Error'].abs()
+                    results_df['SquaredError'] = results_df['Error'] ** 2
+
+                    driver_error_stats = results_df.groupby('resultsDriverName').agg(
+                        MeanError=('Error', 'mean'),
+                        MeanAbsoluteError=('AbsError', 'mean'),
+                        RMSE=('SquaredError', lambda x: np.sqrt(np.mean(x))),
+                        MedianAbsoluteError=('AbsError', 'median'),
+                        MaxError=('Error', 'max'),
+                        MinError=('Error', 'min'),
+                        Count=('Error', 'count')
+                    ).reset_index()
+
+                    st.subheader("Mean Error (ME) and Mean Absolute Error (MAE) per Driver")
+                    st.write(f"Total number of drivers: {len(driver_error_stats)}")
+                    st.write(f"Total number of results: {len(results_df)}")
+                    driver_error_stats = driver_error_stats.sort_values(by='MeanAbsoluteError', ascending=False)
+                    driver_error_stats['MeanError'] = driver_error_stats['MeanError'].round(3)
+                    driver_error_stats['MeanAbsoluteError'] = driver_error_stats['MeanAbsoluteError'].round(3)
+                    driver_error_stats['RMSE'] = driver_error_stats['RMSE'].round(3)
+                    driver_error_stats['MedianAbsoluteError'] = driver_error_stats['MedianAbsoluteError'].round(3)
+                    driver_error_stats['MaxError'] = driver_error_stats['MaxError'].round(3)
+                    driver_error_stats['MinError'] = driver_error_stats['MinError'].round(3)
+                    driver_error_stats['Count'] = driver_error_stats['Count'].astype(int)
+                    driver_error_stats = driver_error_stats.rename(columns={
+                        'resultsDriverName': 'Driver',
+                        'MeanError': 'Mean Error',
+                        'MeanAbsoluteError': 'Mean Absolute Error',
+                        'RMSE': 'Root Mean Squared Error',
+                        'MedianAbsoluteError': 'Median Absolute Error',
+                        'MaxError': 'Max Error',
+                        'MinError': 'Min Error',
+                        'Count': 'Number of Results'
+                    })
+                    st.subheader("Error Metrics per Driver")
+                    st.dataframe(driver_error_stats, hide_index=True, width=1000)
+
+                    st.subheader("Predictive Results with Features")
+                    show_imputed = st.checkbox(
+                        "Show imputed values (as seen by model)",
+                        value=False,
+                        key="show_imputed_values",
+                        help="When checked, originally-missing cells are filled with values estimated by the model's IterativeImputer and highlighted in amber."
                     )
 
-                results_mc = sorted(results_mc, key=lambda x: x['mae'])
-                best = results_mc[0]
-                st.write("Best feature subset:", best['features'])
-                st.write(", ".join([f"'{f}'" for f in best['features']]))
-                st.write("Best MAE:", best['mae'])
+                    def _humanize_column(col: str) -> str:
+                        """Turn a raw column name into a readable display label."""
+                        mapping = {
+                            'resultsDriverName': 'Driver',
+                            'constructorName': 'Constructor',
+                            'grandPrixName': 'Grand Prix',
+                            'resultsFinalPositionNumber': 'Finish Position',
+                            'resultsGridPositionNumber': 'Grid Position',
+                            'resultsFastestLapTime': 'Fastest Lap',
+                            'raceId': 'Race ID',
+                            'driverId': 'Driver ID',
+                            'constructorId': 'Constructor ID',
+                            'Actual': 'Actual',
+                            'Predicted': 'Predicted',
+                            'Error': 'Error',
+                            'AbsError': 'Absolute Error',
+                            'SquaredError': 'Squared Error'
+                        }
+                        if col in mapping:
+                            return mapping[col]
 
-                # Save best features to file
-                with open('data_files/f1_position_model_best_features_monte_carlo.txt', 'w') as f:
-                    f.write('\n'.join(best['features']))
-                    f.write(f"\nBest MAE: {best['mae']:.4f}\n")
-                st.success("Best features and MAE saved to f1_position_model_best_features_monte_carlo.txt")
+                        # Convert camelCase -> Title Case and underscores -> spaces
+                        import re
+                        human = re.sub(r'([a-z0-9])([A-Z])', r'\1 \2', col)
+                        human = human.replace('_', ' ')
+                        human = ' '.join(human.split())
+                        return human.strip().title()
 
-                st.subheader("Top 20 Feature Subsets")
-                st.dataframe(pd.DataFrame(results_mc[:20]), hide_index=True, column_config={
-                    "features": "Feature Subset",
-                    "mae": "Mean Absolute Error (MAE)",
-                    "rmse": "Root Mean Squared Error (RMSE)",
-                    "r2": "R² Score"
-                })
+                    def _reorder_for_display(df):
+                        """Bring the most relevant driver metadata columns to the front and humanize headings.
 
-                from collections import Counter
-                top_features = [f for r in results_mc[:20] for f in r['features']]
-                feature_counts = Counter(top_features)
-                feature_counts_df = pd.DataFrame(feature_counts.items(), columns=['Feature', 'Appearances']).sort_values(by='Appearances', ascending=False)
-                st.subheader("Feature Appearance in Top 20 Subsets")
-                st.dataframe(feature_counts_df, hide_index=True, width=600)
+                        Drops any columns that are clearly artifacts from joins (e.g., ending in _x/_y)
+                        to avoid duplication in the UI and confusion for users.
+                        """
 
-            # ----------------------------------------------------------------
-            # 4F: Monte Carlo convergence analysis dashboard (ROADMAP-4F)
-            # ----------------------------------------------------------------
-            st.write("---")
-            if st.checkbox("📈 Show Monte Carlo convergence analysis"):
-                mc_log_path = Path('data_files/precomputed/monte_carlo_run_log.json')
-                if mc_log_path.exists():
-                    import json as _json
-                    mc_log = _json.loads(mc_log_path.read_text())
-                    trials_data = mc_log.get('trials', [])
-                    if trials_data:
-                        mc_df = pd.DataFrame(trials_data)
+                        # Drop columns created by pandas merges (e.g., 'Points_x', 'Points_y')
+                        drop_suffixes = ('_x', '_y')
+                        df = df[[c for c in df.columns if not c.endswith(drop_suffixes)]].copy()
 
-                        col1, col2, col3 = st.columns(3)
-                        col1.metric("Best Trial", mc_log.get('best_trial', '–'))
-                        col2.metric("Best MAE", f"{mc_log.get('best_mae', 0):.4f}" if mc_log.get('best_mae') else '–')
-                        col3.metric("Total Trials", mc_log.get('total_trials', 0))
+                        # Drop known unhelpful ID columns from the UI
+                        drop_columns = {'engineManufacturerId', 'EngineManufacturerId', 'engineManufacturerID'}
+                        df = df[[c for c in df.columns if c not in drop_columns]]
 
-                        # MAE convergence over trial index
-                        import altair as _alt
-                        conv_chart = _alt.Chart(mc_df).mark_line(opacity=0.7).encode(
-                            x=_alt.X('trial:Q', title='Trial Number'),
-                            y=_alt.Y('mae:Q', title='MAE', scale=_alt.Scale(zero=False)),
-                            color=_alt.Color('stage:N', title='Stage'),
-                            tooltip=['trial', 'stage', 'n_features', 'mae'],
-                        ).properties(title='Monte Carlo MAE Convergence', height=250)
-                        st.altair_chart(conv_chart, width='stretch')
+                        desired_first = [
+                            'resultsDriverName',
+                            'constructorName',
+                            'grandPrixName',
+                            'resultsFinalPositionNumber',
+                            'Actual',
+                            'Predicted',
+                            'Error',
+                            'AbsError',
+                            'SquaredError'
+                        ]
+                        leading = [c for c in desired_first if c in df.columns]
+                        remaining = [c for c in df.columns if c not in leading]
+                        df_out = df[leading + remaining].copy()
 
-                        # Feature count vs MAE scatter
-                        scatter_chart = _alt.Chart(mc_df).mark_circle(size=30, opacity=0.5).encode(
-                            x=_alt.X('n_features:Q', title='Feature Count'),
-                            y=_alt.Y('mae:Q', title='MAE', scale=_alt.Scale(zero=False)),
-                            color=_alt.Color('mae:Q', scale=_alt.Scale(
-                                scheme='redyellowgreen', reverse=True)),
-                            tooltip=['trial', 'stage', 'n_features', 'mae'],
-                        ).properties(title='Feature Count vs MAE', height=250)
-                        st.altair_chart(scatter_chart, width='stretch')
+                        # Convert binary columns (0/1/True/False) into checkmarks for display
+                        # so they render as a simple yes/blank indicator.
+                        binary_cols = []
+                        for c in df_out.columns:
+                            ser = df_out[c]
+                            if pd.api.types.is_bool_dtype(ser):
+                                binary_cols.append(c)
+                            elif pd.api.types.is_numeric_dtype(ser):
+                                uniq = set(ser.dropna().unique())
+                                if uniq <= {0, 1}:
+                                    binary_cols.append(c)
+                        for c in binary_cols:
+                            df_out[c] = df_out[c].map(lambda v: "✓" if v in (1, 1.0, True) else "")
+
+                        # Rename columns for display, ensuring uniqueness to avoid pyarrow errors
+                        new_names = {}
+                        used = set()
+                        for c in df_out.columns:
+                            human = _humanize_column(c)
+                            if human in used:
+                                # Ensure unique names for display
+                                suffix = 2
+                                while f"{human} ({suffix})" in used:
+                                    suffix += 1
+                                human = f"{human} ({suffix})"
+                            used.add(human)
+                            new_names[c] = human
+                        df_out = df_out.rename(columns=new_names)
+                        return df_out
+
+                    if show_imputed:
+                        # Build display DataFrame from post-imputation values
+                        disp_imp = X_test_prep.copy()
+                        # Re-attach the outcome columns
+                        for _col in ['Actual', 'Predicted', 'Error', 'AbsError', 'SquaredError']:
+                            if _col in results_df.columns:
+                                disp_imp[_col] = results_df[_col].values
+                        # Re-attach metadata columns if present
+                        for _meta in ['resultsDriverName', 'constructorName', 'grandPrixName']:
+                            if _meta in results_df.columns:
+                                disp_imp[_meta] = results_df[_meta].values
+
+                        # Styler: highlight cells that were originally NaN in amber
+                        def _highlight_imputed(df):
+                            styles = pd.DataFrame('', index=df.index, columns=df.columns)
+                            for col in df.columns:
+                                if col in null_mask_test.columns:
+                                    imputed_idx = null_mask_test.index[null_mask_test[col]]
+                                    valid_idx = imputed_idx[imputed_idx.isin(df.index)]
+                                    if len(valid_idx):
+                                        styles.loc[valid_idx, col] = 'background-color: #ffe599; color: #7a5800'
+                            return styles
+
+                        st.caption("🟡 Amber cells were originally missing and have been imputed by the model's preprocessor (IterativeImputer). All other values are as recorded.")
+                        st.dataframe(
+                            _reorder_for_display(disp_imp).style.apply(_highlight_imputed, axis=None),
+                            hide_index=True,
+                            width='stretch'
+                        )
                     else:
-                        st.info("Run log exists but contains no trial data yet.")
+                        st.dataframe(_reorder_for_display(results_df), hide_index=True, width='stretch')
+
+                    # Feature importances
+                    st.subheader("Feature Importances")
+                    feature_names = get_features_and_target(data)[0].columns.tolist()
+                    feature_names = preprocessor.get_feature_names_out()
+                    feature_names = [name.replace('num__', '').replace('cat__', '') for name in feature_names]
+
+                    # Get importances based on model type
+                    if hasattr(model, 'get_booster'):  # XGBoost (XGBRegressor)
+                        importances_dict = model.get_booster().get_score(importance_type='weight')
+                        importances = []
+                        for i, name in enumerate(feature_names):
+                            importances.append(importances_dict.get(f'f{i}', 0))
+                    elif hasattr(model, 'feature_importances_'):  # LightGBM, CatBoost, sklearn models
+                        importances = model.feature_importances_
+                    elif hasattr(model, 'get_feature_importance'):  # CatBoost
+                        importances = model.get_feature_importance()
+                    else:  # Ensemble or other
+                        importances = [0] * len(feature_names)  # Default to zero
+
+                    feature_importances_df = pd.DataFrame({
+                        'Feature': feature_names,
+                        'Importance': importances,
+                        'Percentage': np.array(importances) / (np.sum(importances) or 1) * 100
+                    }).sort_values(by='Importance', ascending=False)
+
+                    # Display boosting rounds used (conditional on model type)
+                    if hasattr(model, 'best_iteration_'):  # LightGBM
+                        st.write(f"Boosting rounds used: {model.best_iteration_}")
+                    elif hasattr(model, 'best_iteration'):  # XGBoost
+                        st.write(f"Boosting rounds used: {model.best_iteration + 1}")
+                    elif hasattr(model, 'get_best_iteration'):  # CatBoost
+                        st.write(f"Boosting rounds used: {model.get_best_iteration()}")
+                    elif hasattr(model, 'n_estimators'):  # XGBoost without early stopping
+                        st.write(f"Boosting rounds used: {model.n_estimators} (all estimators, no early stopping)")
+                    else:  # Ensemble or other
+                        st.write("Boosting rounds information not available for this model type")
+
+                    st.dataframe(feature_importances_df, hide_index=True, width=800)
+
+                    # MAE by Position Groups
+                    st.subheader("MAE by Position Groups")
+                    st.info("📊 This analysis uses a 20% test set. Some position ranges may not have data in the test set due to random sampling. This is normal and doesn't affect the overall model performance.")
+
+                    # Define position groups
+                    mid_field_actual = results_df_analysis[(results_df_analysis['Actual'] >= 11) & (results_df_analysis['Actual'] <= 15)]
+                    back_actual = results_df_analysis[results_df_analysis['Actual'] >= 16]
+
+                    position_groups = [
+                        ("Winner (P1)", winners_actual),
+                        ("Top 3 (P1-3)", podium_actual),
+                        ("Top 10 (P1-10)", points_actual),
+                        ("Mid-field (P11-15)", mid_field_actual),
+                        ("Back (P16-20)", back_actual),
+                        ("Bottom 10 (P11-20)", bottom_10_actual)
+                    ]
+
+                    mae_data = []
+                    for group_name, group_data in position_groups:
+                        if len(group_data) > 0:
+                            mae = mean_absolute_error(group_data['Actual'], group_data['Predicted'])
+                            mae_data.append({
+                                'Position Group': group_name,
+                                'MAE': mae,
+                                'Sample Size': len(group_data)
+                            })
+
+                    mae_df = pd.DataFrame(mae_data)
+                    st.dataframe(mae_df, hide_index=True, width=600)
+                    st.bar_chart(mae_df.set_index('Position Group')['MAE'], width='stretch')
+
+                    # Individual positions MAE
+                    st.subheader("MAE by Individual Positions")
+                    individual_mae = []
+                    for pos in range(1, 21):
+                        pos_data = results_df_analysis[results_df_analysis['Actual'] == pos]
+                        if len(pos_data) > 0:
+                            mae = mean_absolute_error(pos_data['Actual'], pos_data['Predicted'])
+                            individual_mae.append({
+                                'Position': pos,
+                                'MAE': mae,
+                                'Sample Size': len(pos_data)
+                            })
+
+                    individual_mae_df = pd.DataFrame(individual_mae)
+                    st.dataframe(individual_mae_df, hide_index=True, width=600, height=750)
+                    st.line_chart(individual_mae_df.set_index('Position')['MAE'], width='stretch')
+
+                    # Store for use in Tab 4
+                    st.session_state['position_mae_dict'] = dict(zip(individual_mae_df['Position'], individual_mae_df['MAE']))
+
+                    # Position group summary
+                    st.subheader("Position Group Summary")
+                    summary_data = []
+                    for group_name, group_data in position_groups:
+                        if len(group_data) > 0:
+                            mae = mean_absolute_error(group_data['Actual'], group_data['Predicted'])
+                            avg_error = (group_data['Predicted'] - group_data['Actual']).mean()
+                            median_error = (group_data['Predicted'] - group_data['Actual']).median()
+                            summary_data.append({
+                                'Position Group': group_name,
+                                'Sample Size': len(group_data),
+                                'MAE': mae,
+                                'Average Error': avg_error,
+                                'Median Error': median_error
+                            })
+
+                    summary_df = pd.DataFrame(summary_data)
+                    st.dataframe(summary_df, hide_index=True, width=1000)
+
+                    # Error Distribution
+                    st.subheader("Prediction Error Distribution by Position Groups")
+                    results_df_analysis['AbsError'] = abs(results_df_analysis['Actual'] - results_df_analysis['Predicted'])
+                    results_df_analysis['Position_Group'] = pd.cut(
+                        results_df_analysis['Actual'],
+                        bins=[0, 1, 3, 10, 15, 20],
+                        labels=['Winner', 'Podium', 'Points', 'Mid-field', 'Back'],
+                        include_lowest=True
+                    )
+
+                    import matplotlib.pyplot as plt
+                    fig, ax = plt.subplots(figsize=(10, 6))
+                    position_groups_cat = results_df_analysis['Position_Group'].cat.categories
+                    error_data = [results_df_analysis[results_df_analysis['Position_Group'] == group]['AbsError'].values
+                                  for group in position_groups_cat]
+                    ax.boxplot(error_data, tick_labels=position_groups_cat)
+                    ax.set_ylabel('Absolute Error')
+                    ax.set_xlabel('Position Group')
+                    ax.set_title('Prediction Error Distribution by Position Group')
+                    st.pyplot(fig, width=1000)
+
+
+            with tab_feat:
+                st.subheader("Feature Analysis")
+            
+                # Permutation Importance
+                st.write("### Permutation Importance (Feature Impact on Model Error)")
+                precomputed_permutation_analysis = load_precomputed_permutation(CACHE_VERSION)
+                if precomputed_permutation_analysis:
+                    permutation_metadata = precomputed_permutation_analysis.get('metadata', {})
+                    generated_at = permutation_metadata.get('generated_at') or permutation_metadata.get('timestamp', 'Unknown')
+                    st.caption(
+                        f"Precomputed by GitHub Actions: {generated_at} · "
+                        f"{permutation_metadata.get('n_repeats', 'N/A')} repeats"
+                    )
+                    permutation_rows = (
+                        precomputed_permutation_analysis.get('feature_importance')
+                        or precomputed_permutation_analysis.get('importances')
+                        or []
+                    )
+                    if permutation_rows:
+                        perm_df = pd.DataFrame(permutation_rows).rename(columns={
+                            'feature': 'Feature',
+                            'importance': 'Permutation Importance',
+                            'std': 'Standard Deviation',
+                        })
+                        perm_df = perm_df.sort_values(by='Permutation Importance', ascending=True)
+                        st.write("Features with lowest permutation importance (least helpful):")
+                        st.dataframe(perm_df.head(100), hide_index=True, width=800)
+                        st.write("Features with highest permutation importance (most helpful):")
+                        st.dataframe(
+                            perm_df.tail(100).sort_values(by='Permutation Importance', ascending=False),
+                            hide_index=True,
+                            width=800,
+                        )
+                    else:
+                        st.info("The precomputed permutation artifact contains no feature rows.")
                 else:
-                    st.info("No Monte Carlo run log found at `data_files/precomputed/monte_carlo_run_log.json`. "
-                            "This is expected if the GitHub feature-selection workflow hasn’t executed yet. "
-                            "You can either trigger that workflow or run the selection script locally: "
-                            "`python scripts/precompute/monte_carlo_features.py` (it will emit the log file). ")
+                    st.info(
+                        "Permutation importance is generated by the Feature Selection Suite "
+                        "GitHub workflow and is not computed in the live app."
+                    )
 
-            # RFE
-            st.write("### Recursive Feature Elimination (RFE)")
-            X_rfe, y_rfe = get_features_and_target(data)
-            mask_rfe = y_rfe.notnull() & np.isfinite(y_rfe)
-            X_rfe, y_rfe = X_rfe[mask_rfe], y_rfe[mask_rfe]
-            for col in X_rfe.select_dtypes(include='object').columns:
-                X_rfe[col] = X_rfe[col].astype('category').cat.codes
+                # High-Cardinality Features
+                st.write("### High-Cardinality Features (Potential Overfitting Risk)")
+                X_card, _ = get_features_and_target(data)
+                cardinality = X_card.nunique().sort_values(ascending=False)
+                cardinality_df = pd.DataFrame({
+                    'Feature': cardinality.index,
+                    'Unique Values': cardinality.values
+                })
+                cardinality_df['Risk'] = np.where(cardinality_df['Unique Values'] > 50, 'High', 'Low')
+                st.write("Features with high cardinality (many unique values) are more likely to cause overfitting, especially if they are IDs or post-event info.")
+                st.dataframe(cardinality_df, hide_index=True, width=800)
+
+                # Safety Car Data Importances
+                st.write("### Safety Car Feature Importance")
+                safetycar_model_loaded = get_safetycar_model(CACHE_VERSION)
+                preprocessor_sc = safetycar_model_loaded.named_steps['preprocessor']
+                feature_names_sc = preprocessor_sc.get_feature_names_out()
+                feature_names_sc = [name.replace('num__', '').replace('cat__', '') for name in feature_names_sc]
+                importances_sc = safetycar_model_loaded.named_steps['classifier'].coef_[0]
+
+                odds_ratios = np.exp(importances_sc)
+                prob_change = (1 / (1 + np.exp(-importances_sc))) - 0.5
+
+                df_sc = pd.DataFrame({
+                    'Feature': feature_names_sc,
+                    'Coefficient': importances_sc,
+                    'Odds Ratio': odds_ratios,
+                    'Prob Change (per unit)': prob_change
+                }).sort_values('Coefficient', key=np.abs, ascending=False, ignore_index=True)
+
+                st.dataframe(df_sc, width=1000, hide_index=True)
+
+                # Correlations
+                st.write("### Correlation Matrix")
+                # Get the original DataFrame from the Styler object
+                if hasattr(correlation_matrix, 'data'):
+                    corr_df = correlation_matrix.data
+                else:
+                    corr_df = correlation_matrix
             
-            n_features_rfe = st.number_input("Number of features to select (RFE)", min_value=1, max_value=len(X_rfe.columns), value=10, step=1)
-            if st.button("Run RFE"):
-                with st.spinner("Running RFE..."):
-                    selected_features, ranking = run_rfe_feature_selection(X_rfe, y_rfe, n_features_to_select=int(n_features_rfe))
-                st.write("Selected features:", selected_features)
-                st.dataframe(pd.DataFrame({'Feature': X_rfe.columns, 'Ranking': ranking}).sort_values('Ranking'), width=600, hide_index=True)
-
-                # Save selected features to file
-                with open('data_files/f1_position_model_rfe_selected_features.txt', 'w') as f:
-                    f.write('\n'.join(selected_features))
-                st.success("RFE selected features saved to f1_position_model_rfe_selected_features.txt")
-
-            # Boruta
-            st.write("### Boruta Feature Selection")
-            X_boruta, y_boruta = get_features_and_target(data)
-            mask_boruta = y_boruta.notnull() & np.isfinite(y_boruta)
-            X_boruta, y_boruta = X_boruta[mask_boruta], y_boruta[mask_boruta]
-            for col in X_boruta.select_dtypes(include='object').columns:
-                X_boruta[col] = X_boruta[col].astype('category').cat.codes
-            max_iter_boruta = st.number_input("Boruta max iterations", min_value=10, max_value=200, value=50, step=10)
-            if st.button("Run Boruta"):
-                with st.spinner("Running Boruta..."):
-                    selected_features_b, ranking_b = run_boruta_feature_selection(X_boruta, y_boruta, max_iter=int(max_iter_boruta))
-                st.write("Selected features:", selected_features_b)
-                st.dataframe(pd.DataFrame({'Feature': X_boruta.columns[:len(ranking_b)], 'Ranking': ranking_b}).sort_values('Ranking'))
-                st.write("Best feature subset (quoted, comma-delimited):")
-                st.write(", ".join([f"'{f}'" for f in selected_features_b]))
-
-                # Save selected features to file
-                with open('data_files/f1_position_model_boruta_selected_features.txt', 'w') as f:
-                    f.write('\n'.join(selected_features_b))
-                st.success("Boruta selected features saved to f1_position_model_boruta_selected_features.txt")
-
-            # RFE to Minimize MAE
-            st.write("### RFE to Minimize MAE")
-            X_rfe_mae, y_rfe_mae = get_features_and_target(data)
-            mask_rfe_mae = y_rfe_mae.notnull() & np.isfinite(y_rfe_mae)
-            X_rfe_mae, y_rfe_mae = X_rfe_mae[mask_rfe_mae], y_rfe_mae[mask_rfe_mae]
-            min_features_mae = st.number_input("Min features", min_value=1, max_value=len(X_rfe_mae.columns)-1, value=3, step=1)
-            max_features_mae = st.number_input(
-                "Max features",
-                min_value=min_features_mae+1,
-                max_value=len(X_rfe_mae.columns),
-                value=min(min_features_mae+5, len(X_rfe_mae.columns)),
-                step=1
-            )
-            if st.button("Run RFE to Minimize MAE"):
-                with st.spinner("Running RFE to minimize MAE..."):
-                    best_features, best_ranking, best_mae, maes = rfe_minimize_mae(X_rfe_mae, y_rfe_mae, min_features=int(min_features_mae), max_features=int(max_features_mae))
-                st.write(f"Best MAE: {best_mae:.3f}")
-                st.write("Best feature subset:", best_features)
-                st.dataframe(pd.DataFrame({'Feature': best_features}))
-                st.line_chart(pd.DataFrame(maes, columns=['n_features', 'MAE']).set_index('n_features'))
-                st.write("Best feature subset (quoted, comma-delimited):")
-                st.write(", ".join([f"'{f}'" for f in best_features]))
-
-                # Save best features to file
-                with open('data_files/f1_position_model_rfe_mae_best_features.txt', 'w') as f:
-                    f.write('\n'.join(best_features))
-                    f.write(f"\nBest MAE: {best_mae:.4f}\n")
-                st.success("RFE MAE best features saved to f1_position_model_rfe_mae_best_features.txt")
-
-            # External script runner (feature selection helper)
-            st.write("### External Feature Selection Script")
+                # Rename the index
+                correlation_matrix_display = corr_df.rename(
+                    index={
+                        'resultsPodium': 'Podium',
+                        'resultsTop5': 'Top 5',
+                        'resultsTop10': 'Top 10',
+                        'resultsStartingGridPositionNumber': 'Starting Grid Position',
+                        'resultsFinalPositionNumber': 'Final Position',
+                        'positionsGained': 'Positions Gained',
+                        'DNF': 'DNF',
+                        'averagePracticePosition': 'Avg Practice Pos.',
+                        'grandPrixLaps': 'Laps',
+                        'lastFPPositionNumber': 'Last FP Pos.',
+                        'resultsQualificationPositionNumber': 'Qual. Pos.',
+                        'constructorTotalRaceStarts': 'Constructor Race Starts',
+                        'constructorTotalRaceWins': 'Constructor Race Wins',
+                        'constructorTotalPolePositions': 'Constructor Pole Pos.',
+                        'turns': 'Turns',
+                        'q1End': 'Out at Q1',
+                        'q2End': 'Out at Q2',
+                        'q3Top10': 'Q3 Top 10',
+                        'numberOfStops': 'Number of Stops',
+                        'positionsGained': 'Positions Gained',
+                        'avgLapTime': 'Avg Lap Time',
+                        'finishingTime': 'Finishing Time',
+                    }
+                )
+                # Apply styling after rename
+                correlation_matrix_display = correlation_matrix_display.style.map(highlight_correlation, subset=correlation_matrix_display.columns[1:])
+                st.dataframe(correlation_matrix_display, column_config=correlation_columns_to_display, hide_index=True, height=600)
+        
+            with tab_select:
+                st.subheader("Feature Selection Tools")
             
-            if st.button("Run feature-selection helper", help="Runs the feature_selection_refinement.py script to perform additional feature selection analyses."):
-                with st.spinner('Launching feature selection script...'):
-                    import subprocess, sys
-                    script_path = os.path.join('scripts', 'feature_selection_refinement.py')
-                    log_dir = os.path.join('scripts', 'output')
-                    os.makedirs(log_dir, exist_ok=True)
-                    log_path = os.path.join(log_dir, 'feature_selection_stdout.log')
-                    try:
-                        # Capture full stdout/stderr to a log file for post-mortem
-                        with open(log_path, 'w', encoding='utf-8') as logfile:
-                            proc = subprocess.Popen([sys.executable, script_path], stdout=logfile, stderr=subprocess.STDOUT, text=True)
-                            proc.wait()
+                # Check for precomputed results
+                precomputed_monte_carlo = load_precomputed_monte_carlo(CACHE_VERSION)
+                precomputed_shap = load_precomputed_shap(CACHE_VERSION)
+                precomputed_rfe = load_precomputed_rfe(CACHE_VERSION)
+                precomputed_boruta = load_precomputed_boruta(CACHE_VERSION)
+                precomputed_permutation = load_precomputed_permutation(CACHE_VERSION)
+            
+                # Show availability status
+                has_precomputed = any([precomputed_monte_carlo, precomputed_shap, precomputed_rfe, precomputed_boruta, precomputed_permutation])
+            
+                if has_precomputed:
+                    st.info("📦 Precomputed feature selection results available from GitHub Actions!")
+                
+                    with st.expander("📊 View Precomputed Results", expanded=True):
+                        if precomputed_monte_carlo:
+                            st.write("### Monte Carlo Results (Precomputed)")
+                            metadata = precomputed_monte_carlo.get('metadata', {})
+                            st.write(f"**Computed:** {metadata.get('timestamp', 'Unknown')}")
+                            st.write(f"**Trials:** {metadata.get('n_trials', 'N/A')}")
+                        
+                            best_result = precomputed_monte_carlo.get('best_result', {})
+                            st.write(f"**Best MAE:** {best_result.get('mae', 'N/A')}")
+                            st.write("**Best Features:**", ", ".join([f"`{f}`" for f in best_result.get('features', [])]))
+                        
+                            # Show top results if available
+                            top_results = precomputed_monte_carlo.get('top_20_results', [])
+                            if top_results:
+                                st.dataframe(pd.DataFrame(top_results), hide_index=True)
+                    
+                        if precomputed_shap:
+                            st.write("### SHAP Analysis (Precomputed)")
+                            metadata = precomputed_shap.get('metadata', {})
+                            st.write(f"**Computed:** {metadata.get('timestamp', 'Unknown')}")
+                        
+                            feature_importance = precomputed_shap.get('feature_importance', [])
+                            if feature_importance:
+                                shap_df = pd.DataFrame(feature_importance)
+                                st.dataframe(shap_df.head(30), hide_index=True)
+                    
+                        if precomputed_rfe:
+                            st.write("### RFE Results (Precomputed)")
+                            metadata = precomputed_rfe.get('metadata', {})
+                            st.write(f"**Computed:** {metadata.get('timestamp', 'Unknown')}")
+                            st.write(f"**Features selected:** {metadata.get('n_features_selected', 'N/A')}")
+                        
+                            selected = precomputed_rfe.get('selected_features', [])
+                            st.write("**Selected Features:**", ", ".join([f"`{f}`" for f in selected]))
+                    
+                        if precomputed_boruta:
+                            st.write("### Boruta Results (Precomputed)")
+                            metadata = precomputed_boruta.get('metadata', {})
+                            st.write(f"**Computed:** {metadata.get('timestamp', 'Unknown')}")
+                            st.write(f"**Iterations:** {metadata.get('max_iter', 'N/A')}")
+                        
+                            selected = precomputed_boruta.get('selected_features', [])
+                            st.write("**Selected Features:**", ", ".join([f"`{f}`" for f in selected]))
+                    
+                        if precomputed_permutation:
+                            st.write("### Permutation Importance (Precomputed)")
+                            metadata = precomputed_permutation.get('metadata', {})
+                            st.write(f"**Computed:** {metadata.get('generated_at') or metadata.get('timestamp', 'Unknown')}")
+                        
+                            importances = (
+                                precomputed_permutation.get('feature_importance')
+                                or precomputed_permutation.get('importances')
+                                or []
+                            )
+                            if importances:
+                                perm_df = pd.DataFrame(importances)
+                                st.dataframe(perm_df.head(30), hide_index=True)
+            
+                st.write("---")
+            
+                # Monte Carlo Feature Subset Search
+                st.write("### Monte Carlo Feature Subset Search")
+                X_mc, y_mc = get_features_and_target(data)
+                feature_names_mc = X_mc.columns.tolist()
 
-                        # Read final summary from feature_selection_report.txt if available
-                        report_path = os.path.join(log_dir, 'feature_selection_report.txt')
-                        if os.path.exists(report_path):
+                n_trials = st.number_input("Number of random trials", min_value=10, max_value=100000, value=50, step=10)
+                min_features = st.number_input("Minimum features per trial", min_value=3, max_value=len(feature_names_mc)-1, value=8, step=1)
+                max_features = st.number_input(
+                    "Maximum features per trial",
+                    min_value=min_features+1,
+                    max_value=len(feature_names_mc),
+                    value=min(min_features+1, len(feature_names_mc)),
+                    step=1
+                )
+            
+                if st.button("Run Monte Carlo Search"):
+                    with st.spinner("Running Monte Carlo feature subset search..."):
+                        results_mc = monte_carlo_feature_selection(
+                            X_mc, y_mc,
+                            model_class=lambda: XGBRegressor(n_estimators=100, max_depth=4, n_jobs=-1, tree_method='hist'),
+                            n_trials=int(n_trials),
+                            min_features=int(min_features),
+                            max_features=int(max_features),
+                            random_state=123,
+                            cv=10
+                        )
+
+                    results_mc = sorted(results_mc, key=lambda x: x['mae'])
+                    best = results_mc[0]
+                    st.write("Best feature subset:", best['features'])
+                    st.write(", ".join([f"'{f}'" for f in best['features']]))
+                    st.write("Best MAE:", best['mae'])
+
+                    # Save best features to file
+                    with open('data_files/f1_position_model_best_features_monte_carlo.txt', 'w') as f:
+                        f.write('\n'.join(best['features']))
+                        f.write(f"\nBest MAE: {best['mae']:.4f}\n")
+                    st.success("Best features and MAE saved to f1_position_model_best_features_monte_carlo.txt")
+
+                    st.subheader("Top 20 Feature Subsets")
+                    st.dataframe(pd.DataFrame(results_mc[:20]), hide_index=True, column_config={
+                        "features": "Feature Subset",
+                        "mae": "Mean Absolute Error (MAE)",
+                        "rmse": "Root Mean Squared Error (RMSE)",
+                        "r2": "R² Score"
+                    })
+
+                    from collections import Counter
+                    top_features = [f for r in results_mc[:20] for f in r['features']]
+                    feature_counts = Counter(top_features)
+                    feature_counts_df = pd.DataFrame(feature_counts.items(), columns=['Feature', 'Appearances']).sort_values(by='Appearances', ascending=False)
+                    st.subheader("Feature Appearance in Top 20 Subsets")
+                    st.dataframe(feature_counts_df, hide_index=True, width=600)
+
+                # ----------------------------------------------------------------
+                # 4F: Monte Carlo convergence analysis dashboard (ROADMAP-4F)
+                # ----------------------------------------------------------------
+                st.write("---")
+                if st.checkbox("📈 Show Monte Carlo convergence analysis"):
+                    mc_log_path = Path('data_files/precomputed/monte_carlo_run_log.json')
+                    if mc_log_path.exists():
+                        import json as _json
+                        mc_log = _json.loads(mc_log_path.read_text())
+                        trials_data = mc_log.get('trials', [])
+                        if trials_data:
+                            mc_df = pd.DataFrame(trials_data)
+
+                            col1, col2, col3 = st.columns(3)
+                            col1.metric("Best Trial", mc_log.get('best_trial', '–'))
+                            col2.metric("Best MAE", f"{mc_log.get('best_mae', 0):.4f}" if mc_log.get('best_mae') else '–')
+                            col3.metric("Total Trials", mc_log.get('total_trials', 0))
+
+                            # MAE convergence over trial index
+                            import altair as _alt
+                            conv_chart = _alt.Chart(mc_df).mark_line(opacity=0.7).encode(
+                                x=_alt.X('trial:Q', title='Trial Number'),
+                                y=_alt.Y('mae:Q', title='MAE', scale=_alt.Scale(zero=False)),
+                                color=_alt.Color('stage:N', title='Stage'),
+                                tooltip=['trial', 'stage', 'n_features', 'mae'],
+                            ).properties(title='Monte Carlo MAE Convergence', height=250)
+                            st.altair_chart(conv_chart, width='stretch')
+
+                            # Feature count vs MAE scatter
+                            scatter_chart = _alt.Chart(mc_df).mark_circle(size=30, opacity=0.5).encode(
+                                x=_alt.X('n_features:Q', title='Feature Count'),
+                                y=_alt.Y('mae:Q', title='MAE', scale=_alt.Scale(zero=False)),
+                                color=_alt.Color('mae:Q', scale=_alt.Scale(
+                                    scheme='redyellowgreen', reverse=True)),
+                                tooltip=['trial', 'stage', 'n_features', 'mae'],
+                            ).properties(title='Feature Count vs MAE', height=250)
+                            st.altair_chart(scatter_chart, width='stretch')
+                        else:
+                            st.info("Run log exists but contains no trial data yet.")
+                    else:
+                        st.info("No Monte Carlo run log found at `data_files/precomputed/monte_carlo_run_log.json`. "
+                                "This is expected if the GitHub feature-selection workflow hasn’t executed yet. "
+                                "You can either trigger that workflow or run the selection script locally: "
+                                "`python scripts/precompute/monte_carlo_features.py` (it will emit the log file). ")
+
+                # RFE
+                st.write("### Recursive Feature Elimination (RFE)")
+                X_rfe, y_rfe = get_features_and_target(data)
+                mask_rfe = y_rfe.notnull() & np.isfinite(y_rfe)
+                X_rfe, y_rfe = X_rfe[mask_rfe], y_rfe[mask_rfe]
+                for col in X_rfe.select_dtypes(include='object').columns:
+                    X_rfe[col] = X_rfe[col].astype('category').cat.codes
+            
+                n_features_rfe = st.number_input("Number of features to select (RFE)", min_value=1, max_value=len(X_rfe.columns), value=10, step=1)
+                if st.button("Run RFE"):
+                    with st.spinner("Running RFE..."):
+                        selected_features, ranking = run_rfe_feature_selection(X_rfe, y_rfe, n_features_to_select=int(n_features_rfe))
+                    st.write("Selected features:", selected_features)
+                    st.dataframe(pd.DataFrame({'Feature': X_rfe.columns, 'Ranking': ranking}).sort_values('Ranking'), width=600, hide_index=True)
+
+                    # Save selected features to file
+                    with open('data_files/f1_position_model_rfe_selected_features.txt', 'w') as f:
+                        f.write('\n'.join(selected_features))
+                    st.success("RFE selected features saved to f1_position_model_rfe_selected_features.txt")
+
+                # Boruta
+                st.write("### Boruta Feature Selection")
+                X_boruta, y_boruta = get_features_and_target(data)
+                mask_boruta = y_boruta.notnull() & np.isfinite(y_boruta)
+                X_boruta, y_boruta = X_boruta[mask_boruta], y_boruta[mask_boruta]
+                for col in X_boruta.select_dtypes(include='object').columns:
+                    X_boruta[col] = X_boruta[col].astype('category').cat.codes
+                max_iter_boruta = st.number_input("Boruta max iterations", min_value=10, max_value=200, value=50, step=10)
+                if st.button("Run Boruta"):
+                    with st.spinner("Running Boruta..."):
+                        selected_features_b, ranking_b = run_boruta_feature_selection(X_boruta, y_boruta, max_iter=int(max_iter_boruta))
+                    st.write("Selected features:", selected_features_b)
+                    st.dataframe(pd.DataFrame({'Feature': X_boruta.columns[:len(ranking_b)], 'Ranking': ranking_b}).sort_values('Ranking'))
+                    st.write("Best feature subset (quoted, comma-delimited):")
+                    st.write(", ".join([f"'{f}'" for f in selected_features_b]))
+
+                    # Save selected features to file
+                    with open('data_files/f1_position_model_boruta_selected_features.txt', 'w') as f:
+                        f.write('\n'.join(selected_features_b))
+                    st.success("Boruta selected features saved to f1_position_model_boruta_selected_features.txt")
+
+                # RFE to Minimize MAE
+                st.write("### RFE to Minimize MAE")
+                X_rfe_mae, y_rfe_mae = get_features_and_target(data)
+                mask_rfe_mae = y_rfe_mae.notnull() & np.isfinite(y_rfe_mae)
+                X_rfe_mae, y_rfe_mae = X_rfe_mae[mask_rfe_mae], y_rfe_mae[mask_rfe_mae]
+                min_features_mae = st.number_input("Min features", min_value=1, max_value=len(X_rfe_mae.columns)-1, value=3, step=1)
+                max_features_mae = st.number_input(
+                    "Max features",
+                    min_value=min_features_mae+1,
+                    max_value=len(X_rfe_mae.columns),
+                    value=min(min_features_mae+5, len(X_rfe_mae.columns)),
+                    step=1
+                )
+                if st.button("Run RFE to Minimize MAE"):
+                    with st.spinner("Running RFE to minimize MAE..."):
+                        best_features, best_ranking, best_mae, maes = rfe_minimize_mae(
+                            X_rfe_mae,
+                            y_rfe_mae,
+                            data.loc[X_rfe_mae.index],
+                            min_features=int(min_features_mae),
+                            max_features=int(max_features_mae),
+                        )
+                    st.write(f"Best MAE: {best_mae:.3f}")
+                    st.write("Best feature subset:", best_features)
+                    st.dataframe(pd.DataFrame({'Feature': best_features}))
+                    st.line_chart(pd.DataFrame(maes, columns=['n_features', 'MAE']).set_index('n_features'))
+                    st.write("Best feature subset (quoted, comma-delimited):")
+                    st.write(", ".join([f"'{f}'" for f in best_features]))
+
+                    # Save best features to file
+                    with open('data_files/f1_position_model_rfe_mae_best_features.txt', 'w') as f:
+                        f.write('\n'.join(best_features))
+                        f.write(f"\nBest MAE: {best_mae:.4f}\n")
+                    st.success("RFE MAE best features saved to f1_position_model_rfe_mae_best_features.txt")
+
+                # External script runner (feature selection helper)
+                st.write("### External Feature Selection Script")
+            
+                if st.button("Run feature-selection helper", help="Runs the feature_selection_refinement.py script to perform additional feature selection analyses."):
+                    with st.spinner('Launching feature selection script...'):
+                        import subprocess, sys
+                        script_path = os.path.join('scripts', 'feature_selection_refinement.py')
+                        log_dir = os.path.join('scripts', 'output')
+                        os.makedirs(log_dir, exist_ok=True)
+                        log_path = os.path.join(log_dir, 'feature_selection_stdout.log')
+                        try:
+                            # Capture full stdout/stderr to a log file for post-mortem
+                            with open(log_path, 'w', encoding='utf-8') as logfile:
+                                proc = subprocess.Popen([sys.executable, script_path], stdout=logfile, stderr=subprocess.STDOUT, text=True)
+                                proc.wait()
+
+                            # Read final summary from feature_selection_report.txt if available
+                            report_path = os.path.join(log_dir, 'feature_selection_report.txt')
+                            if os.path.exists(report_path):
+                                try:
+                                    rpt = open(report_path, 'r', encoding='utf-8').read()
+                                    st.subheader('Feature selection summary')
+                                    st.code(rpt)
+                                except Exception:
+                                    st.write('Feature selection completed; could not read summary report.')
+                            else:
+                                st.write('Feature selection completed; no summary report found.')
+
+                            if proc.returncode == 0:
+                                st.success('Feature selection script completed successfully.')
+                            else:
+                                st.error(f'Feature selection script exited with code {proc.returncode}. See full log below for details.')
+                                # Show tail of the log to help debugging
+                                try:
+                                    with open(log_path, 'r', encoding='utf-8', errors='ignore') as lf:
+                                        lines = lf.readlines()[-200:]
+                                    with st.expander('Show last 200 lines of full run log'):
+                                        for l in lines:
+                                            st.text(l.rstrip())
+                                except Exception:
+                                    st.write('Could not read log file')
+                        except Exception as e:
+                            st.error(f'Failed to run feature selection script: {e}')
+
+                # Show outputs if available
+                out_dir = os.path.join('scripts', 'output')
+                if os.path.exists(out_dir):
+                    if os.path.exists(os.path.join(out_dir, 'boruta_selected.txt')):
+                        st.subheader('Boruta Selected Features')
+                        try:
+                            with open(os.path.join(out_dir, 'boruta_selected.txt'), 'r', encoding='utf-8') as f:
+                                boruta_lines = [l.strip() for l in f.readlines() if l.strip()]
+                            st.write(boruta_lines[:100])
                             try:
-                                rpt = open(report_path, 'r', encoding='utf-8').read()
-                                st.subheader('Feature selection summary')
-                                st.code(rpt)
+                                # Render clickable icon + download link (small text file)
+                                import base64
+                                bpath = os.path.join(out_dir, 'boruta_selected.txt')
+                                with open(bpath, 'rb') as bf:
+                                    bdata = bf.read()
+                                file_uri = 'data:text/plain;base64,' + base64.b64encode(bdata).decode('ascii')
+                                icon_path_local = os.path.join('data_files', 'csv_icon.png')
+                                fallback_icon = os.path.join('data_files', 'favicon.png')
+                                chosen_icon = icon_path_local if os.path.exists(icon_path_local) else (fallback_icon if os.path.exists(fallback_icon) else None)
+                                img_tag = ''
+                                if chosen_icon is not None:
+                                    try:
+                                        with open(chosen_icon, 'rb') as ifh:
+                                            img_b64 = base64.b64encode(ifh.read()).decode('ascii')
+                                        img_tag = f'<img src="data:image/png;base64,{img_b64}" style="width:36px;height:36px;margin-right:10px;vertical-align:middle;border-radius:6px;">'
+                                    except Exception:
+                                        img_tag = ''
+                                html = (
+                                    f'<div style="display:flex;align-items:center;margin:6px 0;">'
+                                    f'<a download="boruta_selected.txt" href="{file_uri}" '
+                                    f'style="display:flex;align-items:center;padding:6px 12px;background:#1976d2;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">'
+                                    f'{img_tag}'
+                                    f'<span style="color:#fff;">Download boruta_selected.txt</span>'
+                                    f'</a></div>'
+                                )
+                                st.markdown(html, unsafe_allow_html=True)
                             except Exception:
-                                st.write('Feature selection completed; could not read summary report.')
-                        else:
-                            st.write('Feature selection completed; no summary report found.')
+                                try:
+                                    with open(os.path.join(out_dir, 'boruta_selected.txt'), 'rb') as fbin:
+                                        st.download_button('Download Boruta list', fbin, file_name='boruta_selected.txt')
+                                except Exception:
+                                    st.write('Could not read boruta_selected.txt')
+                        except Exception:
+                            st.write('Could not read boruta_selected.txt')
 
-                        if proc.returncode == 0:
-                            st.success('Feature selection script completed successfully.')
-                        else:
-                            st.error(f'Feature selection script exited with code {proc.returncode}. See full log below for details.')
-                            # Show tail of the log to help debugging
+                    if os.path.exists(os.path.join(out_dir, 'shap_ranking.txt')):
+                        st.subheader('SHAP Ranking (top 20)')
+                        try:
+                            # Prefer CSV-style read, but fall back to parsing plain text
+                            shp_path = os.path.join(out_dir, 'shap_ranking.txt')
                             try:
-                                with open(log_path, 'r', encoding='utf-8', errors='ignore') as lf:
-                                    lines = lf.readlines()[-200:]
-                                with st.expander('Show last 200 lines of full run log'):
+                                # Try to auto-detect separator (handles CSV or tab-delimited)
+                                try:
+                                    df_shap = pd.read_csv(shp_path, sep=None, engine='python')
+                                except Exception:
+                                    df_shap = pd.read_csv(shp_path)
+                            except Exception:
+                                # Fallback: parse as plain text lines into Feature / SHAP value
+                                def _is_number(x):
+                                    try:
+                                        float(x)
+                                        return True
+                                    except Exception:
+                                        return False
+
+                                rows = []
+                                with open(shp_path, 'r', encoding='utf-8', errors='ignore') as f:
+                                    for raw in f:
+                                        s = raw.strip()
+                                        if not s:
+                                            continue
+                                        # Try common separators first
+                                        if ',' in s:
+                                            parts = [p.strip() for p in s.split(',') if p.strip()]
+                                        elif '\t' in s:
+                                            parts = [p.strip() for p in s.split('\t') if p.strip()]
+                                        elif ' - ' in s:
+                                            parts = [p.strip() for p in s.split(' - ') if p.strip()]
+                                        elif ':' in s and s.count(':') == 1:
+                                            parts = [p.strip() for p in s.split(':') if p.strip()]
+                                        else:
+                                            parts = s.split()
+
+                                        if len(parts) >= 2 and _is_number(parts[-1]):
+                                            feature = ' '.join(parts[:-1]).strip()
+                                            val = parts[-1]
+                                        elif len(parts) >= 2:
+                                            # Last part may be the value, even if not numeric
+                                            feature = ' '.join(parts[:-1]).strip()
+                                            val = parts[-1]
+                                        else:
+                                            # Can't split confidently; put whole line in Feature
+                                            feature = s
+                                            val = ''
+
+                                        rows.append({'Feature': feature, 'SHAP': val})
+
+                                df_shap = pd.DataFrame(rows)
+                                # Attempt to coerce SHAP values to numeric where possible
+                                if 'SHAP' in df_shap.columns:
+                                    df_shap['SHAP'] = pd.to_numeric(df_shap['SHAP'], errors='coerce')
+
+                            # Normalize common column names to nice display names
+                            if isinstance(df_shap, pd.DataFrame):
+                                cols_lower = [c.lower() for c in df_shap.columns]
+                                if 'feature' in cols_lower and 'mean_abs_shap' in cols_lower:
+                                    # map to consistent names
+                                    mapping = {df_shap.columns[cols_lower.index('feature')]: 'Feature',
+                                               df_shap.columns[cols_lower.index('mean_abs_shap')]: 'SHAP'}
+                                    df_shap = df_shap.rename(columns=mapping)[['Feature', 'SHAP']]
+                                elif len(df_shap.columns) >= 2:
+                                    # Prefer first two columns
+                                    df_shap = df_shap.iloc[:, :2]
+                                    df_shap.columns = ['Feature', 'SHAP']
+                            # Display top 20 rows (if available). Guard height calculation.
+                            height = get_dataframe_height(df_shap)
+                            try:
+                                st.dataframe(df_shap.head(20), height=height, hide_index=True, width=600)
+                            except Exception:
+                                st.dataframe(df_shap.head(20), hide_index=True, width=600, height=height)
+                            try:
+                                import base64
+                                with open(shp_path, 'rb') as sf:
+                                    sdata = sf.read()
+                                file_uri = 'data:text/plain;base64,' + base64.b64encode(sdata).decode('ascii')
+                                icon_path_local = os.path.join('data_files', 'csv_icon.png')
+                                fallback_icon = os.path.join('data_files', 'favicon.png')
+                                chosen_icon = icon_path_local if os.path.exists(icon_path_local) else (fallback_icon if os.path.exists(fallback_icon) else None)
+                                img_tag = ''
+                                if chosen_icon is not None:
+                                    try:
+                                        with open(chosen_icon, 'rb') as ifh:
+                                            img_b64 = base64.b64encode(ifh.read()).decode('ascii')
+                                        img_tag = f'<img src="data:image/png;base64,{img_b64}" style="width:36px;height:36px;margin-right:10px;vertical-align:middle;border-radius:6px;">'
+                                    except Exception:
+                                        img_tag = ''
+                                html = (
+                                    f'<div style="display:flex;align-items:center;margin:6px 0;">'
+                                    f'<a download="shap_ranking.txt" href="{file_uri}" '
+                                    f'style="display:flex;align-items:center;padding:6px 12px;background:#1976d2;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">'
+                                    f'{img_tag}'
+                                    f'<span style="color:#fff;">Download SHAP ranking</span>'
+                                    f'</a></div>'
+                                )
+                                st.markdown(html, unsafe_allow_html=True)
+                            except Exception:
+                                try:
+                                    with open(shp_path, 'rb') as fbin:
+                                        st.download_button('Download SHAP ranking', fbin, file_name='shap_ranking.txt')
+                                except Exception:
+                                    st.write('Could not read shap_ranking.txt')
+                        except Exception as e:
+                            st.write('Could not read shap_ranking.txt')
+                            try:
+                                st.write('Error:', str(e))
+                                # Show a small preview of the file to help debugging
+                                preview_path = os.path.abspath(shp_path)
+                                with open(preview_path, 'r', encoding='utf-8', errors='ignore') as pf:
+                                    lines = pf.readlines()[:50]
+                                with st.expander('Preview of shap_ranking.txt (first 50 lines)'):
                                     for l in lines:
                                         st.text(l.rstrip())
-                            except Exception:
-                                st.write('Could not read log file')
-                    except Exception as e:
-                        st.error(f'Failed to run feature selection script: {e}')
+                            except Exception as e2:
+                                st.write('Also could not read file preview:', str(e2))
 
-            # Show outputs if available
-            out_dir = os.path.join('scripts', 'output')
-            if os.path.exists(out_dir):
-                if os.path.exists(os.path.join(out_dir, 'boruta_selected.txt')):
-                    st.subheader('Boruta Selected Features')
-                    try:
-                        with open(os.path.join(out_dir, 'boruta_selected.txt'), 'r', encoding='utf-8') as f:
-                            boruta_lines = [l.strip() for l in f.readlines() if l.strip()]
-                        st.write(boruta_lines[:100])
+                    if os.path.exists(os.path.join(out_dir, 'correlated_pairs.csv')):
+                        st.subheader('Highly Correlated Pairs (>0.95)')
                         try:
-                            # Render clickable icon + download link (small text file)
-                            import base64
-                            bpath = os.path.join(out_dir, 'boruta_selected.txt')
-                            with open(bpath, 'rb') as bf:
-                                bdata = bf.read()
-                            file_uri = 'data:text/plain;base64,' + base64.b64encode(bdata).decode('ascii')
-                            icon_path_local = os.path.join('data_files', 'csv_icon.png')
-                            fallback_icon = os.path.join('data_files', 'favicon.png')
-                            chosen_icon = icon_path_local if os.path.exists(icon_path_local) else (fallback_icon if os.path.exists(fallback_icon) else None)
-                            img_tag = ''
-                            if chosen_icon is not None:
-                                try:
-                                    with open(chosen_icon, 'rb') as ifh:
-                                        img_b64 = base64.b64encode(ifh.read()).decode('ascii')
-                                    img_tag = f'<img src="data:image/png;base64,{img_b64}" style="width:36px;height:36px;margin-right:10px;vertical-align:middle;border-radius:6px;">'
-                                except Exception:
-                                    img_tag = ''
-                            html = (
-                                f'<div style="display:flex;align-items:center;margin:6px 0;">'
-                                f'<a download="boruta_selected.txt" href="{file_uri}" '
-                                f'style="display:flex;align-items:center;padding:6px 12px;background:#1976d2;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">'
-                                f'{img_tag}'
-                                f'<span style="color:#fff;">Download boruta_selected.txt</span>'
-                                f'</a></div>'
-                            )
-                            st.markdown(html, unsafe_allow_html=True)
-                        except Exception:
+                            df_corr = pd.read_csv(os.path.join(out_dir, 'correlated_pairs.csv'))
+                            height = get_dataframe_height(df_corr)
+                            st.dataframe(df_corr.head(50), hide_index=True, width=800, height=height)
+                            # Render clickable icon + HTML download (data-URI) for correlated_pairs.csv
                             try:
-                                with open(os.path.join(out_dir, 'boruta_selected.txt'), 'rb') as fbin:
-                                    st.download_button('Download Boruta list', fbin, file_name='boruta_selected.txt')
+                                import base64
+                                csv_path = os.path.join(out_dir, 'correlated_pairs.csv')
+                                with open(csv_path, 'rb') as fbin:
+                                    data_bytes = fbin.read()
+                                file_uri = 'data:text/csv;base64,' + base64.b64encode(data_bytes).decode('ascii')
+                                icon_path_local = os.path.join('data_files', 'csv_icon.png')
+                                fallback_icon = os.path.join('data_files', 'favicon.png')
+                                chosen_icon = icon_path_local if os.path.exists(icon_path_local) else (fallback_icon if os.path.exists(fallback_icon) else None)
+                                img_tag = ''
+                                if chosen_icon is not None:
+                                    try:
+                                        with open(chosen_icon, 'rb') as ifh:
+                                            img_b64 = base64.b64encode(ifh.read()).decode('ascii')
+                                        img_tag = f'<img src="data:image/png;base64,{img_b64}" style="width:36px;height:36px;margin-right:10px;vertical-align:middle;border-radius:6px;">'
+                                    except Exception:
+                                        img_tag = ''
+                                html = (
+                                    f'<div style="display:flex;align-items:center;margin:6px 0;">'
+                                    f'<a download="correlated_pairs.csv" href="{file_uri}" '
+                                    f'style="display:flex;align-items:center;padding:6px 12px;background:#1976d2;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">'
+                                    f'{img_tag}'
+                                    f'<span style="color:#fff;">Download correlated_pairs.csv</span>'
+                                    f'</a></div>'
+                                )
+                                st.markdown(html, unsafe_allow_html=True)
                             except Exception:
-                                st.write('Could not read boruta_selected.txt')
-                    except Exception:
-                        st.write('Could not read boruta_selected.txt')
-
-                if os.path.exists(os.path.join(out_dir, 'shap_ranking.txt')):
-                    st.subheader('SHAP Ranking (top 20)')
-                    try:
-                        # Prefer CSV-style read, but fall back to parsing plain text
-                        shp_path = os.path.join(out_dir, 'shap_ranking.txt')
-                        try:
-                            # Try to auto-detect separator (handles CSV or tab-delimited)
-                            try:
-                                df_shap = pd.read_csv(shp_path, sep=None, engine='python')
-                            except Exception:
-                                df_shap = pd.read_csv(shp_path)
-                        except Exception:
-                            # Fallback: parse as plain text lines into Feature / SHAP value
-                            def _is_number(x):
                                 try:
-                                    float(x)
-                                    return True
+                                    with open(os.path.join(out_dir, 'correlated_pairs.csv'), 'rb') as fbin:
+                                        st.download_button('Download correlated pairs', fbin, file_name='correlated_pairs.csv')
                                 except Exception:
-                                    return False
-
-                            rows = []
-                            with open(shp_path, 'r', encoding='utf-8', errors='ignore') as f:
-                                for raw in f:
-                                    s = raw.strip()
-                                    if not s:
-                                        continue
-                                    # Try common separators first
-                                    if ',' in s:
-                                        parts = [p.strip() for p in s.split(',') if p.strip()]
-                                    elif '\t' in s:
-                                        parts = [p.strip() for p in s.split('\t') if p.strip()]
-                                    elif ' - ' in s:
-                                        parts = [p.strip() for p in s.split(' - ') if p.strip()]
-                                    elif ':' in s and s.count(':') == 1:
-                                        parts = [p.strip() for p in s.split(':') if p.strip()]
-                                    else:
-                                        parts = s.split()
-
-                                    if len(parts) >= 2 and _is_number(parts[-1]):
-                                        feature = ' '.join(parts[:-1]).strip()
-                                        val = parts[-1]
-                                    elif len(parts) >= 2:
-                                        # Last part may be the value, even if not numeric
-                                        feature = ' '.join(parts[:-1]).strip()
-                                        val = parts[-1]
-                                    else:
-                                        # Can't split confidently; put whole line in Feature
-                                        feature = s
-                                        val = ''
-
-                                    rows.append({'Feature': feature, 'SHAP': val})
-
-                            df_shap = pd.DataFrame(rows)
-                            # Attempt to coerce SHAP values to numeric where possible
-                            if 'SHAP' in df_shap.columns:
-                                df_shap['SHAP'] = pd.to_numeric(df_shap['SHAP'], errors='coerce')
-
-                        # Normalize common column names to nice display names
-                        if isinstance(df_shap, pd.DataFrame):
-                            cols_lower = [c.lower() for c in df_shap.columns]
-                            if 'feature' in cols_lower and 'mean_abs_shap' in cols_lower:
-                                # map to consistent names
-                                mapping = {df_shap.columns[cols_lower.index('feature')]: 'Feature',
-                                           df_shap.columns[cols_lower.index('mean_abs_shap')]: 'SHAP'}
-                                df_shap = df_shap.rename(columns=mapping)[['Feature', 'SHAP']]
-                            elif len(df_shap.columns) >= 2:
-                                # Prefer first two columns
-                                df_shap = df_shap.iloc[:, :2]
-                                df_shap.columns = ['Feature', 'SHAP']
-                        # Display top 20 rows (if available). Guard height calculation.
-                        height = get_dataframe_height(df_shap)
-                        try:
-                            st.dataframe(df_shap.head(20), height=height, hide_index=True, width=600)
+                                    st.write('Could not read correlated_pairs.csv')
                         except Exception:
-                            st.dataframe(df_shap.head(20), hide_index=True, width=600, height=height)
-                        try:
-                            import base64
-                            with open(shp_path, 'rb') as sf:
-                                sdata = sf.read()
-                            file_uri = 'data:text/plain;base64,' + base64.b64encode(sdata).decode('ascii')
-                            icon_path_local = os.path.join('data_files', 'csv_icon.png')
-                            fallback_icon = os.path.join('data_files', 'favicon.png')
-                            chosen_icon = icon_path_local if os.path.exists(icon_path_local) else (fallback_icon if os.path.exists(fallback_icon) else None)
-                            img_tag = ''
-                            if chosen_icon is not None:
-                                try:
-                                    with open(chosen_icon, 'rb') as ifh:
-                                        img_b64 = base64.b64encode(ifh.read()).decode('ascii')
-                                    img_tag = f'<img src="data:image/png;base64,{img_b64}" style="width:36px;height:36px;margin-right:10px;vertical-align:middle;border-radius:6px;">'
-                                except Exception:
-                                    img_tag = ''
-                            html = (
-                                f'<div style="display:flex;align-items:center;margin:6px 0;">'
-                                f'<a download="shap_ranking.txt" href="{file_uri}" '
-                                f'style="display:flex;align-items:center;padding:6px 12px;background:#1976d2;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">'
-                                f'{img_tag}'
-                                f'<span style="color:#fff;">Download SHAP ranking</span>'
-                                f'</a></div>'
-                            )
-                            st.markdown(html, unsafe_allow_html=True)
-                        except Exception:
-                            try:
-                                with open(shp_path, 'rb') as fbin:
-                                    st.download_button('Download SHAP ranking', fbin, file_name='shap_ranking.txt')
-                            except Exception:
-                                st.write('Could not read shap_ranking.txt')
-                    except Exception as e:
-                        st.write('Could not read shap_ranking.txt')
-                        try:
-                            st.write('Error:', str(e))
-                            # Show a small preview of the file to help debugging
-                            preview_path = os.path.abspath(shp_path)
-                            with open(preview_path, 'r', encoding='utf-8', errors='ignore') as pf:
-                                lines = pf.readlines()[:50]
-                            with st.expander('Preview of shap_ranking.txt (first 50 lines)'):
-                                for l in lines:
-                                    st.text(l.rstrip())
-                        except Exception as e2:
-                            st.write('Also could not read file preview:', str(e2))
+                            st.write('Could not read correlated_pairs.csv')
 
-                if os.path.exists(os.path.join(out_dir, 'correlated_pairs.csv')):
-                    st.subheader('Highly Correlated Pairs (>0.95)')
-                    try:
-                        df_corr = pd.read_csv(os.path.join(out_dir, 'correlated_pairs.csv'))
-                        height = get_dataframe_height(df_corr)
-                        st.dataframe(df_corr.head(50), hide_index=True, width=800, height=height)
-                        # Render clickable icon + HTML download (data-URI) for correlated_pairs.csv
+                    # Exporter outputs (CSV summary and HTML report)
+                    summary_csv = os.path.join(out_dir, 'feature_selection_summary.csv')
+                    summary_html = os.path.join(out_dir, 'feature_selection_report.html')
+                    st.write('### Exported Summaries')
+                    if os.path.exists(summary_csv):
                         try:
+                            # Render HTML clickable icon + data-URI for the summary CSV
                             import base64
-                            csv_path = os.path.join(out_dir, 'correlated_pairs.csv')
-                            with open(csv_path, 'rb') as fbin:
+                            csv_path_local = summary_csv
+                            with open(csv_path_local, 'rb') as fbin:
                                 data_bytes = fbin.read()
                             file_uri = 'data:text/csv;base64,' + base64.b64encode(data_bytes).decode('ascii')
                             icon_path_local = os.path.join('data_files', 'csv_icon.png')
@@ -5826,753 +6003,27 @@ with tab5:
                                     img_tag = ''
                             html = (
                                 f'<div style="display:flex;align-items:center;margin:6px 0;">'
-                                f'<a download="correlated_pairs.csv" href="{file_uri}" '
+                                f'<a download="feature_selection_summary.csv" href="{file_uri}" '
                                 f'style="display:flex;align-items:center;padding:6px 12px;background:#1976d2;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">'
                                 f'{img_tag}'
-                                f'<span style="color:#fff;">Download correlated_pairs.csv</span>'
+                                f'<span style="color:#fff;">Download summary (CSV)</span>'
                                 f'</a></div>'
                             )
                             st.markdown(html, unsafe_allow_html=True)
                         except Exception:
                             try:
-                                with open(os.path.join(out_dir, 'correlated_pairs.csv'), 'rb') as fbin:
-                                    st.download_button('Download correlated pairs', fbin, file_name='correlated_pairs.csv')
+                                with open(summary_csv, 'rb') as fbin:
+                                    st.download_button('Download summary (CSV)', fbin, file_name='feature_selection_summary.csv')
                             except Exception:
-                                st.write('Could not read correlated_pairs.csv')
-                    except Exception:
-                        st.write('Could not read correlated_pairs.csv')
-
-                # Exporter outputs (CSV summary and HTML report)
-                summary_csv = os.path.join(out_dir, 'feature_selection_summary.csv')
-                summary_html = os.path.join(out_dir, 'feature_selection_report.html')
-                st.write('### Exported Summaries')
-                if os.path.exists(summary_csv):
-                    try:
-                        # Render HTML clickable icon + data-URI for the summary CSV
-                        import base64
-                        csv_path_local = summary_csv
-                        with open(csv_path_local, 'rb') as fbin:
-                            data_bytes = fbin.read()
-                        file_uri = 'data:text/csv;base64,' + base64.b64encode(data_bytes).decode('ascii')
-                        icon_path_local = os.path.join('data_files', 'csv_icon.png')
-                        fallback_icon = os.path.join('data_files', 'favicon.png')
-                        chosen_icon = icon_path_local if os.path.exists(icon_path_local) else (fallback_icon if os.path.exists(fallback_icon) else None)
-                        img_tag = ''
-                        if chosen_icon is not None:
+                                st.write('Could not read feature_selection_summary.csv')
+                    if os.path.exists(summary_html):
+                        try:
+                            st.write(f"HTML report available: {os.path.basename(summary_html)}")
                             try:
-                                with open(chosen_icon, 'rb') as ifh:
-                                    img_b64 = base64.b64encode(ifh.read()).decode('ascii')
-                                img_tag = f'<img src="data:image/png;base64,{img_b64}" style="width:36px;height:36px;margin-right:10px;vertical-align:middle;border-radius:6px;">'
-                            except Exception:
-                                img_tag = ''
-                        html = (
-                            f'<div style="display:flex;align-items:center;margin:6px 0;">'
-                            f'<a download="feature_selection_summary.csv" href="{file_uri}" '
-                            f'style="display:flex;align-items:center;padding:6px 12px;background:#1976d2;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">'
-                            f'{img_tag}'
-                            f'<span style="color:#fff;">Download summary (CSV)</span>'
-                            f'</a></div>'
-                        )
-                        st.markdown(html, unsafe_allow_html=True)
-                    except Exception:
-                        try:
-                            with open(summary_csv, 'rb') as fbin:
-                                st.download_button('Download summary (CSV)', fbin, file_name='feature_selection_summary.csv')
-                        except Exception:
-                            st.write('Could not read feature_selection_summary.csv')
-                if os.path.exists(summary_html):
-                    try:
-                        st.write(f"HTML report available: {os.path.basename(summary_html)}")
-                        try:
-                            import base64
-                            with open(summary_html, 'rb') as rh:
-                                rdata = rh.read()
-                            file_uri = 'data:text/html;base64,' + base64.b64encode(rdata).decode('ascii')
-                            icon_path_local = os.path.join('data_files', 'csv_icon.png')
-                            fallback_icon = os.path.join('data_files', 'favicon.png')
-                            chosen_icon = icon_path_local if os.path.exists(icon_path_local) else (fallback_icon if os.path.exists(fallback_icon) else None)
-                            img_tag = ''
-                            if chosen_icon is not None:
-                                try:
-                                    with open(chosen_icon, 'rb') as ifh:
-                                        img_b64 = base64.b64encode(ifh.read()).decode('ascii')
-                                    img_tag = f'<img src="data:image/png;base64,{img_b64}" style="width:36px;height:36px;margin-right:10px;vertical-align:middle;border-radius:6px;">'
-                                except Exception:
-                                    img_tag = ''
-                            html = (
-                                f'<div style="display:flex;align-items:center;margin:6px 0;">'
-                                f'<a download="{os.path.basename(summary_html)}" href="{file_uri}" '
-                                f'style="display:flex;align-items:center;padding:6px 12px;background:#1976d2;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">'
-                                f'{img_tag}'
-                                f'<span style="color:#fff;">Download report (HTML)</span>'
-                                f'</a></div>'
-                            )
-                            st.markdown(html, unsafe_allow_html=True)
-                        except Exception:
-                            with open(summary_html, 'rb') as fbin:
-                                st.download_button('Download report (HTML)', fbin, file_name='feature_selection_report.html')
-                    except Exception:
-                        st.write('Could not read feature_selection_report.html')
-
-                # Regenerate exporters on demand
-                if st.button('Regenerate CSV/HTML exporters'):
-                    with st.spinner('Generating CSV summary and HTML report...'):
-                        script_path = os.path.join('scripts', 'export_feature_selection.py')
-                        try:
-                            proc = subprocess.run([sys.executable, script_path], check=False, capture_output=True, text=True)
-                            if proc.returncode == 0:
-                                st.success('Exporters generated successfully.')
-                                if proc.stdout:
-                                    st.text(proc.stdout)
-                            else:
-                                st.error(f'Exporter exited with code {proc.returncode}')
-                                if proc.stdout:
-                                    st.text(proc.stdout)
-                                if proc.stderr:
-                                    st.text(proc.stderr)
-                        except Exception as e:
-                            st.error(f'Failed to run exporter: {e}')
-
-                # Prefer a nicely-formatted Markdown report if available
-                md_report = os.path.join(out_dir, 'feature_selection_report.md')
-                txt_report = os.path.join(out_dir, 'feature_selection_report.txt')
-                if os.path.exists(md_report):
-                    st.subheader('Feature Selection Report')
-                    try:
-                        rpt_md = open(md_report, 'r', encoding='utf-8').read()
-                        st.markdown(rpt_md)
-                        try:
-                            import base64
-                            with open(md_report, 'rb') as mf:
-                                mdata = mf.read()
-                            file_uri = 'data:text/markdown;base64,' + base64.b64encode(mdata).decode('ascii')
-                            icon_path_local = os.path.join('data_files', 'csv_icon.png')
-                            fallback_icon = os.path.join('data_files', 'favicon.png')
-                            chosen_icon = icon_path_local if os.path.exists(icon_path_local) else (fallback_icon if os.path.exists(fallback_icon) else None)
-                            img_tag = ''
-                            if chosen_icon is not None:
-                                try:
-                                    with open(chosen_icon, 'rb') as ifh:
-                                        img_b64 = base64.b64encode(ifh.read()).decode('ascii')
-                                    img_tag = f'<img src="data:image/png;base64,{img_b64}" style="width:36px;height:36px;margin-right:10px;vertical-align:middle;border-radius:6px;">'
-                                except Exception:
-                                    img_tag = ''
-                            html = (
-                                f'<div style="display:flex;align-items:center;margin:6px 0;">'
-                                f'<a download="{os.path.basename(md_report)}" href="{file_uri}" '
-                                f'style="display:flex;align-items:center;padding:6px 12px;background:#1976d2;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">'
-                                f'{img_tag}'
-                                f'<span style="color:#fff;">Download report (MD)</span>'
-                                f'</a></div>'
-                            )
-                            st.markdown(html, unsafe_allow_html=True)
-                        except Exception:
-                            with open(md_report, 'rb') as fbin:
-                                st.download_button('Download report (MD)', fbin, file_name='feature_selection_report.md')
-                    except Exception:
-                        st.write('Could not read feature_selection_report.md')
-                elif os.path.exists(txt_report):
-                    st.subheader('Feature Selection Report')
-                    try:
-                        rpt = open(txt_report, 'r', encoding='utf-8').read()
-                        st.code(rpt)
-                        try:
-                            import base64
-                            with open(txt_report, 'rb') as tf:
-                                tdata = tf.read()
-                            file_uri = 'data:text/plain;base64,' + base64.b64encode(tdata).decode('ascii')
-                            icon_path_local = os.path.join('data_files', 'csv_icon.png')
-                            fallback_icon = os.path.join('data_files', 'favicon.png')
-                            chosen_icon = icon_path_local if os.path.exists(icon_path_local) else (fallback_icon if os.path.exists(fallback_icon) else None)
-                            img_tag = ''
-                            if chosen_icon is not None:
-                                try:
-                                    with open(chosen_icon, 'rb') as ifh:
-                                        img_b64 = base64.b64encode(ifh.read()).decode('ascii')
-                                    img_tag = f'<img src="data:image/png;base64,{img_b64}" style="width:36px;height:36px;margin-right:10px;vertical-align:middle;border-radius:6px;">'
-                                except Exception:
-                                    img_tag = ''
-                            html = (
-                                f'<div style="display:flex;align-items:center;margin:6px 0;">'
-                                f'<a download="{os.path.basename(txt_report)}" href="{file_uri}" '
-                                f'style="display:flex;align-items:center;padding:6px 12px;background:#1976d2;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">'
-                                f'{img_tag}'
-                                f'<span style="color:#fff;">Download report</span>'
-                                f'</a></div>'
-                            )
-                            st.markdown(html, unsafe_allow_html=True)
-                        except Exception:
-                            with open(txt_report, 'rb') as fbin:
-                                st.download_button('Download report', fbin, file_name='feature_selection_report.txt')
-                    except Exception:
-                        st.write('Could not read feature_selection_report.txt')
-        
-        with tab_position:
-            from pathlib import Path
-            import re, datetime
-
-            OUT_DIR = Path('scripts') / 'output'
-            report_path = OUT_DIR / 'position_group_analysis_report.html'
-
-            if report_path.exists():
-                # Try to extract the generated timestamp from the HTML; fallback to file mtime
-                try:
-                    html = report_path.read_text(encoding='utf-8')
-                    m = re.search(r'Generated:\s*([^<]+)</p>', html)
-                    if m:
-                        ts = m.group(1).strip()
-                    else:
-                        ts = datetime.datetime.fromtimestamp(report_path.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')
-                except Exception:
-                    ts = datetime.datetime.fromtimestamp(report_path.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')
-
-                st.header('Position Group Analysis')
-                st.write(f'Based on current UI test set (same as Model Performance tab)')
-
-                # Calculate position-specific MAE from current UI test set (matches Model Performance tab)
-                X, y = get_features_and_target(data)
-                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-                
-                preprocessor = st.session_state.get('training_preprocessor')
-                if preprocessor is not None and model is not None:
-                    # Align X_test columns to preprocessor
-                    if hasattr(preprocessor, 'feature_names_in_'):
-                        expected = list(preprocessor.feature_names_in_)
-                        for c in expected:
-                            if c not in X_test.columns:
-                                X_test[c] = np.nan
-                        X_test = X_test[expected]
-                    
-                    X_test_prep = _prep_as_df(preprocessor.transform(X_test), preprocessor)
-                    
-                    # Predict
-                    if isinstance(model, xgb.Booster):
-                        y_pred = model.predict(xgb.DMatrix(X_test_prep))
-                    else:
-                        y_pred = model.predict(X_test_prep)
-                    
-                    # Calculate position-specific MAE
-                    # Create results dataframe - do NOT filter NaN to match Model Performance tab calculation
-                    results_analysis = pd.DataFrame({'Actual': y_test.values, 'Predicted': y_pred})
-                    
-                    st.subheader('📊 Position Group MAE Summary')
-                    
-                    # Use same overall MAE as Model Performance tab (from session state)
-                    overall_mae = st.session_state.get('global_mae')
-                    if overall_mae is not None:
-                        st.metric("Overall Model MAE", f"{overall_mae:.3f}")
-                    else:
-                        # Fallback: calculate if not in session state
-                        overall_mae = mean_absolute_error(y_test, y_pred)
-                        st.metric("Overall Model MAE", f"{overall_mae:.3f}")
-                    
-                    # Define position groups
-                    group_definitions = [
-                        ('🏆 Winners (P1)', results_analysis[results_analysis['Actual'] == 1]),
-                        ('🥇 Podium (P1-3)', results_analysis[results_analysis['Actual'] <= 3]),
-                        ('⭐ Top 5', results_analysis[results_analysis['Actual'] <= 5]),
-                        ('🎯 Points (P1-10)', results_analysis[results_analysis['Actual'] <= 10]),
-                        ('🏎️ Midfield (P11-15)', results_analysis[(results_analysis['Actual'] >= 11) & (results_analysis['Actual'] <= 15)]),
-                        ('🔚 Backmarkers (P16+)', results_analysis[results_analysis['Actual'] >= 16])
-                    ]
-                    
-                    group_data = []
-                    for label, group_df in group_definitions:
-                        if len(group_df) > 0:
-                            # Drop NaN/inf for position-specific MAE calculation
-                            group_clean = group_df.replace([np.inf, -np.inf], np.nan).dropna()
-                            if len(group_clean) > 0:
-                                mae_val = mean_absolute_error(group_clean['Actual'], group_clean['Predicted'])
-                                errors = group_clean['Actual'] - group_clean['Predicted']
-                                group_data.append({
-                                    'Position Group': label,
-                                    'MAE': f"{mae_val:.3f}",
-                                    'Count': len(group_clean),
-                                'Median Error': f"{errors.median():.3f}",
-                                'Std Error': f"{errors.std():.3f}"
-                            })
-                    
-                    if group_data:
-                        df_groups = pd.DataFrame(group_data)
-                        st.dataframe(df_groups, hide_index=True, width='stretch')
-                        st.caption("Lower MAE indicates better prediction accuracy for that position group. These values match the Model Performance tab.")
-                    
-                    # Show example predictions for winners to verify the MAE calculation
-                    with st.expander("🔍 Example Predictions for Winners (P1)"):
-                        winners_data = results_analysis[results_analysis['Actual'] == 1].copy()
-                        if len(winners_data) > 0:
-                            winners_data = winners_data.replace([np.inf, -np.inf], np.nan).dropna()
-                            winners_data['Error'] = winners_data['Actual'] - winners_data['Predicted']
-                            winners_data['AbsError'] = winners_data['Error'].abs()
-                            
-                            st.write(f"**Total P1 finishers in test set:** {len(winners_data)}")
-                            st.write(f"**MAE for P1 predictions:** {mean_absolute_error(winners_data['Actual'], winners_data['Predicted']):.3f}")
-                            st.write(f"**Mean predicted position for P1 finishers:** {winners_data['Predicted'].mean():.3f}")
-                            st.write(f"**Median predicted position for P1 finishers:** {winners_data['Predicted'].median():.3f}")
-                            
-                            # Show distribution stats
-                            st.write("**Distribution of predictions for actual P1 finishers:**")
-                            pred_under_1_5 = (winners_data['Predicted'] <= 1.5).sum()
-                            pred_under_2 = (winners_data['Predicted'] <= 2.0).sum()
-                            pred_under_3 = (winners_data['Predicted'] <= 3.0).sum()
-                            pred_over_3 = (winners_data['Predicted'] > 3.0).sum()
-                            
-                            st.write(f"- Predicted ≤1.5: {pred_under_1_5} ({pred_under_1_5/len(winners_data)*100:.1f}%)")
-                            st.write(f"- Predicted ≤2.0: {pred_under_2} ({pred_under_2/len(winners_data)*100:.1f}%)")
-                            st.write(f"- Predicted ≤3.0: {pred_under_3} ({pred_under_3/len(winners_data)*100:.1f}%)")
-                            st.write(f"- Predicted >3.0: {pred_over_3} ({pred_over_3/len(winners_data)*100:.1f}%)")
-                            
-                            # Show some examples
-                            st.write("**Sample predictions (first 10):**")
-                            sample_display = winners_data[['Actual', 'Predicted', 'Error', 'AbsError']].head(10).round(3)
-                            st.dataframe(sample_display, hide_index=True, width='stretch')
-                    
-                    st.divider()
-                else:
-                    st.info("Train a model to see position-specific analysis.")
-                    st.divider()
-
-                # MAE by season: only show when multiple seasons are present
-                mae_csv = OUT_DIR / 'mae_by_season.csv'
-                if mae_csv.exists():
-                    try:
-                        mae_df = pd.read_csv(mae_csv)
-                        # Filter out invalid seasons (e.g., 0 from missing data)
-                        if 'season' in mae_df.columns:
-                            mae_df = mae_df[mae_df['season'] >= raceNoEarlierThan].copy()
-                        
-                        if 'season' in mae_df.columns and mae_df['season'].nunique() > 1:
-                            mae_img = OUT_DIR / 'mae_trends.png'
-                            if mae_img.exists():
-                                st.subheader('MAE by Season')
-                                st.image(str(mae_img), width=1000)
-                    except Exception:
-                        pass
-
-                # Notes (render in a shaded info box)
-                st.info(
-                    """
-                    **Color scale**: darker/warmer colors indicate larger average absolute error.
-
-                    **Missing cells**: blank or neutral color means insufficient data (no races for that pair).
-
-                    **Sample size**: confidence intervals are empirical percentiles computed only when a group has at least 5 residuals.
-                    
-                    **Interpretation**: cells with darker colors indicate that the model has higher prediction errors for that driver/constructor at that circuit, suggesting potential areas for model improvement or unique performance characteristics.
-                    """
-                )
-
-                # Heatmaps
-                for img_name, title in [('heatmap_driver_by_circuit.png', 'Driver x Circuit heatmap'),
-                                        ('heatmap_constructor_by_circuit.png', 'Constructor x Circuit heatmap')]:
-                    img_path = OUT_DIR / img_name
-                    if img_path.exists():
-                        st.subheader(title)
-                        st.image(str(img_path), width=1000)
-
-                # CSV download buttons (show small icon from `data_files/` if available)
-                csv_files = ['mae_by_season.csv', 'confid_int_by_driver_track.csv', 'confid_int_by_driver.csv', 'confid_int_by_constructor.csv']
-                icons_dir = Path('data_files')
-                csv_icon = icons_dir / 'csv_icon.png'
-                pdf_icon = icons_dir / 'pdf_icon.png'
-                fallback_icon = icons_dir / 'favicon.png'
-
-                # Render HTML-based download buttons with embedded icons (base64 data-URIs).
-                # Fallback to the existing Streamlit download button if something goes wrong.
-                import base64
-                for fname in csv_files:
-                    p = OUT_DIR / fname
-                    if not p.exists():
-                        continue
-                    try:
-                        with open(p, 'rb') as fh:
-                            data_bytes = fh.read()
-
-                        # Prepare data URI for download link
-                        b64_file = base64.b64encode(data_bytes).decode('ascii')
-                        file_data_uri = f"data:text/csv;base64,{b64_file}"
-
-                        # Choose icon (csv_icon preferred, fallback to favicon)
-                        chosen_icon_path = None
-                        if p.suffix.lower() == '.csv' and csv_icon.exists():
-                            chosen_icon_path = csv_icon
-                        elif p.suffix.lower() == '.pdf' and pdf_icon.exists():
-                            chosen_icon_path = pdf_icon
-                        elif fallback_icon.exists():
-                            chosen_icon_path = fallback_icon
-
-                        img_tag = ''
-                        if chosen_icon_path is not None:
-                            try:
-                                with open(chosen_icon_path, 'rb') as ifh:
-                                    img_b64 = base64.b64encode(ifh.read()).decode('ascii')
-                                # Larger icon and rounded corners for nicer appearance
-                                img_tag = f'<img src="data:image/png;base64,{img_b64}" style="width:36px;height:36px;margin-right:10px;vertical-align:middle;border-radius:6px;">'
-                            except Exception:
-                                img_tag = ''
-
-                        # HTML for a compact icon + button-like link; wrap the image inside the anchor so it's clickable
-                        html = (
-                            f'<div style="display:flex;align-items:center;margin:6px 0;">'
-                            f'<a download="{fname}" href="{file_data_uri}" '
-                            f'style="display:flex;align-items:center;padding:6px 12px;background:#1976d2;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">'
-                            f'{img_tag}'
-                            f'<span style="color:#fff;">Download {fname}</span>'
-                            f'</a></div>'
-                        )
-
-                        st.markdown(html, unsafe_allow_html=True)
-                    except Exception:
-                        # fallback to Streamlit native button
-                        try:
-                            with open(p, 'rb') as fh:
-                                data_bytes = fh.read()
-                            st.download_button(f"Download {fname}", data_bytes, file_name=fname)
-                        except Exception:
-                            st.write(f'Could not prepare download for {fname}')
-            else:
-                st.info("Position analysis report not found. Run `python scripts/position_group_analysis.py` to generate outputs.")
-        
-        with tab_hyper:
-            st.subheader("Hyperparameter Tuning")
-
-            if model is None or preprocessor is None:
-                st.info("Train a model above to see early stopping details and feature importances.")
-            else:
-            
-                # Early Stopping Details
-                st.write("### Early Stopping Details")
-                # Handle different evals_result formats for different XGBoost APIs
-                if 'eval' in evals_result and ('absolute_error' in evals_result['eval'] or 'mae' in evals_result['eval']):
-                    mae_per_round = evals_result['eval']['absolute_error'] if 'absolute_error' in evals_result['eval'] else evals_result['eval']['mae']
-                elif 'validation_0' in evals_result and 'mae' in evals_result['validation_0']:
-                    mae_per_round = evals_result['validation_0']['mae']
-                else:
-                    # Fallback
-                    mae_per_round = [getattr(model, 'best_score', 0)]
-                
-                if len(mae_per_round) > 0:
-                    best_round = int(np.argmin(mae_per_round))
-                    lowest_mae = mae_per_round[best_round]
-                    st.write(f"Early stopping occurred at round {best_round + 1} (lowest MAE: {lowest_mae:.4f})")
-                    st.line_chart(mae_per_round)
-                else:
-                    st.write("Early stopping details not available")
-
-                if True:  # preprocessor and model already checked above
-                    feature_names_early = preprocessor.get_feature_names_out()
-                    feature_names_early = [name.replace('num__', '').replace('cat__', '') for name in feature_names_early]
-
-                    # Get importances based on model type (early stopping section)
-                    if hasattr(model, 'get_booster'):  # XGBoost (XGBRegressor)
-                        importances_dict_early = model.get_booster().get_score(importance_type='weight')
-                        importances_early = []
-                        for i, name in enumerate(feature_names_early):
-                            importances_early.append(importances_dict_early.get(f'f{i}', 0))
-                    elif hasattr(model, 'feature_importances_'):  # LightGBM, CatBoost, sklearn models
-                        importances_early = model.feature_importances_
-                    elif hasattr(model, 'get_feature_importance'):  # CatBoost
-                        importances_early = model.get_feature_importance()
-                    else:  # Ensemble or other
-                        importances_early = [0] * len(feature_names_early)  # Default to zero
-
-                    feature_importances_df_early = pd.DataFrame({
-                        'Feature': feature_names_early,
-                        'Importance': importances_early,
-                        'Percentage': np.array(importances_early) / (np.sum(importances_early) or 1) * 100
-                    }).sort_values(by='Importance', ascending=False)
-
-                    top_feature = feature_importances_df_early.iloc[0]
-                    st.write(f"Most important feature after training: **{top_feature['Feature']}** (Importance: {top_feature['Importance']})")
-                    st.dataframe(feature_importances_df_early.head(50), hide_index=True, width=800)
-
-            # Hyperparameter Tuning
-            st.write("### Run Hyperparameter Tuning")
-            
-            tuning_method = st.selectbox("Tuning Method", ["Grid Search", "Bayesian Optimization"], key="tuning_method")
-            
-            if st.button("Start Hyperparameter Tuning"):
-                with st.spinner("Running hyperparameter tuning (this may take several minutes)..."):
-                    X_hyper, y_hyper = get_features_and_target(data)
-                    
-                    # Get season for stratified CV
-                    season_groups = data.loc[y_hyper.index, 'year'] if 'year' in data.columns else None
-                    
-                    mask_hyper = y_hyper.notnull() & np.isfinite(y_hyper)
-                    X_clean, y_clean = X_hyper[mask_hyper], y_hyper[mask_hyper]
-                    season_clean = season_groups[mask_hyper] if season_groups is not None else None
-                    
-                    if tuning_method == "Grid Search":
-                          param_grid = {
-                              'regressor__learning_rate': [0.01, 0.05, 0.1, 0.2],
-                              'regressor__max_depth': [3, 4, 5, 6, 7],
-                              'regressor__min_child_weight': [1, 3, 5, 7],
-                          }
-                          pipeline = Pipeline([
-                              ('preprocessor', get_preprocessor_position(X_clean)),
-                              ('regressor', XGBRegressor(n_estimators=100, random_state=42))
-                          ])
-                          
-                          # Use GroupKFold if season data available, else StratifiedKFold approximation
-                          if season_clean is not None:
-                              cv = GroupKFold(n_splits=5)
-                              groups = season_clean
-                          else:
-                              cv = 5
-                              groups = None
-                              
-                          grid_search = GridSearchCV(pipeline, param_grid, cv=cv, groups=groups, scoring='neg_mean_absolute_error')
-                          grid_search.fit(X_clean, y_clean)
-                          st.write("Best params:", grid_search.best_params_)
-                          st.write(f"Best MAE: {-grid_search.best_score_:.4f}")
-                        
-                    elif tuning_method == "Bayesian Optimization":
-                        import optuna
-                        
-                        def objective(trial):
-                            learning_rate = trial.suggest_float('learning_rate', 0.01, 0.3)
-                            max_depth = trial.suggest_int('max_depth', 3, 10)
-                            min_child_weight = trial.suggest_int('min_child_weight', 1, 10)
-
-                            pipeline = Pipeline([
-                                ('preprocessor', get_preprocessor_position(X_clean)),
-                                ('regressor', XGBRegressor(
-                                    n_estimators=100,
-                                    learning_rate=learning_rate,
-                                    max_depth=max_depth,
-                                    min_child_weight=min_child_weight,
-                                    random_state=42
-                                ))
-                            ])
-                            
-                            # Use GroupKFold for season stratification
-                            if season_clean is not None:
-                                cv = GroupKFold(n_splits=5)
-                                groups = season_clean
-                            else:
-                                cv = 5
-                                groups = None
-                                
-                            scores = cross_val_score(pipeline, X_clean, y_clean, cv=cv, groups=groups, scoring='neg_mean_absolute_error')
-                            return -scores.mean()
-                        
-                        study = optuna.create_study(direction='minimize')
-                        study.optimize(objective, n_trials=50)
-                        
-                        st.write("Best params:", study.best_params)
-                        st.write(f"Best MAE: {study.best_value:.4f}")
-                        
-                        # Plot optimization history
-                        fig = optuna.visualization.plot_optimization_history(study)
-                        st.plotly_chart(fig)
-        
-        with tab_hist:
-            st.subheader("Historical Validation")
-            historical_validation = load_precomputed_historical_validation(CACHE_VERSION)
-            if not historical_validation:
-                st.info(
-                    "Historical validation is generated by the Feature Selection Suite "
-                    "GitHub workflow and is not computed in the live app."
-                )
-            else:
-                validation_metadata = historical_validation.get('metadata', {})
-                generated_at = validation_metadata.get('generated_at', 'Unknown')
-                validation_model_type = validation_metadata.get('model_type', 'XGBoost')
-                st.caption(
-                    f"Precomputed by GitHub Actions: {generated_at} · "
-                    f"validation model: {validation_model_type}"
-                )
-
-                st.write("### Model Evaluation Metrics (Cross-Validation)")
-                position_cv = historical_validation.get('position_cv', {})
-                if position_cv:
-                    st.write(
-                        "Final Position Model - Cross-validated MSE: "
-                        f"{position_cv.get('mse_mean', float('nan')):.3f} "
-                        f"(± {position_cv.get('mse_std', float('nan')):.3f})"
-                    )
-
-                dnf_validation = historical_validation.get('dnf_validation', {})
-                if dnf_validation:
-                    if dnf_validation.get('test_mae') is not None:
-                        st.write(
-                            "Mean Absolute Error (MAE) for DNF Probability (test set): "
-                            f"{dnf_validation['test_mae']:.3f}"
-                        )
-                    st.write(
-                        "DNF Model - Cross-validated ROC AUC: "
-                        f"{dnf_validation.get('roc_auc_mean', float('nan')):.3f} "
-                        f"(± {dnf_validation.get('roc_auc_std', float('nan')):.3f})"
-                    )
-
-                safety_car_validation = historical_validation.get('safety_car_validation', {})
-                if safety_car_validation:
-                    st.write(
-                        "Safety Car Model - Cross-validated ROC AUC (unique rows): "
-                        f"{safety_car_validation.get('roc_auc_mean', float('nan')):.3f} "
-                        f"(± {safety_car_validation.get('roc_auc_std', float('nan')):.3f})"
-                    )
-
-                st.write("### Model Accuracy Across All Races")
-                holdout = historical_validation.get('holdout', {})
-                holdout_metrics = holdout.get('metrics', {})
-                metrics = {
-                    'Mean Squared Error': holdout_metrics.get('mse'),
-                    'R^2 Score': holdout_metrics.get('r2'),
-                    'Mean Absolute Error': holdout_metrics.get('mae'),
-                    'Mean Error': holdout_metrics.get('mean_error'),
-                }
-                metrics = {label: value for label, value in metrics.items() if value is not None}
-                position_mae_hist = holdout.get('position_mae', {})
-                if metrics:
-                    display_model_performance(
-                        metrics=metrics,
-                        position_mae=position_mae_hist if position_mae_hist else None,
-                    )
-
-                results_df_all = pd.DataFrame(holdout.get('rows', []))
-                expected_result_columns = [
-                    'constructorName',
-                    'resultsDriverName',
-                    'ActualFinalPosition',
-                    'PredictedFinalPosition',
-                    'Error',
-                ]
-                if not results_df_all.empty and set(expected_result_columns).issubset(results_df_all.columns):
-                    results_df_all = results_df_all.sort_values(by=['ActualFinalPosition'])
-                    st.dataframe(
-                        results_df_all[expected_result_columns],
-                        hide_index=True,
-                        width=1000,
-                        column_config={
-                            'constructorName': st.column_config.TextColumn("Constructor"),
-                            'resultsDriverName': st.column_config.TextColumn("Driver"),
-                            'ActualFinalPosition': st.column_config.NumberColumn("Actual", format="%d"),
-                            'PredictedFinalPosition': st.column_config.NumberColumn("Predicted", format="%.2f"),
-                            'Error': st.column_config.NumberColumn("Error", format="%.2f"),
-                        },
-                    )
-
-                    st.subheader("Actual vs Predicted Final Position (All Races)")
-                    st.scatter_chart(
-                        results_df_all,
-                        x='ActualFinalPosition',
-                        y='PredictedFinalPosition',
-                        width='stretch',
-                    )
-        
-        with tab_debug:
-            st.subheader("Debug & Experiments")
-                        
-            # Bin Count Comparison
-            st.write("### Compare Different Bin Counts (q)")
-            from feature_lists import high_cardinality_features
-            q_values = st.multiselect("Select q values (number of bins)", [2, 3, 4, 5, 6, 7, 8, 9, 10], default=[2, 3, 4, 5, 6, 7, 8, 9, 10])
-            
-            if st.button("Run Bin Count Comparison"):
-                results_bin = []
-                for q in q_values:
-                    df_bin = data.copy()
-                    for col in high_cardinality_features:
-                        try:
-                            df_bin[f"{col}_bin"] = pd.qcut(df_bin[col], q=q, labels=False, duplicates='drop')
-                        except Exception as e:
-                            continue
-                            
-                        X_bin, y_bin = get_features_and_target(df_bin)
-                        mask_bin = y_bin.notnull() & np.isfinite(y_bin)
-                        X_bin, y_bin = X_bin[mask_bin], y_bin[mask_bin]
-
-                        # Use proper preprocessor instead of naive cat.codes
-                        preprocessor_bin = get_preprocessor_position(X_bin)
-                        X_train_bin, X_test_bin, y_train_bin, y_test_bin = train_test_split(X_bin, y_bin, test_size=0.2, random_state=42)
-                        X_train_bin_prep = preprocessor_bin.fit_transform(X_train_bin)
-                        X_test_bin_prep = preprocessor_bin.transform(X_test_bin)
-                        
-                        model_bin = XGBRegressor(n_estimators=100, max_depth=4, n_jobs=-1, tree_method='hist', random_state=42)
-                        model_bin.fit(X_train_bin_prep, y_train_bin)
-                        y_pred_bin = model_bin.predict(X_test_bin_prep)
-                        mae_bin = mean_absolute_error(y_test_bin, y_pred_bin)
-                        results_bin.append({'q': q, 'MAE': mae_bin})
-                        
-                    results_df_bin = pd.DataFrame(results_bin).sort_values('q')
-                    st.write("MAE for each bin count (q):")
-                    st.dataframe(results_df_bin, hide_index=True)
-                    st.line_chart(results_df_bin.set_index('q'))
-
-def leakage_audit_ui():
-    """Admin UI to run the temporal leakage audit from Streamlit."""
-    try:
-        with st.expander("🔍 Run Temporal Leakage Audit (Admin)", expanded=False):
-            st.write("Run a heuristics-based audit that checks for features likely to leak future information into training.")
-            # Short explainer for users/admins describing what the audit does and its outputs
-            with st.expander("About this Leakage Audit", expanded=False):
-                st.write(
-                    "This audit scans the analysis dataset for features that may leak future or post-event information into training."
-                )
-                st.write("It applies several heuristics:")
-                st.write("- Name-pattern checks (e.g. columns containing 'post', 'after', 'final', 'result', 'total').")
-                st.write("- Very high Pearson correlation with targets (abs >= 0.95).")
-                st.write("- Per-driver lagged-correlation checks: flags features whose correlation with the *next* race result is substantially higher than with the current result, suggesting future information.")
-                st.write("- Safety-car related candidate checks (features mentioning 'safety' or similar).")
-                st.write("")
-                st.write("Output: a CSV at `leakage_audit_report.csv` with columns: feature, issue, target, value, value2, metric_name, explanation, delta, note.")
-                st.write("Recommendation: review flagged features and remove or re-engineer any that use post-race or future information before training models.")
-            nrows = st.number_input("Rows to read (0 = all)", min_value=0, value=0)
-            run = st.button("Run Leakage Audit")
-            if run:
-                nr = None if int(nrows) == 0 else int(nrows)
-                with st.spinner("Running leakage audit..."):
-                    try:
-                        report_df = audit_temporal_leakage.run_audit(nrows=nr)
-                        if report_df is None or report_df.empty:
-                            st.success("No suspicious features found by heuristics.")
-                        else:
-                            st.success(f"Audit finished: {len(report_df)} items")
-                            # Rename columns for a friendly UI display
-                            ui_map = {
-                                'feature': 'Feature',
-                                'issue_type': 'Issue',
-                                'target': 'Target',
-                                'metric': 'Value',
-                                'metric2': 'Value2',
-                                'metric_name': 'Metric Name',
-                                'explanation': 'Explanation',
-                                'diff': 'Delta',
-                                'extra_info': 'Note'
-                            }
-                            display_df = report_df.rename(columns=ui_map)
-
-                            st.dataframe(display_df, hide_index=True, width='stretch', column_config={
-                                'Feature': st.column_config.TextColumn("Feature"),
-                                'Issue': st.column_config.TextColumn("Issue"),
-                                'Target': st.column_config.TextColumn("Target"),
-                                'Value': st.column_config.NumberColumn("Value", format="%.6f"),
-                                'Value2': st.column_config.NumberColumn("Value2", format="%.6f"),
-                                'Metric Name': st.column_config.TextColumn("Metric Name"),
-                                'Explanation': st.column_config.TextColumn("Explanation"),
-                                'Delta': st.column_config.NumberColumn("Delta", format="%.6f"),
-                                'Note': st.column_config.TextColumn("Note")
-                            })
-
-                            # Prepare downloadable CSV with the friendlier headers
-                            csv_df = report_df.rename(columns={
-                                'feature': 'feature',
-                                'issue_type': 'issue',
-                                'target': 'target',
-                                'metric': 'value',
-                                'metric2': 'value2',
-                                'metric_name': 'metric_name',
-                                'explanation': 'explanation',
-                                'diff': 'delta',
-                                'extra_info': 'note'
-                            })
-                            csv = csv_df.to_csv(index=False)
-                            try:
-                                # Use HTML clickable icon + download for leakage audit CSV
                                 import base64
-                                tdata = csv.encode('utf-8') if isinstance(csv, str) else csv
-                                file_uri = 'data:text/csv;base64,' + base64.b64encode(tdata).decode('ascii')
+                                with open(summary_html, 'rb') as rh:
+                                    rdata = rh.read()
+                                file_uri = 'data:text/html;base64,' + base64.b64encode(rdata).decode('ascii')
                                 icon_path_local = os.path.join('data_files', 'csv_icon.png')
                                 fallback_icon = os.path.join('data_files', 'favicon.png')
                                 chosen_icon = icon_path_local if os.path.exists(icon_path_local) else (fallback_icon if os.path.exists(fallback_icon) else None)
@@ -6586,21 +6037,706 @@ def leakage_audit_ui():
                                         img_tag = ''
                                 html = (
                                     f'<div style="display:flex;align-items:center;margin:6px 0;">'
-                                    f'<a download="leakage_audit_report.csv" href="{file_uri}" '
+                                    f'<a download="{os.path.basename(summary_html)}" href="{file_uri}" '
                                     f'style="display:flex;align-items:center;padding:6px 12px;background:#1976d2;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">'
                                     f'{img_tag}'
-                                    f'<span style="color:#fff;">Download CSV</span>'
+                                    f'<span style="color:#fff;">Download report (HTML)</span>'
                                     f'</a></div>'
                                 )
                                 st.markdown(html, unsafe_allow_html=True)
                             except Exception:
-                                # Fallback to plain download button
-                                st.download_button("Download CSV", csv, file_name='leakage_audit_report.csv')
-                    except Exception as e:
-                        st.error(f"Audit failed: {e}")
-    except Exception:
-        # If Streamlit not available or UI errors, fail silently
-        pass
+                                with open(summary_html, 'rb') as fbin:
+                                    st.download_button('Download report (HTML)', fbin, file_name='feature_selection_report.html')
+                        except Exception:
+                            st.write('Could not read feature_selection_report.html')
+
+                    # Regenerate exporters on demand
+                    if st.button('Regenerate CSV/HTML exporters'):
+                        with st.spinner('Generating CSV summary and HTML report...'):
+                            script_path = os.path.join('scripts', 'export_feature_selection.py')
+                            try:
+                                proc = subprocess.run([sys.executable, script_path], check=False, capture_output=True, text=True)
+                                if proc.returncode == 0:
+                                    st.success('Exporters generated successfully.')
+                                    if proc.stdout:
+                                        st.text(proc.stdout)
+                                else:
+                                    st.error(f'Exporter exited with code {proc.returncode}')
+                                    if proc.stdout:
+                                        st.text(proc.stdout)
+                                    if proc.stderr:
+                                        st.text(proc.stderr)
+                            except Exception as e:
+                                st.error(f'Failed to run exporter: {e}')
+
+                    # Prefer a nicely-formatted Markdown report if available
+                    md_report = os.path.join(out_dir, 'feature_selection_report.md')
+                    txt_report = os.path.join(out_dir, 'feature_selection_report.txt')
+                    if os.path.exists(md_report):
+                        st.subheader('Feature Selection Report')
+                        try:
+                            rpt_md = open(md_report, 'r', encoding='utf-8').read()
+                            st.markdown(rpt_md)
+                            try:
+                                import base64
+                                with open(md_report, 'rb') as mf:
+                                    mdata = mf.read()
+                                file_uri = 'data:text/markdown;base64,' + base64.b64encode(mdata).decode('ascii')
+                                icon_path_local = os.path.join('data_files', 'csv_icon.png')
+                                fallback_icon = os.path.join('data_files', 'favicon.png')
+                                chosen_icon = icon_path_local if os.path.exists(icon_path_local) else (fallback_icon if os.path.exists(fallback_icon) else None)
+                                img_tag = ''
+                                if chosen_icon is not None:
+                                    try:
+                                        with open(chosen_icon, 'rb') as ifh:
+                                            img_b64 = base64.b64encode(ifh.read()).decode('ascii')
+                                        img_tag = f'<img src="data:image/png;base64,{img_b64}" style="width:36px;height:36px;margin-right:10px;vertical-align:middle;border-radius:6px;">'
+                                    except Exception:
+                                        img_tag = ''
+                                html = (
+                                    f'<div style="display:flex;align-items:center;margin:6px 0;">'
+                                    f'<a download="{os.path.basename(md_report)}" href="{file_uri}" '
+                                    f'style="display:flex;align-items:center;padding:6px 12px;background:#1976d2;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">'
+                                    f'{img_tag}'
+                                    f'<span style="color:#fff;">Download report (MD)</span>'
+                                    f'</a></div>'
+                                )
+                                st.markdown(html, unsafe_allow_html=True)
+                            except Exception:
+                                with open(md_report, 'rb') as fbin:
+                                    st.download_button('Download report (MD)', fbin, file_name='feature_selection_report.md')
+                        except Exception:
+                            st.write('Could not read feature_selection_report.md')
+                    elif os.path.exists(txt_report):
+                        st.subheader('Feature Selection Report')
+                        try:
+                            rpt = open(txt_report, 'r', encoding='utf-8').read()
+                            st.code(rpt)
+                            try:
+                                import base64
+                                with open(txt_report, 'rb') as tf:
+                                    tdata = tf.read()
+                                file_uri = 'data:text/plain;base64,' + base64.b64encode(tdata).decode('ascii')
+                                icon_path_local = os.path.join('data_files', 'csv_icon.png')
+                                fallback_icon = os.path.join('data_files', 'favicon.png')
+                                chosen_icon = icon_path_local if os.path.exists(icon_path_local) else (fallback_icon if os.path.exists(fallback_icon) else None)
+                                img_tag = ''
+                                if chosen_icon is not None:
+                                    try:
+                                        with open(chosen_icon, 'rb') as ifh:
+                                            img_b64 = base64.b64encode(ifh.read()).decode('ascii')
+                                        img_tag = f'<img src="data:image/png;base64,{img_b64}" style="width:36px;height:36px;margin-right:10px;vertical-align:middle;border-radius:6px;">'
+                                    except Exception:
+                                        img_tag = ''
+                                html = (
+                                    f'<div style="display:flex;align-items:center;margin:6px 0;">'
+                                    f'<a download="{os.path.basename(txt_report)}" href="{file_uri}" '
+                                    f'style="display:flex;align-items:center;padding:6px 12px;background:#1976d2;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">'
+                                    f'{img_tag}'
+                                    f'<span style="color:#fff;">Download report</span>'
+                                    f'</a></div>'
+                                )
+                                st.markdown(html, unsafe_allow_html=True)
+                            except Exception:
+                                with open(txt_report, 'rb') as fbin:
+                                    st.download_button('Download report', fbin, file_name='feature_selection_report.txt')
+                        except Exception:
+                            st.write('Could not read feature_selection_report.txt')
+        
+            with tab_position:
+                from pathlib import Path
+                import re, datetime
+
+                OUT_DIR = Path('scripts') / 'output'
+                report_path = OUT_DIR / 'position_group_analysis_report.html'
+
+                if report_path.exists():
+                    # Try to extract the generated timestamp from the HTML; fallback to file mtime
+                    try:
+                        html = report_path.read_text(encoding='utf-8')
+                        m = re.search(r'Generated:\s*([^<]+)</p>', html)
+                        if m:
+                            ts = m.group(1).strip()
+                        else:
+                            ts = datetime.datetime.fromtimestamp(report_path.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')
+                    except Exception:
+                        ts = datetime.datetime.fromtimestamp(report_path.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')
+
+                    st.header('Position Group Analysis')
+                    st.write(f'Based on current UI test set (same as Model Performance tab)')
+
+                    # Calculate position-specific MAE from current UI test set (matches Model Performance tab)
+                    X, y = get_features_and_target(data)
+                    _valid = y.notnull() & np.isfinite(y)
+                    X, y = X.loc[_valid], y.loc[_valid]
+                    _train, _test, _ = _temporal_holdout_positions(data, X.index)
+                    X_train, X_test = X.iloc[_train], X.iloc[_test]
+                    y_train, y_test = y.iloc[_train], y.iloc[_test]
+                
+                    preprocessor = st.session_state.get('training_preprocessor')
+                    if preprocessor is not None and model is not None:
+                        # Align X_test columns to preprocessor
+                        if hasattr(preprocessor, 'feature_names_in_'):
+                            expected = list(preprocessor.feature_names_in_)
+                            for c in expected:
+                                if c not in X_test.columns:
+                                    X_test[c] = np.nan
+                            X_test = X_test[expected]
+                    
+                        X_test_prep = _prep_as_df(preprocessor.transform(X_test), preprocessor)
+                    
+                        # Predict
+                        if isinstance(model, xgb.Booster):
+                            y_pred = model.predict(xgb.DMatrix(X_test_prep))
+                        else:
+                            y_pred = model.predict(X_test_prep)
+                    
+                        # Calculate position-specific MAE
+                        # Create results dataframe - do NOT filter NaN to match Model Performance tab calculation
+                        results_analysis = pd.DataFrame({'Actual': y_test.values, 'Predicted': y_pred})
+                    
+                        st.subheader('📊 Position Group MAE Summary')
+                    
+                        # Use same overall MAE as Model Performance tab (from session state)
+                        overall_mae = st.session_state.get('global_mae')
+                        if overall_mae is not None:
+                            st.metric("Overall Model MAE", f"{overall_mae:.3f}")
+                        else:
+                            # Fallback: calculate if not in session state
+                            overall_mae = mean_absolute_error(y_test, y_pred)
+                            st.metric("Overall Model MAE", f"{overall_mae:.3f}")
+                    
+                        # Define position groups
+                        group_definitions = [
+                            ('🏆 Winners (P1)', results_analysis[results_analysis['Actual'] == 1]),
+                            ('🥇 Podium (P1-3)', results_analysis[results_analysis['Actual'] <= 3]),
+                            ('⭐ Top 5', results_analysis[results_analysis['Actual'] <= 5]),
+                            ('🎯 Points (P1-10)', results_analysis[results_analysis['Actual'] <= 10]),
+                            ('🏎️ Midfield (P11-15)', results_analysis[(results_analysis['Actual'] >= 11) & (results_analysis['Actual'] <= 15)]),
+                            ('🔚 Backmarkers (P16+)', results_analysis[results_analysis['Actual'] >= 16])
+                        ]
+                    
+                        group_data = []
+                        for label, group_df in group_definitions:
+                            if len(group_df) > 0:
+                                # Drop NaN/inf for position-specific MAE calculation
+                                group_clean = group_df.replace([np.inf, -np.inf], np.nan).dropna()
+                                if len(group_clean) > 0:
+                                    mae_val = mean_absolute_error(group_clean['Actual'], group_clean['Predicted'])
+                                    errors = group_clean['Actual'] - group_clean['Predicted']
+                                    group_data.append({
+                                        'Position Group': label,
+                                        'MAE': f"{mae_val:.3f}",
+                                        'Count': len(group_clean),
+                                    'Median Error': f"{errors.median():.3f}",
+                                    'Std Error': f"{errors.std():.3f}"
+                                })
+                    
+                        if group_data:
+                            df_groups = pd.DataFrame(group_data)
+                            st.dataframe(df_groups, hide_index=True, width='stretch')
+                            st.caption("Lower MAE indicates better prediction accuracy for that position group. These values match the Model Performance tab.")
+                    
+                        # Show example predictions for winners to verify the MAE calculation
+                        with st.expander("🔍 Example Predictions for Winners (P1)"):
+                            winners_data = results_analysis[results_analysis['Actual'] == 1].copy()
+                            if len(winners_data) > 0:
+                                winners_data = winners_data.replace([np.inf, -np.inf], np.nan).dropna()
+                                winners_data['Error'] = winners_data['Actual'] - winners_data['Predicted']
+                                winners_data['AbsError'] = winners_data['Error'].abs()
+                            
+                                st.write(f"**Total P1 finishers in test set:** {len(winners_data)}")
+                                st.write(f"**MAE for P1 predictions:** {mean_absolute_error(winners_data['Actual'], winners_data['Predicted']):.3f}")
+                                st.write(f"**Mean predicted position for P1 finishers:** {winners_data['Predicted'].mean():.3f}")
+                                st.write(f"**Median predicted position for P1 finishers:** {winners_data['Predicted'].median():.3f}")
+                            
+                                # Show distribution stats
+                                st.write("**Distribution of predictions for actual P1 finishers:**")
+                                pred_under_1_5 = (winners_data['Predicted'] <= 1.5).sum()
+                                pred_under_2 = (winners_data['Predicted'] <= 2.0).sum()
+                                pred_under_3 = (winners_data['Predicted'] <= 3.0).sum()
+                                pred_over_3 = (winners_data['Predicted'] > 3.0).sum()
+                            
+                                st.write(f"- Predicted ≤1.5: {pred_under_1_5} ({pred_under_1_5/len(winners_data)*100:.1f}%)")
+                                st.write(f"- Predicted ≤2.0: {pred_under_2} ({pred_under_2/len(winners_data)*100:.1f}%)")
+                                st.write(f"- Predicted ≤3.0: {pred_under_3} ({pred_under_3/len(winners_data)*100:.1f}%)")
+                                st.write(f"- Predicted >3.0: {pred_over_3} ({pred_over_3/len(winners_data)*100:.1f}%)")
+                            
+                                # Show some examples
+                                st.write("**Sample predictions (first 10):**")
+                                sample_display = winners_data[['Actual', 'Predicted', 'Error', 'AbsError']].head(10).round(3)
+                                st.dataframe(sample_display, hide_index=True, width='stretch')
+                    
+                        st.divider()
+                    else:
+                        st.info("Train a model to see position-specific analysis.")
+                        st.divider()
+
+                    # MAE by season: only show when multiple seasons are present
+                    mae_csv = OUT_DIR / 'mae_by_season.csv'
+                    if mae_csv.exists():
+                        try:
+                            mae_df = pd.read_csv(mae_csv)
+                            # Filter out invalid seasons (e.g., 0 from missing data)
+                            if 'season' in mae_df.columns:
+                                mae_df = mae_df[mae_df['season'] >= raceNoEarlierThan].copy()
+                        
+                            if 'season' in mae_df.columns and mae_df['season'].nunique() > 1:
+                                mae_img = OUT_DIR / 'mae_trends.png'
+                                if mae_img.exists():
+                                    st.subheader('MAE by Season')
+                                    st.image(str(mae_img), width=1000)
+                        except Exception:
+                            pass
+
+                    # Notes (render in a shaded info box)
+                    st.info(
+                        """
+                        **Color scale**: darker/warmer colors indicate larger average absolute error.
+
+                        **Missing cells**: blank or neutral color means insufficient data (no races for that pair).
+
+                        **Sample size**: confidence intervals are empirical percentiles computed only when a group has at least 5 residuals.
+                    
+                        **Interpretation**: cells with darker colors indicate that the model has higher prediction errors for that driver/constructor at that circuit, suggesting potential areas for model improvement or unique performance characteristics.
+                        """
+                    )
+
+                    # Heatmaps
+                    for img_name, title in [('heatmap_driver_by_circuit.png', 'Driver x Circuit heatmap'),
+                                            ('heatmap_constructor_by_circuit.png', 'Constructor x Circuit heatmap')]:
+                        img_path = OUT_DIR / img_name
+                        if img_path.exists():
+                            st.subheader(title)
+                            st.image(str(img_path), width=1000)
+
+                    # CSV download buttons (show small icon from `data_files/` if available)
+                    csv_files = ['mae_by_season.csv', 'confid_int_by_driver_track.csv', 'confid_int_by_driver.csv', 'confid_int_by_constructor.csv']
+                    icons_dir = Path('data_files')
+                    csv_icon = icons_dir / 'csv_icon.png'
+                    pdf_icon = icons_dir / 'pdf_icon.png'
+                    fallback_icon = icons_dir / 'favicon.png'
+
+                    # Render HTML-based download buttons with embedded icons (base64 data-URIs).
+                    # Fallback to the existing Streamlit download button if something goes wrong.
+                    import base64
+                    for fname in csv_files:
+                        p = OUT_DIR / fname
+                        if not p.exists():
+                            continue
+                        try:
+                            with open(p, 'rb') as fh:
+                                data_bytes = fh.read()
+
+                            # Prepare data URI for download link
+                            b64_file = base64.b64encode(data_bytes).decode('ascii')
+                            file_data_uri = f"data:text/csv;base64,{b64_file}"
+
+                            # Choose icon (csv_icon preferred, fallback to favicon)
+                            chosen_icon_path = None
+                            if p.suffix.lower() == '.csv' and csv_icon.exists():
+                                chosen_icon_path = csv_icon
+                            elif p.suffix.lower() == '.pdf' and pdf_icon.exists():
+                                chosen_icon_path = pdf_icon
+                            elif fallback_icon.exists():
+                                chosen_icon_path = fallback_icon
+
+                            img_tag = ''
+                            if chosen_icon_path is not None:
+                                try:
+                                    with open(chosen_icon_path, 'rb') as ifh:
+                                        img_b64 = base64.b64encode(ifh.read()).decode('ascii')
+                                    # Larger icon and rounded corners for nicer appearance
+                                    img_tag = f'<img src="data:image/png;base64,{img_b64}" style="width:36px;height:36px;margin-right:10px;vertical-align:middle;border-radius:6px;">'
+                                except Exception:
+                                    img_tag = ''
+
+                            # HTML for a compact icon + button-like link; wrap the image inside the anchor so it's clickable
+                            html = (
+                                f'<div style="display:flex;align-items:center;margin:6px 0;">'
+                                f'<a download="{fname}" href="{file_data_uri}" '
+                                f'style="display:flex;align-items:center;padding:6px 12px;background:#1976d2;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">'
+                                f'{img_tag}'
+                                f'<span style="color:#fff;">Download {fname}</span>'
+                                f'</a></div>'
+                            )
+
+                            st.markdown(html, unsafe_allow_html=True)
+                        except Exception:
+                            # fallback to Streamlit native button
+                            try:
+                                with open(p, 'rb') as fh:
+                                    data_bytes = fh.read()
+                                st.download_button(f"Download {fname}", data_bytes, file_name=fname)
+                            except Exception:
+                                st.write(f'Could not prepare download for {fname}')
+                else:
+                    st.info("Position analysis report not found. Run `python scripts/position_group_analysis.py` to generate outputs.")
+        
+            with tab_hyper:
+                st.subheader("Hyperparameter Tuning")
+
+                if model is None or preprocessor is None:
+                    st.info("Train a model above to see early stopping details and feature importances.")
+                else:
+            
+                    # Early Stopping Details
+                    st.write("### Early Stopping Details")
+                    # Handle different evals_result formats for different XGBoost APIs
+                    if 'eval' in evals_result and ('absolute_error' in evals_result['eval'] or 'mae' in evals_result['eval']):
+                        mae_per_round = evals_result['eval']['absolute_error'] if 'absolute_error' in evals_result['eval'] else evals_result['eval']['mae']
+                    elif 'validation_0' in evals_result and 'mae' in evals_result['validation_0']:
+                        mae_per_round = evals_result['validation_0']['mae']
+                    else:
+                        # Fallback
+                        mae_per_round = [getattr(model, 'best_score', 0)]
+                
+                    if len(mae_per_round) > 0:
+                        best_round = int(np.argmin(mae_per_round))
+                        lowest_mae = mae_per_round[best_round]
+                        st.write(f"Early stopping occurred at round {best_round + 1} (lowest MAE: {lowest_mae:.4f})")
+                        st.line_chart(mae_per_round)
+                    else:
+                        st.write("Early stopping details not available")
+
+                    if True:  # preprocessor and model already checked above
+                        feature_names_early = preprocessor.get_feature_names_out()
+                        feature_names_early = [name.replace('num__', '').replace('cat__', '') for name in feature_names_early]
+
+                        # Get importances based on model type (early stopping section)
+                        if hasattr(model, 'get_booster'):  # XGBoost (XGBRegressor)
+                            importances_dict_early = model.get_booster().get_score(importance_type='weight')
+                            importances_early = []
+                            for i, name in enumerate(feature_names_early):
+                                importances_early.append(importances_dict_early.get(f'f{i}', 0))
+                        elif hasattr(model, 'feature_importances_'):  # LightGBM, CatBoost, sklearn models
+                            importances_early = model.feature_importances_
+                        elif hasattr(model, 'get_feature_importance'):  # CatBoost
+                            importances_early = model.get_feature_importance()
+                        else:  # Ensemble or other
+                            importances_early = [0] * len(feature_names_early)  # Default to zero
+
+                        feature_importances_df_early = pd.DataFrame({
+                            'Feature': feature_names_early,
+                            'Importance': importances_early,
+                            'Percentage': np.array(importances_early) / (np.sum(importances_early) or 1) * 100
+                        }).sort_values(by='Importance', ascending=False)
+
+                        top_feature = feature_importances_df_early.iloc[0]
+                        st.write(f"Most important feature after training: **{top_feature['Feature']}** (Importance: {top_feature['Importance']})")
+                        st.dataframe(feature_importances_df_early.head(50), hide_index=True, width=800)
+
+                # Hyperparameter Tuning
+                st.write("### Run Hyperparameter Tuning")
+            
+                tuning_method = st.selectbox("Tuning Method", ["Grid Search", "Bayesian Optimization"], key="tuning_method")
+            
+                if st.button("Start Hyperparameter Tuning"):
+                    with st.spinner("Running hyperparameter tuning (this may take several minutes)..."):
+                        X_hyper, y_hyper = get_features_and_target(data)
+                    
+                        mask_hyper = y_hyper.notnull() & np.isfinite(y_hyper)
+                        X_clean, y_clean = X_hyper[mask_hyper], y_hyper[mask_hyper]
+                        from f1bet.validation import sklearn_model_selection_cv
+                        temporal_cv, final_hyper_index, final_hyper_season = sklearn_model_selection_cv(
+                            data.loc[y_clean.index], n_splits=5, embargo_events=1
+                        )
+                        st.caption(
+                            f"Model search excludes final season {final_hyper_season} "
+                            f"({len(final_hyper_index)} untouched rows)."
+                        )
+                    
+                        if tuning_method == "Grid Search":
+                              param_grid = {
+                                  'regressor__learning_rate': [0.01, 0.05, 0.1, 0.2],
+                                  'regressor__max_depth': [3, 4, 5, 6, 7],
+                                  'regressor__min_child_weight': [1, 3, 5, 7],
+                              }
+                              pipeline = Pipeline([
+                                  ('preprocessor', get_preprocessor_position(X_clean)),
+                                  ('regressor', XGBRegressor(n_estimators=100, random_state=42))
+                              ])
+                          
+                              grid_search = GridSearchCV(
+                                  pipeline, param_grid, cv=temporal_cv,
+                                  scoring='neg_mean_absolute_error'
+                              )
+                              grid_search.fit(X_clean, y_clean)
+                              st.write("Best params:", grid_search.best_params_)
+                              st.write(f"Best MAE: {-grid_search.best_score_:.4f}")
+                        
+                        elif tuning_method == "Bayesian Optimization":
+                            import optuna
+                        
+                            def objective(trial):
+                                learning_rate = trial.suggest_float('learning_rate', 0.01, 0.3)
+                                max_depth = trial.suggest_int('max_depth', 3, 10)
+                                min_child_weight = trial.suggest_int('min_child_weight', 1, 10)
+
+                                pipeline = Pipeline([
+                                    ('preprocessor', get_preprocessor_position(X_clean)),
+                                    ('regressor', XGBRegressor(
+                                        n_estimators=100,
+                                        learning_rate=learning_rate,
+                                        max_depth=max_depth,
+                                        min_child_weight=min_child_weight,
+                                        random_state=42
+                                    ))
+                                ])
+                            
+                                scores = cross_val_score(
+                                    pipeline, X_clean, y_clean, cv=temporal_cv,
+                                    scoring='neg_mean_absolute_error'
+                                )
+                                return -scores.mean()
+                        
+                            study = optuna.create_study(direction='minimize')
+                            study.optimize(objective, n_trials=50)
+                        
+                            st.write("Best params:", study.best_params)
+                            st.write(f"Best MAE: {study.best_value:.4f}")
+                        
+                            # Plot optimization history
+                            fig = optuna.visualization.plot_optimization_history(study)
+                            st.plotly_chart(fig)
+        
+            with tab_hist:
+                st.subheader("Historical Validation")
+                historical_validation = load_precomputed_historical_validation(CACHE_VERSION)
+                if not historical_validation:
+                    st.info(
+                        "Historical validation is generated by the Feature Selection Suite "
+                        "GitHub workflow and is not computed in the live app."
+                    )
+                else:
+                    validation_metadata = historical_validation.get('metadata', {})
+                    generated_at = validation_metadata.get('generated_at', 'Unknown')
+                    validation_model_type = validation_metadata.get('model_type', 'XGBoost')
+                    st.caption(
+                        f"Precomputed by GitHub Actions: {generated_at} · "
+                        f"validation model: {validation_model_type}"
+                    )
+
+                    st.write("### Model Evaluation Metrics (Cross-Validation)")
+                    position_cv = historical_validation.get('position_cv', {})
+                    if position_cv:
+                        st.write(
+                            "Final Position Model - Cross-validated MSE: "
+                            f"{position_cv.get('mse_mean', float('nan')):.3f} "
+                            f"(± {position_cv.get('mse_std', float('nan')):.3f})"
+                        )
+
+                    dnf_validation = historical_validation.get('dnf_validation', {})
+                    if dnf_validation:
+                        if dnf_validation.get('test_mae') is not None:
+                            st.write(
+                                "Mean Absolute Error (MAE) for DNF Probability (test set): "
+                                f"{dnf_validation['test_mae']:.3f}"
+                            )
+                        st.write(
+                            "DNF Model - Cross-validated ROC AUC: "
+                            f"{dnf_validation.get('roc_auc_mean', float('nan')):.3f} "
+                            f"(± {dnf_validation.get('roc_auc_std', float('nan')):.3f})"
+                        )
+
+                    safety_car_validation = historical_validation.get('safety_car_validation', {})
+                    if safety_car_validation:
+                        st.write(
+                            "Safety Car Model - Cross-validated ROC AUC (unique rows): "
+                            f"{safety_car_validation.get('roc_auc_mean', float('nan')):.3f} "
+                            f"(± {safety_car_validation.get('roc_auc_std', float('nan')):.3f})"
+                        )
+
+                    st.write("### Model Accuracy Across All Races")
+                    holdout = historical_validation.get('holdout', {})
+                    holdout_metrics = holdout.get('metrics', {})
+                    metrics = {
+                        'Mean Squared Error': holdout_metrics.get('mse'),
+                        'R^2 Score': holdout_metrics.get('r2'),
+                        'Mean Absolute Error': holdout_metrics.get('mae'),
+                        'Mean Error': holdout_metrics.get('mean_error'),
+                    }
+                    metrics = {label: value for label, value in metrics.items() if value is not None}
+                    position_mae_hist = holdout.get('position_mae', {})
+                    if metrics:
+                        display_model_performance(
+                            metrics=metrics,
+                            position_mae=position_mae_hist if position_mae_hist else None,
+                        )
+
+                    results_df_all = pd.DataFrame(holdout.get('rows', []))
+                    expected_result_columns = [
+                        'constructorName',
+                        'resultsDriverName',
+                        'ActualFinalPosition',
+                        'PredictedFinalPosition',
+                        'Error',
+                    ]
+                    if not results_df_all.empty and set(expected_result_columns).issubset(results_df_all.columns):
+                        results_df_all = results_df_all.sort_values(by=['ActualFinalPosition'])
+                        st.dataframe(
+                            results_df_all[expected_result_columns],
+                            hide_index=True,
+                            width=1000,
+                            column_config={
+                                'constructorName': st.column_config.TextColumn("Constructor"),
+                                'resultsDriverName': st.column_config.TextColumn("Driver"),
+                                'ActualFinalPosition': st.column_config.NumberColumn("Actual", format="%d"),
+                                'PredictedFinalPosition': st.column_config.NumberColumn("Predicted", format="%.2f"),
+                                'Error': st.column_config.NumberColumn("Error", format="%.2f"),
+                            },
+                        )
+
+                        st.subheader("Actual vs Predicted Final Position (All Races)")
+                        st.scatter_chart(
+                            results_df_all,
+                            x='ActualFinalPosition',
+                            y='PredictedFinalPosition',
+                            width='stretch',
+                        )
+        
+            with tab_debug:
+                st.subheader("Debug & Experiments")
+                        
+                # Bin Count Comparison
+                st.write("### Compare Different Bin Counts (q)")
+                from feature_lists import high_cardinality_features
+                q_values = st.multiselect("Select q values (number of bins)", [2, 3, 4, 5, 6, 7, 8, 9, 10], default=[2, 3, 4, 5, 6, 7, 8, 9, 10])
+            
+                if st.button("Run Bin Count Comparison"):
+                    results_bin = []
+                    for q in q_values:
+                        df_bin = data.copy()
+                        for col in high_cardinality_features:
+                            try:
+                                df_bin[f"{col}_bin"] = pd.qcut(df_bin[col], q=q, labels=False, duplicates='drop')
+                            except Exception as e:
+                                continue
+                            
+                            X_bin, y_bin = get_features_and_target(df_bin)
+                            mask_bin = y_bin.notnull() & np.isfinite(y_bin)
+                            X_bin, y_bin = X_bin[mask_bin], y_bin[mask_bin]
+
+                            # Use proper preprocessor instead of naive cat.codes
+                            preprocessor_bin = get_preprocessor_position(X_bin)
+                            _train_bin, _test_bin, _ = _temporal_holdout_positions(df_bin, X_bin.index)
+                            X_train_bin, X_test_bin = X_bin.iloc[_train_bin], X_bin.iloc[_test_bin]
+                            y_train_bin, y_test_bin = y_bin.iloc[_train_bin], y_bin.iloc[_test_bin]
+                            X_train_bin_prep = preprocessor_bin.fit_transform(X_train_bin)
+                            X_test_bin_prep = preprocessor_bin.transform(X_test_bin)
+                        
+                            model_bin = XGBRegressor(n_estimators=100, max_depth=4, n_jobs=-1, tree_method='hist', random_state=42)
+                            model_bin.fit(X_train_bin_prep, y_train_bin)
+                            y_pred_bin = model_bin.predict(X_test_bin_prep)
+                            mae_bin = mean_absolute_error(y_test_bin, y_pred_bin)
+                            results_bin.append({'q': q, 'MAE': mae_bin})
+                        
+                        results_df_bin = pd.DataFrame(results_bin).sort_values('q')
+                        st.write("MAE for each bin count (q):")
+                        st.dataframe(results_df_bin, hide_index=True)
+                        st.line_chart(results_df_bin.set_index('q'))
+
+    def leakage_audit_ui():
+        """Admin UI to run the temporal leakage audit from Streamlit."""
+        try:
+            with st.expander("🔍 Run Temporal Leakage Audit (Admin)", expanded=False):
+                st.write("Run a heuristics-based audit that checks for features likely to leak future information into training.")
+                # Short explainer for users/admins describing what the audit does and its outputs
+                with st.expander("About this Leakage Audit", expanded=False):
+                    st.write(
+                        "This audit scans the analysis dataset for features that may leak future or post-event information into training."
+                    )
+                    st.write("It applies several heuristics:")
+                    st.write("- Name-pattern checks (e.g. columns containing 'post', 'after', 'final', 'result', 'total').")
+                    st.write("- Very high Pearson correlation with targets (abs >= 0.95).")
+                    st.write("- Per-driver lagged-correlation checks: flags features whose correlation with the *next* race result is substantially higher than with the current result, suggesting future information.")
+                    st.write("- Safety-car related candidate checks (features mentioning 'safety' or similar).")
+                    st.write("")
+                    st.write("Output: a CSV at `leakage_audit_report.csv` with columns: feature, issue, target, value, value2, metric_name, explanation, delta, note.")
+                    st.write("Recommendation: review flagged features and remove or re-engineer any that use post-race or future information before training models.")
+                nrows = st.number_input("Rows to read (0 = all)", min_value=0, value=0)
+                run = st.button("Run Leakage Audit")
+                if run:
+                    nr = None if int(nrows) == 0 else int(nrows)
+                    with st.spinner("Running leakage audit..."):
+                        try:
+                            report_df = audit_temporal_leakage.run_audit(nrows=nr)
+                            if report_df is None or report_df.empty:
+                                st.success("No suspicious features found by heuristics.")
+                            else:
+                                st.success(f"Audit finished: {len(report_df)} items")
+                                # Rename columns for a friendly UI display
+                                ui_map = {
+                                    'feature': 'Feature',
+                                    'issue_type': 'Issue',
+                                    'target': 'Target',
+                                    'metric': 'Value',
+                                    'metric2': 'Value2',
+                                    'metric_name': 'Metric Name',
+                                    'explanation': 'Explanation',
+                                    'diff': 'Delta',
+                                    'extra_info': 'Note'
+                                }
+                                display_df = report_df.rename(columns=ui_map)
+
+                                st.dataframe(display_df, hide_index=True, width='stretch', column_config={
+                                    'Feature': st.column_config.TextColumn("Feature"),
+                                    'Issue': st.column_config.TextColumn("Issue"),
+                                    'Target': st.column_config.TextColumn("Target"),
+                                    'Value': st.column_config.NumberColumn("Value", format="%.6f"),
+                                    'Value2': st.column_config.NumberColumn("Value2", format="%.6f"),
+                                    'Metric Name': st.column_config.TextColumn("Metric Name"),
+                                    'Explanation': st.column_config.TextColumn("Explanation"),
+                                    'Delta': st.column_config.NumberColumn("Delta", format="%.6f"),
+                                    'Note': st.column_config.TextColumn("Note")
+                                })
+
+                                # Prepare downloadable CSV with the friendlier headers
+                                csv_df = report_df.rename(columns={
+                                    'feature': 'feature',
+                                    'issue_type': 'issue',
+                                    'target': 'target',
+                                    'metric': 'value',
+                                    'metric2': 'value2',
+                                    'metric_name': 'metric_name',
+                                    'explanation': 'explanation',
+                                    'diff': 'delta',
+                                    'extra_info': 'note'
+                                })
+                                csv = csv_df.to_csv(index=False)
+                                try:
+                                    # Use HTML clickable icon + download for leakage audit CSV
+                                    import base64
+                                    tdata = csv.encode('utf-8') if isinstance(csv, str) else csv
+                                    file_uri = 'data:text/csv;base64,' + base64.b64encode(tdata).decode('ascii')
+                                    icon_path_local = os.path.join('data_files', 'csv_icon.png')
+                                    fallback_icon = os.path.join('data_files', 'favicon.png')
+                                    chosen_icon = icon_path_local if os.path.exists(icon_path_local) else (fallback_icon if os.path.exists(fallback_icon) else None)
+                                    img_tag = ''
+                                    if chosen_icon is not None:
+                                        try:
+                                            with open(chosen_icon, 'rb') as ifh:
+                                                img_b64 = base64.b64encode(ifh.read()).decode('ascii')
+                                            img_tag = f'<img src="data:image/png;base64,{img_b64}" style="width:36px;height:36px;margin-right:10px;vertical-align:middle;border-radius:6px;">'
+                                        except Exception:
+                                            img_tag = ''
+                                    html = (
+                                        f'<div style="display:flex;align-items:center;margin:6px 0;">'
+                                        f'<a download="leakage_audit_report.csv" href="{file_uri}" '
+                                        f'style="display:flex;align-items:center;padding:6px 12px;background:#1976d2;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">'
+                                        f'{img_tag}'
+                                        f'<span style="color:#fff;">Download CSV</span>'
+                                        f'</a></div>'
+                                    )
+                                    st.markdown(html, unsafe_allow_html=True)
+                                except Exception:
+                                    # Fallback to plain download button
+                                    st.download_button("Download CSV", csv, file_name='leakage_audit_report.csv')
+                        except Exception as e:
+                            st.error(f"Audit failed: {e}")
+        except Exception:
+            # If Streamlit not available or UI errors, fail silently
+            pass
 
 with tab6:
     # Force immediate render to test if tab executes
@@ -6647,5 +6783,10 @@ with tab6:
             X_clean, y_clean = X[mask], y[mask]
             grid_search.fit(X_clean, y_clean)
             st.write("Best params:", grid_search.best_params_)
+
+with tab7:
+    from f1bet.streamlit_page import render_betting_research
+
+    render_betting_research(data)
 
 add_betting_oracle_footer()

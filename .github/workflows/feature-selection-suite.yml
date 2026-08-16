@@ -1,5 +1,12 @@
 name: Feature Selection Suite
 
+permissions:
+  contents: read
+
+concurrency:
+  group: f1-generated-artifact-writes
+  cancel-in-progress: false
+
 on:
   workflow_dispatch:
   schedule:
@@ -11,8 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -21,7 +28,7 @@ jobs:
         run: python scripts/precompute/rfe_features.py --output data_files/precomputed/rfe_results.json
         env:
           STREAMLIT_SERVER_HEADLESS: '1'
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: rfe-results
           path: data_files/precomputed/rfe_results.json
@@ -30,8 +37,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -40,7 +47,7 @@ jobs:
         run: python scripts/precompute/boruta_features.py --max-iter 200 --output data_files/precomputed/boruta_results.json
         env:
           STREAMLIT_SERVER_HEADLESS: '1'
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: boruta-results
           path: data_files/precomputed/boruta_results.json
@@ -49,8 +56,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -59,7 +66,7 @@ jobs:
         run: python scripts/precompute/shap_analysis.py --output data_files/precomputed/shap_results.json
         env:
           STREAMLIT_SERVER_HEADLESS: '1'
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: shap-results
           path: data_files/precomputed/shap_results.json
@@ -68,8 +75,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -78,7 +85,7 @@ jobs:
         run: python scripts/precompute/permutation_importance.py --output data_files/precomputed/permutation_results.json
         env:
           STREAMLIT_SERVER_HEADLESS: '1'
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: permutation-results
           path: data_files/precomputed/permutation_results.json
@@ -87,8 +94,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -97,7 +104,7 @@ jobs:
         run: python scripts/precompute/historical_validation.py --output data_files/precomputed/historical_validation.json
         env:
           STREAMLIT_SERVER_HEADLESS: '1'
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: historical-validation-results
           path: data_files/precomputed/historical_validation.json
@@ -105,11 +112,13 @@ jobs:
   commit-all:
     needs: [rfe-selection, boruta-selection, shap-analysis, permutation-importance, historical-validation]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           pattern: '*-results'
           path: data_files/precomputed/

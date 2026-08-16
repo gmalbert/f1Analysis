@@ -2,8 +2,8 @@
 """ROADMAP-3 benchmark: compare old SimpleImputer+OHE preprocessing vs
 new IterativeImputer+TargetEncoder+RobustScaler preprocessing.
 
-Measures MAE using 5-fold season-stratified GroupKFold CV on XGBoost
-so results are directly comparable to the project baseline.
+Measures MAE using five race-grouped expanding-window folds with a one-event
+embargo so every comparison uses the production temporal-validation policy.
 
 Usage:
     python scripts/benchmark_roadmap3.py
@@ -13,7 +13,7 @@ warnings.filterwarnings('ignore')
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import GroupKFold, cross_val_score
+from sklearn.model_selection import cross_val_score
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
@@ -21,6 +21,7 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder, RobustScaler, T
 from sklearn.experimental import enable_iterative_imputer  # noqa
 from sklearn.impute import IterativeImputer
 from xgboost import XGBRegressor
+from f1bet.validation import sklearn_model_selection_cv
 
 DATA_DIR = pathlib.Path('data_files')
 TARGET = 'resultsFinalPositionNumber'
@@ -65,7 +66,6 @@ print(f"  Features used: {len(feature_cols)}  (numeric={len(numeric_cols)}, "
 
 X = df[feature_cols].copy()
 y = df[TARGET].astype(float).values
-groups = df['grandPrixYear'].fillna(0).astype(int).values
 
 # ─── XGBoost base estimator ─────────────────────────────────────────────────
 def make_xgb():
@@ -75,7 +75,10 @@ def make_xgb():
         random_state=SEED, verbosity=0, n_jobs=-1,
     )
 
-cv = GroupKFold(n_splits=N_SPLITS)
+cv, final_test_index, final_test_season = sklearn_model_selection_cv(
+    df, n_splits=N_SPLITS, embargo_events=1
+)
+print(f"  Reserved untouched final season: {final_test_season} ({len(final_test_index)} rows)")
 
 # ─── OLD preprocessor (SimpleImputer + OHE) ─────────────────────────────────
 print("\n[OLD] Building SimpleImputer + OneHotEncoder pipeline …")
@@ -100,7 +103,7 @@ old_pre = ColumnTransformer([
 old_pipe = Pipeline([('pre', old_pre), ('xgb', make_xgb())])
 
 t0 = time.perf_counter()
-old_scores = cross_val_score(old_pipe, X, y, groups=groups, cv=cv,
+old_scores = cross_val_score(old_pipe, X, y, cv=cv,
                               scoring='neg_mean_absolute_error', n_jobs=1)
 old_time = time.perf_counter() - t0
 old_mae = -old_scores.mean()
@@ -143,7 +146,7 @@ new_pre = ColumnTransformer(transformers, remainder='drop')
 new_pipe = Pipeline([('pre', new_pre), ('xgb', make_xgb())])
 
 t0 = time.perf_counter()
-new_scores = cross_val_score(new_pipe, X, y, groups=groups, cv=cv,
+new_scores = cross_val_score(new_pipe, X, y, cv=cv,
                               scoring='neg_mean_absolute_error', n_jobs=1)
 new_time = time.perf_counter() - t0
 new_mae = -new_scores.mean()

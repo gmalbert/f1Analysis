@@ -1,5 +1,12 @@
 name: Pull Practice Session Data
 
+permissions:
+  contents: read
+
+concurrency:
+  group: f1-generated-artifact-writes
+  cancel-in-progress: false
+
 on:
   # Run Saturday 22:00 UTC during F1 season — captures FP1/FP2/FP3 for all circuits,
   # including late-running Americas sessions (COTA ~18:30 UTC, Miami ~18:30 UTC).
@@ -25,11 +32,11 @@ jobs:
       contents: write     # needed to push the updated CSV back to main
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0  # full history so we can pull/rebase before pushing
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
@@ -51,7 +58,7 @@ jobs:
           LOCAL_RUN: '1'    # enables FastF1 disk cache
 
       - name: Upload practice data as artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: practice-laps-${{ github.run_id }}
           path: data_files/all_practice_laps.csv

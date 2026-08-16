@@ -16,7 +16,8 @@ os.environ["STREAMLIT_LOG_LEVEL"] = "error"
 import numpy as np
 import pandas as pd
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.model_selection import cross_val_score, train_test_split
+from sklearn.base import clone
+from sklearn.model_selection import cross_val_score
 from sklearn.pipeline import Pipeline
 from xgboost import XGBRegressor
 
@@ -24,6 +25,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
 import json_helpers
+from f1bet.validation import sklearn_expanding_window_cv
 
 
 def _clean_target(X: pd.DataFrame, y: pd.Series) -> tuple[pd.DataFrame, pd.Series]:
@@ -91,46 +93,50 @@ def main() -> None:
             ),
         ]
     )
+    position_cv = sklearn_expanding_window_cv(
+        data.loc[X_position.index], n_splits=5, embargo_events=1
+    )
     position_scores = cross_val_score(
         position_pipeline,
         X_position,
         y_position,
-        cv=5,
+        cv=position_cv,
         scoring="neg_mean_squared_error",
     )
 
     print("Computing DNF validation...")
     X_dnf, y_dnf = _clean_target(*get_features_and_target_dnf(data))
     dnf_model = get_dnf_model(CACHE_VERSION)
-    _, X_test_dnf, _, y_test_dnf = train_test_split(
-        X_dnf,
-        y_dnf,
-        test_size=0.2,
-        random_state=42,
+    dnf_cv = sklearn_expanding_window_cv(
+        data.loc[X_dnf.index], n_splits=5, embargo_events=1
     )
-    dnf_test_probabilities = dnf_model.predict_proba(X_test_dnf)[:, 1]
-    dnf_scores = cross_val_score(dnf_model, X_dnf, y_dnf, cv=5, scoring="roc_auc")
+    dnf_train, dnf_test = dnf_cv[-1]
+    X_train_dnf, X_test_dnf = X_dnf.iloc[dnf_train], X_dnf.iloc[dnf_test]
+    y_train_dnf, y_test_dnf = y_dnf.iloc[dnf_train], y_dnf.iloc[dnf_test]
+    dnf_holdout_model = clone(dnf_model).fit(X_train_dnf, y_train_dnf)
+    dnf_test_probabilities = dnf_holdout_model.predict_proba(X_test_dnf)[:, 1]
+    dnf_scores = cross_val_score(dnf_model, X_dnf, y_dnf, cv=dnf_cv, scoring="roc_auc")
 
     print("Computing safety-car validation...")
     X_safety, y_safety = _clean_target(
         *get_features_and_target_safety_car(safety_cars)
     )
     safety_model = get_safetycar_model(CACHE_VERSION)
+    safety_cv = sklearn_expanding_window_cv(
+        safety_cars.loc[X_safety.index], n_splits=5, embargo_events=1
+    )
     safety_scores = cross_val_score(
         safety_model,
         X_safety,
         y_safety,
-        cv=5,
+        cv=safety_cv,
         scoring="roc_auc",
     )
 
     print("Generating position-model holdout predictions...")
-    X_train, X_test, y_train, y_test = train_test_split(
-        X_position,
-        y_position,
-        test_size=0.2,
-        random_state=42,
-    )
+    train_index, test_index = position_cv[-1]
+    X_train, X_test = X_position.iloc[train_index], X_position.iloc[test_index]
+    y_train, y_test = y_position.iloc[train_index], y_position.iloc[test_index]
     holdout_pipeline = Pipeline(
         [
             ("pre", _build_advanced_preprocessor(X_position)),
@@ -170,6 +176,7 @@ def main() -> None:
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "model_type": "XGBoost",
             "folds": 5,
+            "validation": "race-grouped expanding window with one-event embargo",
             "data_fingerprint": get_data_fingerprint(),
         },
         "position_cv": {

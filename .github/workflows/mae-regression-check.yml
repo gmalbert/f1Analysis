@@ -1,5 +1,8 @@
 name: MAE Regression Check
 
+permissions:
+  contents: read
+
 on:
   pull_request:
     paths:
@@ -15,9 +18,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
@@ -31,4 +34,5 @@ jobs:
           # Set MAE_BASELINE as a repository variable (repo Settings → Variables).
           # Update it manually after a confirmed improvement, e.g. "1.53"
           MAE_BASELINE: ${{ vars.MAE_BASELINE || '1.94' }}
+          PYTHONPATH: ${{ github.workspace }}
           STREAMLIT_SERVER_HEADLESS: '1'
