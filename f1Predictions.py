@@ -1,7 +1,6 @@
 import fastf1
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.pipeline import Pipeline
@@ -67,7 +66,9 @@ model = Pipeline(steps=[
 # -----------------------------
 # Split data & train
 # -----------------------------
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+split_at = max(1, int(len(X) * 0.8))
+X_train, X_test = X.iloc[:split_at], X.iloc[split_at:]
+y_train, y_test = y.iloc[:split_at], y.iloc[split_at:]
 model.fit(X_train, y_train)
 
 preprocessor = model.named_steps['preprocessor']

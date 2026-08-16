@@ -40,10 +40,8 @@ from scipy.stats import linregress
 from scipy.stats import truncnorm
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
-from sklearn.model_selection import train_test_split
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import GroupKFold
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.pipeline import Pipeline
@@ -1066,14 +1064,14 @@ raceNoEarlierThan = current_year - 10
 
 # start = time.time()
 
-@st.cache_data(max_entries=1)
+@st.cache_resource(show_spinner=False)
 def load_correlation(nrows, CACHE_VERSION):
     correlation_matrix = pd.read_csv(path.join(DATA_DIR, 'f1PositionCorrelation.csv'), sep='\t', nrows=nrows)
     return correlation_matrix
 
 correlation_matrix = load_correlation(10000, CACHE_VERSION)
 
-@st.cache_data(max_entries=1)
+@st.cache_resource(show_spinner=False)
 def load_data_schedule(nrows, CACHE_VERSION):
     raceSchedule = pd.read_json(path.join(DATA_DIR, 'f1db-races.json'))
     grandPrix = pd.read_json(path.join(DATA_DIR, 'f1db-grands-prix.json'))
@@ -1083,14 +1081,14 @@ def load_data_schedule(nrows, CACHE_VERSION):
 
 raceSchedule = load_data_schedule(10000, CACHE_VERSION)
 
-@st.cache_data(max_entries=1)
+@st.cache_resource(show_spinner=False)
 def load_drivers(nrows, CACHE_VERSION):
     drivers = pd.read_json(path.join(DATA_DIR, 'f1db-drivers.json'))
     return drivers
 
 drivers = load_drivers(10000, CACHE_VERSION)
 
-@st.cache_data(max_entries=1)
+@st.cache_resource(show_spinner=False)
 def load_qualifying(nrows):
     # Include cache version to invalidate when preprocessor changes
     _ = CACHE_VERSION
@@ -1099,7 +1097,7 @@ def load_qualifying(nrows):
 
 qualifying = load_qualifying(10000)
 
-@st.cache_data(max_entries=1)
+@st.cache_resource(show_spinner=False)
 def load_practices(nrows, CACHE_VERSION):
     practices = pd.read_csv(path.join(DATA_DIR, 'all_practice_laps.csv'), sep='\t', dtype={'PitOutTime': str}) 
     practices = practices[practices['Driver'] != 'ERROR']  # Remove rows where Driver is 'ERROR'
@@ -1107,7 +1105,7 @@ def load_practices(nrows, CACHE_VERSION):
 
 practices = load_practices(10000, CACHE_VERSION)
 
-@st.cache_data(max_entries=1)
+@st.cache_resource(show_spinner=False)
 def load_data_race_messages(nrows, CACHE_VERSION):
     race_messages = pd.read_csv(path.join(DATA_DIR, 'race_control_messages_grouped_with_dnf.csv'),sep='\t')
     return race_messages
@@ -1169,7 +1167,7 @@ schedule_columns_to_display = {
     'sprintQualifyingTime': None,   
 }
 
-@st.cache_data(max_entries=1)
+@st.cache_resource(show_spinner=False)
 def load_weather_data(nrows, CACHE_VERSION):
     weather = pd.read_csv(path.join(DATA_DIR, 'f1WeatherData_Grouped.csv'), sep='\t', nrows=nrows, usecols=['grandPrixId', 'short_date', 'average_temp', 'total_precipitation', 'average_humidity', 'average_wind_speed', 'id_races'])
     grandPrix = pd.read_json(path.join(DATA_DIR, 'f1db-grands-prix.json'))
@@ -1379,13 +1377,14 @@ if CLEAN_TABLE_BORDERS:
     """, unsafe_allow_html=True)
 
 # Create main tabs
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "📊 Data Explorer", 
     "📈 Analytics & Visualizations", 
     "🏎️ Schedule",
     "🏁 Next Race",
     "🤖 Predictive Models",
-    "💾 Data & Debug"
+    "💾 Data & Debug",
+    "📐 Betting Research"
 ])
 
 columns_to_display = {
@@ -1580,7 +1579,7 @@ season_summary_columns_to_display = {
     'total_podiums': st.column_config.NumberColumn("Total Podiums", format="%d")
 }
 
-@st.cache_data(max_entries=1)
+@st.cache_resource(show_spinner=False)
 def load_data(nrows, CACHE_VERSION, data_sha256=None):
     # data_sha256 is a stable cache key. Unlike a checkout mtime, it changes
     # only when file content changes, so hot updates do not accumulate large
@@ -1589,7 +1588,7 @@ def load_data(nrows, CACHE_VERSION, data_sha256=None):
         data_sha256 = get_data_fingerprint()['data_sha256']
     # Read the header only to get all column names
     all_columns = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t', nrows=0).columns.tolist()
-    selected_columns = ['grandPrixYear', 'grandPrixName', 'resultsDriverName', 'resultsPodium', 'resultsTop5', 'resultsTop10', 'constructorName',  'resultsStartingGridPositionNumber', 'resultsFinalPositionNumber', 
+    selected_columns = ['grandPrixYear', 'round', 'grandPrixName', 'resultsDriverName', 'resultsPodium', 'resultsTop5', 'resultsTop10', 'constructorName',  'resultsStartingGridPositionNumber', 'resultsFinalPositionNumber', 
     'positionsGained', 'short_date', 'raceId_results', 'grandPrixRaceId', 'DNF', 'averagePracticePosition', 'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'q1End', 'q2End', 'q3Top10', 'resultsDriverId', 
     'grandPrixLaps', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 'resultsReasonRetired', 'constructorId_results', 
     'driverBestStartingGridPosition', 'driverBestRaceResult', 'driverTotalChampionshipWins', 'driverTotalPolePositions', 'activeDriver', 'streetRace', 'trackRace', 'recent_form_3_races', 'recent_form_5_races', #'Points',
@@ -1687,114 +1686,131 @@ def load_data(nrows, CACHE_VERSION, data_sha256=None):
 
     return fullResults, pitStops
 
-data, pitStops = load_data(
+@st.cache_resource(max_entries=1, show_spinner=False)
+def get_shared_dataset(nrows, CACHE_VERSION, data_sha256=None):
+    """Load and fully prepare the analysis dataset exactly once, shared by every session.
+
+    ``st.cache_resource`` returns the same object by reference to all user sessions,
+    so concurrent sessions no longer each receive a private deep copy of the
+    ~500-column DataFrame.  (With ``st.cache_data`` every session was handed a
+    pickled copy, so memory grew linearly with the number of open sessions and
+    drove the Community Cloud over-capacity / OOM restarts.)  All of the
+    post-processing that used to run at module scope on every session is done here
+    a single time instead.
+    """
+    fullResults, pitStops = load_data(nrows, CACHE_VERSION, data_sha256)
+
+    # Debug: Check what columns were actually loaded
+    print(f"[DEBUG] Loaded data with {len(fullResults.columns)} columns")
+    lap_level_in_data = [c for c in fullResults.columns if any(x in c for x in ['sector1_sec', 'sector2_sec', 'sector3_sec', 'theoretical_best_lap', 'sector_consistency'])]
+    print(f"[DEBUG] Lap-level/engineered columns in loaded data: {lap_level_in_data}")
+
+    # Check for duplicate columns and remove them
+    dupes = [col for col in fullResults.columns if fullResults.columns.tolist().count(col) > 1]
+    if dupes:
+        st.warning(f"Duplicate columns found in your data: {dupes}")
+        fullResults = fullResults.loc[:, ~fullResults.columns.duplicated()]
+
+    if 'constructorName_results_with_qualifying' in fullResults.columns:
+        fullResults.rename(columns={'constructorName_results_with_qualifying': 'constructorName'}, inplace=True)
+    elif 'constructorName_qualifying' in fullResults.columns:
+        fullResults.rename(columns={'constructorName_qualifying': 'constructorName'}, inplace=True)
+
+    if 'best_qual_time_results_with_qualifying' in fullResults.columns:
+        fullResults.rename(columns={'best_qual_time_results_with_qualifying': 'best_qual_time'}, inplace=True)
+    elif 'best_qual_time_qualifying' in fullResults.columns:
+        fullResults.rename(columns={'best_qual_time_qualifying': 'best_qual_time'}, inplace=True)  
+
+    if 'teammate_qual_delta_results_with_qualifying' in fullResults.columns:
+        fullResults.rename(columns={'teammate_qual_delta_results_with_qualifying': 'teammate_qual_delta'}, inplace=True)
+    elif 'teammate_qual_delta_qualifying' in fullResults.columns:
+        fullResults.rename(columns={'teammate_qual_delta_qualifying': 'teammate_qual_delta'}, inplace=True)
+
+    # Apply team-aware feature engineering (after column renaming)
+    try:
+        fullResults = create_constructor_adjusted_driver_features(fullResults)
+        fullResults = create_recent_performance_features(fullResults, recent_races=5)
+        fullResults = create_constructor_compatibility_features(fullResults)
+    except Exception as e:
+        st.warning(f"Could not create some team-aware features: {e}")
+        # Continue with original data if feature creation fails
+
+    # Round averagePracticePosition to 2 decimal places
+    fullResults['averagePracticePosition'] = fullResults['averagePracticePosition'].round(2)
+
+    # Convert columns to appropriate types to allow for NaN values
+    fullResults['resultsStartingGridPositionNumber'] = fullResults['resultsStartingGridPositionNumber'].astype('Float64')
+    fullResults['resultsFinalPositionNumber'] = fullResults['resultsFinalPositionNumber'].astype('Float64')
+    fullResults['positionsGained'] = fullResults['positionsGained'].astype('Int64')
+    fullResults['averagePracticePosition'] = fullResults['averagePracticePosition'].astype('Float64')
+    fullResults['lastFPPositionNumber'] = fullResults['lastFPPositionNumber'].astype('Float64')
+    fullResults['resultsQualificationPositionNumber'] = fullResults['resultsQualificationPositionNumber'].astype('Int64')
+    fullResults['short_date'] = pd.to_datetime(fullResults['short_date'])
+    fullResults['numberOfStops'] = fullResults['numberOfStops'].astype('Int64')
+    fullResults['averageStopTime'] = fullResults['averageStopTime'].astype('Float64')
+    fullResults['totalStopTime'] = fullResults['totalStopTime'].astype('Float64')
+    fullResults['driverBestStartingGridPosition'] = fullResults['driverBestStartingGridPosition'].astype('Int64')
+    fullResults['driverBestRaceResult'] = fullResults['driverBestRaceResult'].astype('Int64')
+    fullResults['constructorRank'] = fullResults['constructorRank'].astype('Int64')
+    if 'Points' in fullResults.columns:
+        fullResults['Points'] = fullResults['Points'].astype('Int64')
+    fullResults['driverRank'] = fullResults['driverRank'].astype('Int64')
+    # if 'bestQualifyingTime_sec' in fullResults.columns:
+    #     fullResults['bestQualifyingTime_sec'] = fullResults['bestQualifyingTime_sec'].astype('Float64')
+    # else:
+    #     st.warning("'bestQualifyingTime_sec' column not found in data.")
+    fullResults['driverTotalChampionshipWins'] = fullResults['driverTotalChampionshipWins'].astype('Int64')
+    fullResults['driverTotalRaceEntries'] = fullResults['driverTotalRaceEntries'].astype('Int64')
+
+    # Handle columns that may or may not exist (legacy suffixes from older data structure)
+    if 'bestChampionshipPosition_results_with_qualifying' in fullResults.columns:
+        fullResults['bestChampionshipPosition'] = fullResults['bestChampionshipPosition_results_with_qualifying'].astype('Int64')
+    if 'bestStartingGridPosition_results_with_qualifying' in fullResults.columns:
+        fullResults['bestStartingGridPosition'] = fullResults['bestStartingGridPosition_results_with_qualifying'].astype('Int64')
+    if 'bestRaceResult_results_with_qualifying' in fullResults.columns:
+        fullResults['bestRaceResult'] = fullResults['bestRaceResult_results_with_qualifying'].astype('Int64')
+    if 'totalChampionshipWins_results_with_qualifying' in fullResults.columns:
+        fullResults['totalChampionshipWins'] = fullResults['totalChampionshipWins_results_with_qualifying'].astype('Int64')
+    if 'totalRaceStarts_results_with_qualifying' in fullResults.columns:
+        fullResults['totalRaceStarts'] = fullResults['totalRaceStarts_results_with_qualifying'].astype('Int64')
+    if 'totalRaceWins_results_with_qualifying' in fullResults.columns:
+        fullResults['totalRaceWins'] = fullResults['totalRaceWins_results_with_qualifying'].astype('Int64')
+    if 'total1And2Finishes' in fullResults.columns:
+        fullResults['total1And2Finishes'] = fullResults['total1And2Finishes'].astype('Int64')
+    if 'totalRaceLaps_results_with_qualifying' in fullResults.columns:
+        fullResults['totalRaceLaps'] = fullResults['totalRaceLaps_results_with_qualifying'].astype('Int64')
+    if 'totalPodiums_results_with_qualifying' in fullResults.columns:
+        fullResults['totalPodiums'] = fullResults['totalPodiums_results_with_qualifying'].astype('Int64')
+    if 'totalPodiumRaces' in fullResults.columns:
+        fullResults['totalPodiumRaces'] = fullResults['totalPodiumRaces'].astype('Int64')
+    if 'totalPoints_results_with_qualifying' in fullResults.columns:
+        fullResults['totalPoints'] = fullResults['totalPoints_results_with_qualifying'].astype('Float64')
+    if 'totalChampionshipPoints_results_with_qualifying' in fullResults.columns:
+        fullResults['totalChampionshipPoints'] = fullResults['totalChampionshipPoints_results_with_qualifying'].astype('Float64')
+    # fullResults['totalPolePositions'] = fullResults['totalPolePositions_results_with_qualifying'].astype('Int64')
+    if 'totalFastestLaps_results_with_qualifying' in fullResults.columns:
+        fullResults['totalFastestLaps'] = fullResults['totalFastestLaps_results_with_qualifying'].astype('Int64')
+    if 'totalRaceEntries_results_with_qualifying' in fullResults.columns:
+        fullResults['totalRaceEntries'] = fullResults['totalRaceEntries_results_with_qualifying'].astype('Int64')
+    fullResults['driverAge'] = fullResults['driverAge'].astype('Int64')
+    # fullResults['delta_from_race_avg'] = fullResults['delta_from_race_avg'].astype('Float64')
+    fullResults['driverAge'] = fullResults['driverAge'].astype('Int64')
+    fullResults['DNF'] = fullResults['DNF'].astype('boolean')
+    fullResults['championship_position'] = fullResults['championship_position'].astype('Float64')
+    fullResults['practice_x_safetycar_bin'] = fullResults['practice_x_safetycar_bin'].astype('Float64')
+    fullResults['positions_gained_first_lap_pct_bin'] = fullResults['positions_gained_first_lap_pct_bin'].astype('Float64')
+    fullResults['is_first_season_with_constructor'] = fullResults['is_first_season_with_constructor'].astype('Int64')
+    fullResults['grid_penalty_x_constructor_bin'] = fullResults['grid_penalty_x_constructor_bin'].astype('Float64')
+    fullResults['SafetyCarStatus'] = fullResults['SafetyCarStatus'].astype('Float64')
+
+    return fullResults, pitStops
+
+
+data, pitStops = get_shared_dataset(
     10000,
     CACHE_VERSION,
     get_data_fingerprint()['data_sha256']
 )
-
-# Debug: Check what columns were actually loaded
-print(f"[DEBUG] Loaded data with {len(data.columns)} columns")
-lap_level_in_data = [c for c in data.columns if any(x in c for x in ['sector1_sec', 'sector2_sec', 'sector3_sec', 'theoretical_best_lap', 'sector_consistency'])]
-print(f"[DEBUG] Lap-level/engineered columns in loaded data: {lap_level_in_data}")
-
-# Check for duplicate columns and remove them
-dupes = [col for col in data.columns if data.columns.tolist().count(col) > 1]
-if dupes:
-    st.warning(f"Duplicate columns found in your data: {dupes}")
-    data = data.loc[:, ~data.columns.duplicated()]
-
-if 'constructorName_results_with_qualifying' in data.columns:
-    data.rename(columns={'constructorName_results_with_qualifying': 'constructorName'}, inplace=True)
-elif 'constructorName_qualifying' in data.columns:
-    data.rename(columns={'constructorName_qualifying': 'constructorName'}, inplace=True)
-
-if 'best_qual_time_results_with_qualifying' in data.columns:
-    data.rename(columns={'best_qual_time_results_with_qualifying': 'best_qual_time'}, inplace=True)
-elif 'best_qual_time_qualifying' in data.columns:
-    data.rename(columns={'best_qual_time_qualifying': 'best_qual_time'}, inplace=True)  
-
-if 'teammate_qual_delta_results_with_qualifying' in data.columns:
-    data.rename(columns={'teammate_qual_delta_results_with_qualifying': 'teammate_qual_delta'}, inplace=True)
-elif 'teammate_qual_delta_qualifying' in data.columns:
-    data.rename(columns={'teammate_qual_delta_qualifying': 'teammate_qual_delta'}, inplace=True)
-
-# Apply team-aware feature engineering (after column renaming)
-try:
-    data = create_constructor_adjusted_driver_features(data)
-    data = create_recent_performance_features(data, recent_races=5)
-    data = create_constructor_compatibility_features(data)
-except Exception as e:
-    st.warning(f"Could not create some team-aware features: {e}")
-    # Continue with original data if feature creation fails
-
-# Round averagePracticePosition to 2 decimal places
-data['averagePracticePosition'] = data['averagePracticePosition'].round(2)
-
-# Convert columns to appropriate types to allow for NaN values
-data['resultsStartingGridPositionNumber'] = data['resultsStartingGridPositionNumber'].astype('Float64')
-data['resultsFinalPositionNumber'] = data['resultsFinalPositionNumber'].astype('Float64')
-data['positionsGained'] = data['positionsGained'].astype('Int64')
-data['averagePracticePosition'] = data['averagePracticePosition'].astype('Float64')
-data['lastFPPositionNumber'] = data['lastFPPositionNumber'].astype('Float64')
-data['resultsQualificationPositionNumber'] = data['resultsQualificationPositionNumber'].astype('Int64')
-data['short_date'] = pd.to_datetime(data['short_date'])
-data['numberOfStops'] = data['numberOfStops'].astype('Int64')
-data['averageStopTime'] = data['averageStopTime'].astype('Float64')
-data['totalStopTime'] = data['totalStopTime'].astype('Float64')
-data['driverBestStartingGridPosition'] = data['driverBestStartingGridPosition'].astype('Int64')
-data['driverBestRaceResult'] = data['driverBestRaceResult'].astype('Int64')
-data['constructorRank'] = data['constructorRank'].astype('Int64')
-if 'Points' in data.columns:
-    data['Points'] = data['Points'].astype('Int64')
-data['driverRank'] = data['driverRank'].astype('Int64')
-# if 'bestQualifyingTime_sec' in data.columns:
-#     data['bestQualifyingTime_sec'] = data['bestQualifyingTime_sec'].astype('Float64')
-# else:
-#     st.warning("'bestQualifyingTime_sec' column not found in data.")
-data['driverTotalChampionshipWins'] = data['driverTotalChampionshipWins'].astype('Int64')
-data['driverTotalRaceEntries'] = data['driverTotalRaceEntries'].astype('Int64')
-
-# Handle columns that may or may not exist (legacy suffixes from older data structure)
-if 'bestChampionshipPosition_results_with_qualifying' in data.columns:
-    data['bestChampionshipPosition'] = data['bestChampionshipPosition_results_with_qualifying'].astype('Int64')
-if 'bestStartingGridPosition_results_with_qualifying' in data.columns:
-    data['bestStartingGridPosition'] = data['bestStartingGridPosition_results_with_qualifying'].astype('Int64')
-if 'bestRaceResult_results_with_qualifying' in data.columns:
-    data['bestRaceResult'] = data['bestRaceResult_results_with_qualifying'].astype('Int64')
-if 'totalChampionshipWins_results_with_qualifying' in data.columns:
-    data['totalChampionshipWins'] = data['totalChampionshipWins_results_with_qualifying'].astype('Int64')
-if 'totalRaceStarts_results_with_qualifying' in data.columns:
-    data['totalRaceStarts'] = data['totalRaceStarts_results_with_qualifying'].astype('Int64')
-if 'totalRaceWins_results_with_qualifying' in data.columns:
-    data['totalRaceWins'] = data['totalRaceWins_results_with_qualifying'].astype('Int64')
-if 'total1And2Finishes' in data.columns:
-    data['total1And2Finishes'] = data['total1And2Finishes'].astype('Int64')
-if 'totalRaceLaps_results_with_qualifying' in data.columns:
-    data['totalRaceLaps'] = data['totalRaceLaps_results_with_qualifying'].astype('Int64')
-if 'totalPodiums_results_with_qualifying' in data.columns:
-    data['totalPodiums'] = data['totalPodiums_results_with_qualifying'].astype('Int64')
-if 'totalPodiumRaces' in data.columns:
-    data['totalPodiumRaces'] = data['totalPodiumRaces'].astype('Int64')
-if 'totalPoints_results_with_qualifying' in data.columns:
-    data['totalPoints'] = data['totalPoints_results_with_qualifying'].astype('Float64')
-if 'totalChampionshipPoints_results_with_qualifying' in data.columns:
-    data['totalChampionshipPoints'] = data['totalChampionshipPoints_results_with_qualifying'].astype('Float64')
-# data['totalPolePositions'] = data['totalPolePositions_results_with_qualifying'].astype('Int64')
-if 'totalFastestLaps_results_with_qualifying' in data.columns:
-    data['totalFastestLaps'] = data['totalFastestLaps_results_with_qualifying'].astype('Int64')
-if 'totalRaceEntries_results_with_qualifying' in data.columns:
-    data['totalRaceEntries'] = data['totalRaceEntries_results_with_qualifying'].astype('Int64')
-data['driverAge'] = data['driverAge'].astype('Int64')
-# data['delta_from_race_avg'] = data['delta_from_race_avg'].astype('Float64')
-data['driverAge'] = data['driverAge'].astype('Int64')
-data['DNF'] = data['DNF'].astype('boolean')
-data['championship_position'] = data['championship_position'].astype('Float64')
-data['practice_x_safetycar_bin'] = data['practice_x_safetycar_bin'].astype('Float64')
-data['positions_gained_first_lap_pct_bin'] = data['positions_gained_first_lap_pct_bin'].astype('Float64')
-data['is_first_season_with_constructor'] = data['is_first_season_with_constructor'].astype('Int64')
-data['grid_penalty_x_constructor_bin'] = data['grid_penalty_x_constructor_bin'].astype('Float64')
-data['SafetyCarStatus'] = data['SafetyCarStatus'].astype('Float64')
 
 column_names = data.columns.tolist()
 
@@ -1931,7 +1947,22 @@ def get_features_and_target(data):
 
     return X, y
 
-features, _ = get_features_and_target(data)
+
+@st.cache_resource(max_entries=1, show_spinner=False)
+def get_shared_features(data_sha256=None):
+    """Compute the shared model feature matrix once per dataset (not per session).
+
+    The module-level ``features`` frame is consumed read-only throughout the app,
+    so it can be shared across sessions by reference instead of being rebuilt and
+    deep-copied for every open session.
+    """
+    global data
+    if data_sha256 is None:
+        data_sha256 = get_data_fingerprint()['data_sha256']
+    return get_features_and_target(data)
+
+
+features, _ = get_shared_features(get_data_fingerprint()['data_sha256'])
 missing = [col for col in features.columns if col not in data.columns]
 if missing:
     st.write(f"The following feature columns are missing from your data: {missing}")
@@ -2263,7 +2294,7 @@ safety_cars = load_safetycars(10000, CACHE_VERSION)
 
 ###### Training model for final racing position prediction
 
-features, _ = get_features_and_target(data)
+features, _ = get_shared_features(get_data_fingerprint()['data_sha256'])
 missing = [col for col in features.columns if col not in data.columns]
 if missing:
     st.error(f"The following feature columns are missing from your data: {missing}")
@@ -2288,10 +2319,20 @@ def _prep_as_df(arr, preprocessor):
         return arr  # fall back to numpy if feature names are unavailable
 
 
+def _temporal_holdout_positions(data, index, test_fraction=0.2, embargo_events=1):
+    """Return a final-event holdout with a conservative event embargo."""
+    from f1bet.validation import final_event_holdout_indices
+
+    return final_event_holdout_indices(
+        data.loc[index],
+        test_fraction=test_fraction,
+        embargo_events=embargo_events,
+    )
+
+
 def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost", preprocessor_version="v2"):
     import xgboost as xgb
     from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
-    from sklearn.model_selection import train_test_split
     import numpy as np
 
     X, y = get_features_and_target(data)
@@ -2315,7 +2356,20 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
     X = X.loc[valid_y]
     y = y.loc[valid_y].astype(np.float64)
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    train_positions, test_positions, embargoed_events = _temporal_holdout_positions(
+        data, X.index, test_fraction=0.2, embargo_events=1
+    )
+    X_train, X_test = X.iloc[train_positions], X.iloc[test_positions]
+    y_train, y_test = y.iloc[train_positions], y.iloc[test_positions]
+    _training_meta = data.loc[X_train.index].copy()
+    if 'event_id' not in _training_meta.columns:
+        from f1bet.contracts import add_event_identity as _add_event_identity
+        _training_meta = _add_event_identity(_training_meta)
+    from f1bet.validation import event_order as _event_order
+    _training_events = _event_order(_training_meta)
+    preprocessor.f1bet_training_start_event_ = _training_events[0]
+    preprocessor.f1bet_training_end_event_ = _training_events[-1]
+    preprocessor.f1bet_embargoed_events_ = embargoed_events
 
      # ADD THIS: Create sample weights favoring top positions
     # Sample weights removed to match precompute script and minimize overall MAE
@@ -2480,10 +2534,13 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
                      "platform (missing libgomp.so.1). Please select XGBoost or CatBoost.")
             return None, None, None, None, None, {}, preprocessor
         from catboost import CatBoostRegressor
-        from sklearn.model_selection import GroupKFold
+        from f1bet.validation import (
+            final_season_holdout_indices,
+            sklearn_model_selection_cv,
+            with_event_identity,
+        )
 
-        # Season-stratified groups so CV never leaks future-season data into eval
-        groups_arr = data.loc[X.index, 'grandPrixYear'].fillna(0).astype(int).values
+        validation_metadata = with_event_identity(data.loc[X.index])
         y_arr = np.asarray(y, dtype=np.float64)  # force plain ndarray (LightGBM rejects FloatingArray)
 
         # Helper: build and predict with a fresh PGE on one fold
@@ -2510,10 +2567,15 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
             return PositionGroupEnsemble(podium_model=pm, points_model=cm,
                                          outside_model=om, router_model=r).predict(X_te)
 
-        # 3-fold GroupKFold CV (reduced from 5 to lower live-retrain memory usage)
-        cv = GroupKFold(n_splits=3)
-        oof_pred = np.zeros(len(y_arr))
-        for tr_idx, te_idx in cv.split(X, y_arr, groups=groups_arr):
+        # Expanding race-event folds. Every validation row is strictly later
+        # than training and a one-event embargo separates the partitions.
+        folds, final_test_index, final_test_season = sklearn_model_selection_cv(
+            validation_metadata, n_splits=5, embargo_events=1
+        )
+        if not folds:
+            raise ValueError("insufficient events for position-group walk-forward validation")
+        oof_pred = np.full(len(y_arr), np.nan)
+        for tr_idx, te_idx in folds:
             X_ftr, y_ftr = X.iloc[tr_idx], y_arr[tr_idx]
             X_fte, y_fte = X.iloc[te_idx], y_arr[te_idx]
             _pp = _build_advanced_preprocessor(X_ftr)
@@ -2524,15 +2586,35 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
                     np.where(y_ftr <= 10, 1.2, 1.0)))
             oof_pred[te_idx] = _fold_pge(Xtr_p, y_ftr, Xte_p, sw_f)
 
-        # OOF-based metrics (honest, consistent with benchmark)
-        cv_mae   = float(mean_absolute_error(y_arr, oof_pred))
-        cv_mse   = float(mean_squared_error(y_arr, oof_pred))
-        cv_r2    = float(r2_score(y_arr, oof_pred))
-        cv_merr  = float(np.mean(oof_pred - y_arr))
+        # Development OOF is reported separately from the untouched final season.
+        evaluated = np.isfinite(oof_pred)
+        development_mae = float(mean_absolute_error(y_arr[evaluated], oof_pred[evaluated]))
+
+        development_index, final_test_index, final_embargo, _ = final_season_holdout_indices(
+            validation_metadata, embargo_events=1
+        )
+        X_dev, y_dev = X.iloc[development_index], y_arr[development_index]
+        X_final, y_final = X.iloc[final_test_index], y_arr[final_test_index]
+        final_preprocessor = _build_advanced_preprocessor(X_dev)
+        X_dev_p = _prep_as_df(final_preprocessor.fit_transform(X_dev, y_dev), final_preprocessor)
+        X_final_p = _prep_as_df(final_preprocessor.transform(X_final), final_preprocessor)
+        final_weights = np.where(y_dev == 1, 2.0,
+                        np.where(y_dev <= 3, 1.5,
+                        np.where(y_dev <= 10, 1.2, 1.0)))
+        final_pred = _fold_pge(X_dev_p, y_dev, X_final_p, final_weights)
+        cv_mae = float(mean_absolute_error(y_final, final_pred))
+        cv_mse = float(mean_squared_error(y_final, final_pred))
+        cv_r2 = float(r2_score(y_final, final_pred))
+        cv_merr = float(np.mean(final_pred - y_final))
 
         # Final model: refit preprocessor and models on ALL data
         X_all_prep = _prep_as_df(preprocessor.fit_transform(X, y), preprocessor)
         TRAINING_PREPROCESSOR = preprocessor
+        from f1bet.validation import event_order as _event_order_all
+        _all_events = _event_order_all(validation_metadata)
+        preprocessor.f1bet_training_start_event_ = _all_events[0]
+        preprocessor.f1bet_training_end_event_ = _all_events[-1]
+        preprocessor.f1bet_embargoed_events_ = ()
 
         sw_all     = np.where(y_arr == 1, 2.0,
                      np.where(y_arr <= 3, 1.5,
@@ -2565,7 +2647,14 @@ def train_and_evaluate_model(data, early_stopping_rounds=20, model_type="XGBoost
             router_model=_router,
         )
 
-        evals_result = {'eval': {'mae': [cv_mae]}}
+        evals_result = {
+            'development': {'walk_forward_mae': [development_mae]},
+            'final': {
+                'mae': [cv_mae],
+                'season': [int(final_test_season)],
+                'embargoed_events': [list(final_embargo)],
+            },
+        }
         return model, cv_mse, cv_r2, cv_mae, cv_merr, evals_result, preprocessor
 
     elif model_type == "Track-Weighted Ensemble":  # ROADMAP-3E
@@ -2711,6 +2800,25 @@ def _load_pretrained_model_resource(
 
         artifact = dict(artifact)
         artifact['_artifact_path'] = str(model_file)
+        manifest_file = model_file.parent / 'manifest.json'
+        if manifest_file.exists() and model_name == 'position_model':
+            try:
+                from f1bet.artifacts import ModelManifest
+                manifest = ModelManifest.load(manifest_file)
+                preprocessor = artifact.get('preprocessor')
+                feature_names = tuple(str(value) for value in getattr(preprocessor, 'feature_names_in_', ()))
+                if manifest.schema_version != 'legacy-wide-v1':
+                    raise ValueError(f"unsupported schema {manifest.schema_version!r}")
+                if manifest.data_sha256 != data_fingerprint.get('data_sha256'):
+                    raise ValueError('dataset SHA-256 mismatch')
+                if manifest.feature_names != feature_names:
+                    raise ValueError('feature order mismatch')
+                artifact['_manifest_status'] = 'verified'
+            except Exception as exc:
+                print(f"INFO: Ignoring model with incompatible manifest at {manifest_file}: {exc}")
+                continue
+        else:
+            artifact['_manifest_status'] = 'legacy-missing'
         fingerprint_match = artifact_matches_fingerprint(artifact, data_fingerprint)
         if fingerprint_match is True:
             artifact['_artifact_status'] = 'current'
@@ -2733,9 +2841,10 @@ def load_pretrained_model(model_name='position_model', CACHE_VERSION='v2.3', mod
     fingerprint = get_data_fingerprint(data_file)
     search_paths = _model_search_paths(model_name, model_type)
     artifact_signature = tuple(
-        (str(model_file), model_file.stat().st_size, model_file.stat().st_mtime_ns)
+        (str(path), path.stat().st_size, path.stat().st_mtime_ns)
         for model_file in search_paths
-        if model_file.exists()
+        for path in (model_file, model_file.parent / 'manifest.json')
+        if path.exists()
     )
     return _load_pretrained_model_resource(
         model_name,
@@ -2752,6 +2861,11 @@ def _warn_if_stale_artifact(artifact, label):
             f"{label} is using the most recent precomputed model while GitHub Actions "
             "rebuilds it for the latest dataset. Runtime training is disabled to keep "
             "the app responsive."
+        )
+    elif artifact.get('_manifest_status') == 'legacy-missing':
+        st.info(
+            f"{label} is a grandfathered legacy artifact without a v2 manifest. "
+            "It remains loadable, but it is ineligible for promotion until the training workflow rebuilds it."
         )
 
 
@@ -2933,9 +3047,8 @@ def run_boruta_feature_selection(X, y, max_iter=200):
     ranking = boruta_selector.ranking_
     return selected_features, ranking
 
-def rfe_minimize_mae(X, y, min_features=3, max_features=20, step=1, random_state=42):
+def rfe_minimize_mae(X, y, metadata, min_features=3, max_features=20, step=1, random_state=42):
     """Run RFE for a range of feature counts and return the subset with the lowest MAE."""
-    from sklearn.model_selection import train_test_split
     from sklearn.metrics import mean_absolute_error
 
     # Convert object columns to category codes
@@ -2943,7 +3056,11 @@ def rfe_minimize_mae(X, y, min_features=3, max_features=20, step=1, random_state
     for col in X_rfe.select_dtypes(include='object').columns:
         X_rfe[col] = X_rfe[col].astype('category').cat.codes
 
-    X_train, X_test, y_train, y_test = train_test_split(X_rfe, y, test_size=0.2, random_state=random_state)
+    train_positions, test_positions, _ = _temporal_holdout_positions(
+        metadata, X_rfe.index, test_fraction=0.2, embargo_events=1
+    )
+    X_train, X_test = X_rfe.iloc[train_positions], X_rfe.iloc[test_positions]
+    y_train, y_test = y.iloc[train_positions], y.iloc[test_positions]
     best_mae = float('inf')
     best_features = None
     best_ranking = None
@@ -3555,7 +3672,11 @@ with tab2:
             }
             display_model_performance(metrics=metrics)
                    
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+            _valid = y.notnull() & np.isfinite(y)
+            X, y = X.loc[_valid], y.loc[_valid]
+            _train, _test, _ = _temporal_holdout_positions(filtered_data, X.index)
+            X_train, X_test = X.iloc[_train], X.iloc[_test]
+            y_train, y_test = y.iloc[_train], y.iloc[_test]
 
             preprocessor = get_preprocessor_position(X)
             preprocessor.fit(X_train)  # Fit on training data
@@ -3578,7 +3699,7 @@ with tab2:
             for col in meta_cols:
                 if col not in results_df.columns and 'filtered_data' in globals() and col in filtered_data.columns:
                     try:
-                        # Align by index from the split (train_test_split preserves the DataFrame index)
+                        # Align by index from the chronological holdout.
                         results_df[col] = filtered_data.loc[results_df.index, col]
                     except Exception:
                         # If alignment fails, fall back to adding a column of NaNs so later display logic can ignore it
@@ -4420,7 +4541,11 @@ with tab4:
 
             # Calculate MAE by individual positions for mapping to predicted positions
             X_mae, y_mae = get_features_and_target(data)
-            X_train_mae, X_test_mae, y_train_mae, y_test_mae = train_test_split(X_mae, y_mae, test_size=0.2, random_state=42)
+            _valid_mae = y_mae.notnull() & np.isfinite(y_mae)
+            X_mae, y_mae = X_mae.loc[_valid_mae], y_mae.loc[_valid_mae]
+            _train_mae, _test_mae, _ = _temporal_holdout_positions(data, X_mae.index)
+            X_train_mae, X_test_mae = X_mae.iloc[_train_mae], X_mae.iloc[_test_mae]
+            y_train_mae, y_test_mae = y_mae.iloc[_train_mae], y_mae.iloc[_test_mae]
             
             # Use the same preprocessor that was used to train the model
             preprocessor_mae = st.session_state.get('training_preprocessor')
@@ -4857,7 +4982,11 @@ with tab5:
 
             # Combine predictions and actuals for comparison
             X, y = get_features_and_target(data)
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+            _valid = y.notnull() & np.isfinite(y)
+            X, y = X.loc[_valid], y.loc[_valid]
+            _train, _test, _ = _temporal_holdout_positions(data, X.index)
+            X_train, X_test = X.iloc[_train], X.iloc[_test]
+            y_train, y_test = y.iloc[_train], y.iloc[_test]
 
             # Use the training preprocessor from session state (ensures feature consistency)
             preprocessor = st.session_state.get('training_preprocessor')
@@ -5577,7 +5706,13 @@ with tab5:
             )
             if st.button("Run RFE to Minimize MAE"):
                 with st.spinner("Running RFE to minimize MAE..."):
-                    best_features, best_ranking, best_mae, maes = rfe_minimize_mae(X_rfe_mae, y_rfe_mae, min_features=int(min_features_mae), max_features=int(max_features_mae))
+                    best_features, best_ranking, best_mae, maes = rfe_minimize_mae(
+                        X_rfe_mae,
+                        y_rfe_mae,
+                        data.loc[X_rfe_mae.index],
+                        min_features=int(min_features_mae),
+                        max_features=int(max_features_mae),
+                    )
                 st.write(f"Best MAE: {best_mae:.3f}")
                 st.write("Best feature subset:", best_features)
                 st.dataframe(pd.DataFrame({'Feature': best_features}))
@@ -6031,7 +6166,11 @@ with tab5:
 
                 # Calculate position-specific MAE from current UI test set (matches Model Performance tab)
                 X, y = get_features_and_target(data)
-                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+                _valid = y.notnull() & np.isfinite(y)
+                X, y = X.loc[_valid], y.loc[_valid]
+                _train, _test, _ = _temporal_holdout_positions(data, X.index)
+                X_train, X_test = X.iloc[_train], X.iloc[_test]
+                y_train, y_test = y.iloc[_train], y.iloc[_test]
                 
                 preprocessor = st.session_state.get('training_preprocessor')
                 if preprocessor is not None and model is not None:
@@ -6295,12 +6434,16 @@ with tab5:
                 with st.spinner("Running hyperparameter tuning (this may take several minutes)..."):
                     X_hyper, y_hyper = get_features_and_target(data)
                     
-                    # Get season for stratified CV
-                    season_groups = data.loc[y_hyper.index, 'year'] if 'year' in data.columns else None
-                    
                     mask_hyper = y_hyper.notnull() & np.isfinite(y_hyper)
                     X_clean, y_clean = X_hyper[mask_hyper], y_hyper[mask_hyper]
-                    season_clean = season_groups[mask_hyper] if season_groups is not None else None
+                    from f1bet.validation import sklearn_model_selection_cv
+                    temporal_cv, final_hyper_index, final_hyper_season = sklearn_model_selection_cv(
+                        data.loc[y_clean.index], n_splits=5, embargo_events=1
+                    )
+                    st.caption(
+                        f"Model search excludes final season {final_hyper_season} "
+                        f"({len(final_hyper_index)} untouched rows)."
+                    )
                     
                     if tuning_method == "Grid Search":
                           param_grid = {
@@ -6313,15 +6456,10 @@ with tab5:
                               ('regressor', XGBRegressor(n_estimators=100, random_state=42))
                           ])
                           
-                          # Use GroupKFold if season data available, else StratifiedKFold approximation
-                          if season_clean is not None:
-                              cv = GroupKFold(n_splits=5)
-                              groups = season_clean
-                          else:
-                              cv = 5
-                              groups = None
-                              
-                          grid_search = GridSearchCV(pipeline, param_grid, cv=cv, groups=groups, scoring='neg_mean_absolute_error')
+                          grid_search = GridSearchCV(
+                              pipeline, param_grid, cv=temporal_cv,
+                              scoring='neg_mean_absolute_error'
+                          )
                           grid_search.fit(X_clean, y_clean)
                           st.write("Best params:", grid_search.best_params_)
                           st.write(f"Best MAE: {-grid_search.best_score_:.4f}")
@@ -6345,15 +6483,10 @@ with tab5:
                                 ))
                             ])
                             
-                            # Use GroupKFold for season stratification
-                            if season_clean is not None:
-                                cv = GroupKFold(n_splits=5)
-                                groups = season_clean
-                            else:
-                                cv = 5
-                                groups = None
-                                
-                            scores = cross_val_score(pipeline, X_clean, y_clean, cv=cv, groups=groups, scoring='neg_mean_absolute_error')
+                            scores = cross_val_score(
+                                pipeline, X_clean, y_clean, cv=temporal_cv,
+                                scoring='neg_mean_absolute_error'
+                            )
                             return -scores.mean()
                         
                         study = optuna.create_study(direction='minimize')
@@ -6485,7 +6618,9 @@ with tab5:
 
                         # Use proper preprocessor instead of naive cat.codes
                         preprocessor_bin = get_preprocessor_position(X_bin)
-                        X_train_bin, X_test_bin, y_train_bin, y_test_bin = train_test_split(X_bin, y_bin, test_size=0.2, random_state=42)
+                        _train_bin, _test_bin, _ = _temporal_holdout_positions(df_bin, X_bin.index)
+                        X_train_bin, X_test_bin = X_bin.iloc[_train_bin], X_bin.iloc[_test_bin]
+                        y_train_bin, y_test_bin = y_bin.iloc[_train_bin], y_bin.iloc[_test_bin]
                         X_train_bin_prep = preprocessor_bin.fit_transform(X_train_bin)
                         X_test_bin_prep = preprocessor_bin.transform(X_test_bin)
                         
@@ -6647,5 +6782,10 @@ with tab6:
             X_clean, y_clean = X[mask], y[mask]
             grid_search.fit(X_clean, y_clean)
             st.write("Best params:", grid_search.best_params_)
+
+with tab7:
+    from f1bet.streamlit_page import render_betting_research
+
+    render_betting_research(data)
 
 add_betting_oracle_footer()
