@@ -1,5 +1,8 @@
 name: Keep Streamlit App Alive
 
+permissions:
+  contents: read
+
 # This workflow pings the Streamlit app to prevent it from going to sleep
 # due to inactivity on Streamlit Community Cloud.
 #
@@ -96,13 +99,13 @@ jobs:
 
       - name: Wake Streamlit App (headless Playwright)
         if: ${{ !startsWith(steps.ping.outputs.response, '2') }}
-        uses: actions/setup-node@v4.3.0
+        uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e # v4.3.0
         with:
           node-version: '20'
 
       - name: Restore Playwright & npm cache
         if: ${{ !startsWith(steps.ping.outputs.response, '2') }}
-        uses: actions/cache@v4.2.3
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
           path: |
             ~/.npm

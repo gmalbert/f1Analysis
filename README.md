@@ -5,6 +5,7 @@ Analysis of Formula 1 ```.json``` files based on the very generous data files fr
 
 ## Table of Contents
 - [How to run](#how-to-run)
+- [Predictive betting research v2](#predictive-betting-research-v2)
 - [Deployment and caching](#deployment-and-caching)
 - [File organization](#file-organization)
 
@@ -24,6 +25,34 @@ Analysis of Formula 1 ```.json``` files based on the very generous data files fr
 - [Other options](#other-options)
 - [Weather](#weather)
 - [To do](#to-do)
+
+## Predictive betting research v2
+
+The new import-safe `f1bet` package adds point-in-time data contracts,
+race-grouped walk-forward validation, calibrated market probabilities,
+coherent field simulation, timestamped odds/forecast ledgers, conservative
+paper staking, and an odds-required backtester. The Streamlit app exposes these
+tools in the **Betting Research** tab. It does not place bets or claim a proven
+market edge.
+
+Start here:
+
+- [Comprehensive repository review](docs/COMPREHENSIVE_REPOSITORY_REVIEW_2026.md)
+- [100 implemented additions](docs/FEATURE_CATALOG_V2.md)
+- [Predictive F1 betting research review](docs/PREDICTIVE_F1_BETTING_RESEARCH.md)
+- [Data model v2](docs/DATA_MODEL_V2.md)
+- [Implementation guide](docs/IMPLEMENTATION_GUIDE_F1BET.md)
+- [Implementation traceability](docs/IMPLEMENTATION_TRACEABILITY.md)
+- [Validation and release gates](docs/VALIDATION_AND_RELEASE_GATES.md)
+- [Architecture decisions](docs/ARCHITECTURE_DECISIONS_V2.md)
+
+Quick offline validation:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -Wall -m compileall -q .
+.\.venv\Scripts\python.exe -m f1bet --help
+```
 
 ## How to run
 ```powershell
@@ -244,9 +273,9 @@ This project’s **March 2026 pull request** (the branch `model/roadmap-improv
      weights** so each sub‑model remains calibrated outside its core segment.
    * Predictions are blended using soft inverse‑distance weights centred at
      2, 7, and 15; the router determines how much each sub‑model contributes.
-   * 5‑fold **GroupKFold** CV (groups = `grandPrixYear`) produces honest OOF
-     MAE for display and debugging; final model is refit on all rows for race
-     day inference.
+   * Five race-grouped **expanding-window** folds with a one-event embargo
+     produce chronological OOF MAE; the final model is refit on all rows for
+     race-day inference.
 
 2. **Track‑Weighted Ensemble (ROADMAP‑3E)**
    * XGB / LGBM / CatBoost base models are blended using circuit‑type weights.
@@ -369,22 +398,19 @@ This project’s **March 2026 pull request** (the branch `model/roadmap-improv
      alternative that applies pre‑computed circuit weights to the base trio; it
      lives alongside the main ensemble in the dropdown.
    Decision process: every candidate architecture was subjected to the same
-   5‑fold GroupKFold evaluation and Monte Carlo feature selection.  Models that
+   5‑fold embargoed expanding-window evaluation and Monte Carlo feature selection. Models that
    didn’t show clear OOF improvement were stripped to keep the UI concise.
    The Position‑Group model was particularly valuable because it explicitly
    models the non‑linear distribution of finishing positions; we later added a
    router because simple conditional slicing (podium vs. rest) introduced
    discontinuities at the boundaries.
 
-4. **Proper evaluation** – a series of early complaints (“why does the UI show
-   MAE 1.89 when my benchmark says 1.50?”) revealed that the app used a single
-   80/20 random holdout split with fixed `random_state=42`.  That split
-   happened to be unusually hard, and the resulting metric had no resemblance to
-   the 5‑fold GroupKFold CV used in offline benchmarks.  Replacing the holdout
-   with the same season‑stratified CV both aligned the UI with the benchmarks
-   and prevented misleading conclusions during development.  This change also
-   required revamping `train_and_evaluate_model()` to return CV-based metrics
-   while still training a final model on all data for prediction.
+4. **Proper evaluation** – the original app used a single 80/20 random
+   holdout and the benchmark scripts used season-grouped folds that could still
+   reverse time. Both have been replaced with complete-race chronological
+   holdouts or expanding windows, always with a one-event embargo. The final
+   model can still be fit on all available rows for inference, but selection
+   metrics come only from frozen future events.
 
 5. **Calibration & weighting** – after the Position‑Group and track‑weighted
    architectures were in place, we calibrated the latter’s circuit weights via

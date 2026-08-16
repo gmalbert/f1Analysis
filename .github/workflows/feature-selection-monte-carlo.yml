@@ -1,5 +1,12 @@
 name: Monte Carlo Feature Selection
 
+permissions:
+  contents: read
+
+concurrency:
+  group: f1-generated-artifact-writes
+  cancel-in-progress: false
+
 on:
   # 4C: Run Mon/Wed/Fri to capture race-weekend data quickly (ROADMAP-4C).
   # Monday  — day after race Sunday: new data incorporated immediately.
@@ -31,11 +38,13 @@ jobs:
   monte-carlo-search:
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -55,7 +64,7 @@ jobs:
         env:
           STREAMLIT_SERVER_HEADLESS: '1'
       
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: monte-carlo-results
           path: |

@@ -1,5 +1,12 @@
 name: Pull Qualifying Data
 
+permissions:
+  contents: read
+
+concurrency:
+  group: f1-generated-artifact-writes
+  cancel-in-progress: false
+
 on:
   # Run Sunday 05:00 UTC during F1 season — qualifying sessions are done worldwide by then,
   # including late-running Americas events (Brazil/Mexico ~23:00 UTC Sat, Las Vegas ~03:00 UTC Sun).
@@ -25,11 +32,11 @@ jobs:
       contents: write     # needed to push the updated CSV back to main
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0  # full history so we can pull/rebase before pushing
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
@@ -51,7 +58,7 @@ jobs:
           LOCAL_RUN: '1'    # enables FastF1 disk cache
 
       - name: Upload qualifying data as artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: qualifying-data-${{ github.run_id }}
           path: data_files/all_qualifying_races.csv
@@ -86,6 +93,9 @@ jobs:
   trigger-precompute:
     needs: pull-qualifying
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
     # Run automatically on schedule; respect the manual override for workflow_dispatch
     if: |
       github.event_name == 'schedule' ||
@@ -95,7 +105,7 @@ jobs:
         run: sleep 120
 
       - name: Trigger full precompute pipeline
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
             await github.rest.actions.createWorkflowDispatch({

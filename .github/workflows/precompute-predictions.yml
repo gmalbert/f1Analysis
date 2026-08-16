@@ -1,5 +1,12 @@
 name: Precompute Race Predictions
 
+permissions:
+  contents: read
+
+concurrency:
+  group: f1-generated-artifact-writes
+  cancel-in-progress: false
+
 on:
   workflow_run:
     workflows: ["Train All Models (Multi-Type)"]
@@ -14,11 +21,13 @@ jobs:
   generate-predictions:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0            # full history so we can pull/rebase
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -40,7 +49,7 @@ jobs:
         env:
           STREAMLIT_SERVER_HEADLESS: '1'
       
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: race-predictions
           path: data_files/precomputed/predictions/
