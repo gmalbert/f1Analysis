@@ -34,4 +34,5 @@ jobs:
           # Set MAE_BASELINE as a repository variable (repo Settings → Variables).
           # Update it manually after a confirmed improvement, e.g. "1.53"
           MAE_BASELINE: ${{ vars.MAE_BASELINE || '1.94' }}
+          PYTHONPATH: ${{ github.workspace }}
           STREAMLIT_SERVER_HEADLESS: '1'
