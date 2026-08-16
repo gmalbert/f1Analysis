@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Headless prediction runner
+r"""Headless prediction runner
 
 Creates a lightweight predictions CSV for the next upcoming race when no
 predictions file exists. This is a pragmatic fallback to populate

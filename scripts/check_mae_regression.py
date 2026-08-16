@@ -27,8 +27,9 @@ logging.getLogger('streamlit').setLevel(logging.ERROR)
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import GroupKFold, cross_val_score
+from sklearn.model_selection import cross_val_score
 from xgboost import XGBRegressor
+from f1bet.validation import sklearn_model_selection_cv
 
 DATA_DIR = Path('data_files')
 FEATURE_LIST_PATH = DATA_DIR / 'precomputed' / 'monte_carlo_results.json'
@@ -74,7 +75,7 @@ def _load_features() -> tuple[list[str], str]:
 
 
 def _compute_mae_for_features(data: pd.DataFrame, features: list[str], target: str) -> float:
-    """Compute GroupKFold CV MAE for a given feature list."""
+    """Compute embargoed expanding-window CV MAE for a feature list."""
     features = [f for f in features if f in data.columns]
     if not features:
         raise ValueError('No feature columns found in dataset.')
@@ -91,7 +92,6 @@ def _compute_mae_for_features(data: pd.DataFrame, features: list[str], target: s
 
     X = X_num.fillna(X_num.median())
     y = valid[target].astype(float)
-    groups = valid['grandPrixYear']
 
     if len(X) < 200:
         raise ValueError(f'Only {len(X)} usable rows after cleaning.')
@@ -101,8 +101,8 @@ def _compute_mae_for_features(data: pd.DataFrame, features: list[str], target: s
         subsample=0.8, colsample_bytree=0.8, min_child_weight=3,
         n_jobs=-1, tree_method='hist', random_state=42, verbosity=0,
     )
-    cv = GroupKFold(n_splits=5)
-    scores = cross_val_score(model, X, y, groups=groups, cv=cv,
+    cv, _, _ = sklearn_model_selection_cv(valid, n_splits=5, embargo_events=1)
+    scores = cross_val_score(model, X, y, cv=cv,
                              scoring='neg_mean_absolute_error')
     return float(-scores.mean())
 
@@ -123,7 +123,7 @@ def compute_mae(threshold: float, baseline: float) -> None:
         print(f"WARNING: {e} — skipping MAE check.")
         sys.exit(0)
 
-    print(f"\nMAE (5-fold GroupKFold CV): {mae:.4f}")
+    print(f"\nMAE (5-fold embargoed expanding-window CV): {mae:.4f}")
     print(f"Baseline:                   {baseline:.4f}")
     print(f"Allowed delta:              +{threshold:.4f}")
     print(f"Allowed ceiling:            {baseline + threshold:.4f}")

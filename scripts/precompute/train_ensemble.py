@@ -30,6 +30,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 # helper for robust json serialization of numpy/pandas scalars used by precompute scripts
 import json_helpers
 from model_artifacts import build_data_fingerprint, stamp_artifact
+from f1bet.artifacts import save_training_manifest
 
 DATA_DIR = 'data_files/'
 
@@ -60,11 +61,18 @@ def train_ensemble_model():
         analysis_fingerprint['data_sha256']
     )
     
-    # Apply column renaming
-    if 'constructorName_results_with_qualifying' in data.columns:
-        data.rename(columns={'constructorName_results_with_qualifying': 'constructorName'}, inplace=True)
-    elif 'constructorName_qualifying' in data.columns:
-        data.rename(columns={'constructorName_qualifying': 'constructorName'}, inplace=True)
+    # Apply column renaming (guarded so an already-present short name is never
+    # clobbered into a duplicate column)
+    for src, dst in [
+        ('constructorName_results_with_qualifying', 'constructorName'),
+        ('constructorName_qualifying',              'constructorName'),
+        ('best_qual_time_results_with_qualifying',  'best_qual_time'),
+        ('best_qual_time_qualifying',               'best_qual_time'),
+        ('teammate_qual_delta_results_with_qualifying', 'teammate_qual_delta'),
+        ('teammate_qual_delta_qualifying',              'teammate_qual_delta'),
+    ]:
+        if src in data.columns and dst not in data.columns:
+            data.rename(columns={src: dst}, inplace=True)
     
     print(f"Data loaded: {data.shape}")
     
@@ -112,6 +120,13 @@ def train_ensemble_model():
     }, analysis_fingerprint)
     
     json_helpers.safe_dump(metadata, output_dir / 'metadata.json', indent=2)
+    save_training_manifest(
+        destination=output_dir / 'manifest.json',
+        model_name='position', model_version=f'ensemble-{CACHE_VERSION}', estimator='Ensemble',
+        preprocessor=preprocessor, training_frame=data,
+        data_path=Path(DATA_DIR) / 'f1ForAnalysis.csv',
+        metrics={'mae': float(mae), 'mse': float(mse), 'r2': float(r2)},
+    )
     
     print("\n" + "=" * 60)
     print("Ensemble Training Complete!")

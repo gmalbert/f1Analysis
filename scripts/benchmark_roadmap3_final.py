@@ -12,7 +12,7 @@ warnings.filterwarnings('ignore')
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import GroupKFold, cross_val_score
+from sklearn.model_selection import cross_val_score
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
@@ -21,6 +21,7 @@ from sklearn.experimental import enable_iterative_imputer  # noqa
 from sklearn.impute import IterativeImputer
 from sklearn.base import BaseEstimator, RegressorMixin
 from xgboost import XGBRegressor
+from f1bet.validation import sklearn_model_selection_cv
 from lightgbm import LGBMRegressor
 from catboost import CatBoostRegressor
 
@@ -60,9 +61,10 @@ print(f"  {len(numeric_cols)} numeric, {len(HIGH_CARD)} high-card, {len(LOW_CARD
 
 X = df[numeric_cols + HIGH_CARD + LOW_CARD].copy()
 y = df[TARGET].astype(float).values
-groups = df['grandPrixYear'].fillna(0).astype(int).values
-
-cv = GroupKFold(n_splits=N_SPLITS)
+cv, final_test_index, final_test_season = sklearn_model_selection_cv(
+    df, n_splits=N_SPLITS, embargo_events=1
+)
+print(f"  Reserved untouched final season: {final_test_season} ({len(final_test_index)} rows)")
 
 # ─── Helper: build OLD preprocessor ─────────────────────────────────────────
 def make_old_pre():
@@ -126,7 +128,7 @@ def make_xgb(): return XGBRegressor(n_estimators=N_TREES, max_depth=5,
 print("\n[A] OLD: SimpleImputer + OHE", flush=True)
 t0 = time.perf_counter()
 old_scores = cross_val_score(Pipeline([('p', make_old_pre()), ('m', make_xgb())]),
-                              X, y, groups=groups, cv=cv,
+                              X, y, cv=cv,
                               scoring='neg_mean_absolute_error', n_jobs=1)
 old_mae, old_t = -old_scores.mean(), time.perf_counter()-t0
 print(f"  MAE: {old_mae:.4f} ± {old_scores.std():.4f}  ({old_t:.1f}s)")
@@ -136,7 +138,7 @@ print("\n[B] NEW: Scoped IterativeImputer + TargetEncoder + RobustScaler + XGB",
 new_pre = make_new_pre(X)
 t0 = time.perf_counter()
 new_scores = cross_val_score(Pipeline([('p', new_pre), ('m', make_xgb())]),
-                              X, y, groups=groups, cv=cv,
+                              X, y, cv=cv,
                               scoring='neg_mean_absolute_error', n_jobs=1)
 new_mae, new_t = -new_scores.mean(), time.perf_counter()-t0
 print(f"  MAE: {new_mae:.4f} ± {new_scores.std():.4f}  ({new_t:.1f}s)")
@@ -164,7 +166,7 @@ class PGE(BaseEstimator, RegressorMixin):
 pg_pre = make_new_pre(X)
 t0 = time.perf_counter()
 pg_scores = cross_val_score(Pipeline([('p', pg_pre), ('m', PGE())]),
-                             X, y, groups=groups, cv=cv,
+                             X, y, cv=cv,
                              scoring='neg_mean_absolute_error', n_jobs=1)
 pg_mae, pg_t = -pg_scores.mean(), time.perf_counter()-t0
 print(f"  MAE: {pg_mae:.4f} ± {pg_scores.std():.4f}  ({pg_t:.1f}s)")

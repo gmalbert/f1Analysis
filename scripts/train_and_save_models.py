@@ -52,6 +52,7 @@ warnings.filterwarnings("ignore", message=".*No runtime found, using MemoryCache
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from model_artifacts import build_data_fingerprint, stamp_artifact
+from f1bet.artifacts import save_training_manifest
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -88,24 +89,20 @@ def train_all_models():
         analysis_fingerprint['data_sha256']
     )
     
-    # Apply the same column renaming logic as in raceAnalysis.py
+    # Apply the same column renaming logic as in raceAnalysis.py (guarded so an
+    # already-present short name is never clobbered into a duplicate column)
     print("Applying column renaming logic...")
-    if 'constructorName_results_with_qualifying' in data.columns:
-        data.rename(columns={'constructorName_results_with_qualifying': 'constructorName'}, inplace=True)
-        print("   Renamed constructorName_results_with_qualifying to constructorName")
-    elif 'constructorName_qualifying' in data.columns:
-        data.rename(columns={'constructorName_qualifying': 'constructorName'}, inplace=True)
-        print("   Renamed constructorName_qualifying to constructorName")
-    
-    if 'best_qual_time_results_with_qualifying' in data.columns:
-        data.rename(columns={'best_qual_time_results_with_qualifying': 'best_qual_time'}, inplace=True)
-    elif 'best_qual_time_qualifying' in data.columns:
-        data.rename(columns={'best_qual_time_qualifying': 'best_qual_time'}, inplace=True)
-    
-    if 'teammate_qual_delta_results_with_qualifying' in data.columns:
-        data.rename(columns={'teammate_qual_delta_results_with_qualifying': 'teammate_qual_delta'}, inplace=True)
-    elif 'teammate_qual_delta_qualifying' in data.columns:
-        data.rename(columns={'teammate_qual_delta_qualifying': 'teammate_qual_delta'}, inplace=True)
+    for src, dst in [
+        ('constructorName_results_with_qualifying', 'constructorName'),
+        ('constructorName_qualifying',              'constructorName'),
+        ('best_qual_time_results_with_qualifying',  'best_qual_time'),
+        ('best_qual_time_qualifying',               'best_qual_time'),
+        ('teammate_qual_delta_results_with_qualifying', 'teammate_qual_delta'),
+        ('teammate_qual_delta_qualifying',              'teammate_qual_delta'),
+    ]:
+        if src in data.columns and dst not in data.columns:
+            data.rename(columns={src: dst}, inplace=True)
+            print(f"   Renamed {src} to {dst}")
     
     print(f"Data loaded successfully. Shape: {data.shape}")
     print(f"Has constructorName: {'constructorName' in data.columns}")
@@ -178,6 +175,13 @@ def train_all_models():
     
     with open(models_dir / 'metadata.pkl', 'wb') as f:
         pickle.dump(metadata, f)
+    save_training_manifest(
+        destination=models_dir / 'manifest.json',
+        model_name='position', model_version=f'xgboost-{CACHE_VERSION}', estimator='XGBoost',
+        preprocessor=preprocessor, training_frame=data,
+        data_path=Path(DATA_DIR) / 'f1ForAnalysis.csv',
+        metrics={'mae': float(mae), 'mse': float(mse), 'r2': float(r2)},
+    )
     
     print(f"\n[OK] All models trained and saved to {models_dir}")
     print(f"   Total models: {len([m for m in metadata['models'] if m])}")

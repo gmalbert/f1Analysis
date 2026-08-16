@@ -20,7 +20,7 @@ warnings.filterwarnings("ignore")
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import GridSearchCV, GroupKFold
+from sklearn.model_selection import GridSearchCV
 from sklearn.pipeline import Pipeline
 from xgboost import XGBRegressor
 
@@ -28,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 # helper for robust json serialization of numpy/pandas scalars used by precompute scripts
 import json_helpers
+from f1bet.validation import sklearn_model_selection_cv
 
 
 def main():
@@ -56,8 +57,7 @@ def main():
     mask = y.notnull() & np.isfinite(y)
     X_clean, y_clean = X[mask], y[mask]
     
-    # Get season groups for stratified CV
-    season_groups = data.loc[y_clean.index, 'year'] if 'year' in data.columns else None
+    validation_frame = data.loc[y_clean.index]
     
     print(f"Data shape: {X_clean.shape}")
     
@@ -76,14 +76,14 @@ def main():
         ('regressor', XGBRegressor(n_estimators=100, random_state=42, n_jobs=-1, tree_method='hist'))
     ])
     
-    # Use GroupKFold if season data available, else regular CV
-    if season_groups is not None:
-        cv = GroupKFold(n_splits=5)
-        grid_search = GridSearchCV(pipeline, param_grid, cv=cv, groups=season_groups, 
-                                    scoring='neg_mean_absolute_error', n_jobs=1, verbose=2)
-    else:
-        grid_search = GridSearchCV(pipeline, param_grid, cv=5, 
-                                    scoring='neg_mean_absolute_error', n_jobs=1, verbose=2)
+    cv, final_test_index, final_test_season = sklearn_model_selection_cv(
+        validation_frame, n_splits=5, embargo_events=1
+    )
+    print(f"Untouched final season: {final_test_season} ({len(final_test_index)} rows)")
+    grid_search = GridSearchCV(
+        pipeline, param_grid, cv=cv,
+        scoring='neg_mean_absolute_error', n_jobs=1, verbose=2,
+    )
     
     grid_search.fit(X_clean, y_clean)
     
@@ -93,6 +93,7 @@ def main():
             'generated_at': datetime.now().isoformat(),
             'data_rows': len(X_clean),
             'n_combinations': len(grid_search.cv_results_['params'])
+            ,'validation': 'race-grouped expanding window with one-event embargo'
         },
         'best_params': grid_search.best_params_,
         'best_mae': float(-grid_search.best_score_),

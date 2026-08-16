@@ -2,8 +2,8 @@
 """
 Train Position Group ensemble model (ROADMAP-3A).
 
-Uses 5-fold GroupKFold CV (grouped by season) to compute an honest OOF MAE,
-then refits the final model on all data.  Saved artifact is loaded by the
+Uses five embargoed expanding-window race-event folds for development and an
+untouched final-season score, then refits the final model on all data. Saved artifact is loaded by the
 Streamlit UI via load_pretrained_model() at startup — no live retraining needed.
 
 Run via GitHub Actions or locally:
@@ -33,6 +33,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 import json_helpers
 from model_artifacts import build_data_fingerprint, stamp_artifact
+from f1bet.artifacts import save_training_manifest
 
 
 def train_position_group():
@@ -77,7 +78,7 @@ def train_position_group():
 
     print("\n" + "-" * 60)
     print("Training Position Group Ensemble")
-    print("  • 5-fold GroupKFold CV  (grouped by grandPrixYear)")
+    print("  • 5-fold expanding-window CV (race-grouped, one-event embargo)")
     print("  • 20 sub-model fits during CV + 4 final fits on ALL data")
     print("  • Expected runtime: 5-10 min on GitHub-hosted runner")
     print("-" * 60)
@@ -104,7 +105,7 @@ def train_position_group():
     pkl_path = output_dir / 'position_model.pkl'
     with open(pkl_path, 'wb') as f:
         pickle.dump(artifact, f)
-    print(f"[OK] Position Group model saved → {pkl_path}  (OOF MAE: {mae:.4f})")
+    print(f"[OK] Position Group model saved -> {pkl_path}  (final-season MAE: {mae:.4f})")
 
     metadata = stamp_artifact({
         'cache_version': CACHE_VERSION,
@@ -116,10 +117,17 @@ def train_position_group():
         },
     }, analysis_fingerprint)
     json_helpers.safe_dump(metadata, output_dir / 'metadata.json', indent=2)
+    save_training_manifest(
+        destination=output_dir / 'manifest.json',
+        model_name='position', model_version=f'position-group-{CACHE_VERSION}', estimator='Position Group',
+        preprocessor=preprocessor, training_frame=data,
+        data_path=Path(DATA_DIR) / 'f1ForAnalysis.csv',
+        metrics={'mae': float(mae), 'mse': float(mse), 'r2': float(r2)},
+    )
 
     print("\n" + "=" * 60)
     print("Position Group Training Complete!")
-    print(f"  OOF MAE  : {mae:.4f}")
+    print(f"  Final MAE: {mae:.4f}")
     print(f"  R²       : {r2:.4f}")
     print(f"  Output   : {output_dir.absolute()}")
     print("=" * 60)

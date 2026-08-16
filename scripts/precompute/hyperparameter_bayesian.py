@@ -20,7 +20,7 @@ warnings.filterwarnings("ignore")
 import numpy as np
 import pandas as pd
 import optuna
-from sklearn.model_selection import cross_val_score, GroupKFold
+from sklearn.model_selection import cross_val_score
 from sklearn.pipeline import Pipeline
 from xgboost import XGBRegressor
 
@@ -28,9 +28,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 # helper for robust json serialization of numpy/pandas scalars used by precompute scripts
 import json_helpers
+from f1bet.validation import sklearn_model_selection_cv
 
 
-def optimize_xgboost(X, y, season_groups, n_trials=100):
+def optimize_xgboost(X, y, cv, n_trials=100):
     """Optimize XGBoost hyperparameters using Optuna."""
     from raceAnalysis import get_preprocessor_position
     
@@ -64,12 +65,10 @@ def optimize_xgboost(X, y, season_groups, n_trials=100):
             ))
         ])
         
-        if season_groups is not None:
-            cv = GroupKFold(n_splits=5)
-            scores = cross_val_score(pipeline, X, y, cv=cv, groups=season_groups, 
-                                     scoring='neg_mean_absolute_error', n_jobs=1)
-        else:
-            scores = cross_val_score(pipeline, X, y, cv=5, scoring='neg_mean_absolute_error', n_jobs=1)
+        scores = cross_val_score(
+            pipeline, X, y, cv=cv,
+            scoring='neg_mean_absolute_error', n_jobs=1,
+        )
         
         return -scores.mean()
     
@@ -87,7 +86,7 @@ def optimize_xgboost(X, y, season_groups, n_trials=100):
     }
 
 
-def optimize_lightgbm(X, y, season_groups, n_trials=100):
+def optimize_lightgbm(X, y, cv, n_trials=100):
     """Optimize LightGBM hyperparameters."""
     from lightgbm import LGBMRegressor
     from raceAnalysis import get_preprocessor_position
@@ -117,12 +116,10 @@ def optimize_lightgbm(X, y, season_groups, n_trials=100):
             ))
         ])
         
-        if season_groups is not None:
-            cv = GroupKFold(n_splits=5)
-            scores = cross_val_score(pipeline, X, y, cv=cv, groups=season_groups,
-                                     scoring='neg_mean_absolute_error', n_jobs=1)
-        else:
-            scores = cross_val_score(pipeline, X, y, cv=5, scoring='neg_mean_absolute_error', n_jobs=1)
+        scores = cross_val_score(
+            pipeline, X, y, cv=cv,
+            scoring='neg_mean_absolute_error', n_jobs=1,
+        )
         
         return -scores.mean()
     
@@ -157,11 +154,13 @@ def main():
     mask = y.notnull() & np.isfinite(y)
     X_clean, y_clean = X[mask], y[mask]
     
-    # Get season groups for stratified CV
-    season_groups = data.loc[y_clean.index, 'year'] if 'year' in data.columns else None
+    cv, final_test_index, final_test_season = sklearn_model_selection_cv(
+        data.loc[y_clean.index], n_splits=5, embargo_events=1
+    )
     
     print(f"Data shape: {X_clean.shape}")
     print(f"Trials per model: {args.n_trials}")
+    print(f"Untouched final season: {final_test_season} ({len(final_test_index)} rows)")
     
     results = {
         'metadata': {
@@ -176,14 +175,14 @@ def main():
         print("\n" + "-" * 60)
         print("XGBoost Optimization")
         print("-" * 60)
-        results['optimizations']['xgboost'] = optimize_xgboost(X_clean, y_clean, season_groups, args.n_trials)
+        results['optimizations']['xgboost'] = optimize_xgboost(X_clean, y_clean, cv, args.n_trials)
         print(f"  [OK] Best MAE: {results['optimizations']['xgboost']['best_mae']:.4f}")
     
     if 'lightgbm' in args.model_types:
         print("\n" + "-" * 60)
         print("LightGBM Optimization")
         print("-" * 60)
-        results['optimizations']['lightgbm'] = optimize_lightgbm(X_clean, y_clean, season_groups, args.n_trials)
+        results['optimizations']['lightgbm'] = optimize_lightgbm(X_clean, y_clean, cv, args.n_trials)
         print(f"  [OK] Best MAE: {results['optimizations']['lightgbm']['best_mae']:.4f}")
     
     # Save results

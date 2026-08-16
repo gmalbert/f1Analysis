@@ -24,7 +24,6 @@ logging.getLogger("streamlit.runtime").setLevel(logging.ERROR)
 import numpy as np
 import pandas as pd
 from sklearn.metrics import mean_absolute_error
-from sklearn.model_selection import train_test_split
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
@@ -134,8 +133,14 @@ def main():
     X = X.loc[valid_idx]
     y = y.loc[valid_idx].astype(np.float64)
     
-    # Do train/test split ONCE for entire script (same as UI)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    # Latest complete season is a single untouched final block.
+    from f1bet.validation import final_season_holdout_indices
+    train_index, test_index, _, final_test_season = final_season_holdout_indices(
+        data.loc[X.index], embargo_events=1
+    )
+    print(f"Final untouched season: {final_test_season} ({len(test_index)} rows)")
+    X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+    y_train, y_test = y.iloc[train_index], y.iloc[test_index]
     
     # Load or train model
     model_path = Path('data_files/models/position_model.pkl')
