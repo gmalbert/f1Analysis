@@ -80,7 +80,7 @@ def _compute_mae_for_features(data: pd.DataFrame, features: list[str], target: s
     if not features:
         raise ValueError('No feature columns found in dataset.')
 
-    required = features + [target, 'grandPrixYear']
+    required = features + [target, 'grandPrixYear', 'round']
     valid = data[required].copy()
     valid[target] = pd.to_numeric(valid[target], errors='coerce')
     valid = valid.dropna(subset=[target])
