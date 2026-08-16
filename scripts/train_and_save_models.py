@@ -144,25 +144,53 @@ def train_all_models():
     # Train DNF prediction model
     print("\n2. Training DNF prediction model...")
     dnf_model = train_and_evaluate_dnf_model(data, CACHE_VERSION)
-    
+    dnf_preprocessor = dnf_model.named_steps['preprocessor']
+
+    dnf_artifact = stamp_artifact(
+        {'model': dnf_model, 'preprocessor': dnf_preprocessor, 'cache_version': CACHE_VERSION},
+        analysis_fingerprint,
+    )
     with open(models_dir / 'dnf_model.pkl', 'wb') as f:
-        pickle.dump(stamp_artifact(
-            {'model': dnf_model, 'cache_version': CACHE_VERSION},
-            analysis_fingerprint,
-        ), f)
+        pickle.dump(dnf_artifact, f)
+    save_training_manifest(
+        destination=models_dir / 'dnf_manifest.json',
+        model_name='dnf', model_version=f'logistic-{CACHE_VERSION}',
+        estimator='LogisticRegression',
+        preprocessor=dnf_preprocessor, training_frame=data,
+        data_path=Path(DATA_DIR) / 'f1ForAnalysis.csv',
+        metrics={}, target='DNF',
+    )
     print("   [OK] Saved DNF model")
     
     # Train safety car prediction model
     if safety_cars is not None:
         print("\n3. Training safety car prediction model...")
         safetycar_model = train_and_evaluate_safetycar_model(safety_cars, CACHE_VERSION)
-        
+        safetycar_preprocessor = safetycar_model.named_steps['preprocessor']
+
         safetycar_fingerprint = build_data_fingerprint(safety_cars_file)
+        sc_artifact = stamp_artifact(
+            {'model': safetycar_model, 'preprocessor': safetycar_preprocessor, 'cache_version': CACHE_VERSION},
+            safetycar_fingerprint,
+        )
         with open(models_dir / 'safetycar_model.pkl', 'wb') as f:
-            pickle.dump(stamp_artifact(
-                {'model': safetycar_model, 'cache_version': CACHE_VERSION},
-                safetycar_fingerprint,
-            ), f)
+            pickle.dump(sc_artifact, f)
+
+        sc_data = safety_cars.copy()
+        if 'round' not in sc_data:
+            sc_data['_sort_key'] = range(len(sc_data))
+            sc_data['round'] = (
+                sc_data.groupby('grandPrixYear', observed=True)
+                .cumcount() + 1
+            )
+        save_training_manifest(
+            destination=models_dir / 'safetycar_manifest.json',
+            model_name='safetycar', model_version=f'logistic-{CACHE_VERSION}',
+            estimator='LogisticRegression',
+            preprocessor=safetycar_preprocessor, training_frame=sc_data,
+            data_path=safety_cars_file,
+            metrics={}, target='SafetyCarStatus',
+        )
         print("   [OK] Saved safety car model")
     
     # Save metadata

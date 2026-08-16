@@ -2800,19 +2800,31 @@ def _load_pretrained_model_resource(
 
         artifact = dict(artifact)
         artifact['_artifact_path'] = str(model_file)
-        manifest_file = model_file.parent / 'manifest.json'
-        if manifest_file.exists() and model_name == 'position_model':
+        _manifest_names = {
+            'position_model': 'manifest.json',
+            'dnf_model': 'dnf_manifest.json',
+            'safetycar_model': 'safetycar_manifest.json',
+        }
+        manifest_name = _manifest_names.get(model_name)
+        if manifest_name:
+            models_root = Path(DATA_DIR) / 'models'
+            candidate = model_file.parent / manifest_name
+            manifest_file = candidate if candidate.exists() else models_root / manifest_name
+        else:
+            manifest_file = None
+        if manifest_file and manifest_file.exists():
             try:
                 from f1bet.artifacts import ModelManifest
                 manifest = ModelManifest.load(manifest_file)
-                preprocessor = artifact.get('preprocessor')
-                feature_names = tuple(str(value) for value in getattr(preprocessor, 'feature_names_in_', ()))
-                if manifest.schema_version != 'legacy-wide-v1':
-                    raise ValueError(f"unsupported schema {manifest.schema_version!r}")
                 if manifest.data_sha256 != data_fingerprint.get('data_sha256'):
                     raise ValueError('dataset SHA-256 mismatch')
-                if manifest.feature_names != feature_names:
-                    raise ValueError('feature order mismatch')
+                if model_name == 'position_model':
+                    preprocessor = artifact.get('preprocessor')
+                    feature_names = tuple(str(value) for value in getattr(preprocessor, 'feature_names_in_', ()))
+                    if manifest.schema_version != 'legacy-wide-v1':
+                        raise ValueError(f"unsupported schema {manifest.schema_version!r}")
+                    if manifest.feature_names != feature_names:
+                        raise ValueError('feature order mismatch')
                 artifact['_manifest_status'] = 'verified'
             except Exception as exc:
                 print(f"INFO: Ignoring model with incompatible manifest at {manifest_file}: {exc}")
