@@ -15,9 +15,8 @@ from typing import Any, Iterable, Mapping
 
 def sha256_file(path: str | Path) -> str:
     digest = sha256()
-    with Path(path).open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
+    data = Path(path).read_bytes()
+    digest.update(data.replace(b"\r\n", b"\n"))
     return digest.hexdigest()
 
 

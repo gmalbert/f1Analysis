@@ -12,17 +12,23 @@ FINGERPRINT_ALGORITHM = "sha256"
 
 
 def build_data_fingerprint(data_path: str | Path) -> dict[str, Any]:
-    """Return stable content metadata for a model's source dataset."""
+    """Return stable content metadata for a model's source dataset.
+
+    Line endings are normalized to LF before hashing so the digest is identical
+    across checkouts (.gitattributes ``text=auto`` stores LF but Windows working
+    copies may be CRLF) and therefore matches on GitHub Actions and Streamlit
+    Cloud as well as local Windows training runs.
+    """
     path = Path(data_path)
     digest = hashlib.sha256()
     with path.open("rb") as source:
-        for chunk in iter(lambda: source.read(1024 * 1024), b""):
-            digest.update(chunk)
+        data = source.read()
+    digest.update(data.replace(b"\r\n", b"\n"))
 
     return {
         "data_file": path.name,
         "data_sha256": digest.hexdigest(),
-        "data_size": path.stat().st_size,
+        "data_size": len(data.replace(b"\r\n", b"\n")),
         "fingerprint_algorithm": FINGERPRINT_ALGORITHM,
     }
 

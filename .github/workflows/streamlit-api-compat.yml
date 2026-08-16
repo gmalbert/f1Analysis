@@ -30,5 +30,8 @@ jobs:
       - name: Reject deprecated Streamlit keywords
         run: python scripts/check_streamlit_deprecations.py
 
+      - name: Install test dependencies
+        run: python -m pip install pandas numpy scipy scikit-learn requests pyyaml
+
       - name: Test model artifact and runtime cache policy
         run: python -m unittest discover -s tests
