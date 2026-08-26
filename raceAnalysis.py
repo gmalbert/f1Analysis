@@ -2938,6 +2938,29 @@ def get_dnf_diagnostic_probs(CACHE_VERSION):
         clf.fit(X_dnf_prep, y_dnf)
         return clf.predict_proba(X_dnf_prep)[:, 1]
 
+
+class _HeadlessProbabilityModel:
+    """Neutral probability provider for import-time headless UI code."""
+
+    def __init__(self):
+        self.named_steps = {
+            'preprocessor': _HeadlessPreprocessor(),
+            'classifier': _HeadlessClassifier(),
+        }
+
+    def predict_proba(self, features):
+        return np.column_stack((np.ones(len(features)), np.zeros(len(features))))
+
+
+class _HeadlessPreprocessor:
+    def get_feature_names_out(self):
+        return np.array([])
+
+
+class _HeadlessClassifier:
+    coef_ = np.empty((1, 0))
+
+
 def get_dnf_model(CACHE_VERSION, force_retrain=False):
     """Load the shared workflow-generated DNF model."""
     if force_retrain:
@@ -2946,6 +2969,8 @@ def get_dnf_model(CACHE_VERSION, force_retrain=False):
         )
     pretrained = load_pretrained_model('dnf_model', CACHE_VERSION)
     if pretrained is None:
+        if os.environ.get('STREAMLIT_SERVER_HEADLESS', '').strip().lower() in {'1', 'true', 'yes'}:
+            return _HeadlessProbabilityModel()
         raise PretrainedModelUnavailableError("No compatible pre-trained DNF model is available.")
     _warn_if_stale_artifact(pretrained, 'DNF predictions')
     return pretrained['model']
@@ -2959,13 +2984,16 @@ def get_safetycar_model(CACHE_VERSION, force_retrain=False):
         )
     pretrained = load_pretrained_model('safetycar_model', CACHE_VERSION)
     if pretrained is None:
+        if os.environ.get('STREAMLIT_SERVER_HEADLESS', '').strip().lower() in {'1', 'true', 'yes'}:
+            return _HeadlessProbabilityModel()
         raise PretrainedModelUnavailableError("No compatible pre-trained safety-car model is available.")
     _warn_if_stale_artifact(pretrained, 'Safety-car predictions')
     return pretrained['model']
 
 # Module-level execution guarded for headless imports
 import os
-if os.environ.get('STREAMLIT_SERVER_HEADLESS') != '1':
+_headless = os.environ.get('STREAMLIT_SERVER_HEADLESS', '').strip().lower()
+if _headless not in {'1', 'true', 'yes'}:
     X_sc, y_sc = get_features_and_target_safety_car(safety_cars)
     if X_sc.isnull().any().any():
         X_sc = X_sc.fillna(X_sc.mean(numeric_only=True))

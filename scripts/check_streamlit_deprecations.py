@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SKIP_DIRS = {".git", ".venv", ".venv-mac", "__pycache__"}
+SKIP_DIRS = {".git", ".venv", ".venv-mac", "venv", "__pycache__"}
 FORBIDDEN_KEYWORDS = {"use_container_width"}
 
 

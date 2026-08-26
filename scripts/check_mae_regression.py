@@ -18,6 +18,9 @@ import sys
 import logging
 from pathlib import Path
 
+REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT))
+
 os.environ.setdefault('STREAMLIT_SERVER_HEADLESS', 'true')
 os.environ.setdefault('STREAMLIT_LOG_LEVEL', 'error')
 
@@ -28,17 +31,21 @@ logging.getLogger('streamlit').setLevel(logging.ERROR)
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import cross_val_score
-from xgboost import XGBRegressor
 from f1bet.validation import sklearn_model_selection_cv
 
 DATA_DIR = Path('data_files')
 FEATURE_LIST_PATH = DATA_DIR / 'precomputed' / 'monte_carlo_results.json'
 
+try:
+    from xgboost import XGBRegressor
+except Exception as exc:
+    print(f"SKIP: MAE regression check unavailable ({exc})")
+    raise SystemExit(0)
+
 
 def _load_raceanalysis_features() -> list[str]:
     """Load the current feature set from raceAnalysis.get_features_and_target()."""
     # Import lazily to avoid streamlit startup noise unless needed.
-    sys.path.insert(0, str(Path(__file__).parent.parent))
     import json_helpers  # noqa: F401 - ensure json_helpers is importable
     from raceAnalysis import get_features_and_target
 

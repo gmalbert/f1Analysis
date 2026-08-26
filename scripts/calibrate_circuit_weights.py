@@ -104,7 +104,7 @@ DEFAULT_WEIGHTS: dict[str, dict] = {
 }
 
 # ── Data loading ─────────────────────────────────────────────────────────────
-print("Loading f1ForAnalysis.csv …", flush=True)
+print("Loading f1ForAnalysis.csv...", flush=True)
 df = pd.read_csv(DATA_DIR / "f1ForAnalysis.csv", sep="\t", low_memory=False)
 df = df.dropna(subset=[TARGET])
 df[TARGET] = pd.to_numeric(df[TARGET], errors="coerce")
@@ -237,7 +237,7 @@ def collect_oof_predictions():
             y[valid], circuit_types[valid])
 
 
-print(f"Collecting OOF predictions ({N_SPLITS} folds, {N_TREES} trees each) …")
+print(f"Collecting OOF predictions ({N_SPLITS} folds, {N_TREES} trees each)...")
 t_start = time.perf_counter()
 p_xgb, p_lgbm, p_cat, y_oof, ct_oof = collect_oof_predictions()
 print(f"OOF collection done in {time.perf_counter()-t_start:.1f}s\n")
@@ -277,7 +277,7 @@ for ct in all_types:
     mask = ct_oof == ct
     n_rows = mask.sum()
     if n_rows < 30:
-        print(f"  {ct:12s}  SKIP (only {n_rows} OOF rows) → using 'mixed' fallback")
+        print(f"  {ct:12s}  SKIP (only {n_rows} OOF rows) - using 'mixed' fallback")
         calibrated[ct] = calibrate_weights(ct_oof == "mixed") if any(ct_oof == "mixed") else {"xgb": 1/3, "lgbm": 1/3, "cat": 1/3}
         continue
 
@@ -296,7 +296,7 @@ for ct in all_types:
 # Ensure all four canonical types are present
 for ct in ("street", "high_speed", "technical", "mixed"):
     if ct not in calibrated:
-        print(f"  {ct:12s}  FALLBACK — no OOF rows found, using default hardcoded weights")
+        print(f"  {ct:12s}  FALLBACK - no OOF rows found, using default hardcoded weights")
         calibrated[ct] = DEFAULT_WEIGHTS[ct]
 
 # ── Overall OOF MAE comparison ────────────────────────────────────────────────
