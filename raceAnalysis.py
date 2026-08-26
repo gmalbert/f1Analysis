@@ -2816,8 +2816,10 @@ def _load_pretrained_model_resource(
             try:
                 from f1bet.artifacts import ModelManifest
                 manifest = ModelManifest.load(manifest_file)
-                if manifest.data_sha256 != data_fingerprint.get('data_sha256'):
-                    raise ValueError('dataset SHA-256 mismatch')
+                # A changed dataset makes an artifact stale, not structurally
+                # incompatible.  Keep it eligible for the stale-artifact
+                # fallback below while the training workflow rebuilds it.
+                manifest_is_stale = manifest.data_sha256 != data_fingerprint.get('data_sha256')
                 if model_name == 'position_model':
                     preprocessor = artifact.get('preprocessor')
                     feature_names = tuple(str(value) for value in getattr(preprocessor, 'feature_names_in_', ()))
@@ -2825,7 +2827,7 @@ def _load_pretrained_model_resource(
                         raise ValueError(f"unsupported schema {manifest.schema_version!r}")
                     if manifest.feature_names != feature_names:
                         raise ValueError('feature order mismatch')
-                artifact['_manifest_status'] = 'verified'
+                artifact['_manifest_status'] = 'stale' if manifest_is_stale else 'verified'
             except Exception as exc:
                 print(f"INFO: Ignoring model with incompatible manifest at {manifest_file}: {exc}")
                 continue
