@@ -1,1133 +1,1121 @@
 {
   "metadata": {
-    "generated_at": "2026-08-30T05:04:56.949861",
+    "generated_at": "2026-08-30T06:19:23.274856",
     "n_samples_analyzed": 1000,
     "total_features": 447
   },
   "feature_importance": [
     {
       "feature": "race_pace_vs_median",
-      "mean_abs_shap": 1.6644293204162275
+      "mean_abs_shap": 1.8271944741497053
     },
     {
       "feature": "avg_final_position_per_track",
-      "mean_abs_shap": 0.9756848221991209
+      "mean_abs_shap": 0.8085099280862196
     },
     {
       "feature": "grid_x_avg_pit_time",
-      "mean_abs_shap": 0.4751169056380168
+      "mean_abs_shap": 0.49607365800114345
     },
     {
       "feature": "avg_final_position_per_track_constructor",
-      "mean_abs_shap": 0.4053695410758258
-    },
-    {
-      "feature": "last_final_position_per_track",
-      "mean_abs_shap": 0.31941242574735074
-    },
-    {
-      "feature": "championship_position",
-      "mean_abs_shap": 0.2960174816498651
+      "mean_abs_shap": 0.38337499146026105
     },
     {
       "feature": "podium_form_3_races",
-      "mean_abs_shap": 0.25009378892006334
+      "mean_abs_shap": 0.3075451456064826
     },
     {
-      "feature": "delta_from_race_avg",
-      "mean_abs_shap": 0.21590989131350072
-    },
-    {
-      "feature": "avgLapPace",
-      "mean_abs_shap": 0.20969575260982384
+      "feature": "championship_position",
+      "mean_abs_shap": 0.2957445111060515
     },
     {
       "feature": "qualPos_x_avg_practicePos",
-      "mean_abs_shap": 0.19903141111312445
+      "mean_abs_shap": 0.26928108326485367
     },
     {
-      "feature": "pit_stop_rate",
-      "mean_abs_shap": 0.19524399808635937
+      "feature": "delta_from_race_avg",
+      "mean_abs_shap": 0.22444377564722656
+    },
+    {
+      "feature": "avgLapPace",
+      "mean_abs_shap": 0.21661822870932504
     },
     {
       "feature": "driver_constructor_avg_final_position",
-      "mean_abs_shap": 0.17614435397279446
+      "mean_abs_shap": 0.19219380694851274
     },
     {
-      "feature": "head_to_head_teammate_performance_delta",
-      "mean_abs_shap": 0.15015168234053997
+      "feature": "pit_stop_rate",
+      "mean_abs_shap": 0.18675731592362282
+    },
+    {
+      "feature": "last_final_position_per_track",
+      "mean_abs_shap": 0.16363379729818553
     },
     {
       "feature": "qual_vs_worst_at_track",
-      "mean_abs_shap": 0.1491720491860062
+      "mean_abs_shap": 0.15910441545394713
     },
     {
-      "feature": "totalStopTime",
-      "mean_abs_shap": 0.14213266781363632
+      "feature": "head_to_head_teammate_performance_delta",
+      "mean_abs_shap": 0.14321285439643552
     },
     {
       "feature": "delta_lap_20",
-      "mean_abs_shap": 0.13824413129584862
+      "mean_abs_shap": 0.13898796812797662
     },
     {
       "feature": "championship_position_pressure_factor",
-      "mean_abs_shap": 0.11963616527337571
-    },
-    {
-      "feature": "qual_vs_best_at_track",
-      "mean_abs_shap": 0.11372095617763696
+      "mean_abs_shap": 0.1383325988184662
     },
     {
       "feature": "practice_position_vs_teammate_historical",
-      "mean_abs_shap": 0.10716220072135332
+      "mean_abs_shap": 0.10737605610992759
     },
     {
       "feature": "recent_form_5_races",
-      "mean_abs_shap": 0.0847252647062764
+      "mean_abs_shap": 0.09740697296857835
     },
     {
-      "feature": "Delta_FP3",
-      "mean_abs_shap": 0.08377728699170986
-    },
-    {
-      "feature": "last_race_vs_track_avg",
-      "mean_abs_shap": 0.08275025943208018
-    },
-    {
-      "feature": "DirtyAirAvg_FP2",
-      "mean_abs_shap": 0.08085198391564198
-    },
-    {
-      "feature": "CleanAirAvg_FP1",
-      "mean_abs_shap": 0.07558459576540627
-    },
-    {
-      "feature": "qual_vs_constructor_avg_at_track",
-      "mean_abs_shap": 0.07538214210644362
-    },
-    {
-      "feature": "driver_avg_qual_pos_at_track",
-      "mean_abs_shap": 0.07441177081689243
-    },
-    {
-      "feature": "qual_vs_track_avg",
-      "mean_abs_shap": 0.07424482947830108
-    },
-    {
-      "feature": "practice_position_percentile_vs_constructor",
-      "mean_abs_shap": 0.07397573833595966
-    },
-    {
-      "feature": "pit_count_x_pit_delta",
-      "mean_abs_shap": 0.07155812582876525
-    },
-    {
-      "feature": "constructor_podium_ratio",
-      "mean_abs_shap": 0.07141387615464624
+      "feature": "totalStopTime",
+      "mean_abs_shap": 0.09416148048380853
     },
     {
       "feature": "driverFastestPracticeLap_sec",
-      "mean_abs_shap": 0.06988007902428502
+      "mean_abs_shap": 0.08920232217037113
     },
     {
-      "feature": "averageStopTime",
-      "mean_abs_shap": 0.0684008676057681
-    },
-    {
-      "feature": "driver_rank_x_years_active",
-      "mean_abs_shap": 0.06764934695856654
-    },
-    {
-      "feature": "track_race_pace_std",
-      "mean_abs_shap": 0.06360016520507628
-    },
-    {
-      "feature": "driver_avg_num_stints",
-      "mean_abs_shap": 0.06330483264653015
-    },
-    {
-      "feature": "top_speed_x_turns",
-      "mean_abs_shap": 0.05898684241435255
-    },
-    {
-      "feature": "theoretical_best_lap",
-      "mean_abs_shap": 0.05897095483541493
-    },
-    {
-      "feature": "races_with_constructor",
-      "mean_abs_shap": 0.05865226782243699
-    },
-    {
-      "feature": "constructor_recent_form_5_races",
-      "mean_abs_shap": 0.057791479338333035
-    },
-    {
-      "feature": "pressure_x_recent_form",
-      "mean_abs_shap": 0.05755914997514331
+      "feature": "qual_vs_best_at_track",
+      "mean_abs_shap": 0.08647490698099133
     },
     {
       "feature": "delta_lap_5",
-      "mean_abs_shap": 0.057328559167031175
+      "mean_abs_shap": 0.08621225476181144
     },
     {
-      "feature": "constructor_form_ratio",
-      "mean_abs_shap": 0.056290692518651424
+      "feature": "DirtyAirAvg_FP2",
+      "mean_abs_shap": 0.08139483010082038
     },
     {
-      "feature": "grid_position_percentile",
-      "mean_abs_shap": 0.05340628719539378
+      "feature": "track_race_pace_std",
+      "mean_abs_shap": 0.08017828324660657
     },
     {
-      "feature": "qualifying_position_vs_constructor_median_at_track",
-      "mean_abs_shap": 0.051670664021745284
+      "feature": "driver_avg_qual_pos_at_track",
+      "mean_abs_shap": 0.07747953898793786
     },
     {
-      "feature": "constructor_avg_practice_pos_at_track",
-      "mean_abs_shap": 0.05007207523696124
+      "feature": "practice_position_percentile_vs_constructor",
+      "mean_abs_shap": 0.07428259215059224
     },
     {
-      "feature": "constructor_reliability_x_form",
-      "mean_abs_shap": 0.049173889295570594
+      "feature": "driver_avg_num_stints",
+      "mean_abs_shap": 0.07167532726412168
     },
     {
-      "feature": "driver_performance_at_circuit_type",
-      "mean_abs_shap": 0.04873430466316634
+      "feature": "Delta_FP3",
+      "mean_abs_shap": 0.07066497662562178
     },
     {
-      "feature": "recent_podium_streak",
-      "mean_abs_shap": 0.04798875111229716
+      "feature": "qual_vs_constructor_avg_at_track",
+      "mean_abs_shap": 0.06883789947666225
     },
     {
-      "feature": "fp3_position_percentile",
-      "mean_abs_shap": 0.04671416264891163
+      "feature": "driver_rank_x_years_active",
+      "mean_abs_shap": 0.06678739877825135
     },
     {
-      "feature": "best_sector3_sec",
-      "mean_abs_shap": 0.04655197607912122
+      "feature": "theoretical_best_lap",
+      "mean_abs_shap": 0.06496082161925729
     },
     {
-      "feature": "fp3Interval",
-      "mean_abs_shap": 0.04536410498949705
+      "feature": "qual_vs_track_avg",
+      "mean_abs_shap": 0.06385977326727008
     },
     {
-      "feature": "last_final_position_per_track_constructor",
-      "mean_abs_shap": 0.0453263028368354
-    },
-    {
-      "feature": "qual_vs_constructor_avg",
-      "mean_abs_shap": 0.043983792728558194
-    },
-    {
-      "feature": "pit_lane_time_constant",
-      "mean_abs_shap": 0.04197149204385936
-    },
-    {
-      "feature": "qualPos_x_last_practicePos",
-      "mean_abs_shap": 0.04186097296830267
-    },
-    {
-      "feature": "practice_position_std",
-      "mean_abs_shap": 0.040434908309951424
-    },
-    {
-      "feature": "practice_position_vs_constructor_recent_form",
-      "mean_abs_shap": 0.03929316312000156
-    },
-    {
-      "feature": "driver_race_pace_std",
-      "mean_abs_shap": 0.03884967603627594
-    },
-    {
-      "feature": "constructor_recent_x_track_exp",
-      "mean_abs_shap": 0.038403823436796665
-    },
-    {
-      "feature": "finishing_position_std_driver",
-      "mean_abs_shap": 0.03831533719301226
-    },
-    {
-      "feature": "track_exp_x_qual",
-      "mean_abs_shap": 0.038182693929597805
-    },
-    {
-      "feature": "practice_time_improvement_1T_2T",
-      "mean_abs_shap": 0.038097383945435326
-    },
-    {
-      "feature": "practice_improvement_rate",
-      "mean_abs_shap": 0.03794978246474635
-    },
-    {
-      "feature": "qual_lap_time_consistency",
-      "mean_abs_shap": 0.03787560775093735
-    },
-    {
-      "feature": "driver_avg_completion_pct",
-      "mean_abs_shap": 0.03745045998692511
-    },
-    {
-      "feature": "best_s2_sec",
-      "mean_abs_shap": 0.03729645841903988
-    },
-    {
-      "feature": "qual_gap_to_teammate",
-      "mean_abs_shap": 0.03699033837919126
-    },
-    {
-      "feature": "qualifying_position_percentile_vs_constructor",
-      "mean_abs_shap": 0.03650593899907546
-    },
-    {
-      "feature": "qualifying_lap_time_delta_to_constructor_best",
-      "mean_abs_shap": 0.036138671341352124
-    },
-    {
-      "feature": "qualifying_position_vs_field_recent_form",
-      "mean_abs_shap": 0.03594273292087024
-    },
-    {
-      "feature": "practice_to_qual_improvement_rate",
-      "mean_abs_shap": 0.03567146419454367
-    },
-    {
-      "feature": "recent_vs_season",
-      "mean_abs_shap": 0.03546811975298917
-    },
-    {
-      "feature": "fp3Gap",
-      "mean_abs_shap": 0.03482470831628886
-    },
-    {
-      "feature": "constructor_recent_form_3_races",
-      "mean_abs_shap": 0.03453903398364778
-    },
-    {
-      "feature": "practice_gap_to_teammate",
-      "mean_abs_shap": 0.033506276282668085
-    },
-    {
-      "feature": "practice_qual_consistency_5r",
-      "mean_abs_shap": 0.03270566843226555
-    },
-    {
-      "feature": "practice_position_vs_field_recent_form",
-      "mean_abs_shap": 0.032056256948411445
-    },
-    {
-      "feature": "top_speed_rank",
-      "mean_abs_shap": 0.03167447689995161
-    },
-    {
-      "feature": "grid_penalty_x_constructor",
-      "mean_abs_shap": 0.0314849742970429
-    },
-    {
-      "feature": "teammate_qual_delta",
-      "mean_abs_shap": 0.030612766490876665
-    },
-    {
-      "feature": "courseLength",
-      "mean_abs_shap": 0.030590858900547004
-    },
-    {
-      "feature": "qual_vs_track_median",
-      "mean_abs_shap": 0.030483395976573246
-    },
-    {
-      "feature": "driver_practice_improvement_3r",
-      "mean_abs_shap": 0.030435806517675575
-    },
-    {
-      "feature": "constructor_practice_improvement_3r",
-      "mean_abs_shap": 0.030278098975121973
-    },
-    {
-      "feature": "q3_pos",
-      "mean_abs_shap": 0.029843673539161664
-    },
-    {
-      "feature": "grandPrixLaps",
-      "mean_abs_shap": 0.029446758906100903
-    },
-    {
-      "feature": "driver_teammate_practice_gap_3r",
-      "mean_abs_shap": 0.028999129974097038
-    },
-    {
-      "feature": "practice_consistency_vs_teammate",
-      "mean_abs_shap": 0.02852417559913009
-    },
-    {
-      "feature": "constructor_avg_qual_pos_at_track",
-      "mean_abs_shap": 0.02809089084006846
-    },
-    {
-      "feature": "delta_lap_20_historical",
-      "mean_abs_shap": 0.027840170343779023
-    },
-    {
-      "feature": "q3_sec",
-      "mean_abs_shap": 0.027376217829436028
-    },
-    {
-      "feature": "practice_std_x_qual",
-      "mean_abs_shap": 0.026660331574268618
-    },
-    {
-      "feature": "sector3_std",
-      "mean_abs_shap": 0.026501620296936017
-    },
-    {
-      "feature": "grandPrixName_Spanish Grand Prix",
-      "mean_abs_shap": 0.02648880820423365
-    },
-    {
-      "feature": "grandPrixName_Hungarian Grand Prix",
-      "mean_abs_shap": 0.025350872680544853
-    },
-    {
-      "feature": "constructor_dnf_rate_5_races",
-      "mean_abs_shap": 0.025332594926096443
-    },
-    {
-      "feature": "tire_deg_x_track_deg",
-      "mean_abs_shap": 0.024952265631430756
-    },
-    {
-      "feature": "practice_position_vs_field_median_at_track",
-      "mean_abs_shap": 0.024625929844379404
-    },
-    {
-      "feature": "driver_track_practice_avg",
-      "mean_abs_shap": 0.02456048190817234
-    },
-    {
-      "feature": "fp1Interval",
-      "mean_abs_shap": 0.02404957916717982
-    },
-    {
-      "feature": "recent_form_ratio",
-      "mean_abs_shap": 0.02351092795719746
-    },
-    {
-      "feature": "constructor_qual_consistency_5r",
-      "mean_abs_shap": 0.023381313924887247
-    },
-    {
-      "feature": "sector2_std",
-      "mean_abs_shap": 0.0233095017764717
-    },
-    {
-      "feature": "driver_positionsGained_3_races",
-      "mean_abs_shap": 0.02327818858958784
-    },
-    {
-      "feature": "SpeedFL_mph",
-      "mean_abs_shap": 0.023236863841675254
-    },
-    {
-      "feature": "driver_fuel_corrected_pace",
-      "mean_abs_shap": 0.02321883696597066
-    },
-    {
-      "feature": "driver_avg_practice_pos_at_track",
-      "mean_abs_shap": 0.02317317137327045
-    },
-    {
-      "feature": "constructor_avg_practice_position",
-      "mean_abs_shap": 0.02312679576837697
-    },
-    {
-      "feature": "track_tire_degradation",
-      "mean_abs_shap": 0.022908526407741013
-    },
-    {
-      "feature": "fp2Gap",
-      "mean_abs_shap": 0.022892138860747254
-    },
-    {
-      "feature": "qual_improvement_vs_teammate",
-      "mean_abs_shap": 0.022867902305722238
-    },
-    {
-      "feature": "driver_podium_rate_at_track",
-      "mean_abs_shap": 0.022641345324367332
-    },
-    {
-      "feature": "wins_last_5_races",
-      "mean_abs_shap": 0.022633646423253207
-    },
-    {
-      "feature": "delta_lap_15",
-      "mean_abs_shap": 0.022364800737798198
-    },
-    {
-      "feature": "total_experience",
-      "mean_abs_shap": 0.022361003752797877
-    },
-    {
-      "feature": "qual_to_final_delta_3yr",
-      "mean_abs_shap": 0.02191842697132377
-    },
-    {
-      "feature": "qualifying_position_vs_constructor_recent_form",
-      "mean_abs_shap": 0.020967797392606773
-    },
-    {
-      "feature": "delta_lap_2_historical",
-      "mean_abs_shap": 0.0206118145883083
-    },
-    {
-      "feature": "pit_delta_x_driver_age",
-      "mean_abs_shap": 0.020491378310509005
-    },
-    {
-      "feature": "positions_gained_first_lap_pct",
-      "mean_abs_shap": 0.020471355770528263
-    },
-    {
-      "feature": "qualifying_lap_time_consistency_vs_field",
-      "mean_abs_shap": 0.02032324383184316
-    },
-    {
-      "feature": "sector1_std",
-      "mean_abs_shap": 0.02026801170706746
-    },
-    {
-      "feature": "practice_x_safetycar",
-      "mean_abs_shap": 0.020152983797341553
-    },
-    {
-      "feature": "SpeedI1_mph",
-      "mean_abs_shap": 0.0200037801161408
+      "feature": "averageStopTime",
+      "mean_abs_shap": 0.06377095757452772
     },
     {
       "feature": "qualifying_improvement_vs_constructor_historical",
-      "mean_abs_shap": 0.019938224937021756
+      "mean_abs_shap": 0.06274876340851185
     },
     {
-      "feature": "fp1_lap_delta_vs_best",
-      "mean_abs_shap": 0.01958649645745753
+      "feature": "last_race_vs_track_avg",
+      "mean_abs_shap": 0.05916496310597284
     },
     {
-      "feature": "driver_positionsGained_5_races",
-      "mean_abs_shap": 0.019447395804524443
+      "feature": "top_speed_x_turns",
+      "mean_abs_shap": 0.057433414093009165
     },
     {
-      "feature": "race_pace_consistency",
-      "mean_abs_shap": 0.019404391509632118
+      "feature": "pressure_x_recent_form",
+      "mean_abs_shap": 0.055904240837972595
     },
     {
-      "feature": "practice_vs_worst_at_track",
-      "mean_abs_shap": 0.01935452836230399
+      "feature": "grid_position_percentile",
+      "mean_abs_shap": 0.054958152669109396
     },
     {
-      "feature": "practice_to_qualifying_delta_vs_constructor_historical",
-      "mean_abs_shap": 0.019033481479436166
+      "feature": "constructor_podium_ratio",
+      "mean_abs_shap": 0.05491554634430214
+    },
+    {
+      "feature": "races_with_constructor",
+      "mean_abs_shap": 0.052888038785115346
+    },
+    {
+      "feature": "recent_podium_streak",
+      "mean_abs_shap": 0.05258362319413574
+    },
+    {
+      "feature": "constructor_form_ratio",
+      "mean_abs_shap": 0.05132420618077738
+    },
+    {
+      "feature": "best_sector3_sec",
+      "mean_abs_shap": 0.050765597883914645
+    },
+    {
+      "feature": "constructor_avg_practice_pos_at_track",
+      "mean_abs_shap": 0.049979869211290585
+    },
+    {
+      "feature": "pit_count_x_pit_delta",
+      "mean_abs_shap": 0.048616698218206855
+    },
+    {
+      "feature": "CleanAirAvg_FP1",
+      "mean_abs_shap": 0.04784603887370327
+    },
+    {
+      "feature": "practice_position_vs_constructor_recent_form",
+      "mean_abs_shap": 0.04553251288085005
+    },
+    {
+      "feature": "finishing_position_std_driver",
+      "mean_abs_shap": 0.04425824830532074
+    },
+    {
+      "feature": "fp3Interval",
+      "mean_abs_shap": 0.04322474231694363
+    },
+    {
+      "feature": "grandPrixLaps",
+      "mean_abs_shap": 0.0419637476924807
+    },
+    {
+      "feature": "constructor_recent_form_5_races",
+      "mean_abs_shap": 0.04175062706603204
+    },
+    {
+      "feature": "fp3_position_percentile",
+      "mean_abs_shap": 0.040321060070861156
+    },
+    {
+      "feature": "qual_vs_constructor_avg",
+      "mean_abs_shap": 0.03916835878714925
+    },
+    {
+      "feature": "constructor_reliability_x_form",
+      "mean_abs_shap": 0.039005025302339326
+    },
+    {
+      "feature": "practice_gap_to_teammate",
+      "mean_abs_shap": 0.03754588476077188
+    },
+    {
+      "feature": "practice_position_vs_field_recent_form",
+      "mean_abs_shap": 0.037450753726623966
+    },
+    {
+      "feature": "qualPos_x_last_practicePos",
+      "mean_abs_shap": 0.037401447324082265
+    },
+    {
+      "feature": "delta_lap_15",
+      "mean_abs_shap": 0.03720291238166397
+    },
+    {
+      "feature": "qual_vs_track_median",
+      "mean_abs_shap": 0.037164370791427793
+    },
+    {
+      "feature": "practice_time_improvement_1T_2T",
+      "mean_abs_shap": 0.036259722893039054
+    },
+    {
+      "feature": "qualifying_lap_time_delta_to_constructor_best",
+      "mean_abs_shap": 0.035868678385182255
+    },
+    {
+      "feature": "practice_consistency_vs_teammate",
+      "mean_abs_shap": 0.03545413028206682
+    },
+    {
+      "feature": "practice_position_std",
+      "mean_abs_shap": 0.035090340555761934
+    },
+    {
+      "feature": "track_exp_x_qual",
+      "mean_abs_shap": 0.03428533495520241
+    },
+    {
+      "feature": "recent_vs_season",
+      "mean_abs_shap": 0.034078150858916356
+    },
+    {
+      "feature": "driver_fuel_corrected_pace",
+      "mean_abs_shap": 0.03400432855188846
+    },
+    {
+      "feature": "practice_improvement_rate",
+      "mean_abs_shap": 0.03378291834017727
+    },
+    {
+      "feature": "courseLength",
+      "mean_abs_shap": 0.033740082658443124
+    },
+    {
+      "feature": "driver_race_pace_std",
+      "mean_abs_shap": 0.03352242683392252
+    },
+    {
+      "feature": "grandPrixName_Hungarian Grand Prix",
+      "mean_abs_shap": 0.03329282471686602
+    },
+    {
+      "feature": "practice_std_x_qual",
+      "mean_abs_shap": 0.03300813267353228
+    },
+    {
+      "feature": "constructor_recent_x_track_exp",
+      "mean_abs_shap": 0.031678039641305805
+    },
+    {
+      "feature": "qualifying_position_percentile_vs_constructor",
+      "mean_abs_shap": 0.03101514835013073
+    },
+    {
+      "feature": "teammate_qual_delta",
+      "mean_abs_shap": 0.030699021675903375
+    },
+    {
+      "feature": "best_s2_sec",
+      "mean_abs_shap": 0.030640010945685216
+    },
+    {
+      "feature": "driver_podium_rate_at_track",
+      "mean_abs_shap": 0.0305650698713958
+    },
+    {
+      "feature": "qual_to_final_delta_3yr",
+      "mean_abs_shap": 0.030207091319357317
+    },
+    {
+      "feature": "fp3Gap",
+      "mean_abs_shap": 0.029798993473243947
+    },
+    {
+      "feature": "qualifying_position_vs_constructor_median_at_track",
+      "mean_abs_shap": 0.029677582596056188
+    },
+    {
+      "feature": "track_tire_degradation",
+      "mean_abs_shap": 0.02960427861437201
+    },
+    {
+      "feature": "q3_sec",
+      "mean_abs_shap": 0.029569027455896135
+    },
+    {
+      "feature": "sector3_std",
+      "mean_abs_shap": 0.02941124082674504
+    },
+    {
+      "feature": "qualifying_position_vs_field_recent_form",
+      "mean_abs_shap": 0.029408221330097864
+    },
+    {
+      "feature": "wins_last_5_races",
+      "mean_abs_shap": 0.029323704963177478
+    },
+    {
+      "feature": "grid_penalty_x_constructor",
+      "mean_abs_shap": 0.02926517807422208
+    },
+    {
+      "feature": "driver_avg_completion_pct",
+      "mean_abs_shap": 0.028464549151610168
+    },
+    {
+      "feature": "total_experience",
+      "mean_abs_shap": 0.02797450167238712
+    },
+    {
+      "feature": "driver_practice_improvement_3r",
+      "mean_abs_shap": 0.027659504843770968
+    },
+    {
+      "feature": "qual_improvement_vs_teammate",
+      "mean_abs_shap": 0.027172725449688698
+    },
+    {
+      "feature": "constructor_recent_form_3_races",
+      "mean_abs_shap": 0.026492749347910273
+    },
+    {
+      "feature": "driver_performance_at_circuit_type",
+      "mean_abs_shap": 0.026087592574581507
+    },
+    {
+      "feature": "practice_position_vs_field_median_at_track",
+      "mean_abs_shap": 0.025802045726776076
     },
     {
       "feature": "historical_race_pace_vs_median",
-      "mean_abs_shap": 0.01881293460326269
+      "mean_abs_shap": 0.025183730000630008
     },
     {
-      "feature": "grid_penalty_x_constructor_rank",
-      "mean_abs_shap": 0.01829784057140349
-    },
-    {
-      "feature": "driver_soft_tendency",
-      "mean_abs_shap": 0.018217634295672212
-    },
-    {
-      "feature": "best_s3_sec",
-      "mean_abs_shap": 0.018164470706880025
-    },
-    {
-      "feature": "average_practice_x_driver_podiums",
-      "mean_abs_shap": 0.017961834080889836
-    },
-    {
-      "feature": "wet_skill_x_precip",
-      "mean_abs_shap": 0.017955160957574837
-    },
-    {
-      "feature": "overtaking_difficulty_index",
-      "mean_abs_shap": 0.0178945756083587
-    },
-    {
-      "feature": "total_qualifying_laps",
-      "mean_abs_shap": 0.017702078730613
-    },
-    {
-      "feature": "grid_x_constructor_rank",
-      "mean_abs_shap": 0.01763078170607331
-    },
-    {
-      "feature": "practice_lap_time_delta_to_constructor_best",
-      "mean_abs_shap": 0.017503491074591836
-    },
-    {
-      "feature": "SafetyCarStatus",
-      "mean_abs_shap": 0.01737849670369172
-    },
-    {
-      "feature": "practice_position_vs_constructor_median_at_track",
-      "mean_abs_shap": 0.01720624239444736
-    },
-    {
-      "feature": "q2_pos",
-      "mean_abs_shap": 0.017156632038950948
-    },
-    {
-      "feature": "practice_improvement_vs_field",
-      "mean_abs_shap": 0.016858103232830775
-    },
-    {
-      "feature": "practice_position_improvement_1P_2P",
-      "mean_abs_shap": 0.016698790381848815
-    },
-    {
-      "feature": "q2_sec",
-      "mean_abs_shap": 0.016495659789815573
-    },
-    {
-      "feature": "practice_position_vs_field_worst_at_track",
-      "mean_abs_shap": 0.016322852164506886
-    },
-    {
-      "feature": "overtake_potential_3yr",
-      "mean_abs_shap": 0.01631126239530273
-    },
-    {
-      "feature": "best_theory_lap_sec",
-      "mean_abs_shap": 0.016166718624532256
-    },
-    {
-      "feature": "constructor_practice_improvement_rate",
-      "mean_abs_shap": 0.01579114395231009
+      "feature": "SpeedI1_mph",
+      "mean_abs_shap": 0.025172056720685204
     },
     {
       "feature": "lap_time_std",
-      "mean_abs_shap": 0.015753100227564598
+      "mean_abs_shap": 0.024972996869497003
     },
     {
-      "feature": "track_fp1_fp3_improvement",
-      "mean_abs_shap": 0.015685831773281055
+      "feature": "driver_positionsGained_3_races",
+      "mean_abs_shap": 0.02444367254711691
     },
     {
-      "feature": "fp2Interval",
-      "mean_abs_shap": 0.015039959945529686
+      "feature": "qual_lap_time_consistency",
+      "mean_abs_shap": 0.02439484749231488
     },
     {
-      "feature": "driver_high_humidity_qual_avg",
-      "mean_abs_shap": 0.014987433657050108
-    },
-    {
-      "feature": "practice_improvement_vs_teammate",
-      "mean_abs_shap": 0.014951370263099655
-    },
-    {
-      "feature": "Delta_FP1",
-      "mean_abs_shap": 0.014313824504986396
-    },
-    {
-      "feature": "driverDNFAvg",
-      "mean_abs_shap": 0.01425172418355942
+      "feature": "top_speed_rank",
+      "mean_abs_shap": 0.024174257102119703
     },
     {
       "feature": "best_s1_sec",
-      "mean_abs_shap": 0.014092467536032218
+      "mean_abs_shap": 0.02393996483311053
     },
     {
-      "feature": "practice_time_improvement_time_time",
-      "mean_abs_shap": 0.0140586965335532
+      "feature": "driver_avg_practice_pos_at_track",
+      "mean_abs_shap": 0.023758043659105943
     },
     {
-      "feature": "recent_dnf_rate_3_races",
-      "mean_abs_shap": 0.013953251913236493
+      "feature": "fp1_lap_delta_vs_best",
+      "mean_abs_shap": 0.02374636236091611
     },
     {
-      "feature": "practice_vs_best_at_track",
-      "mean_abs_shap": 0.013738913389597991
+      "feature": "practice_to_qual_improvement_rate",
+      "mean_abs_shap": 0.023735333825089015
     },
     {
-      "feature": "q1_pos",
-      "mean_abs_shap": 0.013650310677289923
+      "feature": "SafetyCarStatus",
+      "mean_abs_shap": 0.023610655636526704
     },
     {
-      "feature": "averagePracticePosition",
-      "mean_abs_shap": 0.01364560791254045
+      "feature": "practice_x_safetycar",
+      "mean_abs_shap": 0.023253526107966885
     },
     {
-      "feature": "tire_mgmt_x_turns",
-      "mean_abs_shap": 0.013637835046648965
+      "feature": "recent_form_ratio",
+      "mean_abs_shap": 0.023150618218374417
     },
     {
-      "feature": "bestQualifyingTime",
-      "mean_abs_shap": 0.0133923142075539
+      "feature": "last_final_position_per_track_constructor",
+      "mean_abs_shap": 0.02305519091188909
     },
     {
-      "feature": "constructor_qual_improvement_3r",
-      "mean_abs_shap": 0.013390282151103052
+      "feature": "delta_lap_20_historical",
+      "mean_abs_shap": 0.023040493235946563
     },
     {
-      "feature": "qual_x_constructor_wins",
-      "mean_abs_shap": 0.013289918014407194
+      "feature": "qual_gap_to_teammate",
+      "mean_abs_shap": 0.02280337398399135
     },
     {
-      "feature": "dnf_rate_x_practice_std",
-      "mean_abs_shap": 0.013163196608494031
+      "feature": "qualifying_position_vs_constructor_recent_form",
+      "mean_abs_shap": 0.022603328704088942
     },
     {
-      "feature": "practice_time_improvement_2T_3T",
-      "mean_abs_shap": 0.013096521762572168
-    },
-    {
-      "feature": "teammate_practice_delta_at_track",
-      "mean_abs_shap": 0.012874076707288604
-    },
-    {
-      "feature": "finishing_position_std_constructor",
-      "mean_abs_shap": 0.012569133861712186
-    },
-    {
-      "feature": "driverAge",
-      "mean_abs_shap": 0.012516439531813379
-    },
-    {
-      "feature": "fp1Gap",
-      "mean_abs_shap": 0.012356700333952904
-    },
-    {
-      "feature": "avg_sector1_sec",
-      "mean_abs_shap": 0.012213545799255382
-    },
-    {
-      "feature": "wet_race_vs_quali_delta",
-      "mean_abs_shap": 0.012193192901252769
-    },
-    {
-      "feature": "grandPrixName_Barcelona-Catalunya Grand Prix",
-      "mean_abs_shap": 0.012104301154310791
-    },
-    {
-      "feature": "SpeedI2_mph",
-      "mean_abs_shap": 0.011993050464987755
-    },
-    {
-      "feature": "driver_high_wind_qual_avg",
-      "mean_abs_shap": 0.011741307850927103
-    },
-    {
-      "feature": "practice_improvement_vs_field_avg",
-      "mean_abs_shap": 0.011491774040460579
-    },
-    {
-      "feature": "DirtyAirAvg_FP1",
-      "mean_abs_shap": 0.011490019536018335
-    },
-    {
-      "feature": "altitude_m",
-      "mean_abs_shap": 0.011413767892867315
-    },
-    {
-      "feature": "driver_starting_position_3_races",
-      "mean_abs_shap": 0.011377881537750371
-    },
-    {
-      "feature": "qual_improvement_vs_field_avg",
-      "mean_abs_shap": 0.011321396851539586
-    },
-    {
-      "feature": "overtaking_success_top10",
-      "mean_abs_shap": 0.011051506221294374
-    },
-    {
-      "feature": "recent_form_x_qual",
-      "mean_abs_shap": 0.010788459128141416
-    },
-    {
-      "feature": "overtake_potential_5yr",
-      "mean_abs_shap": 0.01076598206013441
-    },
-    {
-      "feature": "SpeedST_mph",
-      "mean_abs_shap": 0.010660486873984333
-    },
-    {
-      "feature": "qualifying_position_vs_race_pace_delta_by_track",
-      "mean_abs_shap": 0.010635024080611743
-    },
-    {
-      "feature": "qualifying_consistency_std",
-      "mean_abs_shap": 0.01049602693915369
-    },
-    {
-      "feature": "qualifying_position_vs_constructor_worst_at_track",
-      "mean_abs_shap": 0.01030758724808694
-    },
-    {
-      "feature": "driver_track_qual_avg",
-      "mean_abs_shap": 0.010299255743622808
-    },
-    {
-      "feature": "avg_positions_gained_5r",
-      "mean_abs_shap": 0.010147814834862887
-    },
-    {
-      "feature": "pit_stop_delta",
-      "mean_abs_shap": 0.010146421785652638
-    },
-    {
-      "feature": "driver_teammate_qual_gap_3r",
-      "mean_abs_shap": 0.010136820966005307
-    },
-    {
-      "feature": "best_qual_time",
-      "mean_abs_shap": 0.010081200131773972
-    },
-    {
-      "feature": "delta_lap_10_historical",
-      "mean_abs_shap": 0.009969478684663727
-    },
-    {
-      "feature": "constructor_avg_grid_pos_at_track",
-      "mean_abs_shap": 0.009703840577602364
-    },
-    {
-      "feature": "theoretical_gap",
-      "mean_abs_shap": 0.009400563943386052
-    },
-    {
-      "feature": "constructorName_AlphaTauri",
-      "mean_abs_shap": 0.009172736722230936
-    },
-    {
-      "feature": "driverTotalRaceWins",
-      "mean_abs_shap": 0.008788843692466615
-    },
-    {
-      "feature": "q1_sec",
-      "mean_abs_shap": 0.008371632072329537
-    },
-    {
-      "feature": "qualifying_position_percentile",
-      "mean_abs_shap": 0.00817160996794698
-    },
-    {
-      "feature": "track_familiarity",
-      "mean_abs_shap": 0.008073340735991945
-    },
-    {
-      "feature": "driver_wet_practice_avg",
-      "mean_abs_shap": 0.008001941242814071
-    },
-    {
-      "feature": "driver_starting_position_5_races",
-      "mean_abs_shap": 0.007679765689768784
-    },
-    {
-      "feature": "fp1PositionNumber",
-      "mean_abs_shap": 0.007532201825547983
-    },
-    {
-      "feature": "teammate_practice_delta",
-      "mean_abs_shap": 0.007225523459911338
-    },
-    {
-      "feature": "qualifying_position_vs_constructor_best_at_track",
-      "mean_abs_shap": 0.0071032784163951755
-    },
-    {
-      "feature": "practice_position_vs_field_best_at_track",
-      "mean_abs_shap": 0.007037211384438036
-    },
-    {
-      "feature": "fp3_vs_constructor_avg",
-      "mean_abs_shap": 0.007033411163091663
-    },
-    {
-      "feature": "historical_avgLapPace",
-      "mean_abs_shap": 0.007002439919114106
-    },
-    {
-      "feature": "race_vs_qual_consistency",
-      "mean_abs_shap": 0.006950993906310761
-    },
-    {
-      "feature": "constructorName_Alpine",
-      "mean_abs_shap": 0.006878506696224249
-    },
-    {
-      "feature": "resultsDriverName_Charles Leclerc",
-      "mean_abs_shap": 0.006863072614371754
-    },
-    {
-      "feature": "practice_position_vs_constructor_worst_at_track",
-      "mean_abs_shap": 0.006571512961387618
-    },
-    {
-      "feature": "fp2PositionNumber",
-      "mean_abs_shap": 0.006496970849670477
-    },
-    {
-      "feature": "avg_sector2_sec",
-      "mean_abs_shap": 0.006494031473994284
-    },
-    {
-      "feature": "driver_avg_grid_pos_at_track",
-      "mean_abs_shap": 0.006461954477801945
-    },
-    {
-      "feature": "practice_lap_time_consistency",
-      "mean_abs_shap": 0.006291674703359617
-    },
-    {
-      "feature": "driver_dnf_rate_5_races",
-      "mean_abs_shap": 0.006223199790716168
-    },
-    {
-      "feature": "qual_to_final_delta_5yr",
-      "mean_abs_shap": 0.0060986383318901004
-    },
-    {
-      "feature": "constructor_dnf_rate_3_races",
-      "mean_abs_shap": 0.005937992797955008
-    },
-    {
-      "feature": "driver_avg_tire_degradation",
-      "mean_abs_shap": 0.00592179974019528
-    },
-    {
-      "feature": "practice_to_qualifying_delta",
-      "mean_abs_shap": 0.005903562310710531
-    },
-    {
-      "feature": "street_experience",
-      "mean_abs_shap": 0.005884917291998904
-    },
-    {
-      "feature": "driver_high_humidity_practice_avg",
-      "mean_abs_shap": 0.005805554509162933
-    },
-    {
-      "feature": "recent_qualifying_improvement_trend",
-      "mean_abs_shap": 0.0056675068765878675
-    },
-    {
-      "feature": "practice_position_improvement_2P_3P",
-      "mean_abs_shap": 0.005601669132709514
-    },
-    {
-      "feature": "resultsQualificationPositionNumber",
-      "mean_abs_shap": 0.005433530914783475
-    },
-    {
-      "feature": "constructor_points_x_grid",
-      "mean_abs_shap": 0.0053525115475058695
-    },
-    {
-      "feature": "resultsDriverName_Kimi R\u00e4ikk\u00f6nen",
-      "mean_abs_shap": 0.00503316846042875
-    },
-    {
-      "feature": "BestConstructorPracticeLap_sec",
-      "mean_abs_shap": 0.004998855731263775
-    },
-    {
-      "feature": "resultsStartingGridPositionNumber",
-      "mean_abs_shap": 0.004991752928495396
-    },
-    {
-      "feature": "driver_constructor_avg_qual_position",
-      "mean_abs_shap": 0.0049435295343399546
-    },
-    {
-      "feature": "practice_improvement_x_qual",
-      "mean_abs_shap": 0.004643038862943654
-    },
-    {
-      "feature": "practice_position_vs_constructor_best_at_track",
-      "mean_abs_shap": 0.0044783119976520794
-    },
-    {
-      "feature": "recent_form_best_3_races",
-      "mean_abs_shap": 0.004477682125568411
-    },
-    {
-      "feature": "best_sector2_sec",
-      "mean_abs_shap": 0.004409887462854372
-    },
-    {
-      "feature": "delta_lap_10",
-      "mean_abs_shap": 0.004401528167724633
-    },
-    {
-      "feature": "turns",
-      "mean_abs_shap": 0.004058531986549494
-    },
-    {
-      "feature": "delta_lap_2",
-      "mean_abs_shap": 0.0036570922423153672
-    },
-    {
-      "feature": "grandPrixName_Abu Dhabi Grand Prix",
-      "mean_abs_shap": 0.0035620868206024127
-    },
-    {
-      "feature": "practice_vs_track_median",
-      "mean_abs_shap": 0.00341849476993083
-    },
-    {
-      "feature": "fp3PositionNumber",
-      "mean_abs_shap": 0.003279483471810799
-    },
-    {
-      "feature": "recent_form_median_3_races",
-      "mean_abs_shap": 0.0032184659749269406
-    },
-    {
-      "feature": "practice_conversion_x_grid",
-      "mean_abs_shap": 0.0030752314686775107
-    },
-    {
-      "feature": "resultsDriverName_Alexander Albon",
-      "mean_abs_shap": 0.0030031154841184656
-    },
-    {
-      "feature": "CleanAirAvg_FP3",
-      "mean_abs_shap": 0.002921447789669025
-    },
-    {
-      "feature": "practice_lap_time_consistency_vs_field",
-      "mean_abs_shap": 0.0028493951916694527
-    },
-    {
-      "feature": "recent_dnf_rate_5_races",
-      "mean_abs_shap": 0.0028303244262933972
-    },
-    {
-      "feature": "DirtyAirAvg_FP3",
-      "mean_abs_shap": 0.002719033786654448
-    },
-    {
-      "feature": "practice_improvement",
-      "mean_abs_shap": 0.002691096282005324
-    },
-    {
-      "feature": "avg_sector3_sec",
-      "mean_abs_shap": 0.0026082245379686407
-    },
-    {
-      "feature": "actual_best_lap",
-      "mean_abs_shap": 0.0024355002164840656
-    },
-    {
-      "feature": "power_to_corner_ratio",
-      "mean_abs_shap": 0.0023288605328649313
-    },
-    {
-      "feature": "CleanAirAvg_FP2",
-      "mean_abs_shap": 0.002220650018751645
-    },
-    {
-      "feature": "grandPrixName_Miami Grand Prix",
-      "mean_abs_shap": 0.0022031469643115876
-    },
-    {
-      "feature": "grandPrixName_United States Grand Prix",
-      "mean_abs_shap": 0.002198430842161171
-    },
-    {
-      "feature": "driver_qual_improvement_3r",
-      "mean_abs_shap": 0.00216769053936005
-    },
-    {
-      "feature": "grandPrixName_Qatar Grand Prix",
-      "mean_abs_shap": 0.0021535501599311857
-    },
-    {
-      "feature": "driver_wet_qual_avg",
-      "mean_abs_shap": 0.002071757668256763
-    },
-    {
-      "feature": "weather_pattern_analysis_by_location",
-      "mean_abs_shap": 0.00172424279302359
-    },
-    {
-      "feature": "driver_constructor_synergy",
-      "mean_abs_shap": 0.001598030209541319
-    },
-    {
-      "feature": "driverDNFCount",
-      "mean_abs_shap": 0.001532109126448631
-    },
-    {
-      "feature": "grandPrixName_Brazilian Grand Prix",
-      "mean_abs_shap": 0.00145004674941301
-    },
-    {
-      "feature": "valid_laps",
-      "mean_abs_shap": 0.0013426008298993142
-    },
-    {
-      "feature": "recent_form_median_5_races",
-      "mean_abs_shap": 0.0011674232721328793
-    },
-    {
-      "feature": "qualifying_consistency_vs_constructor_historical",
-      "mean_abs_shap": 0.0011003798961639344
-    },
-    {
-      "feature": "practice_consistency_vs_constructor_historical",
-      "mean_abs_shap": 0.0009973073720931903
-    },
-    {
-      "feature": "yearsActive",
-      "mean_abs_shap": 0.0009170242547988905
-    },
-    {
-      "feature": "engineManufacturerId_honda",
-      "mean_abs_shap": 0.0007435806989669836
-    },
-    {
-      "feature": "grandPrixName_Austrian Grand Prix",
-      "mean_abs_shap": 0.0005634852170944216
-    },
-    {
-      "feature": "air_density_index",
-      "mean_abs_shap": 0.000447511458396912
-    },
-    {
-      "feature": "points_leader_gap",
-      "mean_abs_shap": 0.0003697511196136483
-    },
-    {
-      "feature": "recent_form_3_races",
-      "mean_abs_shap": 0.000350618600845336
-    },
-    {
-      "feature": "delta_lap_15_historical",
-      "mean_abs_shap": 0.00033991708755492844
-    },
-    {
-      "feature": "driverTotalRaceEntries",
-      "mean_abs_shap": 9.584188461303711e-05
+      "feature": "pit_lane_time_constant",
+      "mean_abs_shap": 0.022522943525109414
     },
     {
       "feature": "numberOfStops",
-      "mean_abs_shap": 9.144122600554916e-05
+      "mean_abs_shap": 0.02232868389422074
     },
     {
-      "feature": "tire_management_score",
-      "mean_abs_shap": 5.006904602050888e-05
+      "feature": "constructor_practice_improvement_3r",
+      "mean_abs_shap": 0.022162453312613052
     },
     {
-      "feature": "deleted_laps",
-      "mean_abs_shap": 1.7308568954468307e-05
+      "feature": "driver_teammate_practice_gap_3r",
+      "mean_abs_shap": 0.022155485399416645
+    },
+    {
+      "feature": "SpeedFL_mph",
+      "mean_abs_shap": 0.02203445708353543
+    },
+    {
+      "feature": "overtake_potential_3yr",
+      "mean_abs_shap": 0.021780655562225717
+    },
+    {
+      "feature": "fp1Interval",
+      "mean_abs_shap": 0.02167585831899196
+    },
+    {
+      "feature": "sector2_std",
+      "mean_abs_shap": 0.021529599811381223
+    },
+    {
+      "feature": "constructor_qual_consistency_5r",
+      "mean_abs_shap": 0.021281405555945855
+    },
+    {
+      "feature": "pit_delta_x_driver_age",
+      "mean_abs_shap": 0.020523780887108302
+    },
+    {
+      "feature": "grid_x_constructor_rank",
+      "mean_abs_shap": 0.020500236799102303
+    },
+    {
+      "feature": "practice_qual_consistency_5r",
+      "mean_abs_shap": 0.020413744430616453
+    },
+    {
+      "feature": "practice_vs_best_at_track",
+      "mean_abs_shap": 0.02005611003935339
+    },
+    {
+      "feature": "driver_soft_tendency",
+      "mean_abs_shap": 0.019837976048327956
+    },
+    {
+      "feature": "recent_dnf_rate_3_races",
+      "mean_abs_shap": 0.01968742403173815
+    },
+    {
+      "feature": "wet_race_vs_quali_delta",
+      "mean_abs_shap": 0.019633917558752
+    },
+    {
+      "feature": "sector1_std",
+      "mean_abs_shap": 0.019572627338051114
+    },
+    {
+      "feature": "constructor_qual_improvement_3r",
+      "mean_abs_shap": 0.01922995475456115
+    },
+    {
+      "feature": "practice_to_qualifying_delta_vs_constructor_historical",
+      "mean_abs_shap": 0.018304975098371524
+    },
+    {
+      "feature": "practice_improvement_vs_field",
+      "mean_abs_shap": 0.018282902671210483
+    },
+    {
+      "feature": "qualifying_position_vs_constructor_worst_at_track",
+      "mean_abs_shap": 0.01826423190869392
+    },
+    {
+      "feature": "tire_deg_x_track_deg",
+      "mean_abs_shap": 0.017808663887623713
+    },
+    {
+      "feature": "best_s3_sec",
+      "mean_abs_shap": 0.017745360128581515
+    },
+    {
+      "feature": "delta_lap_2_historical",
+      "mean_abs_shap": 0.017548147131502642
+    },
+    {
+      "feature": "constructor_avg_qual_pos_at_track",
+      "mean_abs_shap": 0.01736374388616534
+    },
+    {
+      "feature": "qualifying_lap_time_consistency_vs_field",
+      "mean_abs_shap": 0.017145069385692477
+    },
+    {
+      "feature": "fp2Interval",
+      "mean_abs_shap": 0.016700919366534842
+    },
+    {
+      "feature": "fp2Gap",
+      "mean_abs_shap": 0.016656389488279803
+    },
+    {
+      "feature": "dnf_rate_x_practice_std",
+      "mean_abs_shap": 0.016369761352310906
+    },
+    {
+      "feature": "wet_skill_x_precip",
+      "mean_abs_shap": 0.016360365089029015
+    },
+    {
+      "feature": "q1_pos",
+      "mean_abs_shap": 0.016279200407862654
+    },
+    {
+      "feature": "constructor_dnf_rate_5_races",
+      "mean_abs_shap": 0.01626824615672226
+    },
+    {
+      "feature": "best_qual_time",
+      "mean_abs_shap": 0.015922526022046822
+    },
+    {
+      "feature": "teammate_practice_delta_at_track",
+      "mean_abs_shap": 0.015186562514095576
+    },
+    {
+      "feature": "grid_penalty_x_constructor_rank",
+      "mean_abs_shap": 0.015084260338544826
+    },
+    {
+      "feature": "practice_position_vs_field_worst_at_track",
+      "mean_abs_shap": 0.01492640601312736
+    },
+    {
+      "feature": "driver_track_practice_avg",
+      "mean_abs_shap": 0.014699367430061103
+    },
+    {
+      "feature": "average_practice_x_driver_podiums",
+      "mean_abs_shap": 0.014623217913508435
+    },
+    {
+      "feature": "bestQualifyingTime",
+      "mean_abs_shap": 0.014535311201727042
+    },
+    {
+      "feature": "street_experience",
+      "mean_abs_shap": 0.014259615621250112
+    },
+    {
+      "feature": "race_pace_consistency",
+      "mean_abs_shap": 0.01423304456956685
+    },
+    {
+      "feature": "driver_high_wind_qual_avg",
+      "mean_abs_shap": 0.013977537500858317
+    },
+    {
+      "feature": "practice_position_vs_constructor_median_at_track",
+      "mean_abs_shap": 0.013936029747128455
+    },
+    {
+      "feature": "practice_improvement_vs_teammate",
+      "mean_abs_shap": 0.01391617680191992
+    },
+    {
+      "feature": "teammate_practice_delta",
+      "mean_abs_shap": 0.013891036936640727
+    },
+    {
+      "feature": "q2_sec",
+      "mean_abs_shap": 0.013829681104980411
+    },
+    {
+      "feature": "practice_time_improvement_2T_3T",
+      "mean_abs_shap": 0.013821140362392148
+    },
+    {
+      "feature": "practice_position_improvement_1P_2P",
+      "mean_abs_shap": 0.013320937944948692
+    },
+    {
+      "feature": "driver_positionsGained_5_races",
+      "mean_abs_shap": 0.013299811780452687
+    },
+    {
+      "feature": "constructor_avg_practice_position",
+      "mean_abs_shap": 0.013295113979466285
+    },
+    {
+      "feature": "turns",
+      "mean_abs_shap": 0.013109605732560141
+    },
+    {
+      "feature": "DirtyAirAvg_FP3",
+      "mean_abs_shap": 0.013068693480081868
+    },
+    {
+      "feature": "fp1Gap",
+      "mean_abs_shap": 0.012846462446451165
+    },
+    {
+      "feature": "total_qualifying_laps",
+      "mean_abs_shap": 0.012836998479068319
+    },
+    {
+      "feature": "q3_pos",
+      "mean_abs_shap": 0.012813246149942312
+    },
+    {
+      "feature": "fp1PositionNumber",
+      "mean_abs_shap": 0.012642803800292346
+    },
+    {
+      "feature": "overtaking_success_top10",
+      "mean_abs_shap": 0.012600440563261501
+    },
+    {
+      "feature": "driver_starting_position_3_races",
+      "mean_abs_shap": 0.01259055370612767
+    },
+    {
+      "feature": "driver_wet_practice_avg",
+      "mean_abs_shap": 0.01251133065074679
+    },
+    {
+      "feature": "qualifying_position_percentile",
+      "mean_abs_shap": 0.012252070093154925
+    },
+    {
+      "feature": "track_fp1_fp3_improvement",
+      "mean_abs_shap": 0.012190646934509313
+    },
+    {
+      "feature": "resultsQualificationPositionNumber",
+      "mean_abs_shap": 0.012116417002677899
+    },
+    {
+      "feature": "practice_lap_time_delta_to_constructor_best",
+      "mean_abs_shap": 0.011931951643340292
+    },
+    {
+      "feature": "constructor_avg_grid_pos_at_track",
+      "mean_abs_shap": 0.011457096070051164
+    },
+    {
+      "feature": "constructor_practice_improvement_rate",
+      "mean_abs_shap": 0.011407941620051869
+    },
+    {
+      "feature": "historical_avgLapPace",
+      "mean_abs_shap": 0.01108602910041808
+    },
+    {
+      "feature": "overtaking_difficulty_index",
+      "mean_abs_shap": 0.010681645098072479
+    },
+    {
+      "feature": "fp2PositionNumber",
+      "mean_abs_shap": 0.010558523534052096
+    },
+    {
+      "feature": "practice_time_improvement_time_time",
+      "mean_abs_shap": 0.010553821741044531
+    },
+    {
+      "feature": "overtake_potential_5yr",
+      "mean_abs_shap": 0.010553615273535256
+    },
+    {
+      "feature": "driver_high_humidity_qual_avg",
+      "mean_abs_shap": 0.010521880650520336
+    },
+    {
+      "feature": "best_theory_lap_sec",
+      "mean_abs_shap": 0.010462789148092275
+    },
+    {
+      "feature": "practice_lap_time_consistency_vs_field",
+      "mean_abs_shap": 0.010355428892746543
+    },
+    {
+      "feature": "weather_pattern_analysis_by_location",
+      "mean_abs_shap": 0.010325223682261995
+    },
+    {
+      "feature": "qualifying_position_vs_race_pace_delta_by_track",
+      "mean_abs_shap": 0.010040227284980933
+    },
+    {
+      "feature": "DirtyAirAvg_FP1",
+      "mean_abs_shap": 0.009957652171701218
+    },
+    {
+      "feature": "driver_teammate_qual_gap_3r",
+      "mean_abs_shap": 0.009924040835164493
+    },
+    {
+      "feature": "CleanAirAvg_FP3",
+      "mean_abs_shap": 0.009705530595779409
+    },
+    {
+      "feature": "altitude_m",
+      "mean_abs_shap": 0.009661074274778364
+    },
+    {
+      "feature": "resultsStartingGridPositionNumber",
+      "mean_abs_shap": 0.009653465402126337
+    },
+    {
+      "feature": "grandPrixName_Spanish Grand Prix",
+      "mean_abs_shap": 0.00964798781946303
+    },
+    {
+      "feature": "avg_sector1_sec",
+      "mean_abs_shap": 0.009619585465523429
+    },
+    {
+      "feature": "qualifying_consistency_std",
+      "mean_abs_shap": 0.009399428439140321
+    },
+    {
+      "feature": "driverAge",
+      "mean_abs_shap": 0.009397413134574926
+    },
+    {
+      "feature": "driverTotalRaceWins",
+      "mean_abs_shap": 0.009259949795156713
+    },
+    {
+      "feature": "finishing_position_std_constructor",
+      "mean_abs_shap": 0.00923530904725193
+    },
+    {
+      "feature": "avg_positions_gained_5r",
+      "mean_abs_shap": 0.009002859506011008
+    },
+    {
+      "feature": "tire_mgmt_x_turns",
+      "mean_abs_shap": 0.00889164032414554
+    },
+    {
+      "feature": "actual_best_lap",
+      "mean_abs_shap": 0.008730780959129339
+    },
+    {
+      "feature": "SpeedST_mph",
+      "mean_abs_shap": 0.008029830875992761
+    },
+    {
+      "feature": "avg_sector2_sec",
+      "mean_abs_shap": 0.007945774739980654
+    },
+    {
+      "feature": "practice_lap_time_consistency",
+      "mean_abs_shap": 0.0079159978762269
+    },
+    {
+      "feature": "fp3PositionNumber",
+      "mean_abs_shap": 0.00777819017171861
+    },
+    {
+      "feature": "race_vs_qual_consistency",
+      "mean_abs_shap": 0.007776641672477148
+    },
+    {
+      "feature": "resultsDriverName_Charles Leclerc",
+      "mean_abs_shap": 0.007739723473787294
+    },
+    {
+      "feature": "qual_x_constructor_wins",
+      "mean_abs_shap": 0.007735740964114665
+    },
+    {
+      "feature": "positions_gained_first_lap_pct",
+      "mean_abs_shap": 0.007657321897894155
+    },
+    {
+      "feature": "driverDNFAvg",
+      "mean_abs_shap": 0.007589464002847697
+    },
+    {
+      "feature": "pit_stop_delta",
+      "mean_abs_shap": 0.007574859814625169
+    },
+    {
+      "feature": "valid_laps",
+      "mean_abs_shap": 0.007544945439696307
+    },
+    {
+      "feature": "SpeedI2_mph",
+      "mean_abs_shap": 0.007481306749954827
+    },
+    {
+      "feature": "recent_qualifying_improvement_trend",
+      "mean_abs_shap": 0.007436351203918429
+    },
+    {
+      "feature": "driver_avg_grid_pos_at_track",
+      "mean_abs_shap": 0.007363467358530029
+    },
+    {
+      "feature": "driver_starting_position_5_races",
+      "mean_abs_shap": 0.007279628369212156
+    },
+    {
+      "feature": "recent_form_x_qual",
+      "mean_abs_shap": 0.007221164858341211
+    },
+    {
+      "feature": "driver_avg_tire_degradation",
+      "mean_abs_shap": 0.007169022648036483
+    },
+    {
+      "feature": "driverDNFCount",
+      "mean_abs_shap": 0.007161583425104594
+    },
+    {
+      "feature": "constructorName_AlphaTauri",
+      "mean_abs_shap": 0.007130633009038898
+    },
+    {
+      "feature": "theoretical_gap",
+      "mean_abs_shap": 0.007008770790696158
+    },
+    {
+      "feature": "q1_sec",
+      "mean_abs_shap": 0.006835195223987078
+    },
+    {
+      "feature": "practice_position_vs_constructor_worst_at_track",
+      "mean_abs_shap": 0.006754666949808578
+    },
+    {
+      "feature": "Delta_FP1",
+      "mean_abs_shap": 0.006479382365569497
+    },
+    {
+      "feature": "practice_vs_worst_at_track",
+      "mean_abs_shap": 0.0064743479594588016
+    },
+    {
+      "feature": "driver_track_qual_avg",
+      "mean_abs_shap": 0.006393904262781144
+    },
+    {
+      "feature": "qualifying_position_vs_constructor_best_at_track",
+      "mean_abs_shap": 0.006351120518147942
+    },
+    {
+      "feature": "constructor_points_x_grid",
+      "mean_abs_shap": 0.0062486838802695245
+    },
+    {
+      "feature": "grandPrixName_United States Grand Prix",
+      "mean_abs_shap": 0.0062377362251281755
+    },
+    {
+      "feature": "driverTotalRaceEntries",
+      "mean_abs_shap": 0.0060064838767051685
+    },
+    {
+      "feature": "practice_to_qualifying_delta",
+      "mean_abs_shap": 0.005763415854983062
+    },
+    {
+      "feature": "constructorName_Alpine",
+      "mean_abs_shap": 0.005577987462282212
+    },
+    {
+      "feature": "grandPrixName_Miami Grand Prix",
+      "mean_abs_shap": 0.00552387737035747
+    },
+    {
+      "feature": "qual_improvement_vs_field_avg",
+      "mean_abs_shap": 0.00523254489377138
+    },
+    {
+      "feature": "power_to_corner_ratio",
+      "mean_abs_shap": 0.0052169647026807245
+    },
+    {
+      "feature": "track_familiarity",
+      "mean_abs_shap": 0.004975047683715817
+    },
+    {
+      "feature": "recent_form_median_3_races",
+      "mean_abs_shap": 0.004908160412311542
+    },
+    {
+      "feature": "practice_improvement_vs_field_avg",
+      "mean_abs_shap": 0.00482002244584726
+    },
+    {
+      "feature": "averagePracticePosition",
+      "mean_abs_shap": 0.004636526395380498
+    },
+    {
+      "feature": "driver_qual_improvement_3r",
+      "mean_abs_shap": 0.004630201417207717
+    },
+    {
+      "feature": "BestConstructorPracticeLap_sec",
+      "mean_abs_shap": 0.004600624860823121
+    },
+    {
+      "feature": "delta_lap_10",
+      "mean_abs_shap": 0.004488592681288765
+    },
+    {
+      "feature": "driver_constructor_avg_qual_position",
+      "mean_abs_shap": 0.004482842719554897
+    },
+    {
+      "feature": "practice_position_vs_field_best_at_track",
+      "mean_abs_shap": 0.004351818314194654
     },
     {
       "feature": "constructorTotalRaceEntries",
-      "mean_abs_shap": 0.0
+      "mean_abs_shap": 0.004303434795141223
+    },
+    {
+      "feature": "constructor_dnf_rate_3_races",
+      "mean_abs_shap": 0.004091115751024343
+    },
+    {
+      "feature": "q2_pos",
+      "mean_abs_shap": 0.003800398291647431
+    },
+    {
+      "feature": "resultsDriverName_Kimi R\u00e4ikk\u00f6nen",
+      "mean_abs_shap": 0.003550863681454208
+    },
+    {
+      "feature": "practice_position_vs_constructor_best_at_track",
+      "mean_abs_shap": 0.003495260855555531
+    },
+    {
+      "feature": "grandPrixName_Brazilian Grand Prix",
+      "mean_abs_shap": 0.003372781810164459
+    },
+    {
+      "feature": "fp3_vs_constructor_avg",
+      "mean_abs_shap": 0.0031137654751539267
+    },
+    {
+      "feature": "qual_to_final_delta_5yr",
+      "mean_abs_shap": 0.0030665897071361424
+    },
+    {
+      "feature": "recent_form_best_3_races",
+      "mean_abs_shap": 0.0028458989245817145
+    },
+    {
+      "feature": "engineManufacturerId_honda",
+      "mean_abs_shap": 0.002739505773782732
+    },
+    {
+      "feature": "practice_vs_track_median",
+      "mean_abs_shap": 0.002702997773885738
+    },
+    {
+      "feature": "practice_improvement",
+      "mean_abs_shap": 0.0027010645389556973
+    },
+    {
+      "feature": "constructorTotalPolePositions",
+      "mean_abs_shap": 0.0025611440181732116
+    },
+    {
+      "feature": "delta_lap_2",
+      "mean_abs_shap": 0.0024791174456477248
+    },
+    {
+      "feature": "practice_improvement_x_qual",
+      "mean_abs_shap": 0.002433780485391578
+    },
+    {
+      "feature": "grandPrixName_Abu Dhabi Grand Prix",
+      "mean_abs_shap": 0.0024096451520919837
+    },
+    {
+      "feature": "driver_high_humidity_practice_avg",
+      "mean_abs_shap": 0.0023325433313846383
+    },
+    {
+      "feature": "driver_wet_qual_avg",
+      "mean_abs_shap": 0.0022974537253380245
+    },
+    {
+      "feature": "avg_sector3_sec",
+      "mean_abs_shap": 0.0022922637432813676
+    },
+    {
+      "feature": "recent_dnf_rate_5_races",
+      "mean_abs_shap": 0.002276238390803344
+    },
+    {
+      "feature": "recent_form_median_5_races",
+      "mean_abs_shap": 0.002140276628732678
+    },
+    {
+      "feature": "practice_conversion_x_grid",
+      "mean_abs_shap": 0.002107737551629544
+    },
+    {
+      "feature": "grandPrixName_Qatar Grand Prix",
+      "mean_abs_shap": 0.0019471966505050676
+    },
+    {
+      "feature": "CleanAirAvg_FP2",
+      "mean_abs_shap": 0.0016370425574481452
+    },
+    {
+      "feature": "practice_consistency_vs_constructor_historical",
+      "mean_abs_shap": 0.0015615730285644847
+    },
+    {
+      "feature": "resultsDriverName_Alexander Albon",
+      "mean_abs_shap": 0.00131752572879196
+    },
+    {
+      "feature": "driver_dnf_rate_5_races",
+      "mean_abs_shap": 0.001253639075160029
+    },
+    {
+      "feature": "practice_position_improvement_2P_3P",
+      "mean_abs_shap": 0.0012290623806417043
+    },
+    {
+      "feature": "qualifying_consistency_vs_constructor_historical",
+      "mean_abs_shap": 0.0011210305213928118
+    },
+    {
+      "feature": "delta_lap_15_historical",
+      "mean_abs_shap": 0.0007900765001773802
+    },
+    {
+      "feature": "driver_constructor_synergy",
+      "mean_abs_shap": 0.0007085602134466185
+    },
+    {
+      "feature": "delta_lap_10_historical",
+      "mean_abs_shap": 0.0005685268878936745
+    },
+    {
+      "feature": "recent_form_3_races",
+      "mean_abs_shap": 0.0005478415012359683
+    },
+    {
+      "feature": "points_leader_gap",
+      "mean_abs_shap": 0.00039150128364562776
+    },
+    {
+      "feature": "air_density_index",
+      "mean_abs_shap": 0.0001736737728118909
+    },
+    {
+      "feature": "grandPrixName_Austrian Grand Prix",
+      "mean_abs_shap": 0.00010965795516967969
+    },
+    {
+      "feature": "deleted_laps",
+      "mean_abs_shap": 3.461713790893217e-05
     },
     {
       "feature": "constructorTotalRaceStarts",
@@ -1170,10 +1158,6 @@
       "mean_abs_shap": 0.0
     },
     {
-      "feature": "constructorTotalPolePositions",
-      "mean_abs_shap": 0.0
-    },
-    {
       "feature": "constructorTotalFastestLaps",
       "mean_abs_shap": 0.0
     },
@@ -1198,6 +1182,10 @@
       "mean_abs_shap": 0.0
     },
     {
+      "feature": "yearsActive",
+      "mean_abs_shap": 0.0
+    },
+    {
       "feature": "Delta_FP2",
       "mean_abs_shap": 0.0
     },
@@ -1211,6 +1199,10 @@
     },
     {
       "feature": "best_sector1_sec",
+      "mean_abs_shap": 0.0
+    },
+    {
+      "feature": "best_sector2_sec",
       "mean_abs_shap": 0.0
     },
     {
@@ -1355,6 +1347,10 @@
     },
     {
       "feature": "practice_race_conversion",
+      "mean_abs_shap": 0.0
+    },
+    {
+      "feature": "tire_management_score",
       "mean_abs_shap": 0.0
     },
     {
@@ -1654,6 +1650,10 @@
       "mean_abs_shap": 0.0
     },
     {
+      "feature": "grandPrixName_Barcelona-Catalunya Grand Prix",
+      "mean_abs_shap": 0.0
+    },
+    {
       "feature": "grandPrixName_Belgian Grand Prix",
       "mean_abs_shap": 0.0
     },
@@ -1797,83 +1797,83 @@
   "top_20": [
     {
       "feature": "race_pace_vs_median",
-      "mean_abs_shap": 1.6644293204162275
+      "mean_abs_shap": 1.8271944741497053
     },
     {
       "feature": "avg_final_position_per_track",
-      "mean_abs_shap": 0.9756848221991209
+      "mean_abs_shap": 0.8085099280862196
     },
     {
       "feature": "grid_x_avg_pit_time",
-      "mean_abs_shap": 0.4751169056380168
+      "mean_abs_shap": 0.49607365800114345
     },
     {
       "feature": "avg_final_position_per_track_constructor",
-      "mean_abs_shap": 0.4053695410758258
-    },
-    {
-      "feature": "last_final_position_per_track",
-      "mean_abs_shap": 0.31941242574735074
-    },
-    {
-      "feature": "championship_position",
-      "mean_abs_shap": 0.2960174816498651
+      "mean_abs_shap": 0.38337499146026105
     },
     {
       "feature": "podium_form_3_races",
-      "mean_abs_shap": 0.25009378892006334
+      "mean_abs_shap": 0.3075451456064826
     },
     {
-      "feature": "delta_from_race_avg",
-      "mean_abs_shap": 0.21590989131350072
-    },
-    {
-      "feature": "avgLapPace",
-      "mean_abs_shap": 0.20969575260982384
+      "feature": "championship_position",
+      "mean_abs_shap": 0.2957445111060515
     },
     {
       "feature": "qualPos_x_avg_practicePos",
-      "mean_abs_shap": 0.19903141111312445
+      "mean_abs_shap": 0.26928108326485367
     },
     {
-      "feature": "pit_stop_rate",
-      "mean_abs_shap": 0.19524399808635937
+      "feature": "delta_from_race_avg",
+      "mean_abs_shap": 0.22444377564722656
+    },
+    {
+      "feature": "avgLapPace",
+      "mean_abs_shap": 0.21661822870932504
     },
     {
       "feature": "driver_constructor_avg_final_position",
-      "mean_abs_shap": 0.17614435397279446
+      "mean_abs_shap": 0.19219380694851274
     },
     {
-      "feature": "head_to_head_teammate_performance_delta",
-      "mean_abs_shap": 0.15015168234053997
+      "feature": "pit_stop_rate",
+      "mean_abs_shap": 0.18675731592362282
+    },
+    {
+      "feature": "last_final_position_per_track",
+      "mean_abs_shap": 0.16363379729818553
     },
     {
       "feature": "qual_vs_worst_at_track",
-      "mean_abs_shap": 0.1491720491860062
+      "mean_abs_shap": 0.15910441545394713
     },
     {
-      "feature": "totalStopTime",
-      "mean_abs_shap": 0.14213266781363632
+      "feature": "head_to_head_teammate_performance_delta",
+      "mean_abs_shap": 0.14321285439643552
     },
     {
       "feature": "delta_lap_20",
-      "mean_abs_shap": 0.13824413129584862
+      "mean_abs_shap": 0.13898796812797662
     },
     {
       "feature": "championship_position_pressure_factor",
-      "mean_abs_shap": 0.11963616527337571
-    },
-    {
-      "feature": "qual_vs_best_at_track",
-      "mean_abs_shap": 0.11372095617763696
+      "mean_abs_shap": 0.1383325988184662
     },
     {
       "feature": "practice_position_vs_teammate_historical",
-      "mean_abs_shap": 0.10716220072135332
+      "mean_abs_shap": 0.10737605610992759
     },
     {
       "feature": "recent_form_5_races",
-      "mean_abs_shap": 0.0847252647062764
+      "mean_abs_shap": 0.09740697296857835
+    },
+    {
+      "feature": "totalStopTime",
+      "mean_abs_shap": 0.09416148048380853
+    },
+    {
+      "feature": "driverFastestPracticeLap_sec",
+      "mean_abs_shap": 0.08920232217037113
     }
   ]
 }
