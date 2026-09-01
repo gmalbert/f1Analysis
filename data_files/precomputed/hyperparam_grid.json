@@ -1,96 +1,106 @@
 {
   "metadata": {
-    "generated_at": "2026-06-01T03:14:45.373896",
-    "data_rows": 3819,
-    "n_combinations": 80
+    "generated_at": "2026-09-01T02:16:43.165003",
+    "data_rows": 3973,
+    "n_combinations": 80,
+    "validation": "race-grouped expanding window with one-event embargo"
   },
   "best_params": {
-    "regressor__learning_rate": 0.1,
+    "regressor__learning_rate": 0.05,
     "regressor__max_depth": 6,
-    "regressor__min_child_weight": 7
+    "regressor__min_child_weight": 5
   },
-  "best_mae": 1.4508482598181653,
+  "best_mae": 1.5345882626214944,
   "all_results": [
     {
       "params": {
-        "regressor__learning_rate": 0.1,
+        "regressor__learning_rate": 0.05,
         "regressor__max_depth": 6,
-        "regressor__min_child_weight": 7
+        "regressor__min_child_weight": 5
       },
-      "mae": 1.4508482598181653,
+      "mae": 1.5345882626214944,
       "rank": 1
     },
     {
       "params": {
         "regressor__learning_rate": 0.1,
         "regressor__max_depth": 6,
-        "regressor__min_child_weight": 5
+        "regressor__min_child_weight": 7
       },
-      "mae": 1.4514782830837532,
+      "mae": 1.5391234582273516,
       "rank": 2
     },
     {
       "params": {
         "regressor__learning_rate": 0.1,
-        "regressor__max_depth": 7,
-        "regressor__min_child_weight": 7
+        "regressor__max_depth": 6,
+        "regressor__min_child_weight": 5
       },
-      "mae": 1.452443353813496,
+      "mae": 1.5437608722445693,
       "rank": 3
     },
     {
       "params": {
-        "regressor__learning_rate": 0.1,
+        "regressor__learning_rate": 0.05,
         "regressor__max_depth": 7,
-        "regressor__min_child_weight": 5
+        "regressor__min_child_weight": 7
       },
-      "mae": 1.4538552628180827,
+      "mae": 1.549269840210521,
       "rank": 4
     },
     {
       "params": {
         "regressor__learning_rate": 0.05,
-        "regressor__max_depth": 7,
+        "regressor__max_depth": 6,
         "regressor__min_child_weight": 7
       },
-      "mae": 1.4623473086471588,
+      "mae": 1.5509677051986377,
       "rank": 5
     },
     {
       "params": {
-        "regressor__learning_rate": 0.1,
+        "regressor__learning_rate": 0.05,
         "regressor__max_depth": 6,
-        "regressor__min_child_weight": 1
+        "regressor__min_child_weight": 3
       },
-      "mae": 1.4647271489288434,
+      "mae": 1.552126941426243,
       "rank": 6
     },
     {
       "params": {
-        "regressor__learning_rate": 0.1,
-        "regressor__max_depth": 6,
-        "regressor__min_child_weight": 3
+        "regressor__learning_rate": 0.05,
+        "regressor__max_depth": 7,
+        "regressor__min_child_weight": 5
       },
-      "mae": 1.4669647476955894,
+      "mae": 1.5529012170019294,
       "rank": 7
     },
     {
       "params": {
         "regressor__learning_rate": 0.05,
-        "regressor__max_depth": 7,
-        "regressor__min_child_weight": 5
+        "regressor__max_depth": 6,
+        "regressor__min_child_weight": 1
       },
-      "mae": 1.4685439309928707,
+      "mae": 1.5532095104756272,
       "rank": 8
     },
     {
       "params": {
-        "regressor__learning_rate": 0.05,
-        "regressor__max_depth": 6,
+        "regressor__learning_rate": 0.1,
+        "regressor__max_depth": 5,
         "regressor__min_child_weight": 7
       },
-      "mae": 1.469070562843673,
+      "mae": 1.553895659753796,
       "rank": 9
+    },
+    {
+      "params": {
+        "regressor__learning_rate": 0.05,
+        "regressor__max_depth": 5,
+        "regressor__min_child_weight": 7
+      },
+      "mae": 1.5548410151692158,
+      "rank": 10
     },
     {
       "params": {
@@ -98,35 +108,17 @@
         "regressor__max_depth": 7,
         "regressor__min_child_weight": 3
       },
-      "mae": 1.4696524082120175,
-      "rank": 10
-    },
-    {
-      "params": {
-        "regressor__learning_rate": 0.2,
-        "regressor__max_depth": 6,
-        "regressor__min_child_weight": 7
-      },
-      "mae": 1.470549161988046,
+      "mae": 1.5582595284416256,
       "rank": 11
     },
     {
       "params": {
         "regressor__learning_rate": 0.1,
-        "regressor__max_depth": 5,
-        "regressor__min_child_weight": 7
+        "regressor__max_depth": 6,
+        "regressor__min_child_weight": 1
       },
-      "mae": 1.4713398001449316,
+      "mae": 1.5586089461232722,
       "rank": 12
-    },
-    {
-      "params": {
-        "regressor__learning_rate": 0.1,
-        "regressor__max_depth": 5,
-        "regressor__min_child_weight": 5
-      },
-      "mae": 1.4735395007075183,
-      "rank": 13
     },
     {
       "params": {
@@ -134,44 +126,80 @@
         "regressor__max_depth": 7,
         "regressor__min_child_weight": 3
       },
-      "mae": 1.4741568787622161,
+      "mae": 1.5586500708428992,
+      "rank": 13
+    },
+    {
+      "params": {
+        "regressor__learning_rate": 0.05,
+        "regressor__max_depth": 5,
+        "regressor__min_child_weight": 3
+      },
+      "mae": 1.558979664830486,
       "rank": 14
+    },
+    {
+      "params": {
+        "regressor__learning_rate": 0.05,
+        "regressor__max_depth": 5,
+        "regressor__min_child_weight": 5
+      },
+      "mae": 1.5601275629494025,
+      "rank": 15
     },
     {
       "params": {
         "regressor__learning_rate": 0.1,
         "regressor__max_depth": 7,
-        "regressor__min_child_weight": 1
+        "regressor__min_child_weight": 7
       },
-      "mae": 1.478455713763805,
-      "rank": 15
-    },
-    {
-      "params": {
-        "regressor__learning_rate": 0.05,
-        "regressor__max_depth": 6,
-        "regressor__min_child_weight": 5
-      },
-      "mae": 1.4790220920613142,
+      "mae": 1.5625766468930946,
       "rank": 16
     },
     {
       "params": {
         "regressor__learning_rate": 0.1,
         "regressor__max_depth": 5,
-        "regressor__min_child_weight": 3
+        "regressor__min_child_weight": 5
       },
-      "mae": 1.4796309487547181,
+      "mae": 1.563708137937073,
       "rank": 17
     },
     {
       "params": {
         "regressor__learning_rate": 0.1,
-        "regressor__max_depth": 4,
+        "regressor__max_depth": 6,
+        "regressor__min_child_weight": 3
+      },
+      "mae": 1.5641572611162426,
+      "rank": 18
+    },
+    {
+      "params": {
+        "regressor__learning_rate": 0.05,
+        "regressor__max_depth": 7,
+        "regressor__min_child_weight": 1
+      },
+      "mae": 1.5647370857294052,
+      "rank": 19
+    },
+    {
+      "params": {
+        "regressor__learning_rate": 0.1,
+        "regressor__max_depth": 5,
+        "regressor__min_child_weight": 3
+      },
+      "mae": 1.565103379518505,
+      "rank": 20
+    },
+    {
+      "params": {
+        "regressor__learning_rate": 0.1,
+        "regressor__max_depth": 7,
         "regressor__min_child_weight": 5
       },
-      "mae": 1.4883860940614522,
-      "rank": 18
+      "mae": 1.56521495800676,
+      "rank": 21
     },
     {
       "params": {
@@ -179,61 +207,34 @@
         "regressor__max_depth": 5,
         "regressor__min_child_weight": 1
       },
-      "mae": 1.4888266571884567,
-      "rank": 19
-    },
-    {
-      "params": {
-        "regressor__learning_rate": 0.2,
-        "regressor__max_depth": 7,
-        "regressor__min_child_weight": 7
-      },
-      "mae": 1.490784039085306,
-      "rank": 20
-    },
-    {
-      "params": {
-        "regressor__learning_rate": 0.05,
-        "regressor__max_depth": 6,
-        "regressor__min_child_weight": 3
-      },
-      "mae": 1.4912115131382588,
-      "rank": 21
-    },
-    {
-      "params": {
-        "regressor__learning_rate": 0.05,
-        "regressor__max_depth": 6,
-        "regressor__min_child_weight": 1
-      },
-      "mae": 1.4924738103151445,
+      "mae": 1.5690680285060885,
       "rank": 22
     },
     {
       "params": {
-        "regressor__learning_rate": 0.1,
-        "regressor__max_depth": 4,
-        "regressor__min_child_weight": 7
+        "regressor__learning_rate": 0.05,
+        "regressor__max_depth": 5,
+        "regressor__min_child_weight": 1
       },
-      "mae": 1.493620658104713,
+      "mae": 1.5760209307478987,
       "rank": 23
     },
     {
       "params": {
         "regressor__learning_rate": 0.1,
-        "regressor__max_depth": 4,
+        "regressor__max_depth": 7,
         "regressor__min_child_weight": 1
       },
-      "mae": 1.4937521879239202,
+      "mae": 1.5781834133405392,
       "rank": 24
     },
     {
       "params": {
         "regressor__learning_rate": 0.05,
-        "regressor__max_depth": 7,
-        "regressor__min_child_weight": 1
+        "regressor__max_depth": 4,
+        "regressor__min_child_weight": 7
       },
-      "mae": 1.4940981438279486,
+      "mae": 1.5797213538792252,
       "rank": 25
     },
     {
@@ -242,98 +243,89 @@
         "regressor__max_depth": 4,
         "regressor__min_child_weight": 3
       },
-      "mae": 1.4943112915357568,
+      "mae": 1.58043790094742,
       "rank": 26
     },
     {
       "params": {
-        "regressor__learning_rate": 0.2,
-        "regressor__max_depth": 6,
+        "regressor__learning_rate": 0.05,
+        "regressor__max_depth": 4,
         "regressor__min_child_weight": 5
       },
-      "mae": 1.4947404917268123,
+      "mae": 1.5816795737707232,
       "rank": 27
     },
     {
       "params": {
-        "regressor__learning_rate": 0.2,
-        "regressor__max_depth": 7,
-        "regressor__min_child_weight": 5
+        "regressor__learning_rate": 0.1,
+        "regressor__max_depth": 4,
+        "regressor__min_child_weight": 7
       },
-      "mae": 1.4951580901774657,
+      "mae": 1.5824188396812724,
       "rank": 28
     },
     {
       "params": {
         "regressor__learning_rate": 0.05,
-        "regressor__max_depth": 5,
-        "regressor__min_child_weight": 7
+        "regressor__max_depth": 4,
+        "regressor__min_child_weight": 1
       },
-      "mae": 1.495745501601346,
+      "mae": 1.5861123590963824,
       "rank": 29
     },
     {
       "params": {
         "regressor__learning_rate": 0.2,
-        "regressor__max_depth": 5,
-        "regressor__min_child_weight": 3
+        "regressor__max_depth": 7,
+        "regressor__min_child_weight": 5
       },
-      "mae": 1.4983264325989385,
+      "mae": 1.5866782528378762,
       "rank": 30
-    },
-    {
-      "params": {
-        "regressor__learning_rate": 0.05,
-        "regressor__max_depth": 5,
-        "regressor__min_child_weight": 3
-      },
-      "mae": 1.5019242814607552,
-      "rank": 31
     },
     {
       "params": {
         "regressor__learning_rate": 0.2,
         "regressor__max_depth": 7,
-        "regressor__min_child_weight": 1
+        "regressor__min_child_weight": 7
       },
-      "mae": 1.5021869208601764,
-      "rank": 32
+      "mae": 1.593794617131208,
+      "rank": 31
     },
     {
       "params": {
         "regressor__learning_rate": 0.05,
-        "regressor__max_depth": 5,
+        "regressor__max_depth": 4,
+        "regressor__min_child_weight": 3
+      },
+      "mae": 1.5943362465866922,
+      "rank": 32
+    },
+    {
+      "params": {
+        "regressor__learning_rate": 0.1,
+        "regressor__max_depth": 4,
         "regressor__min_child_weight": 5
       },
-      "mae": 1.5044921210049498,
+      "mae": 1.5951603759571467,
       "rank": 33
     },
     {
       "params": {
-        "regressor__learning_rate": 0.2,
-        "regressor__max_depth": 6,
-        "regressor__min_child_weight": 3
+        "regressor__learning_rate": 0.1,
+        "regressor__max_depth": 4,
+        "regressor__min_child_weight": 1
       },
-      "mae": 1.5096894780051746,
+      "mae": 1.596230134147888,
       "rank": 34
     },
     {
       "params": {
         "regressor__learning_rate": 0.2,
-        "regressor__max_depth": 5,
-        "regressor__min_child_weight": 5
+        "regressor__max_depth": 6,
+        "regressor__min_child_weight": 7
       },
-      "mae": 1.5106968030118972,
+      "mae": 1.5988726638419863,
       "rank": 35
-    },
-    {
-      "params": {
-        "regressor__learning_rate": 0.05,
-        "regressor__max_depth": 5,
-        "regressor__min_child_weight": 1
-      },
-      "mae": 1.5112686657344554,
-      "rank": 36
     },
     {
       "params": {
@@ -341,26 +333,44 @@
         "regressor__max_depth": 7,
         "regressor__min_child_weight": 3
       },
-      "mae": 1.5112875708677493,
+      "mae": 1.603488262623074,
+      "rank": 36
+    },
+    {
+      "params": {
+        "regressor__learning_rate": 0.2,
+        "regressor__max_depth": 5,
+        "regressor__min_child_weight": 7
+      },
+      "mae": 1.604298463514974,
       "rank": 37
     },
     {
       "params": {
         "regressor__learning_rate": 0.2,
         "regressor__max_depth": 5,
-        "regressor__min_child_weight": 7
+        "regressor__min_child_weight": 5
       },
-      "mae": 1.512681600887038,
+      "mae": 1.6077976960441198,
       "rank": 38
     },
     {
       "params": {
         "regressor__learning_rate": 0.2,
-        "regressor__max_depth": 5,
-        "regressor__min_child_weight": 1
+        "regressor__max_depth": 6,
+        "regressor__min_child_weight": 5
       },
-      "mae": 1.5135765835923745,
+      "mae": 1.6078710774153646,
       "rank": 39
+    },
+    {
+      "params": {
+        "regressor__learning_rate": 0.2,
+        "regressor__max_depth": 6,
+        "regressor__min_child_weight": 3
+      },
+      "mae": 1.6154267350464095,
+      "rank": 40
     },
     {
       "params": {
@@ -368,8 +378,8 @@
         "regressor__max_depth": 4,
         "regressor__min_child_weight": 7
       },
-      "mae": 1.5157392883998537,
-      "rank": 40
+      "mae": 1.6192274644340388,
+      "rank": 41
     },
     {
       "params": {
@@ -377,16 +387,7 @@
         "regressor__max_depth": 6,
         "regressor__min_child_weight": 1
       },
-      "mae": 1.517077346704569,
-      "rank": 41
-    },
-    {
-      "params": {
-        "regressor__learning_rate": 0.2,
-        "regressor__max_depth": 4,
-        "regressor__min_child_weight": 3
-      },
-      "mae": 1.5182357918579457,
+      "mae": 1.6193847628443723,
       "rank": 42
     },
     {
@@ -395,62 +396,8 @@
         "regressor__max_depth": 4,
         "regressor__min_child_weight": 5
       },
-      "mae": 1.521490420801199,
+      "mae": 1.619808332413238,
       "rank": 43
-    },
-    {
-      "params": {
-        "regressor__learning_rate": 0.05,
-        "regressor__max_depth": 4,
-        "regressor__min_child_weight": 7
-      },
-      "mae": 1.5269627573723958,
-      "rank": 44
-    },
-    {
-      "params": {
-        "regressor__learning_rate": 0.2,
-        "regressor__max_depth": 4,
-        "regressor__min_child_weight": 1
-      },
-      "mae": 1.5308737364065248,
-      "rank": 45
-    },
-    {
-      "params": {
-        "regressor__learning_rate": 0.05,
-        "regressor__max_depth": 4,
-        "regressor__min_child_weight": 5
-      },
-      "mae": 1.533376146120034,
-      "rank": 46
-    },
-    {
-      "params": {
-        "regressor__learning_rate": 0.05,
-        "regressor__max_depth": 4,
-        "regressor__min_child_weight": 3
-      },
-      "mae": 1.5335412470029026,
-      "rank": 47
-    },
-    {
-      "params": {
-        "regressor__learning_rate": 0.05,
-        "regressor__max_depth": 4,
-        "regressor__min_child_weight": 1
-      },
-      "mae": 1.5376572745251156,
-      "rank": 48
-    },
-    {
-      "params": {
-        "regressor__learning_rate": 0.2,
-        "regressor__max_depth": 3,
-        "regressor__min_child_weight": 7
-      },
-      "mae": 1.5381208934094217,
-      "rank": 49
     },
     {
       "params": {
@@ -458,7 +405,61 @@
         "regressor__max_depth": 3,
         "regressor__min_child_weight": 7
       },
-      "mae": 1.5439935082352925,
+      "mae": 1.62420797374689,
+      "rank": 44
+    },
+    {
+      "params": {
+        "regressor__learning_rate": 0.2,
+        "regressor__max_depth": 5,
+        "regressor__min_child_weight": 3
+      },
+      "mae": 1.6253237838647991,
+      "rank": 45
+    },
+    {
+      "params": {
+        "regressor__learning_rate": 0.1,
+        "regressor__max_depth": 3,
+        "regressor__min_child_weight": 1
+      },
+      "mae": 1.6280890469967673,
+      "rank": 46
+    },
+    {
+      "params": {
+        "regressor__learning_rate": 0.2,
+        "regressor__max_depth": 4,
+        "regressor__min_child_weight": 1
+      },
+      "mae": 1.6292207797319993,
+      "rank": 47
+    },
+    {
+      "params": {
+        "regressor__learning_rate": 0.2,
+        "regressor__max_depth": 4,
+        "regressor__min_child_weight": 3
+      },
+      "mae": 1.633417994243473,
+      "rank": 48
+    },
+    {
+      "params": {
+        "regressor__learning_rate": 0.2,
+        "regressor__max_depth": 7,
+        "regressor__min_child_weight": 1
+      },
+      "mae": 1.6343136623664727,
+      "rank": 49
+    },
+    {
+      "params": {
+        "regressor__learning_rate": 0.1,
+        "regressor__max_depth": 3,
+        "regressor__min_child_weight": 3
+      },
+      "mae": 1.6344809954507475,
       "rank": 50
     },
     {
@@ -467,34 +468,34 @@
         "regressor__max_depth": 3,
         "regressor__min_child_weight": 5
       },
-      "mae": 1.5457289389129893,
+      "mae": 1.6361193498074886,
       "rank": 51
     },
     {
       "params": {
-        "regressor__learning_rate": 0.1,
-        "regressor__max_depth": 3,
-        "regressor__min_child_weight": 3
+        "regressor__learning_rate": 0.2,
+        "regressor__max_depth": 5,
+        "regressor__min_child_weight": 1
       },
-      "mae": 1.5482363305235918,
+      "mae": 1.6446899399705415,
       "rank": 52
     },
     {
       "params": {
-        "regressor__learning_rate": 0.1,
+        "regressor__learning_rate": 0.05,
         "regressor__max_depth": 3,
-        "regressor__min_child_weight": 1
+        "regressor__min_child_weight": 7
       },
-      "mae": 1.5486143055900576,
+      "mae": 1.6507456056862282,
       "rank": 53
     },
     {
       "params": {
-        "regressor__learning_rate": 0.2,
+        "regressor__learning_rate": 0.05,
         "regressor__max_depth": 3,
-        "regressor__min_child_weight": 3
+        "regressor__min_child_weight": 1
       },
-      "mae": 1.549688991337377,
+      "mae": 1.653290058940169,
       "rank": 54
     },
     {
@@ -503,7 +504,7 @@
         "regressor__max_depth": 3,
         "regressor__min_child_weight": 5
       },
-      "mae": 1.5513598450376918,
+      "mae": 1.6547807096398632,
       "rank": 55
     },
     {
@@ -512,17 +513,8 @@
         "regressor__max_depth": 3,
         "regressor__min_child_weight": 1
       },
-      "mae": 1.5649122794768413,
+      "mae": 1.6556136225338385,
       "rank": 56
-    },
-    {
-      "params": {
-        "regressor__learning_rate": 0.05,
-        "regressor__max_depth": 3,
-        "regressor__min_child_weight": 7
-      },
-      "mae": 1.6075275061512457,
-      "rank": 57
     },
     {
       "params": {
@@ -530,8 +522,8 @@
         "regressor__max_depth": 3,
         "regressor__min_child_weight": 3
       },
-      "mae": 1.6079049275075168,
-      "rank": 58
+      "mae": 1.6558922129069706,
+      "rank": 57
     },
     {
       "params": {
@@ -539,16 +531,25 @@
         "regressor__max_depth": 3,
         "regressor__min_child_weight": 5
       },
-      "mae": 1.6097969412234732,
+      "mae": 1.6579301296848925,
+      "rank": 58
+    },
+    {
+      "params": {
+        "regressor__learning_rate": 0.2,
+        "regressor__max_depth": 3,
+        "regressor__min_child_weight": 3
+      },
+      "mae": 1.6714972590076385,
       "rank": 59
     },
     {
       "params": {
-        "regressor__learning_rate": 0.05,
+        "regressor__learning_rate": 0.2,
         "regressor__max_depth": 3,
-        "regressor__min_child_weight": 1
+        "regressor__min_child_weight": 7
       },
-      "mae": 1.6138177030693455,
+      "mae": 1.6724637804525055,
       "rank": 60
     },
     {
@@ -557,62 +558,71 @@
         "regressor__max_depth": 7,
         "regressor__min_child_weight": 7
       },
-      "mae": 2.3611606788724577,
+      "mae": 2.378333032809202,
       "rank": 61
     },
     {
       "params": {
         "regressor__learning_rate": 0.01,
         "regressor__max_depth": 7,
-        "regressor__min_child_weight": 5
+        "regressor__min_child_weight": 3
       },
-      "mae": 2.3645987744538575,
+      "mae": 2.381095240325009,
       "rank": 62
     },
     {
       "params": {
         "regressor__learning_rate": 0.01,
-        "regressor__max_depth": 7,
-        "regressor__min_child_weight": 3
+        "regressor__max_depth": 6,
+        "regressor__min_child_weight": 7
       },
-      "mae": 2.3746013282364316,
+      "mae": 2.383185202481143,
       "rank": 63
     },
     {
       "params": {
         "regressor__learning_rate": 0.01,
         "regressor__max_depth": 7,
-        "regressor__min_child_weight": 1
+        "regressor__min_child_weight": 5
       },
-      "mae": 2.3780504636995596,
+      "mae": 2.384219211832572,
       "rank": 64
     },
     {
       "params": {
         "regressor__learning_rate": 0.01,
         "regressor__max_depth": 6,
-        "regressor__min_child_weight": 7
+        "regressor__min_child_weight": 5
       },
-      "mae": 2.3832527437268523,
+      "mae": 2.3896744848945004,
       "rank": 65
     },
     {
       "params": {
         "regressor__learning_rate": 0.01,
         "regressor__max_depth": 6,
-        "regressor__min_child_weight": 5
+        "regressor__min_child_weight": 3
       },
-      "mae": 2.3906686543991342,
+      "mae": 2.3898604072456777,
       "rank": 66
     },
     {
       "params": {
         "regressor__learning_rate": 0.01,
-        "regressor__max_depth": 6,
+        "regressor__max_depth": 5,
         "regressor__min_child_weight": 3
       },
-      "mae": 2.3925257606243866,
+      "mae": 2.3943693303128795,
       "rank": 67
+    },
+    {
+      "params": {
+        "regressor__learning_rate": 0.01,
+        "regressor__max_depth": 5,
+        "regressor__min_child_weight": 5
+      },
+      "mae": 2.3957447493633945,
+      "rank": 68
     },
     {
       "params": {
@@ -620,8 +630,8 @@
         "regressor__max_depth": 6,
         "regressor__min_child_weight": 1
       },
-      "mae": 2.395227818436134,
-      "rank": 68
+      "mae": 2.3961923191017065,
+      "rank": 69
     },
     {
       "params": {
@@ -629,8 +639,8 @@
         "regressor__max_depth": 5,
         "regressor__min_child_weight": 7
       },
-      "mae": 2.419290396441854,
-      "rank": 69
+      "mae": 2.396897709662354,
+      "rank": 70
     },
     {
       "params": {
@@ -638,25 +648,16 @@
         "regressor__max_depth": 5,
         "regressor__min_child_weight": 1
       },
-      "mae": 2.421476212900198,
-      "rank": 70
-    },
-    {
-      "params": {
-        "regressor__learning_rate": 0.01,
-        "regressor__max_depth": 5,
-        "regressor__min_child_weight": 5
-      },
-      "mae": 2.4234014050106043,
+      "mae": 2.3979489410162436,
       "rank": 71
     },
     {
       "params": {
         "regressor__learning_rate": 0.01,
-        "regressor__max_depth": 5,
-        "regressor__min_child_weight": 3
+        "regressor__max_depth": 7,
+        "regressor__min_child_weight": 1
       },
-      "mae": 2.423938298688062,
+      "mae": 2.398371319790983,
       "rank": 72
     },
     {
@@ -665,16 +666,16 @@
         "regressor__max_depth": 4,
         "regressor__min_child_weight": 3
       },
-      "mae": 2.475919377918404,
+      "mae": 2.427065962145525,
       "rank": 73
     },
     {
       "params": {
         "regressor__learning_rate": 0.01,
         "regressor__max_depth": 4,
-        "regressor__min_child_weight": 1
+        "regressor__min_child_weight": 5
       },
-      "mae": 2.476106846873492,
+      "mae": 2.427433240429649,
       "rank": 74
     },
     {
@@ -683,35 +684,17 @@
         "regressor__max_depth": 4,
         "regressor__min_child_weight": 7
       },
-      "mae": 2.476162345308796,
+      "mae": 2.427815080999273,
       "rank": 75
     },
     {
       "params": {
         "regressor__learning_rate": 0.01,
         "regressor__max_depth": 4,
-        "regressor__min_child_weight": 5
+        "regressor__min_child_weight": 1
       },
-      "mae": 2.476773901697638,
+      "mae": 2.429055268876879,
       "rank": 76
-    },
-    {
-      "params": {
-        "regressor__learning_rate": 0.01,
-        "regressor__max_depth": 3,
-        "regressor__min_child_weight": 7
-      },
-      "mae": 2.5797931068978324,
-      "rank": 77
-    },
-    {
-      "params": {
-        "regressor__learning_rate": 0.01,
-        "regressor__max_depth": 3,
-        "regressor__min_child_weight": 5
-      },
-      "mae": 2.5797966361169355,
-      "rank": 78
     },
     {
       "params": {
@@ -719,8 +702,17 @@
         "regressor__max_depth": 3,
         "regressor__min_child_weight": 1
       },
-      "mae": 2.579861089646373,
-      "rank": 79
+      "mae": 2.509456382532546,
+      "rank": 77
+    },
+    {
+      "params": {
+        "regressor__learning_rate": 0.01,
+        "regressor__max_depth": 3,
+        "regressor__min_child_weight": 7
+      },
+      "mae": 2.5095507967339907,
+      "rank": 78
     },
     {
       "params": {
@@ -728,7 +720,16 @@
         "regressor__max_depth": 3,
         "regressor__min_child_weight": 3
       },
-      "mae": 2.5798630091031747,
+      "mae": 2.512249617873144,
+      "rank": 79
+    },
+    {
+      "params": {
+        "regressor__learning_rate": 0.01,
+        "regressor__max_depth": 3,
+        "regressor__min_child_weight": 5
+      },
+      "mae": 2.5122993358438643,
       "rank": 80
     }
   ]
