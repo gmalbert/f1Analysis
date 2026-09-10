@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from 'react'
 import { api, downloadUrl } from "../api";
 import { Card, DataTable, JsonBlock, Status, Tabs } from "../components/UI";
 

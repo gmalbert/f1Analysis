@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useState } from 'react'
 import Papa from "papaparse";
 import { api } from "../api";
 import { Card, DataTable, JsonBlock, Metric, Tabs } from "../components/UI";

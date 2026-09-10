@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from 'react'
 import { api } from "../api";
 import { Card, DataTable, Metric, Status } from "../components/UI";
 import { BarPanel, LinePanel, ScatterPanel } from "../components/Charts";

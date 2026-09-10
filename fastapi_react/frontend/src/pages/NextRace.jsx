@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from 'react'
 import { api } from "../api";
-import { Card, DataTable, JsonBlock, Metric, Status } from "../components/UI";
+import { Card, DataTable, Metric, Status } from "../components/UI";
 
 function Section({ title, rows }) {
   return <Card title={title}><DataTable rows={rows || []} /></Card>;

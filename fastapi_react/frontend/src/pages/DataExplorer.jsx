@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from 'react'
 import { api } from "../api";
 import { Card, DataTable, Status } from "../components/UI";
 
@@ -53,6 +53,9 @@ export default function DataExplorer() {
       setLoading(false);
       runQuery([], preferredColumns);
     }).catch(e => { setError(e); setLoading(false); });
+    // runQuery intentionally omitted: it is recreated on every render and we
+    // only want this effect to run once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const byName = useMemo(() => Object.fromEntries(schema.map(s => [s.column, s])), [schema]);

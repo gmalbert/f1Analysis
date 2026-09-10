@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from 'react'
 import { api } from "./api";
 import DataExplorer from "./pages/DataExplorer";
 import Analytics from "./pages/Analytics";

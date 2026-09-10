@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from 'react'
 import { api } from "../api";
 import { Card, DataTable, JsonBlock, Status, Tabs } from "../components/UI";
 
@@ -69,8 +69,8 @@ export default function Models() {
       </header>
       <Status loading={!health && !error} error={error}>
         <Card title="Model Selection">
-          <label className="field-label">Model type</label>
-          <select value={selectedModel} onChange={e => setSelectedModel(e.target.value)}>
+          <label className="field-label" htmlFor="model-type-select">Model type</label>
+          <select id="model-type-select" value={selectedModel} onChange={e => setSelectedModel(e.target.value)}>
             {models.map(model => <option key={model}>{model}</option>)}
           </select>
           <p className="muted">
