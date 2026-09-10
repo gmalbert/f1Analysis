@@ -12,7 +12,10 @@
     "test": "vitest run --coverage",
     "test:watch": "vitest",
     "audit": "npm audit --omit=dev",
-    "audit:dev": "npm audit"
+    "audit:dev": "npm audit",
+    "capture:react": "node ../parity_evidence/capture_react.mjs",
+    "capture:streamlit": "node ../parity_evidence/capture_streamlit.mjs",
+    "capture:diff": "node ../parity_evidence/diff_screenshots.mjs"
   },
   "dependencies": {
     "papaparse": "^5.4.1",
@@ -36,6 +39,10 @@
     "eslint-plugin-react-hooks": "^5.0.0",
     "globals": "^15.11.0",
     "jsdom": "^25.0.1",
+    "playwright": "^1.49.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "sharp": "^0.33.5",
     "typescript": "^5.7.2",
     "vite": "^6.0.0",
     "vitest": "^2.1.8"
