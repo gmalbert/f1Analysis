@@ -119,7 +119,16 @@ export default function DataExplorer() {
 
         <Card title="Filtered Results">
           <Status loading={loading} error={error}>
-            <DataTable rows={result.rows} columns={result.columns} />
+            {result.rows?.length ? (
+              <DataTable rows={result.rows} columns={result.columns} />
+            ) : (
+              <div className="empty">
+                <p>No rows match the current filters.</p>
+                {Object.keys(values).length > 0 && (
+                  <button onClick={clear}>Reset filters</button>
+                )}
+              </div>
+            )}
           </Status>
         </Card>
       </div>

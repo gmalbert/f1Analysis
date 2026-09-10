@@ -70,9 +70,13 @@ export default function Models() {
       <Status loading={!health && !error} error={error}>
         <Card title="Model Selection">
           <label className="field-label" htmlFor="model-type-select">Model type</label>
-          <select id="model-type-select" value={selectedModel} onChange={e => setSelectedModel(e.target.value)}>
-            {models.map(model => <option key={model}>{model}</option>)}
-          </select>
+          {models.length === 0 ? (
+            <div className="empty">No trained model for the selected type. See <a href="https://github.com/anomalyco/opencode/blob/main/scripts/precompute/README.md" target="_blank" rel="noreferrer">the precompute docs</a> for how to generate one.</div>
+          ) : (
+            <select id="model-type-select" value={selectedModel} onChange={e => setSelectedModel(e.target.value)}>
+              {models.map(model => <option key={model}>{model}</option>)}
+            </select>
+          )}
           <p className="muted">
             Selected: <strong>{selectedModel}</strong>. The React migration keeps production inference artifact-first; it does not train models on page load.
           </p>

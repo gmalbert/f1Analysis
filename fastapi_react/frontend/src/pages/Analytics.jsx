@@ -13,7 +13,9 @@ export default function Analytics() {
     <div>
       <header className="page-header"><div><h1>Analytics & Visualizations</h1><p>Charts, regressions, correlations, driver trends and constructor trends.</p></div></header>
       <Status loading={!data && !error} error={error}>
-        {data && <>
+        {data && data.rows_considered === 0 ? (
+          <Card><div className="empty">No data for the selected years / drivers.</div></Card>
+        ) : data && <>
           <div className="metrics"><Metric label="Rows considered" value={data.rows_considered?.toLocaleString()} /></div>
           <div className="chart-grid">
             <ScatterPanel title="Active Years vs Final Position" rows={data.charts?.active_years_vs_final} x="resultsFinalPositionNumber" y="yearsActive" />

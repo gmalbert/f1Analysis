@@ -50,7 +50,9 @@ export default function RawData() {
         <Card title={`Files (${files.length})`}>
           <input className="search" placeholder="Filter filenames…" value={query} onChange={e => setQuery(e.target.value)} />
           <div className="file-list">
-            {shown.map(f => (
+            {shown.length === 0 ? (
+              <div className="empty">No files in data_files/</div>
+            ) : shown.map(f => (
               <button key={f.path} className={selected === f.path ? "file active" : "file"} onClick={() => open(f.path)}>
                 <span>{f.path}</span><small>{(f.size / 1024).toFixed(1)} KB</small>
               </button>

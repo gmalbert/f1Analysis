@@ -10,7 +10,9 @@ export default function CurrentSeason() {
     <div>
       <header className="page-header"><div><h1>{data?.year || "Current"} Season</h1><p>Complete schedule and circuit information for the current Formula 1 season.</p></div></header>
       <Status loading={!data && !error} error={error}>
-        {data && <>
+        {data && data.rows?.length === 0 ? (
+          <Card><div className="empty">No race data for the current year.</div></Card>
+        ) : data && <>
           <div className="metrics"><Metric label="Races" value={data.rows?.length || 0} /></div>
           <Card title={`${data.year} Schedule`}>
             <div className="table-wrap" style={{maxHeight: 780}}><table><thead><tr>{data.columns.map(c => <th key={c}>{c}</th>)}</tr></thead><tbody>
