@@ -32,7 +32,7 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements-training.txt
       
       - name: Download XGBoost models from previous workflow
         uses: dawidd6/action-download-artifact@09f2f74827fd3a8607589e5ad7f9398816f540fe # v3

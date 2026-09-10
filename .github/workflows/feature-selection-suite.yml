@@ -23,7 +23,7 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements-training.txt
       - name: Run RFE
         run: python scripts/precompute/rfe_features.py --output data_files/precomputed/rfe_results.json
         env:
@@ -42,7 +42,7 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements-training.txt
       - name: Run Boruta
         run: python scripts/precompute/boruta_features.py --max-iter 200 --output data_files/precomputed/boruta_results.json
         env:
@@ -61,7 +61,7 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements-training.txt
       - name: Run SHAP Analysis
         run: python scripts/precompute/shap_analysis.py --output data_files/precomputed/shap_results.json
         env:
@@ -80,7 +80,7 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements-training.txt
       - name: Run Permutation Importance
         run: python scripts/precompute/permutation_importance.py --output data_files/precomputed/permutation_results.json
         env:
@@ -99,7 +99,7 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements-training.txt
       - name: Run Historical Validation
         run: python scripts/precompute/historical_validation.py --output data_files/precomputed/historical_validation.json
         env:

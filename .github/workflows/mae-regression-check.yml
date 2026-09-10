@@ -26,7 +26,7 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-training.txt
 
       - name: Run MAE regression check
         run: python scripts/check_mae_regression.py --threshold 0.05

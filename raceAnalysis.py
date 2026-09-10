@@ -1,5 +1,3 @@
-import fastf1
-from fastf1.ergast import Ergast
 import pandas as pd
 import datetime
 import json
@@ -7,6 +5,13 @@ from os import path
 import os
 import sys
 import subprocess
+
+# Keep the hosted Streamlit process from allowing native numerical libraries to
+# claim every available CPU thread. Offline training workflows set their own
+# parallelism and are not affected by these web-runtime defaults.
+for _thread_env in ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS', 'NUMEXPR_NUM_THREADS'):
+    os.environ.setdefault(_thread_env, '1')
+
 import streamlit as st
 import numpy as np
 from pathlib import Path
@@ -38,10 +43,7 @@ import numpy as np
 #import scipy
 from scipy.stats import linregress
 from scipy.stats import truncnorm
-import matplotlib.pyplot as plt
 import plotly.graph_objects as go
-from sklearn.model_selection import cross_val_score
-from sklearn.model_selection import GridSearchCV
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.pipeline import Pipeline
@@ -53,11 +55,7 @@ from sklearn.impute import IterativeImputer
 from sklearn.preprocessing import RobustScaler, TargetEncoder
 from sklearn.ensemble import VotingRegressor, StackingRegressor
 from sklearn.base import BaseEstimator, RegressorMixin
-import seaborn as sns
 from xgboost import XGBRegressor
-import shap
-from sklearn.feature_selection import RFE
-from boruta import BorutaPy
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.metrics import roc_auc_score
 import xgboost as xgb
@@ -76,9 +74,24 @@ import logging
 # Debugging toggle: set environment variable F1_DEBUG=1 to enable detailed
 # runtime diagnostics (prints shapes, feature lists, and model-reported feature counts).
 DEBUG = os.environ.get('F1_DEBUG', '0') == '1'
+RESEARCH_MODE = os.environ.get('F1_RESEARCH_MODE', '0').strip().lower() in {'1', 'true', 'yes'}
+MEMORY_LOGGING = os.environ.get('F1_MEMORY_LOG', '0').strip().lower() in {'1', 'true', 'yes'}
+
 logger = logging.getLogger('f1analysis')
 if DEBUG:
     logging.basicConfig(level=logging.DEBUG)
+
+
+def log_memory(label: str) -> None:
+    """Log process RSS when explicitly enabled for deployment diagnostics."""
+    if not MEMORY_LOGGING:
+        return
+    try:
+        import psutil
+        rss_mb = psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024
+        print(f"[MEMORY] {label}: {rss_mb:.1f} MB RSS", flush=True)
+    except Exception as exc:
+        logger.debug("Unable to collect RSS for %s: %s", label, exc)
 
 # ── ROADMAP-3 constants ──────────────────────────────────────────────────────
 # High-cardinality categorical columns that benefit from target encoding rather
@@ -788,7 +801,7 @@ def simulate_rookie_dnf(data, all_active_driver_inputs, current_year, n_simulati
 # Done to avoid getting an error on Github after upload
 
 if os.environ.get('LOCAL_RUN') == '1':
-
+    import fastf1
     fastf1.Cache.enable_cache(path.join(DATA_DIR, 'f1_cache'))
 
 st.set_page_config(
@@ -797,6 +810,7 @@ st.set_page_config(
    layout="wide",
    initial_sidebar_state="expanded"
 )
+log_memory('after application imports')
 
 def km_to_miles(km):
     return km * 0.621371
@@ -1586,8 +1600,22 @@ def load_data(nrows, CACHE_VERSION, data_sha256=None):
     # cached DataFrames for identical data.
     if data_sha256 is None:
         data_sha256 = get_data_fingerprint()['data_sha256']
-    # Read the header only to get all column names
-    all_columns = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t', nrows=0).columns.tolist()
+    # Prefer the typed Parquet build artifact, but retain the CSV fallback for
+    # local development and older checkouts that predate the artifact.
+    csv_path = Path(DATA_DIR) / 'f1ForAnalysis.csv'
+    parquet_path = Path(DATA_DIR) / 'f1ForAnalysis.parquet'
+    parquet_requested = os.environ.get('F1_USE_PARQUET')
+    if parquet_requested is None:
+        # Headless jobs are training/precompute consumers and retain the CSV
+        # source contract. Normal Streamlit execution uses the typed artifact.
+        parquet_requested = '0' if os.environ.get('STREAMLIT_SERVER_HEADLESS', '').strip().lower() in {'1', 'true', 'yes'} else '1'
+    use_parquet = parquet_requested.strip().lower() in {'1', 'true', 'yes'}
+    source_path = parquet_path if use_parquet and parquet_path.exists() else csv_path
+    if source_path.suffix == '.parquet':
+        import pyarrow.parquet as pq
+        all_columns = pq.ParquetFile(source_path).schema.names
+    else:
+        all_columns = pd.read_csv(source_path, sep='\t', nrows=0).columns.tolist()
     selected_columns = ['grandPrixYear', 'round', 'grandPrixName', 'resultsDriverName', 'resultsPodium', 'resultsTop5', 'resultsTop10', 'constructorName',  'resultsStartingGridPositionNumber', 'resultsFinalPositionNumber', 
     'positionsGained', 'short_date', 'raceId_results', 'grandPrixRaceId', 'DNF', 'averagePracticePosition', 'lastFPPositionNumber', 'resultsQualificationPositionNumber', 'q1End', 'q2End', 'q3Top10', 'resultsDriverId', 
     'grandPrixLaps', 'constructorTotalRaceStarts', 'constructorTotalRaceWins', 'constructorTotalPolePositions', 'turns', 'resultsReasonRetired', 'constructorId_results', 
@@ -1664,10 +1692,15 @@ def load_data(nrows, CACHE_VERSION, data_sha256=None):
                                         'overtaking_success_top10', 'tire_management_score']
 
     bin_columns = [col for col in all_columns if col.endswith('_bin')]
-    usecols = selected_columns + bin_columns
+    usecols = list(dict.fromkeys(col for col in selected_columns + bin_columns if col in all_columns))
         #    ], dtype={'resultsStartingGridPositionNumber': 'Float64', 'resultsFinalPositionNumber': 'Float64', 'positionsGained': 'Int64', 'averagePracticePosition': 'Float64', 'lastFPPositionNumber': 'Float64', 'resultsQualificationPositionNumber': 'Int64'})
     
-    fullResults = pd.read_csv(path.join(DATA_DIR, 'f1ForAnalysis.csv'), sep='\t', nrows=nrows, usecols=usecols)
+    if source_path.suffix == '.parquet':
+        fullResults = pd.read_parquet(source_path, columns=usecols)
+        if nrows is not None:
+            fullResults = fullResults.iloc[:nrows]
+    else:
+        fullResults = pd.read_csv(source_path, sep='\t', nrows=nrows, usecols=usecols)
 
     pitStops = pd.read_csv(path.join(DATA_DIR, 'f1PitStopsData_Grouped.csv'), sep='\t', nrows=nrows, usecols=['raceId', 'driverId', 'constructorId', 'numberOfStops', 'averageStopTime', 'totalStopTime'])
     constructor_standings = pd.read_csv(path.join(DATA_DIR, 'constructor_standings.csv'), sep='\t')
@@ -1698,7 +1731,9 @@ def get_shared_dataset(nrows, CACHE_VERSION, data_sha256=None):
     post-processing that used to run at module scope on every session is done here
     a single time instead.
     """
+    log_memory('before primary dataset load')
     fullResults, pitStops = load_data(nrows, CACHE_VERSION, data_sha256)
+    log_memory('after primary dataset load')
 
     # Debug: Check what columns were actually loaded
     print(f"[DEBUG] Loaded data with {len(fullResults.columns)} columns")
@@ -1802,6 +1837,8 @@ def get_shared_dataset(nrows, CACHE_VERSION, data_sha256=None):
     fullResults['is_first_season_with_constructor'] = fullResults['is_first_season_with_constructor'].astype('Int64')
     fullResults['grid_penalty_x_constructor_bin'] = fullResults['grid_penalty_x_constructor_bin'].astype('Float64')
     fullResults['SafetyCarStatus'] = fullResults['SafetyCarStatus'].astype('Float64')
+
+    log_memory('after primary dataset preparation')
 
     return fullResults, pitStops
 
@@ -2785,6 +2822,7 @@ def _load_pretrained_model_resource(
         try:
             with model_file.open('rb') as source:
                 artifact = pickle.load(source)
+            log_memory(f'after model load: {model_file.name}')
         except Exception as exc:
             print(f"WARNING: Could not load pre-trained {model_name} from {model_file}: {exc}")
             continue
@@ -3045,6 +3083,7 @@ def monte_carlo_feature_selection(
 
 def run_rfe_feature_selection(X, y, n_features_to_select=10):
     """Run Recursive Feature Elimination (RFE) with XGBoost."""
+    from sklearn.feature_selection import RFE
     estimator = XGBRegressor(n_estimators=100, max_depth=4, n_jobs=-1, tree_method='hist', random_state=42)
     rfe = RFE(estimator, n_features_to_select=n_features_to_select, step=1)
     rfe.fit(X, y)
@@ -3054,6 +3093,7 @@ def run_rfe_feature_selection(X, y, n_features_to_select=10):
 
 def run_boruta_feature_selection(X, y, max_iter=200):
     """Run Boruta feature selection with XGBoost."""
+    from boruta import BorutaPy
     X_boruta = X.copy()
     for col in X_boruta.select_dtypes(include='object').columns:
         X_boruta[col] = X_boruta[col].astype('category').cat.codes
@@ -3091,6 +3131,7 @@ def run_boruta_feature_selection(X, y, max_iter=200):
 
 def rfe_minimize_mae(X, y, metadata, min_features=3, max_features=20, step=1, random_state=42):
     """Run RFE for a range of feature counts and return the subset with the lowest MAE."""
+    from sklearn.feature_selection import RFE
     from sklearn.metrics import mean_absolute_error
 
     # Convert object columns to category codes
@@ -3388,6 +3429,7 @@ with tab2:
     st.write("Comprehensive charts, regressions, and analysis of filtered data.")
     
     if 'filtered_data' in locals() and len(filtered_data) > 0:
+        import matplotlib.pyplot as plt
         # Add visualizations for the filtered data
         st.subheader("Active Years v. Final Position")
         st.scatter_chart(filtered_data, x='resultsFinalPositionNumber', x_label='Final Position', y='yearsActive', y_label='Years Active', width="stretch")
@@ -3703,8 +3745,15 @@ with tab2:
         if len(X) == 0 or len(y) == 0:
             st.warning("No data available after filtering. Please adjust your filters.")
         else:
-            # Split the data
-            model, mse, r2, mae, mean_err, evals_result, _ = train_and_evaluate_model(filtered_data)
+            # Use the shared artifact in production. Runtime training remains
+            # available only for explicitly enabled local research sessions.
+            if RESEARCH_MODE:
+                model, mse, r2, mae, mean_err, evals_result, _ = train_and_evaluate_model(filtered_data)
+                model_preprocessor = None
+            else:
+                model, mse, r2, mae, mean_err, evals_result, model_preprocessor = get_trained_model(
+                    20, CACHE_VERSION, get_data_fingerprint()['data_sha256']
+                )
 
             metrics = {
                 'Mean Squared Error': mse,
@@ -3720,8 +3769,17 @@ with tab2:
             X_train, X_test = X.iloc[_train], X.iloc[_test]
             y_train, y_test = y.iloc[_train], y.iloc[_test]
 
-            preprocessor = get_preprocessor_position(X)
-            preprocessor.fit(X_train)  # Fit on training data
+            if RESEARCH_MODE:
+                preprocessor = get_preprocessor_position(X)
+                preprocessor.fit(X_train)  # Fit on training data
+            else:
+                # Artifact models must use the exact preprocessor saved with
+                # the model; fitting a new encoder on filtered data can change
+                # feature positions and silently invalidate predictions.
+                preprocessor = model_preprocessor
+                expected_columns = list(getattr(preprocessor, 'feature_names_in_', ()))
+                if expected_columns:
+                    X_test = X_test.reindex(columns=expected_columns)
             X_test_prep = _prep_as_df(preprocessor.transform(X_test), preprocessor)
 
             # Predict based on model type
@@ -4344,6 +4402,7 @@ with tab4:
                     X_predict.loc[:, col] = tmp_series
 
             X_predict_prep = preprocessor.transform(X_predict)
+            log_memory('after prediction preprocessing')
     
             # Runtime diagnostics: when DEBUG enabled, emit model and feature info
             if DEBUG:
@@ -4409,8 +4468,10 @@ with tab4:
                     _prep_as_df(X_predict_prep, preprocessor),
                     get_circuit_type(_cref),
                 )
+                log_memory('after position prediction')
             else:
                 predicted_position = model.predict(_prep_as_df(X_predict_prep, preprocessor))
+                log_memory('after position prediction')
 
             # Get DNF feature names
             dnf_features, _ = get_features_and_target_dnf(data)
@@ -4441,6 +4502,7 @@ with tab4:
                     # st.warning("Imputing missing values in X_predict_dnf before prediction.")
                     X_predict_dnf = X_predict_dnf.fillna(X_predict_dnf.mean(numeric_only=True))
                 predicted_dnf_proba = get_dnf_model(CACHE_VERSION).predict_proba(X_predict_dnf)[:, 1]  # Probability of DNF=True
+                log_memory('after DNF prediction')
 
     
             # Get race-level features for the next race (should be one row)
@@ -4968,6 +5030,12 @@ with tab5:
         "Models are pre-trained by GitHub Actions; training controls are kept out "
         "of the live app to protect responsiveness."
     )
+    if not RESEARCH_MODE:
+        st.info(
+            "Research controls are disabled in hosted mode. Enable "
+            "F1_RESEARCH_MODE=1 only for a trusted local/admin session; "
+            "precomputed analyses remain available below."
+        )
 
     # Load one shared workflow-generated model for reuse. Discard any legacy
     # retrain flag left in an existing session after a hot deployment.
@@ -5609,7 +5677,7 @@ with tab5:
                     step=1
                 )
             
-                if st.button("Run Monte Carlo Search"):
+                if RESEARCH_MODE and st.button("Run Monte Carlo Search"):
                     with st.spinner("Running Monte Carlo feature subset search..."):
                         results_mc = monte_carlo_feature_selection(
                             X_mc, y_mc,
@@ -5652,7 +5720,7 @@ with tab5:
                 # 4F: Monte Carlo convergence analysis dashboard (ROADMAP-4F)
                 # ----------------------------------------------------------------
                 st.write("---")
-                if st.checkbox("📈 Show Monte Carlo convergence analysis"):
+                if RESEARCH_MODE and st.checkbox("📈 Show Monte Carlo convergence analysis"):
                     mc_log_path = Path('data_files/precomputed/monte_carlo_run_log.json')
                     if mc_log_path.exists():
                         import json as _json
@@ -5702,7 +5770,7 @@ with tab5:
                     X_rfe[col] = X_rfe[col].astype('category').cat.codes
             
                 n_features_rfe = st.number_input("Number of features to select (RFE)", min_value=1, max_value=len(X_rfe.columns), value=10, step=1)
-                if st.button("Run RFE"):
+                if RESEARCH_MODE and st.button("Run RFE"):
                     with st.spinner("Running RFE..."):
                         selected_features, ranking = run_rfe_feature_selection(X_rfe, y_rfe, n_features_to_select=int(n_features_rfe))
                     st.write("Selected features:", selected_features)
@@ -5721,7 +5789,7 @@ with tab5:
                 for col in X_boruta.select_dtypes(include='object').columns:
                     X_boruta[col] = X_boruta[col].astype('category').cat.codes
                 max_iter_boruta = st.number_input("Boruta max iterations", min_value=10, max_value=200, value=50, step=10)
-                if st.button("Run Boruta"):
+                if RESEARCH_MODE and st.button("Run Boruta"):
                     with st.spinner("Running Boruta..."):
                         selected_features_b, ranking_b = run_boruta_feature_selection(X_boruta, y_boruta, max_iter=int(max_iter_boruta))
                     st.write("Selected features:", selected_features_b)
@@ -5747,7 +5815,7 @@ with tab5:
                     value=min(min_features_mae+5, len(X_rfe_mae.columns)),
                     step=1
                 )
-                if st.button("Run RFE to Minimize MAE"):
+                if RESEARCH_MODE and st.button("Run RFE to Minimize MAE"):
                     with st.spinner("Running RFE to minimize MAE..."):
                         best_features, best_ranking, best_mae, maes = rfe_minimize_mae(
                             X_rfe_mae,
@@ -5772,7 +5840,7 @@ with tab5:
                 # External script runner (feature selection helper)
                 st.write("### External Feature Selection Script")
             
-                if st.button("Run feature-selection helper", help="Runs the feature_selection_refinement.py script to perform additional feature selection analyses."):
+                if RESEARCH_MODE and st.button("Run feature-selection helper", help="Runs the feature_selection_refinement.py script to perform additional feature selection analyses."):
                     with st.spinner('Launching feature selection script...'):
                         import subprocess, sys
                         script_path = os.path.join('scripts', 'feature_selection_refinement.py')
@@ -6093,7 +6161,7 @@ with tab5:
                             st.write('Could not read feature_selection_report.html')
 
                     # Regenerate exporters on demand
-                    if st.button('Regenerate CSV/HTML exporters'):
+                    if RESEARCH_MODE and st.button('Regenerate CSV/HTML exporters'):
                         with st.spinner('Generating CSV summary and HTML report...'):
                             script_path = os.path.join('scripts', 'export_feature_selection.py')
                             try:
@@ -6473,8 +6541,9 @@ with tab5:
             
                 tuning_method = st.selectbox("Tuning Method", ["Grid Search", "Bayesian Optimization"], key="tuning_method")
             
-                if st.button("Start Hyperparameter Tuning"):
+                if RESEARCH_MODE and st.button("Start Hyperparameter Tuning"):
                     with st.spinner("Running hyperparameter tuning (this may take several minutes)..."):
+                        from sklearn.model_selection import GridSearchCV, cross_val_score
                         X_hyper, y_hyper = get_features_and_target(data)
                     
                         mask_hyper = y_hyper.notnull() & np.isfinite(y_hyper)
@@ -6804,7 +6873,8 @@ with tab6:
 
     with tuning_tab:
         st.write("Run basic hyperparameter tuning (GridSearch) on the full dataset.")
-        if st.checkbox("Run Hyperparameter Tuning (subtab)", key='run_hyperparam_tuning_tab5'):
+        if RESEARCH_MODE and st.checkbox("Run Hyperparameter Tuning (subtab)", key='run_hyperparam_tuning_tab5'):
+            from sklearn.model_selection import GridSearchCV
             X, y = get_features_and_target(data)
             param_grid = {
                 'regressor__n_estimators': [100, 200],

@@ -35,7 +35,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements-training.txt
       - name: Train XGBoost Models
         run: python scripts/precompute/train_xgboost.py
         env:
@@ -55,7 +55,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements-training.txt
       - name: Train LightGBM Models
         run: python scripts/precompute/train_lightgbm.py
         env:
@@ -75,7 +75,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements-training.txt
       - name: Train CatBoost Models
         run: python scripts/precompute/train_catboost.py
         env:
@@ -95,7 +95,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements-training.txt
       - name: Train Position Group Ensemble
         run: python scripts/precompute/train_position_group.py
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
@@ -119,7 +119,7 @@ jobs:
           pattern: '*-models'
           path: data_files/models/
           merge-multiple: true
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements-training.txt
       - name: Train Ensemble Model
         run: python scripts/precompute/train_ensemble.py
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
@@ -137,7 +137,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements-training.txt
       - name: Train Track-Weighted Ensemble Model
         run: python scripts/precompute/train_track_weighted.py
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
@@ -155,6 +155,11 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      - run: pip install -r requirements-web.txt
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: xgboost-models
@@ -190,7 +195,8 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git pull --ff-only origin main || true
-          git add data_files/models/
+          python scripts/build_production_parquet.py
+          git add data_files/models/ data_files/f1ForAnalysis.parquet
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
