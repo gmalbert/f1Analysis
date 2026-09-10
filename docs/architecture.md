@@ -10,15 +10,16 @@ Phase 1 — Data Generation (~10-30 min):
             ↓
     f1-generate-analysis.py
             ↓
-    data_files/f1ForAnalysis.csv (tab-separated, 2200+ columns)
+    data_files/f1ForAnalysis.csv (tab-separated source, currently 616 columns)
     data_files/f1WeatherData_*.csv
     data_files/f1PitStopsData_*.csv
     data_files/all_race_control_messages.csv
 
-Phase 2 — UI (sub-second):
-    raceAnalysis.py (Streamlit, @st.cache_data)
+Phase 2 — UI:
+    raceAnalysis.py (Streamlit, shared @st.cache_resource)
             ↓
-    Reads CSVs → trains model on-demand → displays predictions
+    Reads Parquet when available (CSV fallback) → loads workflow-generated
+    model artifacts → displays predictions
 ```
 
 ## ML Models
@@ -54,7 +55,15 @@ Feature engineering: 70+ leakage-free features (all use `shift(1)` before rollin
 - Run `scripts/audit_temporal_leakage.py` after adding features
 
 ## Cache Invalidation
-`CACHE_VERSION = "v2.3"` passed to all `@st.cache_data` functions. Increment when making breaking changes to cached data structures.
+`CACHE_VERSION = "v3.3"` is passed to cached loaders. Dataset content hashes
+also invalidate shared data and model artifacts when source data changes.
+
+Runtime training and research controls are disabled by default. Set
+`F1_RESEARCH_MODE=1` only for a trusted local/admin session.
+
+Dependency roles are separated into `requirements-web.txt` for the hosted app
+and `requirements-training.txt` for data generation, model training, and
+feature-selection workflows.
 
 ## Email Notifications
 `scripts/send_rich_email_now.py` → checks upcoming races in `f1db-races.json` → calls `scripts/export_email_context.py` → sends SMTP email with embedded HTML + TSV attachment. Use `--force` to bypass race-timing checks.

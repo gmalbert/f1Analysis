@@ -36,7 +36,7 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements-training.txt
       - name: Run Grid Search
         run: python scripts/precompute/hyperparameter_grid_search.py --output data_files/precomputed/hyperparam_grid.json
         env:
@@ -56,7 +56,7 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements-training.txt
       - name: Run Bayesian Optimization
         run: |
           python scripts/precompute/hyperparameter_bayesian.py \

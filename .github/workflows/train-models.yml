@@ -43,8 +43,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      
+          pip install -r requirements-training.txt
+
       - name: Train models
         run: |
           python scripts/train_and_save_models.py
@@ -65,9 +65,10 @@ jobs:
 
           # ensure we have latest remote changes
           git pull --ff-only origin main || true
+          python scripts/build_production_parquet.py
           
           # Add model files
-          git add data_files/models/*.pkl
+          git add data_files/models/*.pkl data_files/f1ForAnalysis.parquet
           
           # Check if there are changes
           if git diff --staged --quiet; then

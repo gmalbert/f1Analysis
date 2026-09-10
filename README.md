@@ -55,6 +55,11 @@ Quick offline validation:
 ```
 
 ## How to run
+
+The default `requirements.txt` (or `requirements-web.txt`) is for the
+Streamlit application. Data generation, model training, and feature-selection
+workflows use the expanded `requirements-training.txt` environment.
+
 ```powershell
 # Activate the virtual environment
 .\.venv\Scripts\Activate.ps1
@@ -213,9 +218,10 @@ This fix resolves inflated DNF counts (e.g., Australian GP 2025 showed 57 instea
 The app is deployed on [Streamlit Cloud](https://f1analysis-app.streamlit.app/) and uses aggressive caching with `@st.cache_data` decorators to improve performance. 
 
 ### Cache Management
-- **CACHE_VERSION**: The app uses a version-based cache invalidation system (`CACHE_VERSION="v2.3"`) to ensure cached data and models remain consistent across deployments
+- **CACHE_VERSION**: The app uses version-based cache invalidation (`CACHE_VERSION="v3.3"`) plus content fingerprints to ensure cached data and models remain consistent across deployments
 - **Cache Dependencies**: All cached functions include `CACHE_VERSION` as a dependency to force cache invalidation when the version changes
 - **Model Caching**: ML models are cached with preprocessing pipelines to prevent feature shape mismatches between training and prediction
+- **Research Mode**: Runtime training and feature-selection controls are disabled by default. Set `F1_RESEARCH_MODE=1` only for trusted local/admin sessions.
 
 ### Deployment Notes
 - **Streamlit Cloud Compatibility**: The app is optimized for Streamlit Cloud deployment with proper cache management to prevent stale cached models
