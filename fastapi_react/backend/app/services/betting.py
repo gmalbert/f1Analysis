@@ -1,14 +1,16 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import json
+from datetime import UTC, datetime
+from typing import Any
+
 import pandas as pd
 
 from ..config import DATA_DIR
 from .data import load_main_data, records
 
 
-def value_and_stake(payload) -> dict:
+def value_and_stake(payload: Any) -> dict[str, Any]:
     from f1bet.odds import devig_decimal_odds, expected_value
     from f1bet.risk import PortfolioState, RiskPolicy, propose_stake
     market_probability = devig_decimal_odds(
@@ -29,7 +31,7 @@ def value_and_stake(payload) -> dict:
     }
 
 
-def simulate(payload) -> dict:
+def simulate(payload: Any) -> dict[str, Any]:
     from f1bet.simulation import RaceEntry, SimulationConfig, simulate_race
     entries = [
         RaceEntry(
@@ -42,7 +44,7 @@ def simulate(payload) -> dict:
     return {"columns": list(output.columns), "rows": records(output)}
 
 
-def backtest(rows: list[dict]) -> dict:
+def backtest(rows: list[dict[str, Any]]) -> dict[str, Any]:
     from f1bet.backtest import run_backtest, run_risk_sensitivity
     frame = pd.DataFrame(rows)
     result = run_backtest(frame)
@@ -55,7 +57,7 @@ def backtest(rows: list[dict]) -> dict:
     }
 
 
-def calibration(rows: list[dict]) -> dict:
+def calibration(rows: list[dict[str, Any]]) -> dict[str, Any]:
     from f1bet.calibration import calibration_table, probability_metrics
     frame = pd.DataFrame(rows)
     missing = {"probability", "outcome"} - set(frame.columns)
@@ -68,16 +70,16 @@ def calibration(rows: list[dict]) -> dict:
         row = probability_metrics(group.probability, group.outcome)
         if group_columns:
             values = key if isinstance(key, tuple) else (key,)
-            row.update(dict(zip(group_columns, values)))
+            row.update(dict(zip(group_columns, values, strict=True)))
         metrics.append(row)
     reliability = calibration_table(frame.probability, frame.outcome)
     return {"metrics": metrics, "reliability": records(reliability)}
 
 
-def governance() -> dict:
-    from f1bet.features import default_registry
+def governance() -> dict[str, Any]:
     from f1bet.contracts import RACE_MODEL_CONTRACT, add_event_identity, stamp_feature_snapshot
     from f1bet.domain import SessionStage
+    from f1bet.features import default_registry
     registry = default_registry()
     try:
         data = load_main_data()
@@ -90,7 +92,7 @@ def governance() -> dict:
         sample = data[audit_columns].copy()
         if "event_id" not in sample:
             sample = add_event_identity(sample)
-        sample = stamp_feature_snapshot(sample, as_of=datetime.now(timezone.utc), stage=SessionStage.PRE_RACE)
+        sample = stamp_feature_snapshot(sample, as_of=datetime.now(UTC), stage=SessionStage.PRE_RACE)
         report = RACE_MODEL_CONTRACT.validate(sample).as_dict()
     except Exception as exc:
         report = {"valid": False, "error": str(exc)}

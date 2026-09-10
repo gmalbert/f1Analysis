@@ -1,6 +1,9 @@
 from __future__ import annotations
+
 import subprocess
 import sys
+from typing import Any
+
 from ..config import ENABLE_EXPENSIVE_TOOLS, REPO_ROOT
 
 TOOLS = {
@@ -14,7 +17,7 @@ TOOLS = {
     "hyperparameter_bayesian": "scripts/precompute/hyperparameter_bayesian.py",
 }
 
-def run_tool(name: str, args: list[str]) -> dict:
+def run_tool(name: str, args: list[str]) -> dict[str, Any]:
     if not ENABLE_EXPENSIVE_TOOLS:
         raise PermissionError(
             "Expensive/manual analysis tools are disabled. Set ENABLE_EXPENSIVE_TOOLS=1 only on a test host."

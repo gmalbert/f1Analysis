@@ -4,7 +4,7 @@ import json
 import math
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -29,8 +29,8 @@ def _clean_scalar(value: Any) -> Any:
     try:
         if pd.isna(value):
             return None
-    except Exception:
-        pass
+    except (TypeError, ValueError):
+        return None
     return value
 
 
@@ -134,7 +134,7 @@ def filter_schema() -> list[dict[str, Any]]:
     return schema
 
 
-def query_main(request) -> dict[str, Any]:
+def query_main(request: Any) -> dict[str, Any]:
     df = apply_filters(load_main_data(), request.filters)
     total = len(df)
     if request.sort:
@@ -213,7 +213,7 @@ def precomputed(name: str) -> Any:
     return json.loads(target.read_text(encoding="utf-8"))
 
 
-def model_manifest(model_type: str) -> dict | None:
+def model_manifest(model_type: str) -> dict[str, Any] | None:
     directory_map = {
         "XGBoost": "xgboost",
         "LightGBM": "lightgbm",
@@ -228,4 +228,4 @@ def model_manifest(model_type: str) -> dict | None:
     target = DATA_DIR / "models" / directory / "manifest.json"
     if not target.exists():
         return None
-    return json.loads(target.read_text(encoding="utf-8"))
+    return cast(dict[str, Any], json.loads(target.read_text(encoding="utf-8")))

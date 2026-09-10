@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
+
 import numpy as np
 import pandas as pd
 from scipy.stats import linregress
@@ -9,7 +11,7 @@ from ..config import DATA_DIR
 from .data import apply_filters, load_main_data, load_race_schedule, records
 
 
-def _regression(df: pd.DataFrame, x_col: str, y_col: str) -> dict | None:
+def _regression(df: pd.DataFrame, x_col: str, y_col: str) -> dict[str, Any] | None:
     if x_col not in df or y_col not in df:
         return None
     x = pd.to_numeric(df[x_col], errors="coerce")
@@ -24,9 +26,9 @@ def _regression(df: pd.DataFrame, x_col: str, y_col: str) -> dict | None:
     }
 
 
-def analytics(filters, max_rows: int) -> dict:
+def analytics(filters: Any, max_rows: int) -> dict[str, Any]:
     df = apply_filters(load_main_data(), filters).head(max_rows).copy()
-    payload: dict = {"rows_considered": int(len(df)), "charts": {}, "regressions": []}
+    payload: dict[str, Any] = {"rows_considered": len(df), "charts": {}, "regressions": []}
     pairs = {
         "active_years_vs_final": ("resultsFinalPositionNumber", "yearsActive"),
         "positions_gained_over_time": ("short_date", "positionsGained"),
@@ -94,7 +96,7 @@ def analytics(filters, max_rows: int) -> dict:
     return payload
 
 
-def current_season() -> dict:
+def current_season() -> dict[str, Any]:
     schedule = load_race_schedule().copy()
     if "year" not in schedule:
         return {"year": None, "rows": [], "columns": []}
@@ -133,7 +135,7 @@ def _read_optional(path: Path) -> pd.DataFrame:
             return pd.DataFrame()
 
 
-def find_prediction_artifact(race_id: str, year: str, race_name: str) -> dict | None:
+def find_prediction_artifact(race_id: str, year: str, race_name: str) -> dict[str, Any] | None:
     """Select the best committed next-race prediction artifact.
 
     The current precompute workflow writes JSON with predictions_by_model, while
@@ -180,7 +182,7 @@ def find_prediction_artifact(race_id: str, year: str, race_name: str) -> dict | 
     }
 
 
-def next_race_bundle() -> dict:
+def next_race_bundle() -> dict[str, Any]:
     schedule = load_race_schedule().copy()
     date_col = "date" if "date" in schedule else ("short_date" if "short_date" in schedule else None)
     if not date_col:
