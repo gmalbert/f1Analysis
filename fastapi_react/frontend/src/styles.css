@@ -11,6 +11,33 @@ button { cursor: pointer; }
 a { color: #ff595f; }
 code { color: #ff9296; }
 
+/* Accessibility: visible focus indicator on every focusable element. */
+:focus-visible {
+  outline: 2px solid #ff595f;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Accessibility: skip-to-main-content link. Visible only when focused. */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 1000;
+  padding: 8px 12px;
+  background: #ff595f;
+  color: white;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 0 0 4px 0;
+}
+.skip-link:focus {
+  left: 0;
+}
+
+/* Accessibility: main content becomes the focus target of the skip link. */
+main:focus { outline: none; }
+
 .app-shell { min-height: 100vh; }
 .sidebar {
   position: fixed; inset: 0 auto 0 0; width: 250px; padding: 22px 14px;

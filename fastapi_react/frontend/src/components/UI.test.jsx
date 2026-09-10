@@ -16,14 +16,19 @@ describe('Card', () => {
 });
 
 describe('Status', () => {
-  it('shows loading state', () => {
+  it('shows loading state with aria-busy and aria-live', () => {
     render(<Status loading>kid</Status>);
-    expect(screen.getByText(/Loading/i)).toBeInTheDocument();
+    const node = screen.getByRole('status');
+    expect(node).toHaveAttribute('aria-busy', 'true');
+    expect(node).toHaveAttribute('aria-live', 'polite');
+    expect(node).toHaveTextContent(/Loading/i);
   });
 
-  it('shows error state with message', () => {
+  it('shows error state with role=alert and assertive live region', () => {
     render(<Status error={new Error('boom')}>kid</Status>);
-    expect(screen.getByText('boom')).toBeInTheDocument();
+    const node = screen.getByRole('alert');
+    expect(node).toHaveAttribute('aria-live', 'assertive');
+    expect(node).toHaveTextContent('boom');
   });
 
   it('shows children when neither loading nor error', () => {

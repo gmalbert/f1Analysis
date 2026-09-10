@@ -8,8 +8,25 @@ export function Card({ title, children, className = "" }) {
 }
 
 export function Status({ loading, error, children }) {
-  if (loading) return <div className="status">Loading…</div>;
-  if (error) return <div className="status error">{String(error.message || error)}</div>;
+  if (loading) return (
+    <div
+      className="status"
+      role="status"
+      aria-busy="true"
+      aria-live="polite"
+    >
+      Loading…
+    </div>
+  );
+  if (error) return (
+    <div
+      className="status error"
+      role="alert"
+      aria-live="assertive"
+    >
+      {String(error.message || error)}
+    </div>
+  );
   return children || null;
 }
 
