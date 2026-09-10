@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Papa from "papaparse";
 import { api } from "../api";
 import { Card, DataTable, JsonBlock, Metric, Tabs } from "../components/UI";
+import { LinePanel } from "../components/Charts";
 
 const tabs = ["Value & stake", "Field simulation", "Paper replay", "Calibration", "Release gates"];
 
@@ -10,6 +11,45 @@ const defaultEntries = [
   { driver_id: "driver-b", constructor_id: "team-1", pace_score: 1.4, dnf_probability: 0.06, uncertainty: 0.9, race_sensitivity: 1.0 },
   { driver_id: "driver-c", constructor_id: "team-2", pace_score: 2.2, dnf_probability: 0.08, uncertainty: 1.0, race_sensitivity: 1.2 }
 ];
+
+function csvDownloadUrl(rows, columns, filename) {
+  if (!rows?.length) return "#";
+  const cols = columns?.length ? columns : Object.keys(rows[0]);
+  const header = cols.join(",");
+  const body = rows
+    .map(r => cols.map(c => {
+      const v = r[c];
+      if (v == null) return "";
+      if (typeof v === "string" && (v.includes(",") || v.includes('"'))) {
+        return `"${v.replace(/"/g, '""')}"`;
+      }
+      return String(v);
+    }).join(","))
+    .join("\n");
+  const blob = new Blob([header + "\n" + body], { type: "text/csv" });
+  return URL.createObjectURL(blob) + "#" + filename;
+}
+
+function ReliabilityChart({ rows }) {
+  // The reliability table from f1bet has a 'reliability'/'reliability_observed'
+  // bin-mean field. Plot observed rate vs predicted mean with the y=x reference.
+  const mapped = rows
+    .map(r => ({
+      predicted: Number(r.bin ?? r.predicted ?? r.reliability ?? r.center),
+      observed: Number(r.observed ?? r.observed_rate ?? r.reliability_observed),
+    }))
+    .filter(p => Number.isFinite(p.predicted) && Number.isFinite(p.observed));
+  if (mapped.length < 2) return null;
+  const chartRows = mapped.map(p => ({ ...p, perfect: p.predicted }));
+  return (
+    <LinePanel
+      title="Reliability curve"
+      rows={chartRows}
+      x="predicted"
+      y="observed"
+    />
+  );
+}
 
 function CsvInput({ onRows }) {
   function load(file) {
@@ -83,7 +123,10 @@ export default function BettingResearch() {
         <CsvInput onRows={setSimEntries} />
         <DataTable rows={simEntries} />
         <button className="primary" onClick={runSimulation}>Run coherent field simulation</button>
-        {simOut && <DataTable rows={simOut.rows} columns={simOut.columns} />}
+        {simOut && <>
+          <DataTable rows={simOut.rows} columns={simOut.columns} />
+          <p><a className="button-link" href={csvDownloadUrl(simOut.rows, simOut.columns, "field_simulation.csv")}>Download CSV</a></p>
+        </>}
       </Card>}
 
       {tab === "Paper replay" && <Card title="Paper Backtest">
@@ -102,7 +145,14 @@ export default function BettingResearch() {
         <p>Required columns: <code>probability</code> and <code>outcome</code>. Optional: market and stage.</p>
         <CsvInput onRows={setCalRows} />
         <button className="primary" disabled={!calRows.length} onClick={runCalibration}>Analyze calibration</button>
-        {calOut && <><DataTable rows={calOut.metrics} /><h4>Adaptive reliability</h4><DataTable rows={calOut.reliability} /></>}
+        {calOut && <>
+          <DataTable rows={calOut.metrics} />
+          <h4>Adaptive reliability</h4>
+          <DataTable rows={calOut.reliability} />
+          {calOut.reliability?.length > 1 && (
+            <ReliabilityChart rows={calOut.reliability} />
+          )}
+        </>}
       </Card>}
 
       {tab === "Release gates" && <Card title="Release Governance">
