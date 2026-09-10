@@ -3,3 +3,9 @@ frontend/node_modules/
 frontend/dist/
 __pycache__/
 *.pyc
+/coverage/
+/.pytest_cache/
+*.tsbuildinfo
+
+# Root .gitignore ignores *.txt; allow this dev requirements file
+!backend/requirements-dev.txt
