@@ -1,0 +1,27 @@
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: fastapi_react/backend/Dockerfile
+    environment:
+      F1_REPO_ROOT: /repo
+      ENABLE_EXPENSIVE_TOOLS: "0"
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      NUMEXPR_NUM_THREADS: "1"
+    volumes:
+      - ..:/repo:ro
+    restart: unless-stopped
+    mem_limit: 1600m
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: fastapi_react/frontend/Dockerfile
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    mem_limit: 128m
