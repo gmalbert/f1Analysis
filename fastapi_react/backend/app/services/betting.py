@@ -6,8 +6,8 @@ from typing import Any
 
 import pandas as pd
 
-from ..config import DATA_DIR
-from .data import load_main_data, records
+from app.config import DATA_DIR
+from app.services.data import load_main_data, records
 
 
 def value_and_stake(payload: Any) -> dict[str, Any]:

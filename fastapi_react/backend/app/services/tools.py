@@ -4,7 +4,7 @@ import subprocess
 import sys
 from typing import Any
 
-from ..config import ENABLE_EXPENSIVE_TOOLS, REPO_ROOT
+from app.config import ENABLE_EXPENSIVE_TOOLS, REPO_ROOT
 
 TOOLS = {
     "monte_carlo": "scripts/precompute/monte_carlo_features.py",

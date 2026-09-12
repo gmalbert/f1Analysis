@@ -9,7 +9,7 @@ from typing import Any, cast
 import numpy as np
 import pandas as pd
 
-from ..config import DATA_DIR, MAX_TABLE_ROWS, PRECOMPUTED_DIR
+from app.config import DATA_DIR, MAX_TABLE_ROWS, PRECOMPUTED_DIR
 
 MAIN_DATA = DATA_DIR / "f1ForAnalysis.csv"
 
