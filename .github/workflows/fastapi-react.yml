@@ -37,7 +37,7 @@ jobs:
       - name: Ruff
         run: python -m ruff check .
       - name: Mypy (strict)
-        run: python -m mypy app
+        run: python -m mypy --explicit-package-bases app
       - name: Pytest with coverage (>=80%)
         run: python -m pytest
       - name: pip-audit
