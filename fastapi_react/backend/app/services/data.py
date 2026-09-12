@@ -166,28 +166,41 @@ def read_table(path: Path, limit: int = MAX_TABLE_ROWS) -> dict[str, Any]:
     return {"kind": "binary", "size": path.stat().st_size}
 
 
+_ALLOWED_DATA_SUFFIXES = frozenset({".csv", ".tsv", ".json", ".txt", ".md", ".log", ".png", ".html"})
+
+
+def _data_file_index() -> dict[str, Path]:
+    if not DATA_DIR.exists():
+        return {}
+    root = DATA_DIR.resolve()
+    result: dict[str, Path] = {}
+    for path in DATA_DIR.rglob("*"):
+        if not path.is_file() or path.suffix.lower() not in _ALLOWED_DATA_SUFFIXES:
+            continue
+        resolved = path.resolve()
+        if root not in resolved.parents:
+            continue
+        result[path.relative_to(DATA_DIR).as_posix()] = resolved
+    return result
+
+
 def list_data_files() -> list[dict[str, Any]]:
     if not DATA_DIR.exists():
         return []
-    allowed = {".csv", ".tsv", ".json", ".txt", ".md", ".log", ".png", ".html"}
     result = []
-    for path in sorted(DATA_DIR.rglob("*")):
-        if path.is_file() and path.suffix.lower() in allowed:
-            result.append({
-                "path": path.relative_to(DATA_DIR).as_posix(),
-                "size": path.stat().st_size,
-                "suffix": path.suffix.lower(),
-            })
+    for relative, path in sorted(_data_file_index().items()):
+        result.append({
+            "path": relative,
+            "size": path.stat().st_size,
+            "suffix": path.suffix.lower(),
+        })
     return result
 
 
 def resolve_data_file(relative: str) -> Path:
-    candidate = (DATA_DIR / relative).resolve()
-    root = DATA_DIR.resolve()
-    if root not in candidate.parents and candidate != root:
-        raise ValueError("Invalid data path")
-    if not candidate.exists() or not candidate.is_file():
-        raise FileNotFoundError(relative)
+    candidate = _data_file_index().get(relative.replace("\\", "/"))
+    if candidate is None:
+        raise FileNotFoundError("Requested data file was not found")
     return candidate
 
 

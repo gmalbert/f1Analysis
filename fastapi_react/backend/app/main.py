@@ -49,12 +49,12 @@ app.add_middleware(
 
 def _http_error(exc: Exception) -> HTTPException:
     if isinstance(exc, FileNotFoundError):
-        return HTTPException(404, str(exc))
+        return HTTPException(404, "Requested resource was not found")
     if isinstance(exc, (KeyError, ValueError)):
-        return HTTPException(400, str(exc))
+        return HTTPException(400, "Invalid request")
     if isinstance(exc, PermissionError):
-        return HTTPException(403, str(exc))
-    return HTTPException(500, f"{type(exc).__name__}: {exc}")
+        return HTTPException(403, "Permission denied")
+    return HTTPException(500, "Internal server error")
 
 
 @app.get("/api/health")
@@ -88,7 +88,7 @@ def data_explorer_schema() -> dict[str, Any]:
     try:
         return {"filters": filter_schema()}
     except Exception as exc:
-        raise _http_error(exc) from exc
+        raise _http_error(exc) from None
 
 
 @app.post("/api/data-explorer/query")
@@ -96,7 +96,7 @@ def data_explorer_query(request: QueryRequest) -> dict[str, Any]:
     try:
         return query_main(request)
     except Exception as exc:
-        raise _http_error(exc) from exc
+        raise _http_error(exc) from None
 
 
 @app.post("/api/analytics")
@@ -104,7 +104,7 @@ def analytics_route(request: AnalyticsRequest) -> dict[str, Any]:
     try:
         return analytics(request.filters, request.max_rows)
     except Exception as exc:
-        raise _http_error(exc) from exc
+        raise _http_error(exc) from None
 
 
 @app.get("/api/current-season")
@@ -112,7 +112,7 @@ def season_route() -> dict[str, Any]:
     try:
         return current_season()
     except Exception as exc:
-        raise _http_error(exc) from exc
+        raise _http_error(exc) from None
 
 
 @app.get("/api/next-race")
@@ -120,7 +120,7 @@ def next_race_route() -> dict[str, Any]:
     try:
         return next_race_bundle()
     except Exception as exc:
-        raise _http_error(exc) from exc
+        raise _http_error(exc) from None
 
 
 @app.get("/api/models")
@@ -133,7 +133,7 @@ def model_manifest_route(model_type: str = Query(...)) -> dict[str, Any]:
     try:
         return {"model_type": model_type, "manifest": model_manifest(model_type)}
     except Exception as exc:
-        raise _http_error(exc) from exc
+        raise _http_error(exc) from None
 
 
 @app.get("/api/models/precomputed/{name}")
@@ -141,7 +141,7 @@ def model_precomputed(name: str) -> dict[str, Any]:
     try:
         return {"name": name, "data": precomputed(name)}
     except Exception as exc:
-        raise _http_error(exc) from exc
+        raise _http_error(exc) from None
 
 
 @app.get("/api/raw/files")
@@ -155,7 +155,7 @@ def raw_preview(path: str = Query(...)) -> dict[str, Any]:
         target = resolve_data_file(path)
         return {"path": path, **read_table(target)}
     except Exception as exc:
-        raise _http_error(exc) from exc
+        raise _http_error(exc) from None
 
 
 @app.get("/api/raw/download")
@@ -164,7 +164,7 @@ def raw_download(path: str = Query(...)) -> FileResponse:
         target = resolve_data_file(path)
         return FileResponse(target, filename=target.name)
     except Exception as exc:
-        raise _http_error(exc) from exc
+        raise _http_error(exc) from None
 
 
 @app.post("/api/betting/value")
@@ -172,7 +172,7 @@ def betting_value(payload: BettingValueRequest) -> dict[str, Any]:
     try:
         return value_and_stake(payload)
     except Exception as exc:
-        raise _http_error(exc) from exc
+        raise _http_error(exc) from None
 
 
 @app.post("/api/betting/simulate")
@@ -180,7 +180,7 @@ def betting_simulate(payload: SimulationRequest) -> dict[str, Any]:
     try:
         return simulate(payload)
     except Exception as exc:
-        raise _http_error(exc) from exc
+        raise _http_error(exc) from None
 
 
 @app.post("/api/betting/backtest")
@@ -188,7 +188,7 @@ def betting_backtest(payload: RowsPayload) -> dict[str, Any]:
     try:
         return backtest(payload.rows)
     except Exception as exc:
-        raise _http_error(exc) from exc
+        raise _http_error(exc) from None
 
 
 @app.post("/api/betting/calibration")
@@ -196,7 +196,7 @@ def betting_calibration(payload: RowsPayload) -> dict[str, Any]:
     try:
         return calibration(payload.rows)
     except Exception as exc:
-        raise _http_error(exc) from exc
+        raise _http_error(exc) from None
 
 
 @app.get("/api/betting/governance")
@@ -204,7 +204,7 @@ def betting_governance() -> dict[str, Any]:
     try:
         return governance()
     except Exception as exc:
-        raise _http_error(exc) from exc
+        raise _http_error(exc) from None
 
 
 @app.post("/api/tools/run")
@@ -212,4 +212,4 @@ def tools_run(payload: ToolRunRequest) -> dict[str, Any]:
     try:
         return run_tool(payload.tool, payload.args)
     except Exception as exc:
-        raise _http_error(exc) from exc
+        raise _http_error(exc) from None
