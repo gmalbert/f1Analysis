@@ -1,5 +1,8 @@
 .venv/
 frontend/node_modules/
+# Junction so scripts in parity_evidence/ can resolve playwright/sharp,
+# which are installed under frontend/node_modules.
+node_modules/
 frontend/dist/
 __pycache__/
 *.pyc

@@ -54,7 +54,7 @@ async function run() {
       await page.waitForTimeout(WAIT_MS);
       for (const section of SECTIONS) {
         const out = join(OUT, `${view.name}-${section.name}.png`);
-        await page.screenshot({ path: out, fullPage: true });
+        await page.screenshot({ path: out });
         console.log(`  -> ${out}`);
         // For sections beyond the first, the script relies on the
         // Streamlit app exposing a way to navigate by URL; if it

@@ -48,12 +48,16 @@ async function run() {
       for (const target of PAGES) {
         const url = `${BASE}/${target.hash}`;
         console.log(`[${view.name}] ${url}`);
+        // goto() only changes the fragment between routes (same-document
+        // navigation), which does not remount the React app, so force a real
+        // load to apply the hash on mount.
         await page.goto(url, { waitUntil: 'networkidle', timeout: 30_000 });
+        await page.reload({ waitUntil: 'networkidle', timeout: 30_000 });
         // Disable transitions and wait for charts to settle
         await page.addStyleTag({ content: '*{transition:none!important;animation:none!important;}' });
         await page.waitForTimeout(WAIT_MS);
         const out = join(OUT, `${view.name}-${target.name}.png`);
-        await page.screenshot({ path: out, fullPage: true });
+        await page.screenshot({ path: out });
         console.log(`  -> ${out}`);
       }
       await context.close();
