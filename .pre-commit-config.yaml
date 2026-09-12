@@ -1,0 +1,38 @@
+# Pre-commit hooks for the fastapi_react migration.
+# Install once with:  pipx install pre-commit && pre-commit install
+# Or run manually:    pre-commit run --all-files
+#
+# These mirror the GitHub Actions checks in
+# .github/workflows/fastapi-react.yml so local commits get the
+# same fast feedback before pushing.
+
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-fastapi-backend
+        name: ruff (backend)
+        entry: bash -c 'cd fastapi_react/backend && python -m ruff check .'
+        language: system
+        files: ^fastapi_react/backend/.*\.py$
+        pass_filenames: false
+
+      - id: mypy-fastapi-backend
+        name: mypy --strict (backend)
+        entry: bash -c 'cd fastapi_react/backend && python -m mypy app'
+        language: system
+        files: ^fastapi_react/backend/.*\.py$
+        pass_filenames: false
+
+      - id: eslint-fastapi-frontend
+        name: eslint (frontend)
+        entry: bash -c 'cd fastapi_react/frontend && npx eslint .'
+        language: system
+        files: ^fastapi_react/frontend/.*\.(js|jsx)$
+        pass_filenames: false
+
+      - id: typecheck-fastapi-frontend
+        name: tsc --noEmit (frontend)
+        entry: bash -c 'cd fastapi_react/frontend && npx tsc --noEmit'
+        language: system
+        files: ^fastapi_react/frontend/.*\.(js|jsx|ts|tsx)$
+        pass_filenames: false

@@ -1,0 +1,56 @@
+[project]
+name = "f1-analysis-fastapi-backend"
+version = "0.1.0"
+description = "FastAPI backend for the React parity migration of raceAnalysis.py"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+extend-exclude = [".venv", "build", "dist"]
+
+[tool.ruff.lint]
+# BLE001 is allowed at HTTP request boundaries where the handler maps
+# arbitrary exceptions to HTTP responses; every other linter is enforced.
+# S110 is enforced to require logging in silent except clauses.
+select = ["E", "F", "I", "B", "S", "UP", "RUF", "N", "W", "C4", "PT", "RET", "SIM"]
+ignore = [
+    "E501",  # line length handled by formatter
+    "B008",  # FastAPI Query()/Depends() in defaults are idiomatic
+]
+
+[tool.ruff.lint.per-file-ignores]
+"app/main.py" = ["BLE001"]
+"app/services/analysis.py" = ["BLE001"]
+"app/services/betting.py" = ["BLE001"]
+"app/services/data.py" = ["BLE001"]
+# subprocess.run in tools.py is called with arguments that come from a
+# server-side allow-list (the TOOLS dict), not from user input, so S603
+# (subprocess execution of untrusted input) does not apply.
+"app/services/tools.py" = ["S603"]
+# Asserts are idiomatic in pytest test files.
+"test_*.py" = ["S101"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "f1bet"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_return_any = true
+no_implicit_optional = true
+check_untyped_defs = true
+disallow_untyped_defs = true
+# pandas / numpy / sklearn stubs are incomplete; relax on those modules
+[[tool.mypy.overrides]]
+module = ["pandas.*", "numpy.*", "sklearn.*", "xgboost.*", "lightgbm.*", "catboost.*", "scipy.*", "duckdb.*"]
+ignore_missing_imports = true
+ignore_errors = true
+
+[tool.pytest.ini_options]
+testpaths = ["."]
+python_files = ["test_*.py"]
+addopts = "-q --cov=app --cov-report=term-missing --cov-fail-under=80"
+filterwarnings = ["ignore::DeprecationWarning"]
