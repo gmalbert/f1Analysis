@@ -43,7 +43,6 @@ Betting Research includes:
 - Field simulation
 - Paper replay
 - Calibration
-- Release gates
 
 Predictive Models includes:
 

@@ -2,17 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-import json
-from pathlib import Path
-
 import pandas as pd
 
 from .backtest import run_backtest, run_risk_sensitivity
 from .calibration import calibration_table, probability_metrics
-from .contracts import RACE_MODEL_CONTRACT, add_event_identity, stamp_feature_snapshot
-from .domain import SessionStage
-from .features import default_registry
 from .odds import devig_decimal_odds, expected_value
 from .risk import PortfolioState, RiskPolicy, propose_stake
 from .simulation import RaceEntry, SimulationConfig, simulate_race
@@ -32,12 +25,8 @@ def render_betting_research(data: pd.DataFrame | None = None) -> None:
     import streamlit as st
 
     st.header("Probability & Betting Research")
-    st.warning(
-        "Paper-research mode only. A finishing-position MAE is not evidence of a betting edge; "
-        "release requires frozen real odds, calibration, closing-line value, and walk-forward replay."
-    )
-    calculator, simulation, replay, calibration, governance = st.tabs(
-        ["Value & stake", "Field simulation", "Paper replay", "Calibration", "Release gates"]
+    calculator, simulation, replay, calibration = st.tabs(
+        ["Value & stake", "Field simulation", "Paper replay", "Calibration"]
     )
 
     with calculator:
@@ -67,7 +56,7 @@ def render_betting_research(data: pd.DataFrame | None = None) -> None:
         metrics[1].metric("Raw EV / unit", f"{expected_value(model_probability, decimal_odds):+.2%}")
         metrics[2].metric("Conservative probability", f"{proposal.adjusted_probability:.2%}")
         metrics[3].metric("Paper stake on $10k", f"${proposal.stake:,.2f}")
-        st.caption(f"Decision: {proposal.reason_code}. This calculator is paper-research only.")
+        st.caption(f"Decision: {proposal.reason_code}.")
 
     with simulation:
         st.write(
@@ -172,59 +161,3 @@ def render_betting_research(data: pd.DataFrame | None = None) -> None:
                 )
             except Exception as exc:
                 st.error(f"Calibration input is invalid: {exc}")
-
-    with governance:
-        registry = default_registry()
-        st.subheader("Feature availability registry")
-        st.dataframe(pd.DataFrame(registry.manifest()), hide_index=True, width="stretch")
-        if data is not None and not data.empty:
-            try:
-                audit_columns = [
-                    column
-                    for column in (
-                        "event_id",
-                        "grandPrixYear",
-                        "round",
-                        "raceId_results",
-                        "resultsDriverId",
-                        "constructorName",
-                        "resultsStartingGridPositionNumber",
-                        "resultsFinalPositionNumber",
-                    )
-                    if column in data
-                ]
-                sample = data[audit_columns].copy()
-                if "event_id" not in sample:
-                    sample = add_event_identity(sample)
-                sample = stamp_feature_snapshot(
-                    sample,
-                    as_of=datetime.now(timezone.utc),
-                    stage=SessionStage.PRE_RACE,
-                )
-                # Legacy data may contain one row per practice session. Contract validation exposes it.
-                report = RACE_MODEL_CONTRACT.validate(sample)
-                st.subheader("Current wide-table contract audit")
-                if report.valid:
-                    st.success("The current table satisfies the v2 core contract.")
-                else:
-                    st.error("The current table needs migration before it is a valid point-in-time snapshot.")
-                st.code(json.dumps(report.as_dict(), indent=2), language="json")
-            except Exception as exc:
-                st.error(f"Could not audit current data: {exc}")
-        st.subheader("Latest automated release evidence")
-        evidence_path = Path("data_files/release_evidence.json")
-        if evidence_path.exists():
-            try:
-                evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
-                if evidence.get("passed"):
-                    st.success("All recorded software release checks passed.")
-                else:
-                    st.warning("Recorded release evidence is incomplete or contains failures.")
-                st.json(evidence)
-            except (OSError, json.JSONDecodeError) as exc:
-                st.error(f"Release evidence is unreadable: {exc}")
-        else:
-            st.info(
-                "No automated release evidence has been recorded yet. Run the offline suite, compile gate, "
-                "and browser smoke check before promotion."
-            )

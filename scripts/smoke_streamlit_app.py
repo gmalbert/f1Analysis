@@ -26,7 +26,6 @@ def main() -> int:
         "Field simulation",
         "Paper replay",
         "Calibration",
-        "Release gates",
     }
     missing_tabs = required_tabs - tabs
     if missing_tabs:

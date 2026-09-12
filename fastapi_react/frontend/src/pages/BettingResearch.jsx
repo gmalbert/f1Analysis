@@ -4,7 +4,7 @@ import { api } from "../api";
 import { Card, DataTable, JsonBlock, Metric, Tabs } from "../components/UI";
 import { LinePanel } from "../components/Charts";
 
-const tabs = ["Value & stake", "Field simulation", "Paper replay", "Calibration", "Release gates"];
+const tabs = ["Value & stake", "Field simulation", "Paper replay", "Calibration"];
 
 const defaultEntries = [
   { driver_id: "driver-a", constructor_id: "team-1", pace_score: 1.0, dnf_probability: 0.05, uncertainty: 0.8, race_sensitivity: 0.8 },
@@ -69,7 +69,6 @@ export default function BettingResearch() {
   const [replayOut, setReplayOut] = useState(null);
   const [calRows, setCalRows] = useState([]);
   const [calOut, setCalOut] = useState(null);
-  const [gov, setGov] = useState(null);
   const [error, setError] = useState(null);
 
   async function calculate() {
@@ -84,14 +83,9 @@ export default function BettingResearch() {
   async function runCalibration() {
     try { setError(null); setCalOut(await api.post("/api/betting/calibration", { rows: calRows })); } catch (e) { setError(e.message); }
   }
-  async function loadGovernance() {
-    try { setError(null); setGov(await api.get("/api/betting/governance")); } catch (e) { setError(e.message); }
-  }
-
   return (
     <div>
-      <header className="page-header"><div><h1>Probability & Betting Research</h1><p>Paper-research only: value, coherent race simulation, replay, calibration and release governance.</p></div></header>
-      <div className="warning">A finishing-position MAE is not evidence of a betting edge. Release requires frozen real odds, calibration, closing-line value and walk-forward replay.</div>
+      <header className="page-header"><div><h1>Probability & Betting Research</h1><p>Value, coherent race simulation, replay and calibration.</p></div></header>
       <Tabs tabs={tabs} active={tab} onChange={setTab} />
       {error && <div className="status error">{error}</div>}
 
@@ -155,14 +149,6 @@ export default function BettingResearch() {
         </>}
       </Card>}
 
-      {tab === "Release gates" && <Card title="Release Governance">
-        <button className="primary" onClick={loadGovernance}>Load current release evidence</button>
-        {gov && <>
-          <h4>Feature availability registry</h4><DataTable rows={gov.registry} />
-          <h4>Current wide-table contract audit</h4><JsonBlock value={gov.contract_audit} />
-          <h4>Automated release evidence</h4><JsonBlock value={gov.release_evidence} />
-        </>}
-      </Card>}
     </div>
   );
 }

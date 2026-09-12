@@ -186,13 +186,6 @@ Manual research tools:
 - [x] Adaptive reliability table
 - [ ] Add reliability line visualization
 
-### Release gates
-
-- [x] Feature availability registry
-- [x] Existing race-model contract
-- [x] Current wide-table contract audit
-- [x] Release evidence JSON
-
 ## 9. Operational parity
 
 - [x] Existing generator remains authoritative
@@ -307,7 +300,7 @@ Compare the Streamlit app to the React app page-by-page using the same dataset a
 - [ ] Next Race — header, predictions table, historical results
 - [ ] Models — each model-type dropdown selection
 - [ ] Raw Data — file tree, CSV preview, JSON preview
-- [ ] Betting Research — value & stake, simulation, replay, calibration, release gates
+- [ ] Betting Research — value & stake, simulation, replay, calibration
 
 ### Diff and acceptance
 
