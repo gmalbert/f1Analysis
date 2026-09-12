@@ -10,9 +10,9 @@ import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 
-from backend.app.main import app
-from backend.app.services import analysis, betting, tools
-from backend.app.services import data as data_svc
+from app.main import app
+from app.services import analysis, betting, tools
+from app.services import data as data_svc
 
 client = TestClient(app)
 
@@ -325,7 +325,7 @@ def test_precomputed_unknown_raises() -> None:
 # ----- Tools service gate ---------------------------------------------------
 
 def test_tools_gate_raises_when_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
-    from backend.app.config import ENABLE_EXPENSIVE_TOOLS
+    from app.config import ENABLE_EXPENSIVE_TOOLS
     assert ENABLE_EXPENSIVE_TOOLS is False
     with pytest.raises(PermissionError):
         tools.run_tool("monte_carlo", [])
@@ -345,7 +345,7 @@ def test_tools_directory_constant_includes_known_scripts() -> None:
 # ----- Betting service unit tests ------------------------------------------
 
 def test_betting_value_service_smoke() -> None:
-    from backend.app.schemas import BettingValueRequest
+    from app.schemas import BettingValueRequest
     out = betting.value_and_stake(BettingValueRequest())
     assert "raw_ev" in out
     assert "stake" in out
