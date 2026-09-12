@@ -8,8 +8,8 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
-from .config import DATA_DIR, ENABLE_EXPENSIVE_TOOLS, MODEL_TYPES, REPO_ROOT
-from .schemas import (
+from app.config import DATA_DIR, ENABLE_EXPENSIVE_TOOLS, MODEL_TYPES, REPO_ROOT
+from app.schemas import (
     AnalyticsRequest,
     BettingValueRequest,
     QueryRequest,
@@ -17,9 +17,9 @@ from .schemas import (
     SimulationRequest,
     ToolRunRequest,
 )
-from .services.analysis import analytics, current_season, next_race_bundle
-from .services.betting import backtest, calibration, governance, simulate, value_and_stake
-from .services.data import (
+from app.services.analysis import analytics, current_season, next_race_bundle
+from app.services.betting import backtest, calibration, governance, simulate, value_and_stake
+from app.services.data import (
     filter_schema,
     list_data_files,
     model_manifest,
@@ -28,7 +28,7 @@ from .services.data import (
     read_table,
     resolve_data_file,
 )
-from .services.tools import TOOLS, run_tool
+from app.services.tools import TOOLS, run_tool
 
 app = FastAPI(
     title="F1 Analysis API",
