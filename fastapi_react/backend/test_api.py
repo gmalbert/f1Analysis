@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import pandas as pd
 import pytest
-
 from backend.app.main import app
 from backend.app.services import analysis, betting, tools
 from backend.app.services import data as data_svc
