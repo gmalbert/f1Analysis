@@ -2,7 +2,7 @@
   "calibration_end_event": null,
   "calibration_method": null,
   "calibration_start_event": null,
-  "code_revision": "b9bb7f7b1b9ba5b2ca389d9baf3b332607695c79",
+  "code_revision": "59a11c7c0a424bfd708f57bd4f3ff66611a542dd",
   "data_sha256": "6548a21d7a10a2a0d43df0ba84b1ff180b84aa042051f5eed08660396aae1f5f",
   "dependency_versions": {
     "numpy": "2.4.6",
@@ -315,8 +315,6 @@
     "Round",
     "raceId_qualifying",
     "DriverNumber",
-    "best_qual_time_qualifying",
-    "teammate_qual_delta_qualifying",
     "total_qualifying_laps",
     "valid_laps",
     "deleted_laps",
@@ -341,9 +339,9 @@
   ],
   "hyperparameters": {},
   "metrics": {
-    "mae": 2.1649242083175753,
-    "mse": 10.7049145724889,
-    "r2": 0.6517563991174771
+    "mae": 2.1713096604462967,
+    "mse": 10.817427317079702,
+    "r2": 0.648096225740459
   },
   "model_name": "position",
   "model_version": "lightgbm-v3.3",
@@ -356,7 +354,7 @@
   "search_trials": 0,
   "source_manifest_ids": [],
   "target": "resultsFinalPositionNumber",
-  "trained_at": "2026-09-12T03:01:57.528424+00:00",
+  "trained_at": "2026-09-13T05:18:39.800494+00:00",
   "training_end_event": "2024-1115-R",
   "training_start_event": "2016-936-R"
 }
