@@ -2,10 +2,10 @@
   "calibration_end_event": null,
   "calibration_method": null,
   "calibration_start_event": null,
-  "code_revision": "59a11c7c0a424bfd708f57bd4f3ff66611a542dd",
-  "data_sha256": "6548a21d7a10a2a0d43df0ba84b1ff180b84aa042051f5eed08660396aae1f5f",
+  "code_revision": "0d616b36a01554e11c61324c927470add921426f",
+  "data_sha256": "b770437a86b33ae4a2041101f53a7aedf3827a89142954a22acf7cb75c5014af",
   "dependency_versions": {
-    "numpy": "2.4.6",
+    "numpy": "2.5.2",
     "pandas": "2.3.3",
     "scikit-learn": "1.8.0"
   },
@@ -315,6 +315,8 @@
     "Round",
     "raceId_qualifying",
     "DriverNumber",
+    "best_qual_time_qualifying",
+    "teammate_qual_delta_qualifying",
     "total_qualifying_laps",
     "valid_laps",
     "deleted_laps",
@@ -339,22 +341,22 @@
   ],
   "hyperparameters": {},
   "metrics": {
-    "mae": 2.158587783849734,
-    "mse": 11.24582658132215,
-    "r2": 0.6341598882400534
+    "mae": 2.1917472869739467,
+    "mse": 11.794815617394226,
+    "r2": 0.6178786927535063
   },
   "model_name": "position",
   "model_version": "xgboost-v3.3",
   "notes": [
     "Legacy finishing-position artifact; not a calibrated market probability model.",
-    "Embargoed events: ('2024-1116-R',)"
+    "Embargoed events: ('2024-1117-R',)"
   ],
   "random_seed": 42,
   "schema_version": "legacy-wide-v1",
   "search_trials": 0,
   "source_manifest_ids": [],
   "target": "resultsFinalPositionNumber",
-  "trained_at": "2026-09-13T05:18:54.537888+00:00",
-  "training_end_event": "2024-1115-R",
+  "trained_at": "2026-09-15T21:16:13.323265+00:00",
+  "training_end_event": "2024-1116-R",
   "training_start_event": "2016-936-R"
 }
