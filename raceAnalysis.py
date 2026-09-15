@@ -971,10 +971,11 @@ column_rename_for_filter = {
     'driverTotalRaceLaps': 'Total Laps (Driver)', 
     'driverTotalPodiums': 'Total Podiums (Driver)',
     'driverTotalPolePositions': 'Total Pole Positions (Driver)',
-    'activeDriver': 'Active Driver (Raced this year)',
+    'activeDriver': 'Active Driver (Raced This Year)',
     'yearsActive': 'Years Active',
     'streetRace' : 'Street',
     'trackRace': 'Track', 
+    'primary_compound': 'Primary Compound',
     'Points': 'Current Year Points (Driver)',
     'constructorRank': 'Constructor Rank',
     'driverRank': 'Driver Rank',
@@ -1915,7 +1916,31 @@ exclusionList = ['grandPrixRaceId', 'raceId_results',  'constructorId', 'driverI
                                         'overtaking_difficulty_index', 'q1_q2_q3_sector_consistency', 'qualifying_position_vs_race_pace_delta_by_track', 'numberOfStops', 
                                         'driverCareerAvgPosition', 'driverCareerAvgPoints', 'driverCareerPodiumRate', 'driver_constructor_id', 'qualifying_position_vs_teammate_historical', 
                                         'podium_form_3_races', 'wins_last_5_races', 'constructorAvgPosition', 'constructorAvgPoints', 'constructorPodiumRate', 'totalPoints', 'totalFastestLaps', 'totalPolePositions',
-                                        
+
+        # Exclude technical merge artifacts, low-level timing fields, and
+        # model-only engineered features from the user-facing Data Explorer
+        # sidebar. These remain available in the underlying dataset and model
+        # pipeline; they are simply too implementation-specific for basic
+        # filtering.
+        'round_results', 'round_pitStops', 'year', 'constructor_group',
+        'delta_from_race_avg_results', 'delta_from_race_avg_pitStops',
+        'pit_lane_time_constant_results', 'pit_lane_time_constant_pitStops',
+        'pit_stop_delta_results', 'pit_stop_delta_pitStops',
+        'actual_best_lap', 'theoretical_best_lap', 'theoretical_gap',
+        'lap_time_std', 'sector1_std', 'sector2_std', 'sector3_std',
+        'total_qualifying_laps', 'valid_laps', 'deleted_laps',
+        'avg_positions_gained_5r', 'championship_fight_performance',
+        'constructor_reliability_x_form', 'driver_avg_completion_pct',
+        'driver_avg_num_stints', 'driver_avg_tire_degradation',
+        'driver_fuel_corrected_pace', 'driver_race_pace_std',
+        'driver_soft_tendency', 'overtaking_success_top10',
+        'practice_conversion_x_grid', 'practice_race_conversion',
+        'pressure_x_recent_form', 'race_pace_consistency',
+        'race_vs_qual_consistency', 'tire_deg_x_track_deg',
+        'tire_management_score', 'tire_mgmt_x_turns', 'track_exp_x_qual',
+        'track_race_pace_std', 'track_tire_degradation',
+        'wet_race_vs_quali_delta', 'wet_skill_x_precip',
+
 
         ]
 
