@@ -2,7 +2,7 @@
   "calibration_end_event": null,
   "calibration_method": null,
   "calibration_start_event": null,
-  "code_revision": "2ab20847938369cedf1dfd27d0d35476d475ea52",
+  "code_revision": "b4af0a8ef7d65401d4b89d52aae38d2c16a236e6",
   "data_sha256": "b770437a86b33ae4a2041101f53a7aedf3827a89142954a22acf7cb75c5014af",
   "dependency_versions": {
     "numpy": "2.4.6",
@@ -315,8 +315,6 @@
     "Round",
     "raceId_qualifying",
     "DriverNumber",
-    "best_qual_time_qualifying",
-    "teammate_qual_delta_qualifying",
     "total_qualifying_laps",
     "valid_laps",
     "deleted_laps",
@@ -341,9 +339,9 @@
   ],
   "hyperparameters": {},
   "metrics": {
-    "mae": 2.188161802897485,
-    "mse": 11.408331136601724,
-    "r2": 0.6303997833598841
+    "mae": 2.1907712555517707,
+    "mse": 11.389045446863555,
+    "r2": 0.6310245894791957
   },
   "model_name": "position",
   "model_version": "track-weighted-v3.3",
@@ -356,7 +354,7 @@
   "search_trials": 0,
   "source_manifest_ids": [],
   "target": "resultsFinalPositionNumber",
-  "trained_at": "2026-09-19T03:02:16.835378+00:00",
+  "trained_at": "2026-09-20T05:18:27.377010+00:00",
   "training_end_event": "2024-1116-R",
   "training_start_event": "2016-936-R"
 }
