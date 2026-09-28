@@ -43,7 +43,7 @@ for logger_name in [
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_validate
 from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
 
@@ -135,15 +135,25 @@ def _prepare_subset(X, y, subset):
 def _run_cv_trial(model, X_clean, y_clean, subset, cv, trial_idx, stage):
     """Run cross-validation for one feature subset. Returns a result dict or None."""
     try:
-        mae_scores = cross_val_score(model, X_clean, y_clean, cv=cv,
-                                     scoring='neg_mean_absolute_error')
+        # Compute every metric from the same CV fits. Calling cross_val_score
+        # separately for each metric refits the model three times per trial,
+        # multiplying the Monte Carlo workflow's expensive training work by 3.
+        scores = cross_validate(
+            model,
+            X_clean,
+            y_clean,
+            cv=cv,
+            scoring={
+                'mae': 'neg_mean_absolute_error',
+                'rmse': 'neg_root_mean_squared_error',
+                'r2': 'r2',
+            },
+        )
+        mae_scores = scores['test_mae']
         mae = float(-mae_scores.mean())
         mae_std = float(mae_scores.std())
-        rmse_scores = cross_val_score(model, X_clean, y_clean, cv=cv,
-                                      scoring='neg_root_mean_squared_error')
-        rmse = float(-rmse_scores.mean())
-        r2_scores = cross_val_score(model, X_clean, y_clean, cv=cv, scoring='r2')
-        r2 = float(r2_scores.mean())
+        rmse = float(-scores['test_rmse'].mean())
+        r2 = float(scores['test_r2'].mean())
         return {
             'trial': trial_idx,
             'stage': stage,
