@@ -1,13 +1,13 @@
 {
   "metadata": {
-    "generated_at": "2026-09-20T06:18:57.539460+00:00",
+    "generated_at": "2026-09-27T06:19:55.878302+00:00",
     "model_type": "XGBoost",
     "folds": 5,
     "validation": "race-grouped expanding window with one-event embargo",
     "data_fingerprint": {
       "data_file": "f1ForAnalysis.csv",
-      "data_sha256": "b770437a86b33ae4a2041101f53a7aedf3827a89142954a22acf7cb75c5014af",
-      "data_size": 19870896,
+      "data_sha256": "d63d0e58f7b4eb98a13413a92744de1f632298c3b552b1e11b200e70570a3cb9",
+      "data_size": 19870894,
       "fingerprint_algorithm": "sha256"
     }
   },
@@ -17,14 +17,14 @@
     "sample_count": 4017
   },
   "dnf_validation": {
-    "test_mae": 0.27075028603181783,
+    "test_mae": 0.2707502860342298,
     "roc_auc_mean": 0.5028222909027591,
     "roc_auc_std": 0.038563822235956585,
     "sample_count": 4629
   },
   "safety_car_validation": {
-    "roc_auc_mean": 0.6054254569083042,
-    "roc_auc_std": 0.23682068061809566,
+    "roc_auc_mean": 0.6054461180653289,
+    "roc_auc_std": 0.2368275255735064,
     "sample_count": 4629
   },
   "holdout": {
