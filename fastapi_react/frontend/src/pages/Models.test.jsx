@@ -109,7 +109,7 @@ describe('Models page', () => {
 
     render(<Models />);
     await waitFor(() => expect(screen.getByText(/Research controls are disabled/)).toBeInTheDocument());
-    expect(screen.getByText(/No trained model artifact is available/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/No trained model artifact is available/)).toBeInTheDocument());
   });
 
   it('surfaces initial API errors', async () => {
