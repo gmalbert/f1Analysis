@@ -104,13 +104,15 @@ def apply_filters(df: pd.DataFrame, filters: list[Any]) -> pd.DataFrame:
 
 
 @lru_cache(maxsize=1)
-def streamlit_filter_rules() -> tuple[dict[str, str], frozenset[str]]:
-    """Read the Streamlit filter labels and exclusions without importing its app."""
+def streamlit_filter_rules() -> tuple[dict[str, str], frozenset[str], frozenset[str]]:
+    """Read Streamlit filter labels, exclusions, and its loaded-column contract."""
     source_path = REPO_ROOT / "raceAnalysis.py"
     tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
-    literal_names = {"column_rename_for_filter", "exclusionList", "suffixes_to_exclude"}
+    literal_names = {"column_rename_for_filter", "exclusionList", "suffixes_to_exclude", "selected_columns"}
     values: dict[str, Any] = {}
-    for node in tree.body:
+    # selected_columns lives inside load_data(); walk the tree so the API
+    # follows the same authoritative loaded-column contract as Streamlit.
+    for node in ast.walk(tree):
         if not isinstance(node, ast.Assign):
             continue
         for target in node.targets:
@@ -124,15 +126,18 @@ def streamlit_filter_rules() -> tuple[dict[str, str], frozenset[str]]:
     excluded = set(values.get("exclusionList", ()))
     suffixes = values.get("suffixes_to_exclude", ())
     excluded.update(column for column in load_main_data().columns if column.endswith(tuple(suffixes)))
-    return labels, frozenset(excluded)
-
+    selected = set(values.get("selected_columns", ()))
+    # These friendly-name fields include columns introduced by the standings
+    # merges (for example Points and bestChampionshipPosition).
+    selected.update(labels)
+    return labels, frozenset(excluded), frozenset(selected)
 
 def filter_schema() -> list[dict[str, Any]]:
     df = load_main_data()
-    labels, excluded = streamlit_filter_rules()
+    labels, excluded, selected = streamlit_filter_rules()
     schema: list[dict[str, Any]] = []
     for column in sorted(df.columns):
-        if column in excluded:
+        if column in excluded or (selected and column not in selected):
             continue
         series = df[column]
         non_null = series.dropna()
