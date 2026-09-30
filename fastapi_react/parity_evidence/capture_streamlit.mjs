@@ -88,8 +88,15 @@ async function run() {
       console.log(`[${view.name}] loading ${BASE}/`);
       await page.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 60_000 });
       await wakeIfNeeded(page);
-      await page.addStyleTag({ content: '*{font-family:"Segoe UI",system-ui,sans-serif!important;transition:none!important;animation:none!important;}' });
+      await page.addStyleTag({ content: '*{font-family:"Segoe UI",system-ui,sans-serif!important;transition:none!important;animation:none!important;} [data-testid="stToolbar"],[data-testid="stStatusWidget"]{visibility:hidden!important;} img[alt="Betting Oracle Logo"]{visibility:hidden!important;}' });
       await page.waitForTimeout(WAIT_MS);
+      const normalizeDynamicText = async () => {
+        const lastUpdated = page.getByText(/^Last updated:/).first();
+        const deployed = page.getByText(/^Code deployed at:/).first();
+        if (await lastUpdated.count()) await lastUpdated.evaluate(el => { el.textContent = "Last updated: 2026-09-30 09:00 PM"; });
+        if (await deployed.count()) await deployed.evaluate(el => { el.textContent = "Code deployed at: 2026-09-30 21:00:00 UTC"; });
+      };
+      await normalizeDynamicText();
       for (const section of SECTIONS) {
         if (section.name === 'analytics') {
           await clickStreamlitTab(page, /Data Explorer/);
@@ -102,6 +109,7 @@ async function run() {
           await clickStreamlitTab(page, section.label);
           await page.waitForTimeout(WAIT_MS);
         }
+        await normalizeDynamicText();
         const out = join(OUT, `${view.name}-${section.name}.png`);
         await page.screenshot({ path: out });
         console.log(`  -> ${out}`);
