@@ -98,6 +98,11 @@ async function run() {
   }
   await writeFile(join(OUT, 'summary.json'), JSON.stringify(summary, null, 2));
   console.log(JSON.stringify(summary, null, 2));
+  const failed = summary.pages.filter(page => page.error || page.within_tolerance === false);
+  if (failed.length) {
+    console.error(`Visual parity failed for ${failed.length} screenshot pair(s).`);
+    process.exitCode = 1;
+  }
 }
 
 run().catch((err) => {
