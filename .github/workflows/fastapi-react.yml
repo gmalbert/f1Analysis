@@ -121,6 +121,17 @@ jobs:
           REACT_BASE_URL: http://127.0.0.1:5173
           REACT_WAIT_MS: "4000"
         run: npm run capture:react
+      - name: Accessibility audit
+        working-directory: fastapi_react/frontend
+        env:
+          REACT_BASE_URL: http://127.0.0.1:5173
+        run: npm run audit:a11y
+      - name: Operational benchmark
+        working-directory: fastapi_react/frontend
+        env:
+          BENCH_BASE_URL: http://127.0.0.1:5173
+          BENCH_API_URL: http://127.0.0.1:8000
+        run: npm run benchmark
       - name: Capture deployed Streamlit reference
         working-directory: fastapi_react/frontend
         env:
@@ -134,5 +145,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: fastapi-react-parity-evidence
-          path: fastapi_react/parity_evidence/visual
+          path: |
+            fastapi_react/parity_evidence/visual
+            fastapi_react/parity_evidence/accessibility.json
+            fastapi_react/parity_evidence/benchmarks.json
           if-no-files-found: error
