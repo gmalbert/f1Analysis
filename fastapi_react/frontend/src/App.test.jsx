@@ -35,11 +35,11 @@ describe("application shell", () => {
     expect(screen.getByRole("tab", { name: "💾 Data & Debug" })).toBeInTheDocument();
   });
 
-  it("switches sections from the Streamlit-style tab row and updates the title", async () => {
+  it("switches sections from the Streamlit-style tab row and preserves the Streamlit page title", async () => {
     render(<App />);
     fireEvent.click(screen.getByRole("tab", { name: "📈 Analytics & Visualizations" }));
     expect(await screen.findByRole("heading", { name: "Analytics page" })).toBeInTheDocument();
-    await waitFor(() => expect(document.title).toContain("Analytics & Visualizations"));
+    await waitFor(() => expect(document.title).toBe("Gridlocked - Formula 1 Betting & Analytics"));
     expect(window.location.hash).toBe("#/Analytics");
   });
 });
