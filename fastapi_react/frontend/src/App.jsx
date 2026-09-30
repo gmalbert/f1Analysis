@@ -77,10 +77,11 @@ export default function App() {
           </section>
 
           <footer className="site-footer">
-            <span>Powered by</span>
-            <a href="https://www.betting-oracle.com" target="_blank" rel="noreferrer">Betting Oracle</a>
-            <span>Sports Prediction Analytics</span>
-            <small>All content is for informational purposes only and does not constitute betting advice. Wager responsibly.</small>
+            <p>Powered by <a href="https://www.betting-oracle.com" target="_blank" rel="noreferrer"><strong>Betting Oracle</strong></a></p>
+            <p className="footer-subtitle">Sports Prediction Analytics</p>
+            <a href="https://www.betting-oracle.com" target="_blank" rel="noreferrer">
+              <img src="https://raw.githubusercontent.com/gmalbert/betting-oracle/main/data_files/logo.png" alt="Betting Oracle Logo" />
+            </a>
           </footer>
         </div>
       </main>
