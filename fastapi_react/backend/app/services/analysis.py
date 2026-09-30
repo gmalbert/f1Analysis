@@ -9,7 +9,14 @@ import pandas as pd
 from scipy.stats import linregress
 
 from app.config import DATA_DIR
-from app.services.data import apply_filters, load_main_data, load_race_schedule, model_manifest, precomputed, records
+from app.services.data import (
+    apply_filters,
+    load_main_data,
+    load_race_schedule,
+    model_manifest,
+    precomputed,
+    records,
+)
 
 
 def _regression(df: pd.DataFrame, x_col: str, y_col: str) -> dict[str, Any] | None:
