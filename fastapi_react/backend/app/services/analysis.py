@@ -598,6 +598,32 @@ def _dnf_feature_names() -> tuple[str, ...]:
     return tuple(str(value) for value in payload.get("feature_names", ()))
 
 
+@lru_cache(maxsize=1)
+def dnf_diagnostics() -> dict[str, float | None]:
+    """Return min/max/mean saved-model DNF probabilities over the historical analysis rows."""
+    model = _load_dnf_model()
+    feature_names = _dnf_feature_names()
+    if model is None or not feature_names:
+        return {"min": None, "max": None, "mean": None}
+    frame = load_main_data().copy()
+    for column in feature_names:
+        if column not in frame:
+            frame[column] = np.nan
+    try:
+        probabilities = model.predict_proba(frame[list(feature_names)])[:, 1]
+    except Exception:
+        return {"min": None, "max": None, "mean": None}
+    finite = np.asarray(probabilities, dtype=float)
+    finite = finite[np.isfinite(finite)]
+    if not finite.size:
+        return {"min": None, "max": None, "mean": None}
+    return {
+        "min": float(finite.min()),
+        "max": float(finite.max()),
+        "mean": float(finite.mean()),
+    }
+
+
 def build_dnf_predictions(
     position_predictions: dict[str, Any] | None,
     next_race: pd.Series,
@@ -898,6 +924,7 @@ def next_race_bundle() -> dict[str, Any]:
         "predictions": predictions,
         "legacy_predictions": legacy_predictions,
         "dnf_predictions": dnf_predictions,
+        "dnf_diagnostics": dnf_diagnostics(),
         "safety_car_predictions": safety_car_predictions,
         "model_mae": model_mae,
         "position_mae_by_position": position_mae_by_position,
