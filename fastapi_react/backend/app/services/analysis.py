@@ -230,6 +230,30 @@ def analytics(filters: Any, max_rows: int) -> dict[str, Any]:
     except (KeyError, OSError, ValueError):
         importance = None
     payload["feature_importance"] = importance
+
+    try:
+        historical = precomputed("historical_validation")
+    except (KeyError, OSError, ValueError):
+        historical = None
+    holdout = (historical or {}).get("holdout", {}) if isinstance(historical, dict) else {}
+    holdout_rows = holdout.get("rows", []) if isinstance(holdout, dict) else []
+    if isinstance(holdout_rows, list) and holdout_rows:
+        holdout_frame = pd.DataFrame(holdout_rows)
+        expected = {"ActualFinalPosition", "PredictedFinalPosition", "Error"}
+        if expected.issubset(holdout_frame.columns):
+            holdout_frame = holdout_frame.sort_values("ActualFinalPosition")
+            top3 = holdout_frame[pd.to_numeric(holdout_frame["ActualFinalPosition"], errors="coerce") <= 3].copy()
+            if not top3.empty:
+                payload["top3_mae"] = float(
+                    np.mean(
+                        np.abs(
+                            pd.to_numeric(top3["ActualFinalPosition"], errors="coerce")
+                            - pd.to_numeric(top3["PredictedFinalPosition"], errors="coerce")
+                        )
+                    )
+                )
+                payload["top3_predictions"] = records(top3.head(100))
+            payload["first_30_predictions"] = records(holdout_frame.head(30))
     return payload
 
 def current_season() -> dict[str, Any]:
