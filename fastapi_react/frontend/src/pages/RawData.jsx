@@ -1,129 +1,90 @@
-import { useEffect, useMemo, useState } from 'react'
-import { api, downloadUrl } from "../api";
-import { Card, DataTable, JsonBlock, Status, Tabs } from "../components/UI";
+import { useEffect, useState } from "react";
+import { api } from "../api";
+import { DataTable, JsonBlock, Status, Tabs } from "../components/UI";
 
-const RAW_TABS = ["Raw Tables", "Temporal Leakage Audit", "Hyperparameter Tuning"];
+const RAW_TABS = ["Raw Data", "Temporal Leakage Audit", "Hyperparameter Tuning"];
 
 export default function RawData() {
-  const [tab, setTab] = useState(RAW_TABS[0]);
-  const [files, setFiles] = useState([]);
-  const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState(null);
-  const [preview, setPreview] = useState(null);
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState("Raw Data");
   const [health, setHealth] = useState(null);
-  const [toolResult, setToolResult] = useState(null);
-  const [toolBusy, setToolBusy] = useState(false);
   const [showDataset, setShowDataset] = useState(false);
   const [dataset, setDataset] = useState(null);
   const [datasetPage, setDatasetPage] = useState(0);
-  const datasetPageSize = 50;
+  const [toolResult, setToolResult] = useState(null);
+  const [toolBusy, setToolBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const pageSize = 1000;
 
-  useEffect(() => {
-    api.get("/api/raw/files").then(r => { setFiles(r.files); setLoading(false); }).catch(e => { setError(e); setLoading(false); });
-    api.get("/api/health").then(setHealth).catch(() => {});
-  }, []);
+  useEffect(() => { api.get("/api/health").then(setHealth).catch(() => {}); }, []);
 
   useEffect(() => {
     if (!showDataset) return;
-    let cancelled = false;
-    setLoading(true);
+    setError(null);
     api.post("/api/data-explorer/query", {
-      limit: datasetPageSize,
-      offset: datasetPage * datasetPageSize,
-    }).then(result => {
-      if (!cancelled) setDataset(result);
-    }).catch(setError).finally(() => {
-      if (!cancelled) setLoading(false);
-    });
-    return () => { cancelled = true; };
+      filters: [], offset: datasetPage * pageSize, limit: pageSize,
+    }).then(setDataset).catch(setError);
   }, [showDataset, datasetPage]);
 
-  const shown = useMemo(
-    () => files.filter(f => f.path.toLowerCase().includes(query.toLowerCase())).slice(0, 500),
-    [files, query]
-  );
-
-  async function open(path) {
-    setSelected(path); setPreview(null); setError(null);
-    try { setPreview(await api.get(`/api/raw/preview?path=${encodeURIComponent(path)}`)); }
-    catch (e) { setError(e); }
-  }
-
-  async function runTool(tool, args = []) {
-    setToolBusy(true); setToolResult(null); setError(null);
-    try { setToolResult(await api.post("/api/tools/run", { tool, args })); }
-    catch (e) { setError(e); }
+  async function runTool(tool) {
+    setToolBusy(true);
+    setToolResult(null);
+    setError(null);
+    try { setToolResult(await api.post("/api/tools/run", { tool, args: [] })); }
+    catch (err) { setError(err); }
     finally { setToolBusy(false); }
   }
 
-  const enabled = !!health?.expensive_tools_enabled;
+  const enabled = Boolean(health?.expensive_tools_enabled);
 
   return (
     <div>
-      <header className="page-header"><div><h1>Data & Debug Tools</h1><p>Raw datasets plus the diagnostic and tuning utilities exposed by the Streamlit application.</p></div></header>
+      <header className="page-header">
+        <h1>Data & Debug Tools</h1>
+      </header>
       <Tabs tabs={RAW_TABS} active={tab} onChange={setTab} />
 
-      {tab === "Raw Tables" && <div className="raw-grid">
-        <Card title={`Files (${files.length})`}>
-          <label className="dataset-toggle">
-            <input type="checkbox" checked={showDataset} onChange={event => { setShowDataset(event.target.checked); setDatasetPage(0); setError(null); }} />
-            Show complete analysis dataset
-          </label>
-          {showDataset && <>
-            <Status loading={loading} error={error}>
-              {dataset && <>
-                <p className="muted">Rows {dataset.total ? datasetPage * datasetPageSize + 1 : 0}–{Math.min((datasetPage + 1) * datasetPageSize, dataset.total)} of {dataset.total.toLocaleString()}</p>
-                <div className="button-row">
-                  <button disabled={datasetPage === 0 || loading} onClick={() => setDatasetPage(page => page - 1)}>Previous</button>
-                  <button disabled={(datasetPage + 1) * datasetPageSize >= dataset.total || loading} onClick={() => setDatasetPage(page => page + 1)}>Next</button>
-                </div>
-                <DataTable rows={dataset.rows} columns={dataset.columns} maxHeight={620} />
-              </>}
-            </Status>
+      {tab === "Raw Data" && <>
+        <p>View the complete unfiltered dataset.</p>
+        <label className="filter-results-toggle">
+          <input type="checkbox" checked={showDataset} onChange={e => { setShowDataset(e.target.checked); setDatasetPage(0); }} />
+          Show Raw Data
+        </label>
+        {showDataset && <Status loading={!dataset && !error} error={error}>
+          {dataset && <>
+            <p>Total number of results: {dataset.total.toLocaleString()}</p>
+            <DataTable rows={dataset.rows} columns={dataset.columns} maxHeight={600} />
+            {dataset.total > pageSize && <div className="button-row">
+              <button disabled={datasetPage === 0} onClick={() => setDatasetPage(page => page - 1)}>Previous</button>
+              <button disabled={(datasetPage + 1) * pageSize >= dataset.total} onClick={() => setDatasetPage(page => page + 1)}>Next</button>
+            </div>}
           </>}
-          <input className="search" aria-label="Filter filenames" placeholder="Filter filenames…" value={query} onChange={e => setQuery(e.target.value)} />
-          <div className="file-list">
-            {shown.length === 0 ? (
-              <div className="empty">No files in data_files/</div>
-            ) : shown.map(f => (
-              <button key={f.path} className={selected === f.path ? "file active" : "file"} onClick={() => open(f.path)}>
-                <span>{f.path}</span><small>{(f.size / 1024).toFixed(1)} KB</small>
-              </button>
-            ))}
-          </div>
-        </Card>
-        <Card title={selected || "Preview"}>
-          <Status loading={loading && !showDataset} error={!showDataset ? error : null}>
-            {!selected && <div className="empty">Choose a file to preview.</div>}
-            {preview?.kind === "table" && <DataTable rows={preview.rows} columns={preview.columns} />}
-            {preview?.kind === "json" && <JsonBlock value={preview.data} />}
-            {preview?.kind === "text" && <pre className="json">{preview.data}</pre>}
-            {preview?.kind === "binary" && <div className="empty">Binary preview unavailable.</div>}
-            {selected && <p><a className="button-link" href={downloadUrl(selected)}>Download original</a></p>}
-          </Status>
-        </Card>
-      </div>}
+        </Status>}
+      </>}
 
-      {tab === "Temporal Leakage Audit" && <Card title="Temporal Leakage Audit">
-        <p className="muted">Runs the repository's heuristics-based temporal leakage audit. This is intentionally disabled by default on a public host because it can read the full analysis dataset.</p>
-        {!enabled && <div className="warning">Manual analysis tools are disabled. Set <code>ENABLE_EXPENSIVE_TOOLS=1</code> only on a test deployment.</div>}
-        <button className="primary" disabled={!enabled || toolBusy} onClick={() => runTool("temporal_leakage")}>{toolBusy ? "Running…" : "Run Leakage Audit"}</button>
-        {error && <div className="status error">{String(error.message || error)}</div>}
-        {toolResult && <JsonBlock value={toolResult} />}
-      </Card>}
+      {tab === "Temporal Leakage Audit" && <>
+        <p>Run heuristics-based checks for features that may leak future information into models.</p>
+        <details>
+          <summary>🔍 Run Temporal Leakage Audit (Admin)</summary>
+          <p>This audit scans the analysis dataset for features that may leak future or post-event information into training.</p>
+          <details>
+            <summary>About this Leakage Audit</summary>
+            <p>It applies name-pattern checks, very high target-correlation checks, per-driver lagged-correlation checks, and safety-car candidate checks.</p>
+            <p>Recommendation: review flagged features and remove or re-engineer any that use post-race or future information before training models.</p>
+          </details>
+          {!enabled && <div className="warning">Research controls are disabled in hosted mode.</div>}
+          <button disabled={!enabled || toolBusy} onClick={() => runTool("temporal_leakage")}>{toolBusy ? "Running leakage audit…" : "Run Leakage Audit"}</button>
+          {toolResult && <JsonBlock value={toolResult} />}
+        </details>
+        {error && <Status error={error} />}
+      </>}
 
-      {tab === "Hyperparameter Tuning" && <Card title="Hyperparameter Tuning">
-        <p className="muted">The live site should normally consume precomputed HPO artifacts. These controls provide test-only parity with the manual tuning area without enabling them on production by default.</p>
-        {!enabled && <div className="warning">Manual tuning is disabled. Set <code>ENABLE_EXPENSIVE_TOOLS=1</code> on a test host to enable it.</div>}
-        <div className="button-row wrap">
-          <button className="primary" disabled={!enabled || toolBusy} onClick={() => runTool("hyperparameter_grid")}>Run Grid Search</button>
-          <button disabled={!enabled || toolBusy} onClick={() => runTool("hyperparameter_bayesian")}>Run Bayesian Optimization</button>
-        </div>
-        {error && <div className="status error">{String(error.message || error)}</div>}
+      {tab === "Hyperparameter Tuning" && <>
+        <p>Run basic hyperparameter tuning (GridSearch) on the full dataset.</p>
+        {!enabled && <div className="warning">Research controls are disabled in hosted mode.</div>}
+        <button disabled={!enabled || toolBusy} onClick={() => runTool("hyperparameter_grid")}>{toolBusy ? "Running…" : "Run Hyperparameter Tuning (subtab)"}</button>
         {toolResult && <JsonBlock value={toolResult} />}
-      </Card>}
+        {error && <Status error={error} />}
+      </>}
     </div>
   );
 }
