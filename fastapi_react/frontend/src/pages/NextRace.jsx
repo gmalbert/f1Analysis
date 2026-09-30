@@ -91,9 +91,9 @@ export default function NextRace() {
 
           <h2>Predictive DNF</h2>
           <p>Logistic Regression DNF Probabilities:</p>
-          {data.legacy_predictions?.length ? (
+          {(data.dnf_predictions || data.legacy_predictions)?.length ? (
             <DataTable
-              rows={data.legacy_predictions}
+              rows={data.dnf_predictions || data.legacy_predictions}
               columns={["constructorName", "resultsDriverName", "driverDNFCount", "driverDNFPercentage", "PredictedDNFProbabilityPercentage", "PredictedDNFProbabilityStd"]}
               headerMap={{
                 constructorName: "Constructor", resultsDriverName: "Driver", driverDNFCount: "Driver DNF Count",
