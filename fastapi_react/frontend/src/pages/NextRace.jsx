@@ -22,13 +22,24 @@ export default function NextRace() {
   const predictionRows = useMemo(() => {
     const byModel = data?.predictions?.predictions_by_model || {};
     const block = byModel.xgboost || byModel[Object.keys(byModel)[0]];
-    return (block?.predictions || []).map(row => ({
-      Rank: row.predicted_rank,
-      resultsDriverName: row.driverName,
-      constructorName: row.constructor,
-      PredictedFinalPosition: row.predicted_position,
-      ModelMAE: row.mae ?? block?.model_mae,
-    })).sort((a, b) => Number(a.Rank) - Number(b.Rank));
+    const globalMae = Number(data?.model_mae ?? block?.model_mae);
+    return (block?.predictions || []).map(row => {
+      const rank = Number(row.predicted_rank);
+      const predicted = Number(row.predicted_position);
+      const positionMae = Number(data?.position_mae_by_position?.[rank] ?? globalMae);
+      return {
+        Rank: rank,
+        constructorName: row.constructor,
+        resultsDriverName: row.driverName,
+        PredictedFinalPosition: predicted,
+        PredictedFinalPositionStd: row.predicted_position_std ?? null,
+        PredictedFinalPosition_Low: Number.isFinite(globalMae) ? predicted - globalMae : null,
+        PredictedFinalPosition_High: Number.isFinite(globalMae) ? predicted + globalMae : null,
+        PredictedPositionMAE: Number.isFinite(positionMae) ? positionMae : null,
+        PredictedPositionMAE_Low: Number.isFinite(positionMae) ? predicted - positionMae : null,
+        PredictedPositionMAE_High: Number.isFinite(positionMae) ? predicted + positionMae : null,
+      };
+    }).sort((a, b) => Number(a.Rank) - Number(b.Rank));
   }, [data]);
 
   return (
@@ -55,18 +66,31 @@ export default function NextRace() {
           <DataTable rows={data.past_results || []} maxHeight={600} />
 
           <h2>Predictive Results for Active Drivers</h2>
+          {data.model_mae != null && <p>MAE for Position Predictions: {Number(data.model_mae).toFixed(3)}</p>}
           {predictionRows.length ? (
             <DataTable
               rows={predictionRows}
-              columns={["Rank", "constructorName", "resultsDriverName", "PredictedFinalPosition", "ModelMAE"]}
+              columns={[
+                "constructorName", "resultsDriverName", "PredictedFinalPosition", "PredictedFinalPositionStd",
+                "PredictedFinalPosition_Low", "PredictedFinalPosition_High", "PredictedPositionMAE",
+                "PredictedPositionMAE_Low", "PredictedPositionMAE_High",
+              ]}
               headerMap={{
-                Rank: "Rank", constructorName: "Constructor", resultsDriverName: "Driver",
-                PredictedFinalPosition: "Predicted Final Position", ModelMAE: "MAE",
+                constructorName: "Constructor",
+                resultsDriverName: "Driver",
+                PredictedFinalPosition: "Predicted Final Position",
+                PredictedFinalPositionStd: "Predicted Position Std.",
+                PredictedFinalPosition_Low: "Predicted Position Low",
+                PredictedFinalPosition_High: "Predicted Position High",
+                PredictedPositionMAE: "Historical MAE by Rank",
+                PredictedPositionMAE_Low: "MAE Low",
+                PredictedPositionMAE_High: "MAE High",
               }}
             />
           ) : <div className="empty">No precomputed active-driver prediction artifact is available for this race.</div>}
 
           <h2>Predictive DNF</h2>
+          <p>Logistic Regression DNF Probabilities:</p>
           {data.legacy_predictions?.length ? (
             <DataTable
               rows={data.legacy_predictions}
