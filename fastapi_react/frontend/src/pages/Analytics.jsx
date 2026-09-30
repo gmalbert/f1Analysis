@@ -117,6 +117,34 @@ export default function Analytics() {
                 <Metric label="Mean Absolute Error" value={manifestMetrics.mae != null ? Number(manifestMetrics.mae).toFixed(2) : "—"} />
                 <Metric label="Mean Error" value={manifestMetrics.mean_error != null ? Number(manifestMetrics.mean_error).toFixed(2) : "—"} />
               </div>
+
+              {data.top3_mae != null && <p>Mean Absolute Error (MAE) for Top 3 Podium Drivers: {Number(data.top3_mae).toFixed(3)}</p>}
+              <h2>Top 3 Podium Drivers: Actual vs Predicted</h2>
+              <DataTable
+                rows={data.top3_predictions || []}
+                columns={["constructorName", "resultsDriverName", "ActualFinalPosition", "PredictedFinalPosition", "Error"]}
+                headerMap={{
+                  constructorName: "Constructor",
+                  resultsDriverName: "Driver",
+                  ActualFinalPosition: "Actual",
+                  PredictedFinalPosition: "Predicted",
+                  Error: "Error",
+                }}
+              />
+
+              <h2>First 30 Results with Accuracy</h2>
+              <DataTable
+                rows={data.first_30_predictions || []}
+                columns={["constructorName", "resultsDriverName", "ActualFinalPosition", "PredictedFinalPosition", "Error"]}
+                headerMap={{
+                  constructorName: "Constructor",
+                  resultsDriverName: "Driver",
+                  ActualFinalPosition: "Actual",
+                  PredictedFinalPosition: "Predicted",
+                  Error: "Error",
+                }}
+              />
+
               {importanceRows.length > 0 && <>
                 <h2>Feature Importance</h2>
                 <DataTable rows={importanceRows.slice(0, 50)} maxHeight={600} />
