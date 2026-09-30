@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
+import pickle
 from typing import Any
 
 import numpy as np
@@ -504,22 +505,131 @@ def _legacy_prediction_rows(race_id: str, year: int | str, race_name: str) -> li
     return []
 
 
-def _historical_safety_car_rows(race_id: str, year: int | str) -> list[dict[str, Any]]:
-    """Return historical safety-car rows for the current Grand Prix.
+@lru_cache(maxsize=1)
+def _load_safety_car_inputs() -> pd.DataFrame:
+    """Load the same historical safety-car feature frame used by Streamlit."""
+    path = DATA_DIR / "f1SafetyCarFeatures.csv"
+    if not path.is_file():
+        return pd.DataFrame()
+    return pd.read_csv(path, sep="\t", low_memory=False)
 
-    The Streamlit app computes the next-race probability from a loaded model.
-    The React service remains artifact-first and therefore only exposes a
-    prediction when a committed artifact exists; historical rows are still
-    returned here for visual/context parity.
-    """
-    messages = _read_optional(DATA_DIR / "race_control_messages_grouped_with_dnf.csv")
-    if messages.empty or "grandPrixId" not in messages:
-        return []
-    rows = messages[messages["grandPrixId"].astype(str) == str(race_id)].copy()
-    if "Year" in rows:
-        rows = rows[pd.to_numeric(rows["Year"], errors="coerce") != pd.to_numeric(year, errors="coerce")]
-        rows = rows.sort_values("Year", ascending=False)
-    return records(rows.head(100))
+
+@lru_cache(maxsize=1)
+def _load_safety_car_model() -> Any:
+    """Load the trusted, repository-generated safety-car inference artifact."""
+    path = DATA_DIR / "models" / "safetycar_model.pkl"
+    if not path.is_file():
+        return None
+    with path.open("rb") as handle:
+        return pickle.load(handle)  # noqa: S301 - trusted model artifact committed by this repository
+
+
+def safety_car_predictions(
+    next_race: pd.Series,
+    race_name: str,
+    year: int,
+    weather: pd.DataFrame,
+) -> dict[str, Any]:
+    """Mirror Streamlit's historical + synthetic next-race safety-car inference."""
+    frame = _load_safety_car_inputs().copy()
+    model = _load_safety_car_model()
+    if frame.empty or model is None or "SafetyCarStatus" not in frame:
+        return {"rows": [], "mean": None, "min": None, "max": None}
+
+    manifest_path = DATA_DIR / "models" / "safetycar_manifest.json"
+    if not manifest_path.is_file():
+        return {"rows": [], "mean": None, "min": None, "max": None}
+    import json
+
+    try:
+        feature_names = json.loads(manifest_path.read_text(encoding="utf-8")).get("feature_names", [])
+    except (OSError, json.JSONDecodeError):
+        feature_names = []
+    if not feature_names:
+        return {"rows": [], "mean": None, "min": None, "max": None}
+
+    for column in feature_names:
+        if column not in frame:
+            frame[column] = np.nan
+    features = frame[feature_names].copy()
+    try:
+        probabilities = model.predict_proba(features)[:, 1]
+    except Exception:
+        return {"rows": [], "mean": None, "min": None, "max": None}
+
+    history = pd.DataFrame({
+        "grandPrixName": frame.get("grandPrixName"),
+        "grandPrixYear": frame.get("grandPrixYear"),
+        "PredictedSafetyCarProbabilityPercentage": (probabilities * 100).round(3),
+    })
+    history["Type"] = "Historical"
+
+    synthetic: dict[str, Any] = {column: np.nan for column in feature_names}
+    synthetic["grandPrixYear"] = year
+    synthetic["grandPrixName"] = race_name
+    schedule_map = {
+        "circuitId": "circuitId",
+        "grandPrixLaps": "laps",
+        "turns": "turns",
+        "streetRace": "streetRace",
+        "trackRace": "trackRace",
+    }
+    for target, source in schedule_map.items():
+        if target in synthetic and source in next_race.index and pd.notna(next_race[source]):
+            synthetic[target] = next_race[source]
+
+    if not weather.empty:
+        weather_row = weather.iloc[0]
+        for column in ("average_temp", "average_humidity", "average_wind_speed", "total_precipitation"):
+            if column in synthetic and column in weather_row.index and pd.notna(weather_row[column]):
+                synthetic[column] = weather_row[column]
+
+    same_gp = frame[frame.get("grandPrixName", pd.Series(index=frame.index, dtype=object)) == race_name]
+    for column in feature_names:
+        if not pd.isna(synthetic[column]) or column not in frame:
+            continue
+        if pd.api.types.is_numeric_dtype(frame[column]):
+            values = pd.Series(dtype=float)
+            if not same_gp.empty and "grandPrixYear" in same_gp:
+                per_race = same_gp.groupby("grandPrixYear")[column].mean(numeric_only=True).dropna()
+                if not per_race.empty:
+                    values = per_race.sort_index().tail(2)
+            synthetic[column] = (
+                values.median()
+                if not values.empty
+                else pd.to_numeric(frame[column], errors="coerce").dropna().median()
+            )
+
+    synthetic_frame = pd.DataFrame([synthetic], columns=feature_names)
+    try:
+        next_probability = float(model.predict_proba(synthetic_frame)[:, 1][0])
+    except Exception:
+        next_probability = float("nan")
+
+    current = history[
+        (history["grandPrixName"].astype(str) == race_name)
+        & (pd.to_numeric(history["grandPrixYear"], errors="coerce") != year)
+    ].drop_duplicates(subset=["grandPrixYear"])
+
+    if np.isfinite(next_probability):
+        current = pd.concat([
+            current,
+            pd.DataFrame([{
+                "grandPrixName": race_name,
+                "grandPrixYear": year,
+                "PredictedSafetyCarProbabilityPercentage": round(next_probability * 100, 3),
+                "Type": "Next Race",
+            }]),
+        ], ignore_index=True)
+
+    current = current.sort_values("grandPrixYear", ascending=False)
+    percentage = history["PredictedSafetyCarProbabilityPercentage"]
+    return {
+        "rows": records(current),
+        "mean": float(percentage.mean()),
+        "min": float(percentage.min()),
+        "max": float(percentage.max()),
+    }
 
 def next_race_bundle() -> dict[str, Any]:
     schedule = load_race_schedule().copy()
@@ -585,7 +695,7 @@ def next_race_bundle() -> dict[str, Any]:
 
     predictions = find_prediction_artifact(str(race_id), str(year), str(race_name), row[date_col])
     legacy_predictions = _legacy_prediction_rows(str(race_id), int(year), str(race_name))
-    safety_car_predictions = _historical_safety_car_rows(str(race_id), int(year))
+    safety_car_predictions = safety_car_predictions(row, str(race_name), int(year), weather)
     pit_stops = fastest_pit_stops(str(race_id))
     return {
         "next_race": records(next_frame)[0],
