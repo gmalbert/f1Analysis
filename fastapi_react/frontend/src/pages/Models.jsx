@@ -61,14 +61,14 @@ function positionRowsFromHistorical(payload) {
 function groupRowsFromHistorical(payload) {
   const rows = payload?.holdout?.rows || [];
   const groups = [
-    ["Winners", value => value === 1],
-    ["Podium", value => value >= 1 && value <= 3],
-    ["Top 5", value => value >= 1 && value <= 5],
-    ["Points", value => value >= 1 && value <= 10],
-    ["Midfield", value => value >= 11 && value <= 15],
-    ["Backmarkers", value => value >= 16],
+    { name: "Winners", predicate: value => value === 1 },
+    { name: "Podium", predicate: value => value >= 1 && value <= 3 },
+    { name: "Top 5", predicate: value => value >= 1 && value <= 5 },
+    { name: "Points", predicate: value => value >= 1 && value <= 10 },
+    { name: "Midfield", predicate: value => value >= 11 && value <= 15 },
+    { name: "Backmarkers", predicate: value => value >= 16 },
   ];
-  return groups.flatMap(([name, predicate]) => {
+  return groups.flatMap(({ name, predicate }) => {
     const subset = rows.filter(row => predicate(Number(row.ActualFinalPosition)));
     if (!subset.length) return [];
     const errors = subset.map(row => Math.abs(Number(row.ActualFinalPosition) - Number(row.PredictedFinalPosition)));
@@ -96,7 +96,7 @@ export default function Models() {
   const [models, setModels] = useState([]);
   const [selectedModel, setSelectedModel] = useState("XGBoost");
   const [tab, setTab] = useState(advancedTabs[0]);
-  const [artifacts, setArtifacts] = useState({});
+  const [artifacts, setArtifacts] = useState(/** @type {Record<string, any>} */ ({}));
   const [health, setHealth] = useState(null);
   const [manifest, setManifest] = useState(null);
   const [toolOutput, setToolOutput] = useState(null);
