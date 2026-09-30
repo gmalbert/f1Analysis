@@ -58,7 +58,7 @@ describe("BettingResearch page", () => {
       });
     });
     render(<BettingResearch />);
-    fireEvent.click(screen.getByRole("button", { name: "Field simulation" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Field simulation" }));
     const template = screen.getByRole("link", { name: "Download input template" });
     expect(template).toHaveAttribute("download", "f1_field_simulation_template.csv");
     fireEvent.change(screen.getByRole("slider", { name: "Simulations" }), { target: { value: "12000" } });
@@ -72,13 +72,13 @@ describe("BettingResearch page", () => {
 
   it("shows Streamlit's no-ledger message until a replay CSV is uploaded", () => {
     render(<BettingResearch />);
-    fireEvent.click(screen.getByRole("button", { name: "Paper replay" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Paper replay" }));
     expect(screen.getByText("No odds ledger is bundled, so profitability is intentionally not estimated.")).toBeInTheDocument();
   });
 
   it("shows Streamlit's calibration requirements before upload", () => {
     render(<BettingResearch />);
-    fireEvent.click(screen.getByRole("button", { name: "Calibration" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Calibration" }));
     expect(screen.getByText("Required columns: probability and outcome. Optional columns: market and stage.")).toBeInTheDocument();
   });
 });
