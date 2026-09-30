@@ -136,7 +136,9 @@ def filter_schema() -> list[dict[str, Any]]:
     df = load_main_data()
     labels, excluded, selected = streamlit_filter_rules()
     schema: list[dict[str, Any]] = []
-    for column in df.columns:
+    # Streamlit explicitly sorts `column_names` before building sidebar controls.
+    # Preserve that raw-field alphabetical order; labels are applied only for display.
+    for column in sorted(df.columns):
         if column in excluded or (selected and column not in selected):
             continue
         series = df[column]
