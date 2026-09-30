@@ -121,6 +121,7 @@ export function MultiLinePanel({ title, rows = [], x, y, series, xLabel = axisLa
   const seriesNames = [...new Set(rows.map(row => String(row[series] ?? "")).filter(Boolean))];
   const xValues = [...new Set(rows.map(row => row[x]))];
   const byX = xValues.map(xValue => {
+    /** @type {Record<string, any>} */
     const point = { [x]: xValue };
     for (const row of rows.filter(item => item[x] === xValue)) {
       point[String(row[series])] = row[y];
