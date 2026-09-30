@@ -573,6 +573,111 @@ def _position_mae_by_position() -> dict[int, float]:
 
 
 @lru_cache(maxsize=1)
+def _load_dnf_model() -> Any:
+    """Load the trusted, workflow-generated DNF inference artifact."""
+    path = DATA_DIR / "models" / "dnf_model.pkl"
+    if not path.is_file():
+        return None
+    with path.open("rb") as handle:
+        artifact = pickle.load(handle)  # noqa: S301 - trusted model artifact committed by this repository
+    return artifact.get("model") if isinstance(artifact, dict) else artifact
+
+
+@lru_cache(maxsize=1)
+def _dnf_feature_names() -> tuple[str, ...]:
+    """Read the authoritative DNF feature order from the committed manifest."""
+    import json
+
+    path = DATA_DIR / "models" / "dnf_manifest.json"
+    if not path.is_file():
+        return ()
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ()
+    return tuple(str(value) for value in payload.get("feature_names", ()))
+
+
+def build_dnf_predictions(
+    position_predictions: dict[str, Any] | None,
+    next_race: pd.Series,
+    race_name: str,
+    weather: pd.DataFrame,
+) -> list[dict[str, Any]]:
+    """Generate Streamlit-equivalent DNF rows from the committed inference artifact."""
+    model = _load_dnf_model()
+    feature_names = _dnf_feature_names()
+    if model is None or not feature_names or not isinstance(position_predictions, dict):
+        return []
+
+    by_model = position_predictions.get("predictions_by_model") or {}
+    block = by_model.get("xgboost") or (next(iter(by_model.values()), {}) if by_model else {})
+    prediction_rows = block.get("predictions") or []
+    if not prediction_rows:
+        return []
+
+    data = load_main_data().copy()
+    if "resultsDriverName" not in data:
+        return []
+    sort_column = "grandPrixYear" if "grandPrixYear" in data else None
+    if sort_column:
+        data = data.sort_values(sort_column)
+    latest = data.groupby("resultsDriverName", as_index=False).tail(1).copy()
+    latest = latest.set_index("resultsDriverName", drop=False)
+
+    schedule_map = {
+        "turns": "turns",
+        "trackRace": "trackRace",
+        "streetRace": "streetRace",
+    }
+    weather_row = weather.iloc[0] if not weather.empty else pd.Series(dtype=object)
+    rows: list[dict[str, Any]] = []
+    feature_rows: list[dict[str, Any]] = []
+    for prediction in prediction_rows:
+        driver = str(prediction.get("driverName", ""))
+        if not driver or driver not in latest.index:
+            continue
+        source = latest.loc[driver]
+        if isinstance(source, pd.DataFrame):
+            source = source.iloc[-1]
+        feature_row = {name: source.get(name, np.nan) for name in feature_names}
+        feature_row["grandPrixName"] = race_name
+        if prediction.get("constructor"):
+            feature_row["constructorName"] = prediction["constructor"]
+        feature_row["resultsDriverName"] = driver
+        for target, source_name in schedule_map.items():
+            if target in feature_row and source_name in next_race.index and pd.notna(next_race[source_name]):
+                feature_row[target] = next_race[source_name]
+        for column in ("average_temp", "average_humidity", "average_wind_speed", "total_precipitation"):
+            if column in feature_row and column in weather_row.index and pd.notna(weather_row[column]):
+                feature_row[column] = weather_row[column]
+        feature_rows.append(feature_row)
+        rows.append({
+            "constructorName": prediction.get("constructor", source.get("constructorName")),
+            "resultsDriverName": driver,
+            "driverDNFCount": source.get("driverDNFCount"),
+            "driverDNFPercentage": (
+                round(float(source.get("driverDNFAvg", 0) or 0) * 100, 3)
+                if pd.notna(source.get("driverDNFAvg"))
+                else 0.0
+            ),
+            "PredictedDNFProbabilityStd": None,
+        })
+
+    if not feature_rows:
+        return []
+    frame = pd.DataFrame(feature_rows, columns=list(feature_names))
+    try:
+        probabilities = model.predict_proba(frame)[:, 1]
+    except Exception:
+        return []
+    for row, probability in zip(rows, probabilities, strict=True):
+        row["PredictedDNFProbabilityPercentage"] = round(float(probability) * 100, 3)
+    rows.sort(key=lambda row: float(row["PredictedDNFProbabilityPercentage"]), reverse=True)
+    return rows
+
+
+@lru_cache(maxsize=1)
 def _load_safety_car_inputs() -> pd.DataFrame:
     """Load the same historical safety-car feature frame used by Streamlit."""
     path = DATA_DIR / "f1SafetyCarFeatures.csv"
@@ -762,6 +867,7 @@ def next_race_bundle() -> dict[str, Any]:
 
     predictions = find_prediction_artifact(str(race_id), str(year), str(race_name), row[date_col])
     legacy_predictions = _legacy_prediction_rows(str(race_id), int(year), str(race_name))
+    dnf_predictions = legacy_predictions or build_dnf_predictions(predictions, row, str(race_name), weather)
     safety_car_predictions = build_safety_car_predictions(row, str(race_name), int(year), weather)
     pit_stops = fastest_pit_stops(str(race_id))
     position_mae_by_position = _position_mae_by_position()
@@ -791,6 +897,7 @@ def next_race_bundle() -> dict[str, Any]:
         "fastest_pit_stops": pit_stops,
         "predictions": predictions,
         "legacy_predictions": legacy_predictions,
+        "dnf_predictions": dnf_predictions,
         "safety_car_predictions": safety_car_predictions,
         "model_mae": model_mae,
         "position_mae_by_position": position_mae_by_position,
