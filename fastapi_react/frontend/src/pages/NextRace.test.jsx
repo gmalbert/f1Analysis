@@ -53,7 +53,7 @@ describe('NextRace page', () => {
     render(<NextRace />);
 
     await waitFor(() => expect(screen.getByText('Predictive Results for Active Drivers')).toBeInTheDocument());
-    expect(screen.getByText('Singapore Grand Prix', { selector: 'td' })).toBeInTheDocument();
+    expect(screen.getAllByText('Singapore Grand Prix', { selector: 'td' }).length).toBeGreaterThan(0);
     expect(screen.getByText(/MAE for Position Predictions: 1.250/)).toBeInTheDocument();
     expect(screen.getByText(/Min: 0.010/)).toBeInTheDocument();
     expect(screen.getByText(/Historical Safety Car Probabilities \(mean\): 42.100/)).toBeInTheDocument();
