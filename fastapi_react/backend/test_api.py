@@ -166,6 +166,26 @@ def test_next_race_endpoint() -> None:
         assert "fastest_pit_stops" in body
 
 
+def test_safety_car_loader_matches_streamlit_search_order(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    import pickle
+
+    models = tmp_path / "models"
+    xgboost = models / "xgboost"
+    xgboost.mkdir(parents=True)
+    with (xgboost / "safetycar_model.pkl").open("wb") as handle:
+        pickle.dump({"model": "wrapped-safety-model"}, handle)
+
+    monkeypatch.setattr(analysis, "DATA_DIR", tmp_path)
+    analysis._load_safety_car_model.cache_clear()
+    try:
+        assert analysis._load_safety_car_model() == "wrapped-safety-model"
+    finally:
+        analysis._load_safety_car_model.cache_clear()
+
+
 def test_safety_car_predictions_include_historical_and_next_race(monkeypatch: pytest.MonkeyPatch) -> None:
     class FakeSafetyModel:
         def predict_proba(self, frame: pd.DataFrame) -> np.ndarray:
