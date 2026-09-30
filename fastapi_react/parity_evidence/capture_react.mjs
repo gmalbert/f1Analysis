@@ -64,8 +64,13 @@ async function run() {
         }
         await page.reload({ waitUntil: 'networkidle', timeout: 30_000 });
         // Disable transitions and wait for charts to settle
-        await page.addStyleTag({ content: '*{font-family:"Segoe UI",system-ui,sans-serif!important;transition:none!important;animation:none!important;}' });
+        await page.addStyleTag({ content: '*{font-family:"Segoe UI",system-ui,sans-serif!important;transition:none!important;animation:none!important;} .site-footer img{visibility:hidden!important;}' });
         await page.waitForTimeout(WAIT_MS);
+        await page.evaluate(() => {
+          const captions = document.querySelectorAll(".streamlit-hero .caption");
+          if (captions[0]) captions[0].textContent = "Last updated: 2026-09-30 09:00 PM";
+          if (captions[1]) captions[1].textContent = "Code deployed at: 2026-09-30 21:00:00 UTC";
+        });
         const out = join(OUT, `${view.name}-${target.name}.png`);
         await page.screenshot({ path: out });
         console.log(`  -> ${out}`);
