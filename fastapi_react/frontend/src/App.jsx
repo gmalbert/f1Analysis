@@ -57,7 +57,7 @@ export default function App() {
             <p className="caption">Code deployed at: {meta?.code_deployed_at || "Loading…"}</p>
           </header>
 
-          <nav className="streamlit-tabs" aria-label="Main sections" role="tablist">
+          <nav className="streamlit-tabs" aria-label="Main sections">
             {pages.map(([key, label]) => (
               <button
                 key={key}
