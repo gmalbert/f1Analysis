@@ -61,9 +61,10 @@ export default function DataExplorer() {
         filters,
         columns: STREAMLIT_COLUMNS,
         sort: ["grandPrixYear", "resultsFinalPositionNumber"],
+        ascending: [false, true],
         descending: true,
         offset: 0,
-        limit: 1000,
+        limit: 5000,
       };
       setResult(await api.post("/api/data-explorer/query", body));
     } catch (e) {
