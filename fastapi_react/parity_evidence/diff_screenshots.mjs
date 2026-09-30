@@ -31,8 +31,8 @@ const REACT_DIR = join(SNAPSHOT_DIR, 'react');
 const SL_DIR = join(SNAPSHOT_DIR, 'streamlit');
 const OUT = join(SNAPSHOT_DIR, 'diff');
 
-// \u00A713 tolerance: <=2% diff at desktop, <=3% at tablet.
-const TOLERANCE = { desktop: 0.02, tablet: 0.03 };
+// §13 tolerance: <=2% diff at desktop, <=3% at tablet/mobile.
+const TOLERANCE = { desktop: 0.02, tablet: 0.03, mobile: 0.03 };
 // Per-channel distance threshold for marking a pixel as "different".
 const PIXEL_THRESHOLD = 24;
 
