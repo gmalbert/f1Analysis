@@ -37,8 +37,8 @@ describe("DataExplorer page", () => {
       filters: [{ column: "grandPrixYear", kind: "range", value: [2016, 2026] }],
     });
     expect(await screen.findByText("Number of filtered results: 12")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Data" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Data & Debug" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Data" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Data & Debug" })).toBeInTheDocument();
   });
 });
 
