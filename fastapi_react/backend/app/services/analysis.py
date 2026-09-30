@@ -9,7 +9,7 @@ import pandas as pd
 from scipy.stats import linregress
 
 from app.config import DATA_DIR
-from app.services.data import apply_filters, load_main_data, load_race_schedule, records
+from app.services.data import apply_filters, load_main_data, load_race_schedule, model_manifest, precomputed, records
 
 
 def _regression(df: pd.DataFrame, x_col: str, y_col: str) -> dict[str, Any] | None:
@@ -52,8 +52,12 @@ def _regression_series(df: pd.DataFrame, x_col: str, y_col: str) -> dict[str, An
 
 
 def analytics(filters: Any, max_rows: int) -> dict[str, Any]:
+    """Return every lightweight analysis block rendered by the Streamlit Analytics tab."""
     df = apply_filters(load_main_data(), filters).head(max_rows).copy()
     payload: dict[str, Any] = {"rows_considered": len(df), "charts": {}, "regressions": []}
+    if df.empty:
+        return payload
+
     pairs = {
         "active_years_vs_final": ("resultsFinalPositionNumber", "yearsActive"),
         "positions_gained_over_time": ("short_date", "positionsGained"),
@@ -61,6 +65,7 @@ def analytics(filters: Any, max_rows: int) -> dict[str, Any]:
         "grid_vs_final": ("resultsStartingGridPositionNumber", "resultsFinalPositionNumber"),
         "avg_practice_vs_final": ("averagePracticePosition", "resultsFinalPositionNumber"),
         "pit_stop_vs_final": ("averageStopTime", "resultsFinalPositionNumber"),
+        "track_turns_vs_final": ("turns", "resultsFinalPositionNumber"),
     }
     for name, (x, y) in pairs.items():
         if x in df and y in df:
@@ -71,8 +76,14 @@ def analytics(filters: Any, max_rows: int) -> dict[str, Any]:
         if result:
             payload["regressions"].append(result)
     regression_titles = {
-        "averagePracticePosition": ("Linear Regression: Average Practice Position vs Final Position", "Average Practice Position"),
-        "resultsStartingGridPositionNumber": ("Linear Regression: Starting Position vs Final Position", "Starting Position"),
+        "averagePracticePosition": (
+            "Linear Regression: Average Practice Position vs Final Position",
+            "Average Practice Position",
+        ),
+        "resultsStartingGridPositionNumber": (
+            "Linear Regression: Starting Position vs. Final Position",
+            "Starting Position",
+        ),
     }
     payload["regression_series"] = []
     for x, (title, x_label) in regression_titles.items():
@@ -90,19 +101,22 @@ def analytics(filters: Any, max_rows: int) -> dict[str, Any]:
         "driverBestRaceResult", "driverTotalChampionshipWins", "driverTotalPolePositions",
         "driverTotalRaceEntries", "driverTotalRaceStarts", "driverTotalRaceWins",
         "driverTotalRaceLaps", "driverTotalPodiums", "avgLapPace", "finishingTime",
+        "resultsQualificationPositionNumber", "numberOfStops",
     ) if c in df]
     if corr_cols:
         corr = df[corr_cols].apply(pd.to_numeric, errors="coerce").corr()
         payload["correlation"] = {
             "columns": list(corr.columns),
             "rows": [
-                {"feature": idx, **{col: (None if pd.isna(v) else float(v)) for col, v in row.items()}}
+                {"Feature": idx, **{col: (None if pd.isna(v) else float(v)) for col, v in row.items()}}
                 for idx, row in corr.iterrows()
             ],
         }
 
     if {"grandPrixYear", "resultsDriverName", "resultsFinalPositionNumber"}.issubset(df.columns):
-        agg = {"average_final_position": ("resultsFinalPositionNumber", "mean")}
+        agg: dict[str, tuple[str, Any]] = {
+            "average_final_position": ("resultsFinalPositionNumber", "mean"),
+        }
         if "resultsPodium" in df:
             agg["total_podiums"] = ("resultsPodium", "sum")
         driver = df.groupby(["grandPrixYear", "resultsDriverName"]).agg(**agg).reset_index()
@@ -112,34 +126,103 @@ def analytics(filters: Any, max_rows: int) -> dict[str, Any]:
         constructor = (
             df.groupby(["grandPrixYear", "constructorName"])
             .agg(
-                total_wins=("resultsFinalPositionNumber", lambda s: int((s == 1).sum())),
+                total_wins=("resultsFinalPositionNumber", lambda values: int((values == 1).sum())),
                 average_final_position=("resultsFinalPositionNumber", "mean"),
             ).reset_index()
         )
         if "resultsPodium" in df:
-            podium = df.groupby(["grandPrixYear", "constructorName"])["resultsPodium"].sum().reset_index(name="total_podiums")
+            podium = (
+                df.groupby(["grandPrixYear", "constructorName"])["resultsPodium"]
+                .sum().reset_index(name="total_podiums")
+            )
             constructor = constructor.merge(podium, on=["grandPrixYear", "constructorName"], how="left")
         payload["constructor_performance"] = records(constructor)
 
-    if {"DNF", "resultsReasonRetired"}.issubset(df.columns):
+    if {"constructorName", "resultsDriverName", "positionsGained", "resultsFinalPositionNumber"}.issubset(df.columns):
+        driver_vs_constructor = (
+            df.groupby(["constructorName", "resultsDriverName"])
+            .agg(
+                positionsGained=("positionsGained", "sum"),
+                average_final_position=("resultsFinalPositionNumber", "mean"),
+            )
+            .reset_index()
+            .sort_values("average_final_position")
+        )
+        driver_vs_constructor["average_final_position"] = driver_vs_constructor["average_final_position"].round(2)
+        payload["driver_vs_constructor"] = records(driver_vs_constructor)
+
+    dnf_rows = pd.DataFrame()
+    if "DNF" in df:
+        dnf_rows = df[pd.to_numeric(df["DNF"], errors="coerce").fillna(0).eq(1)].copy()
+    if not dnf_rows.empty and "resultsReasonRetired" in dnf_rows:
         dnf = (
-            df[pd.to_numeric(df["DNF"], errors="coerce").fillna(0).eq(1)]
-            .groupby("resultsReasonRetired").size().reset_index(name="count")
+            dnf_rows.groupby("resultsReasonRetired").size().reset_index(name="count")
             .sort_values("count", ascending=False)
         )
         payload["dnf_reasons"] = records(dnf)
-    dnf_group_cols = {"DNF", "resultsDriverName", "driverTotalRaceEntries"}
-    if dnf_group_cols.issubset(df.columns):
-        dnf_by_driver = (
-            df[pd.to_numeric(df["DNF"], errors="coerce").eq(1)]
-            .groupby(["resultsDriverName", "driverTotalRaceEntries"])
-            .size().reset_index(name="dnf_count")
+    if not dnf_rows.empty and {"resultsDriverName", "driverTotalRaceEntries"}.issubset(dnf_rows.columns):
+        grouped = (
+            dnf_rows.groupby(["resultsDriverName", "driverTotalRaceEntries"]).size()
+            .reset_index(name="dnf_count")
         )
-        entries = pd.to_numeric(dnf_by_driver["driverTotalRaceEntries"], errors="coerce")
-        dnf_by_driver["dnf_pct"] = (dnf_by_driver["dnf_count"] / entries * 100).round(1)
-        payload["dnf_by_driver"] = records(dnf_by_driver.sort_values("dnf_pct", ascending=False))
-    return payload
+        entries = pd.to_numeric(grouped["driverTotalRaceEntries"], errors="coerce")
+        grouped["dnf_pct"] = (grouped["dnf_count"] / entries * 100).round(1)
+        payload["dnf_by_driver"] = records(grouped.sort_values("dnf_pct", ascending=False))
+    if "grandPrixName" in df:
+        entries = df.groupby("grandPrixName").size().reset_index(name="race_entry_count")
+        if not dnf_rows.empty:
+            dnfs = dnf_rows.groupby("grandPrixName").size().reset_index(name="dnf_count")
+            entries = entries.merge(dnfs, on="grandPrixName", how="left")
+        else:
+            entries["dnf_count"] = 0
+        entries["dnf_count"] = entries["dnf_count"].fillna(0).astype(int)
+        entries["dnf_pct"] = (entries["dnf_count"] / entries["race_entry_count"] * 100).round(1)
+        payload["dnf_by_race"] = records(entries.sort_values("dnf_pct", ascending=False))
+    if "constructorName" in df:
+        entries = df.groupby("constructorName").size().reset_index(name="constructor_entry_count")
+        if not dnf_rows.empty:
+            dnfs = dnf_rows.groupby("constructorName").size().reset_index(name="dnf_count")
+            entries = entries.merge(dnfs, on="constructorName", how="left")
+        else:
+            entries["dnf_count"] = 0
+        entries["dnf_count"] = entries["dnf_count"].fillna(0).astype(int)
+        entries["dnf_pct"] = (
+            entries["dnf_count"] / entries["constructor_entry_count"] * 100
+        ).round(1)
+        payload["dnf_by_constructor"] = records(entries.sort_values("dnf_pct", ascending=False))
 
+    if {"grandPrixYear", "resultsDriverName", "positionsGained", "resultsPodium"}.issubset(df.columns):
+        year = int(pd.to_numeric(df["grandPrixYear"], errors="coerce").max())
+        season = (
+            df[pd.to_numeric(df["grandPrixYear"], errors="coerce") == year]
+            .groupby("resultsDriverName")
+            .agg(positions_gained=("positionsGained", "sum"), total_podiums=("resultsPodium", "sum"))
+            .reset_index()
+        )
+        payload["season_year"] = year
+        payload["season_summary"] = records(season)
+
+    if {"resultsDriverName", "resultsFinalPositionNumber"}.issubset(df.columns):
+        consistency = (
+            df.groupby("resultsDriverName")
+            .agg(finishing_position_std=("resultsFinalPositionNumber", "std"))
+            .reset_index()
+            .sort_values("finishing_position_std")
+        )
+        payload["driver_consistency"] = records(consistency)
+
+    try:
+        manifest = model_manifest("XGBoost")
+    except (KeyError, OSError, ValueError):
+        manifest = None
+    payload["model_summary"] = manifest
+
+    try:
+        importance = precomputed("permutation")
+    except (KeyError, OSError, ValueError):
+        importance = None
+    payload["feature_importance"] = importance
+    return payload
 
 def current_season() -> dict[str, Any]:
     schedule = load_race_schedule().copy()
