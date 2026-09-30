@@ -74,12 +74,6 @@ export default function DataExplorer() {
     }
   }
 
-  function apply(nextValues = values) {
-    const filters = activeFilters(nextValues);
-    sessionStorage.setItem("f1analysis.filters", JSON.stringify({ applied: true, filters, values: nextValues }));
-    window.dispatchEvent(new CustomEvent("f1analysis:filters-changed"));
-    runQuery(filters);
-  }
 
   function toggleFilters(enabled) {
     setShowFilters(enabled);
