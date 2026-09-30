@@ -471,6 +471,49 @@ def find_prediction_artifact(
     }
 
 
+def _legacy_prediction_rows(race_id: str, year: int | str, race_name: str) -> list[dict[str, Any]]:
+    """Return the committed Streamlit-style CSV prediction rows when an exact race artifact exists."""
+    slugs = {
+        str(race_id).strip().lower().replace("_", "-").replace(" ", "-"),
+        str(race_name).lower().replace(" grand prix", "").replace(" ", "-"),
+    }
+    candidates: list[Path] = []
+    for slug in sorted(slugs):
+        if slug:
+            candidates.extend([
+                DATA_DIR / f"predictions_{slug}_{year}.csv",
+                DATA_DIR / f"predictions_{slug.replace('-', '_')}_{year}.csv",
+            ])
+    for candidate in candidates:
+        if candidate.is_file():
+            frame = _read_optional(candidate)
+            if not frame.empty:
+                sort_col = "Rank" if "Rank" in frame else (
+                    "PredictedFinalPosition" if "PredictedFinalPosition" in frame else None
+                )
+                if sort_col:
+                    frame = frame.sort_values(sort_col)
+                return records(frame)
+    return []
+
+
+def _historical_safety_car_rows(race_id: str, year: int | str) -> list[dict[str, Any]]:
+    """Return historical safety-car rows for the current Grand Prix.
+
+    The Streamlit app computes the next-race probability from a loaded model.
+    The React service remains artifact-first and therefore only exposes a
+    prediction when a committed artifact exists; historical rows are still
+    returned here for visual/context parity.
+    """
+    messages = _read_optional(DATA_DIR / "race_control_messages_grouped_with_dnf.csv")
+    if messages.empty or "grandPrixId" not in messages:
+        return []
+    rows = messages[messages["grandPrixId"].astype(str) == str(race_id)].copy()
+    if "Year" in rows:
+        rows = rows[pd.to_numeric(rows["Year"], errors="coerce") != pd.to_numeric(year, errors="coerce")]
+        rows = rows.sort_values("Year", ascending=False)
+    return records(rows.head(100))
+
 def next_race_bundle() -> dict[str, Any]:
     schedule = load_race_schedule().copy()
     date_col = "date" if "date" in schedule else ("short_date" if "short_date" in schedule else None)
@@ -534,17 +577,25 @@ def next_race_bundle() -> dict[str, Any]:
         messages = messages[messages["grandPrixId"].astype(str) == str(race_id)]
 
     predictions = find_prediction_artifact(str(race_id), str(year), str(race_name), row[date_col])
+    legacy_predictions = _legacy_prediction_rows(str(race_id), int(year), str(race_name))
+    safety_car_predictions = _historical_safety_car_rows(str(race_id), int(year))
     pit_stops = fastest_pit_stops(str(race_id))
     return {
         "next_race": records(next_frame)[0],
         "race_id": None if race_id is None else str(race_id),
         "race_name": str(race_name),
         "year": int(year) if pd.notna(year) else None,
-        "past_results": records(past.drop_duplicates().head(1000)),
+        "past_results": records(
+            past.drop_duplicates(
+                subset=[column for column in ("resultsDriverName", "grandPrixYear") if column in past.columns]
+            ).head(1000)
+        ),
         "driver_performance": records(driver_perf),
         "constructor_performance": records(constructor_perf),
         "weather": records(weather.head(500)),
         "race_messages": records(messages.head(500)),
         "fastest_pit_stops": pit_stops,
         "predictions": predictions,
+        "legacy_predictions": legacy_predictions,
+        "safety_car_predictions": safety_car_predictions,
     }
