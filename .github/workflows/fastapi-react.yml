@@ -132,23 +132,31 @@ jobs:
           REACT_WAIT_MS: "4000"
         run: npm run capture:react
       - name: Accessibility audit
+        id: accessibility
+        continue-on-error: true
         working-directory: fastapi_react/frontend
         env:
           REACT_BASE_URL: http://127.0.0.1:5173
         run: npm run audit:a11y
       - name: Operational benchmark
+        id: benchmark
+        continue-on-error: true
         working-directory: fastapi_react/frontend
         env:
           BENCH_BASE_URL: http://127.0.0.1:5173
           BENCH_API_URL: http://127.0.0.1:8000
         run: npm run benchmark
       - name: Capture local Streamlit reference
+        id: streamlit_capture
+        continue-on-error: true
         working-directory: fastapi_react/frontend
         env:
           STREAMLIT_BASE_URL: http://127.0.0.1:8501
           STREAMLIT_WAIT_MS: "5000"
         run: npm run capture:streamlit
       - name: Diff screenshots
+        id: visual_diff
+        continue-on-error: true
         working-directory: fastapi_react/frontend
         run: npm run capture:diff
       - name: Upload visual parity evidence
@@ -160,4 +168,21 @@ jobs:
             fastapi_react/parity_evidence/visual
             fastapi_react/parity_evidence/accessibility.json
             fastapi_react/parity_evidence/benchmarks.json
-          if-no-files-found: error
+          if-no-files-found: warn
+      - name: Enforce parity evidence gates
+        if: always()
+        env:
+          ACCESSIBILITY_OUTCOME: ${{ steps.accessibility.outcome }}
+          BENCHMARK_OUTCOME: ${{ steps.benchmark.outcome }}
+          STREAMLIT_CAPTURE_OUTCOME: ${{ steps.streamlit_capture.outcome }}
+          VISUAL_DIFF_OUTCOME: ${{ steps.visual_diff.outcome }}
+        run: |
+          failed=0
+          for gate in ACCESSIBILITY_OUTCOME BENCHMARK_OUTCOME STREAMLIT_CAPTURE_OUTCOME VISUAL_DIFF_OUTCOME; do
+            outcome="${!gate}"
+            echo "$gate=$outcome"
+            if [ "$outcome" != "success" ]; then
+              failed=1
+            fi
+          done
+          exit "$failed"
