@@ -22,8 +22,8 @@ from app.services.analysis import analytics, current_season, next_race_bundle, t
 from app.services.betting import backtest, calibration, governance, simulate, value_and_stake
 from app.services.data import (
     filter_schema,
-    load_main_data,
     list_data_files,
+    load_main_data,
     model_manifest,
     precomputed,
     query_main,
@@ -104,7 +104,7 @@ def meta() -> dict[str, Any]:
         "race_start_year": race_start_year,
         "current_year": current_year,
         "last_updated": last_updated,
-        "code_deployed_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+        "code_deployed_at": datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d %H:%M:%S UTC"),
     }
 
 
