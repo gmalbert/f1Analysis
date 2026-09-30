@@ -25,6 +25,7 @@ const OUT = join(SNAPSHOT_DIR, 'react');
 const VIEWS = [
   { name: 'desktop', width: 1280, height: 800 },
   { name: 'tablet', width: 768, height: 1024 },
+  { name: 'mobile', width: 390, height: 844 },
 ];
 
 const PAGES = [
