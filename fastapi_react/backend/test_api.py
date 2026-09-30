@@ -168,7 +168,7 @@ def test_next_race_endpoint() -> None:
 
 def test_safety_car_loader_matches_streamlit_search_order(
     monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
+    tmp_path,
 ) -> None:
     import pickle
 
