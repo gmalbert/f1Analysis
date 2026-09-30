@@ -80,10 +80,21 @@ export default function NextRace() {
           ) : <div className="empty">No committed DNF prediction rows are available for the upcoming race.</div>}
 
           <h2>Predicted Safety Car</h2>
-          {data.safety_car_predictions?.length ? (
-            <DataTable rows={data.safety_car_predictions} />
-          ) : (
-            <div className="empty">No committed safety-car prediction artifact is available for the upcoming race.</div>
+          {data.safety_car_predictions?.rows?.length ? <>
+            <p>Historical Safety Car Probabilities (mean): {Number(data.safety_car_predictions.mean).toFixed(3)}</p>
+            <p>Historical Safety Car Probabilities (min/max): {Number(data.safety_car_predictions.min).toFixed(3)} / {Number(data.safety_car_predictions.max).toFixed(3)}</p>
+            <DataTable
+              rows={data.safety_car_predictions.rows}
+              columns={["grandPrixName", "grandPrixYear", "PredictedSafetyCarProbabilityPercentage", "Type"]}
+              headerMap={{
+                grandPrixName: "Grand Prix",
+                grandPrixYear: "Year",
+                PredictedSafetyCarProbabilityPercentage: "Predicted Safety Car Probability (%)",
+                Type: "Type",
+              }}
+            />
+          </> : (
+            <div className="empty">No safety-car model artifact is available for the upcoming race.</div>
           )}
 
           <h2>Flags and Safety Cars from {data.race_name}:</h2>
