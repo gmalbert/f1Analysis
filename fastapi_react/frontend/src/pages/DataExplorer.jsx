@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
-import { DataTable, Status } from "../components/UI";
+import { DataTable, Status, Tabs } from "../components/UI";
 
 const STREAMLIT_COLUMNS = [
   "grandPrixYear", "grandPrixName", "streetRace", "trackRace", "constructorName", "resultsDriverName",
@@ -68,6 +68,7 @@ export default function DataExplorer() {
   const [result, setResult] = useState({ rows: [], columns: [], total: 0 });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [innerTab, setInnerTab] = useState("Data");
 
   useEffect(() => {
     api.get("/api/data-explorer/schema").then(r => {
@@ -176,18 +177,22 @@ export default function DataExplorer() {
 
           <section>
             <p>Number of filtered results: {result.total.toLocaleString()}</p>
-            <Status loading={loading} error={error}>
-              {result.rows?.length ? (
-                <DataTable
-                  rows={result.rows}
-                  columns={result.columns}
-                  headerMap={headerMap}
-                  checkboxColumns={CHECKBOX_COLUMNS}
-                  maxHeight={600}
-                  ariaLabel="Filtered Formula 1 results"
-                />
-              ) : <div className="empty">No rows match the current filters.</div>}
-            </Status>
+            <Tabs tabs={["Data", "Data & Debug"]} active={innerTab} onChange={setInnerTab} />
+            {innerTab === "Data" && (
+              <Status loading={loading} error={error}>
+                {result.rows?.length ? (
+                  <DataTable
+                    rows={result.rows}
+                    columns={result.columns}
+                    headerMap={headerMap}
+                    checkboxColumns={CHECKBOX_COLUMNS}
+                    maxHeight={600}
+                    ariaLabel="Filtered Formula 1 results"
+                  />
+                ) : <div className="empty">No rows match the current filters.</div>}
+              </Status>
+            )}
+            {innerTab === "Data & Debug" && <div aria-label="Data and debug placeholder" />}
           </section>
         </div>
       )}
