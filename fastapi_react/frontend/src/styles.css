@@ -29,8 +29,29 @@ code { background: var(--code-bg); border-radius: .25rem; padding: .1rem .25rem;
 .skip-link:focus { left: 0; }
 main:focus { outline: none; }
 
-.streamlit-main { min-height: 100vh; }
+.streamlit-main { min-height: 100vh; transition: margin-left .15s ease; }
 .block-container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 2.7rem 3rem 4rem; }
+.filters-active .streamlit-main { margin-left: 21rem; }
+.global-filter-sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 20;
+  width: 21rem;
+  overflow-y: auto;
+  padding: 4rem 1.25rem 2rem;
+  background: var(--secondary-bg);
+  border-right: 1px solid #e3e4e8;
+}
+.global-filter-sidebar h2 {
+  margin: 0 0 1rem;
+  font-size: 1.15rem;
+  line-height: 1.3;
+}
+.global-filter-sidebar .filter-list { gap: .9rem; }
+.global-filter-sidebar .filter-row label > span:first-child { display: block; margin-bottom: .3rem; font-size: .86rem; }
+.global-filter-sidebar .streamlit-checkbox { display: flex; align-items: center; gap: .45rem; }
+.global-filter-sidebar .streamlit-checkbox > span { margin: 0; }
+.global-filter-sidebar input[type="checkbox"] { width: 1rem; height: 1rem; accent-color: var(--accent); }
 .streamlit-hero { margin-bottom: .7rem; }
 .brand-logo { display: block; width: 450px; max-width: 100%; height: auto; margin: 0 0 1.15rem; }
 .streamlit-hero h1 { margin: 0 0 .55rem; font-size: 2.75rem; line-height: 1.15; font-weight: 700; letter-spacing: -.02em; }
@@ -179,6 +200,15 @@ footer.site-footer a { color: #3b82f6; text-decoration: none; }
 footer.site-footer img { height: 60px; width: auto; border: 0; }
 
 @media (max-width: 900px) {
+  .filters-active .streamlit-main { margin-left: 0; }
+  .global-filter-sidebar {
+    position: static;
+    width: 100%;
+    max-height: 42vh;
+    padding: 1rem 1.2rem;
+    border-right: 0;
+    border-bottom: 1px solid #e3e4e8;
+  }
   .block-container { padding: 1.6rem 1.2rem 3rem; }
   .streamlit-hero h1 { font-size: 2.2rem; }
   .streamlit-tabs { gap: 1rem; }
