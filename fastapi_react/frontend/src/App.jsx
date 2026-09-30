@@ -9,13 +9,13 @@ import RawData from "./pages/RawData";
 import BettingResearch from "./pages/BettingResearch";
 
 const pages = [
-  ["Data Explorer", "📊 Data Explorer", DataExplorer],
-  ["Analytics", "📈 Analytics & Visualizations", Analytics],
-  ["Current Season", "🏎️ Schedule", CurrentSeason],
-  ["Next Race", "🏁 Next Race", NextRace],
-  ["Predictive Models", "🤖 Predictive Models", Models],
-  ["Raw Data", "💾 Data & Debug", RawData],
-  ["Betting Research", "📐 Betting Research", BettingResearch],
+  { key: "Data Explorer", label: "📊 Data Explorer", Component: DataExplorer },
+  { key: "Analytics", label: "📈 Analytics & Visualizations", Component: Analytics },
+  { key: "Current Season", label: "🏎️ Schedule", Component: CurrentSeason },
+  { key: "Next Race", label: "🏁 Next Race", Component: NextRace },
+  { key: "Predictive Models", label: "🤖 Predictive Models", Component: Models },
+  { key: "Raw Data", label: "💾 Data & Debug", Component: RawData },
+  { key: "Betting Research", label: "📐 Betting Research", Component: BettingResearch },
 ];
 
 const BASE_TITLE = "Gridlocked - Formula 1 Betting & Analytics";
@@ -27,12 +27,12 @@ export default function App() {
   useEffect(() => {
     api.get("/api/meta").then(setMeta).catch(() => {});
     const hash = decodeURIComponent(location.hash.replace("#/", ""));
-    if (pages.some(([key]) => key === hash)) setActive(hash);
+    if (pages.some(page => page.key === hash)) setActive(hash);
   }, []);
 
   useEffect(() => {
-    const current = pages.find(([key]) => key === active);
-    document.title = current ? `${current[1].replace(/^\S+\s/, "")} — ${BASE_TITLE}` : BASE_TITLE;
+    const current = pages.find(page => page.key === active);
+    document.title = current ? `${current.label.replace(/^\S+\s/, "")} — ${BASE_TITLE}` : BASE_TITLE;
   }, [active]);
 
   function navigate(page) {
@@ -41,7 +41,7 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "auto" });
   }
 
-  const Page = pages.find(([key]) => key === active)?.[2] || DataExplorer;
+  const Page = pages.find(page => page.key === active)?.Component || DataExplorer;
   const startYear = meta?.race_start_year ?? 2016;
   const currentYear = meta?.current_year ?? new Date().getFullYear();
 
@@ -58,7 +58,7 @@ export default function App() {
           </header>
 
           <nav className="streamlit-tabs" aria-label="Main sections">
-            {pages.map(([key, label]) => (
+            {pages.map(({ key, label }) => (
               <button
                 key={key}
                 type="button"
