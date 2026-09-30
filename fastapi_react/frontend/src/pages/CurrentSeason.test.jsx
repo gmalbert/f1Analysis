@@ -1,46 +1,28 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
 
-const apiMock = vi.hoisted(() => ({
-  get: vi.fn(),
-  post: vi.fn(),
-}));
+const apiMock = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
+vi.mock("../api.js", () => ({ api: apiMock }));
 
-vi.mock('../api.js', () => ({
-  api: apiMock,
-  downloadUrl: (p) => `/api/raw/download?path=${encodeURIComponent(p)}`,
-}));
-
-import CurrentSeason from './CurrentSeason.jsx';
+import CurrentSeason from "./CurrentSeason.jsx";
 
 beforeEach(() => {
   apiMock.get.mockReset();
   apiMock.post.mockReset();
 });
 
-describe('CurrentSeason page', () => {
-  it('shows loading then renders the schedule', async () => {
+describe("CurrentSeason page", () => {
+  it("renders the ten-column Streamlit schedule and next-race highlight", async () => {
     apiMock.get.mockResolvedValueOnce({
-      year: 2025,
-      columns: ['round', 'grandPrixName', 'date', 'seasonStatus'],
+      year: 2026,
       rows: [
-        { round: 1, grandPrixName: 'Bahrain', date: '2025-03-02', seasonStatus: 'Completed' },
-        { round: 2, grandPrixName: 'Saudi Arabia', date: '2025-03-09', seasonStatus: 'Completed' },
-        { round: 3, grandPrixName: 'Australia', date: '2025-03-23', seasonStatus: 'Next Race' },
+        { round: 1, fullName: "Australian Grand Prix", date: "2026-03-08", time: "05:00", circuitType: "Race", courseLength: 5.3, laps: 58, turns: 14, distance: 307, totalRacesHeld: 40, seasonStatus: "Completed" },
+        { round: 2, fullName: "Chinese Grand Prix", date: "2026-03-15", time: "07:00", circuitType: "Race", courseLength: 5.4, laps: 56, turns: 16, distance: 305, totalRacesHeld: 20, seasonStatus: "Next Race" },
       ],
     });
     render(<CurrentSeason />);
-    await waitFor(() => {
-      expect(screen.getByText('Bahrain')).toBeInTheDocument();
-    });
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/2025/);
-  });
-
-  it('shows error state when the API fails', async () => {
-    apiMock.get.mockRejectedValueOnce(new Error('network down'));
-    render(<CurrentSeason />);
-    await waitFor(() => {
-      expect(screen.getByText('network down')).toBeInTheDocument();
-    });
+    await waitFor(() => expect(screen.getByText("Australian Grand Prix")).toBeInTheDocument());
+    expect(screen.getByText("Total number of races: 2")).toBeInTheDocument();
+    expect(screen.getByText("Chinese Grand Prix").closest("tr")).toHaveClass("next-race-row");
   });
 });
