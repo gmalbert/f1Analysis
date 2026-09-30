@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
-import { BarPanel, LinePanel, RegressionPanel, ScatterPanel } from "../components/Charts";
+import { BarPanel, LinePanel, MultiLinePanel, PiePanel, RegressionPanel, ScatterPanel } from "../components/Charts";
 import { Card, DataTable, Metric, Status } from "../components/UI";
 
 function firstObjectArray(value) {
@@ -89,7 +89,7 @@ export default function Analytics() {
               <DataTable rows={data.correlation?.rows || []} maxHeight={600} />
             </Card>
 
-            <LinePanel title="Driver Performance Over Time" rows={data.driver_performance || []} x="grandPrixYear" y="average_final_position" xLabel="Year" yLabel="Average Final Position" />
+            <MultiLinePanel title="Driver Performance Over Time" rows={data.driver_performance || []} x="grandPrixYear" y="average_final_position" series="resultsDriverName" xLabel="Year" yLabel="Average Final Position" />
             <BarPanel title="Constructor Dominance Over the Years" rows={data.constructor_performance || []} x="grandPrixYear" y="total_wins" xLabel="Year" yLabel="Wins and Podiums" />
 
             <ScatterPanel title="Impact of Starting Grid Position on Final Position" rows={data.charts?.grid_vs_final} x="resultsStartingGridPositionNumber" y="resultsFinalPositionNumber" xLabel="Starting Pos." yLabel="Final Pos." />
@@ -100,7 +100,7 @@ export default function Analytics() {
             <Card title="DNF by Driver"><DataTable rows={data.dnf_by_driver || []} maxHeight={600} /></Card>
             <Card title="DNF by Race"><DataTable rows={data.dnf_by_race || []} maxHeight={600} /></Card>
             <Card title="DNF by Constructor"><DataTable rows={data.dnf_by_constructor || []} maxHeight={600} /></Card>
-            <Card title="DNF Reasons"><BarPanel title="" rows={data.dnf_reasons || []} x="resultsReasonRetired" y="count" xLabel="Reason" yLabel="Count" /></Card>
+            <PiePanel title="DNF Reasons" rows={data.dnf_reasons || []} nameKey="resultsReasonRetired" valueKey="count" />
 
             <ScatterPanel title="Track Characteristics and Performance" rows={data.charts?.track_turns_vs_final} x="turns" y="resultsFinalPositionNumber" xLabel="Turns" yLabel="Final Position" />
             <Card title={`${data.season_year || ""} Season Summary`}><DataTable rows={data.season_summary || []} /></Card>
