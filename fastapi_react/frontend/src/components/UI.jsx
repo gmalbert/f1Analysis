@@ -38,20 +38,20 @@ export function Status(props = {}) {
   return children || null;
 }
 
-/** @param {{ rows?: Array<Record<string, any>>, columns?: string[], maxHeight?: number, ariaLabel?: string }} props */
+/** @param {{ rows?: Array<Record<string, any>>, columns?: string[], maxHeight?: number, ariaLabel?: string, headerMap?: Record<string,string>, checkboxColumns?: string[] }} props */
 /* eslint-disable jsx-a11y/no-noninteractive-tabindex */
 export function DataTable(props = {}) {
-  const { rows = [], columns = undefined, maxHeight = 560, ariaLabel = "Data table, scrollable region" } = props;
+  const { rows = [], columns = undefined, maxHeight = 560, ariaLabel = "Data table, scrollable region", headerMap = {}, checkboxColumns = [] } = props;
   if (!rows?.length) return <div className="empty">No rows available.</div>;
   const cols = columns?.length ? columns : Object.keys(rows[0] || {});
   return (
     <div className="table-wrap" role="region" aria-label={ariaLabel} tabIndex={0} style={{ maxHeight }}>
       <table>
-        <thead><tr>{cols.map(c => <th key={c} scope="col">{c}</th>)}</tr></thead>
+        <thead><tr>{cols.map(c => <th key={c} scope="col">{headerMap[c] || c}</th>)}</tr></thead>
         <tbody>
           {rows.map((row, i) => (
             <tr key={i}>
-              {cols.map(c => <td key={c}>{formatCell(row[c])}</td>)}
+              {cols.map(c => <td key={c}>{checkboxColumns.includes(c) ? <input type="checkbox" checked={Boolean(row[c])} readOnly aria-label={`${headerMap[c] || c}: ${Boolean(row[c])}`} /> : formatCell(row[c])}</td>)}
             </tr>
           ))}
         </tbody>
