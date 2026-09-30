@@ -564,7 +564,7 @@ def build_safety_car_predictions(
     })
     history["Type"] = "Historical"
 
-    synthetic: dict[str, Any] = {column: np.nan for column in feature_names}
+    synthetic: dict[str, Any] = dict.fromkeys(feature_names, np.nan)
     synthetic["grandPrixYear"] = year
     synthetic["grandPrixName"] = race_name
     schedule_map = {
