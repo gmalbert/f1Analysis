@@ -714,12 +714,30 @@ def _load_safety_car_inputs() -> pd.DataFrame:
 
 @lru_cache(maxsize=1)
 def _load_safety_car_model() -> Any:
-    """Load the trusted, repository-generated safety-car inference artifact."""
-    path = DATA_DIR / "models" / "safetycar_model.pkl"
-    if not path.is_file():
-        return None
-    with path.open("rb") as handle:
-        return pickle.load(handle)  # noqa: S301 - trusted model artifact committed by this repository
+    """Load the same trusted safety-car artifact search order used by Streamlit."""
+    candidates = [
+        DATA_DIR / "models" / "xgboost" / "safetycar_model.pkl",
+        DATA_DIR / "models" / "lightgbm" / "safetycar_model.pkl",
+        DATA_DIR / "models" / "catboost" / "safetycar_model.pkl",
+        DATA_DIR / "models" / "ensemble" / "safetycar_model.pkl",
+        DATA_DIR / "models" / "safetycar_model.pkl",
+    ]
+    for path in candidates:
+        if not path.is_file():
+            continue
+        try:
+            with path.open("rb") as handle:
+                artifact = pickle.load(handle)  # noqa: S301 - trusted repository artifact
+        except Exception:
+            continue
+        if isinstance(artifact, dict):
+            model = artifact.get("model")
+            if model is not None:
+                return model
+            continue
+        if hasattr(artifact, "predict_proba"):
+            return artifact
+    return None
 
 
 def build_safety_car_predictions(
