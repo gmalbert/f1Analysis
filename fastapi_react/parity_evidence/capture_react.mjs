@@ -12,12 +12,14 @@
 // viewports. Run npm run capture:streamlit next, then npm run capture:diff
 // to compute the pixel-difference percentages.
 
-import { chromium } from 'playwright';
+import { createRequire } from 'node:module';
 import { mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const requireFromFrontend = createRequire(join(__dirname, '../frontend/package.json'));
+const { chromium } = requireFromFrontend('playwright');
 const SNAPSHOT_DIR = process.env.PARITY_SCREENSHOT_DIR || join(__dirname, 'visual');
 const OUT = join(SNAPSHOT_DIR, 'react');
 const VIEWS = [
