@@ -728,7 +728,7 @@ def _load_safety_car_model() -> Any:
         try:
             with path.open("rb") as handle:
                 artifact = pickle.load(handle)  # noqa: S301 - trusted repository artifact
-        except Exception:
+        except (OSError, pickle.UnpicklingError, AttributeError, EOFError, ImportError, ValueError):
             continue
         if isinstance(artifact, dict):
             model = artifact.get("model")
