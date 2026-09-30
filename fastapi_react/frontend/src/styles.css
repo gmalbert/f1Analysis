@@ -55,12 +55,13 @@ main:focus { outline: none; }
 .streamlit-hero { margin-bottom: .7rem; }
 .brand-logo { display: block; width: 450px; max-width: 100%; height: auto; margin: 0 0 1.15rem; }
 .streamlit-hero h1 { margin: 0 0 .55rem; font-size: 2.75rem; line-height: 1.15; font-weight: 700; letter-spacing: -.02em; }
-.caption { margin: .12rem 0; color: #808495; font-size: .88rem; line-height: 1.35; }
+.caption { margin: .12rem 0; color: #5f636d; font-size: .88rem; line-height: 1.35; }
 
 .streamlit-tabs {
-  display: flex; align-items: flex-end; gap: 1.35rem; width: 100%; overflow-x: auto;
+  width: 100%; overflow-x: auto;
   border-bottom: 1px solid #e6e6e8; margin: 1rem 0 1.8rem; scrollbar-width: thin;
 }
+.streamlit-tablist { display: flex; align-items: flex-end; gap: 1.35rem; width: max-content; min-width: 100%; }
 .streamlit-tabs button {
   appearance: none; border: 0; border-bottom: 2px solid transparent; background: transparent;
   color: #586069; padding: .7rem .05rem .62rem; border-radius: 0; white-space: nowrap;
@@ -195,8 +196,8 @@ footer.site-footer {
   font-family: sans-serif;
 }
 footer.site-footer p { margin: 0 0 10px; font-size: 14px; }
-footer.site-footer .footer-subtitle { margin: 0 0 15px; font-size: 12px; color: #888; }
-footer.site-footer a { color: #3b82f6; text-decoration: none; }
+footer.site-footer .footer-subtitle { margin: 0 0 15px; font-size: 12px; color: #666; }
+footer.site-footer a { color: #0068c9; text-decoration: none; }
 footer.site-footer img { height: 60px; width: auto; border: 0; }
 
 @media (max-width: 900px) {
