@@ -15,6 +15,7 @@ class QueryRequest(BaseModel):
     filters: list[FilterSpec] = Field(default_factory=list)
     columns: list[str] | None = None
     sort: list[str] = Field(default_factory=list)
+    ascending: list[bool] | None = None
     descending: bool = False
     offset: int = 0
     limit: int = Field(default=200, ge=1, le=5000)
