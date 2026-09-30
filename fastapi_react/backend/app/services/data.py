@@ -136,7 +136,7 @@ def filter_schema() -> list[dict[str, Any]]:
     df = load_main_data()
     labels, excluded, selected = streamlit_filter_rules()
     schema: list[dict[str, Any]] = []
-    for column in sorted(df.columns):
+    for column in df.columns:
         if column in excluded or (selected and column not in selected):
             continue
         series = df[column]
