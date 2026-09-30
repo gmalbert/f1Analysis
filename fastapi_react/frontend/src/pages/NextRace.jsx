@@ -91,6 +91,13 @@ export default function NextRace() {
 
           <h2>Predictive DNF</h2>
           <p>Logistic Regression DNF Probabilities:</p>
+          {data.dnf_diagnostics && (
+            <p>
+              Min: {data.dnf_diagnostics.min != null ? Number(data.dnf_diagnostics.min).toFixed(3) : "—"}{" "}
+              Max: {data.dnf_diagnostics.max != null ? Number(data.dnf_diagnostics.max).toFixed(3) : "—"}{" "}
+              Mean: {data.dnf_diagnostics.mean != null ? Number(data.dnf_diagnostics.mean).toFixed(3) : "—"}
+            </p>
+          )}
           {(data.dnf_predictions || data.legacy_predictions)?.length ? (
             <DataTable
               rows={data.dnf_predictions || data.legacy_predictions}
