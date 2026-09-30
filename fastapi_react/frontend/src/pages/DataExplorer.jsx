@@ -86,11 +86,17 @@ export default function DataExplorer() {
     setError(null);
     if (enabled) {
       const defaults = {};
+      const filters = [];
       for (const spec of schema) {
-        if (spec.kind === "range" || spec.kind === "date_range") defaults[spec.column] = [spec.min, spec.max];
+        if (spec.kind === "range" || spec.kind === "date_range") {
+          defaults[spec.column] = [spec.min, spec.max];
+          filters.push({ column: spec.column, kind: spec.kind, value: [spec.min, spec.max] });
+        }
       }
       setValues(defaults);
-      apply(defaults);
+      sessionStorage.setItem("f1analysis.filters", JSON.stringify({ applied: true, filters, values: defaults }));
+      window.dispatchEvent(new CustomEvent("f1analysis:filters-changed"));
+      runQuery(filters);
     } else {
       setValues({});
       setResult({ rows: [], columns: [], total: 0 });
