@@ -15,12 +15,14 @@
 // Streamlit reference is benchmarked the same way against its own
 // /healthz endpoint, against the same data_files/ snapshot.
 
-import { chromium } from 'playwright';
+import { createRequire } from 'node:module';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const requireFromFrontend = createRequire(join(__dirname, '../frontend/package.json'));
+const { chromium } = requireFromFrontend('playwright');
 const OUT = join(__dirname, 'benchmarks.json');
 const BASE = process.env.BENCH_BASE_URL || 'http://127.0.0.1:5173';
 const API = process.env.BENCH_API_URL || 'http://127.0.0.1:8000';
