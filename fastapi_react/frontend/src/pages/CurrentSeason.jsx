@@ -31,8 +31,7 @@ export default function CurrentSeason() {
         {data && <>
           <p>Total number of races: {data.rows?.length || 0}</p>
           {data.rows?.length ? (
-            {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- wide Streamlit-equivalent schedule is keyboard-scrollable */}
-            <div className="table-wrap" role="region" aria-label={`${data.year} Formula 1 schedule`} tabIndex={0} style={{ maxHeight: 900 }}>
+            <div className="table-wrap" role="region" aria-label={`${data.year} Formula 1 schedule`} style={{ maxHeight: 900 }}>
               <table>
                 <thead><tr>{COLUMNS.map(column => <th key={column} scope="col">{LABELS[column]}</th>)}</tr></thead>
                 <tbody>
