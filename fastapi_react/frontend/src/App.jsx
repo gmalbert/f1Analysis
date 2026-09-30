@@ -45,8 +45,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const current = pages.find(page => page.key === active);
-    document.title = current ? `${current.label.replace(/^\S+\s/, "")} — ${BASE_TITLE}` : BASE_TITLE;
+    document.title = BASE_TITLE;
   }, [active]);
 
   function navigate(page) {
@@ -73,18 +72,20 @@ export default function App() {
           </header>
 
           <nav className="streamlit-tabs" aria-label="Main sections">
-            {pages.map(({ key, label }) => (
-              <button
-                key={key}
-                type="button"
-                role="tab"
-                aria-selected={active === key}
-                className={active === key ? "active" : ""}
-                onClick={() => navigate(key)}
-              >
-                {label}
-              </button>
-            ))}
+            <div className="streamlit-tablist" role="tablist" aria-label="Main sections">
+              {pages.map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={active === key}
+                  className={active === key ? "active" : ""}
+                  onClick={() => navigate(key)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </nav>
 
           <section className="page-content">
