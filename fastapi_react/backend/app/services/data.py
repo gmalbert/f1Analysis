@@ -168,12 +168,13 @@ def query_main(request: Any) -> dict[str, Any]:
     if request.sort:
         valid = [c for c in request.sort if c in df.columns]
         if valid:
+            sort_ascending: bool | list[bool]
             if request.ascending and len(request.ascending) == len(request.sort):
                 direction_map = dict(zip(request.sort, request.ascending, strict=True))
-                ascending = [direction_map[column] for column in valid]
+                sort_ascending = [direction_map[column] for column in valid]
             else:
-                ascending = not request.descending
-            df = df.sort_values(valid, ascending=ascending)
+                sort_ascending = not request.descending
+            df = df.sort_values(valid, ascending=sort_ascending)
     if request.columns:
         valid = [c for c in request.columns if c in df.columns]
         if valid:
