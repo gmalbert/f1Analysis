@@ -519,14 +519,57 @@ def _legacy_prediction_rows(race_id: str, year: int | str, race_name: str) -> li
     for candidate in candidates:
         if candidate.is_file():
             frame = _read_optional(candidate)
-            if not frame.empty:
-                sort_col = "Rank" if "Rank" in frame else (
-                    "PredictedFinalPosition" if "PredictedFinalPosition" in frame else None
+            if frame.empty:
+                continue
+
+            data = load_main_data()
+            if "resultsDriverName" in frame and {"resultsDriverName", "driverDNFCount", "driverDNFAvg"}.issubset(data.columns):
+                latest = (
+                    data.sort_values("grandPrixYear")
+                    .groupby("resultsDriverName", as_index=False)
+                    .tail(1)[["resultsDriverName", "driverDNFCount", "driverDNFAvg"]]
+                    .drop_duplicates("resultsDriverName")
                 )
-                if sort_col:
-                    frame = frame.sort_values(sort_col)
-                return records(frame)
+                frame = frame.merge(latest, on="resultsDriverName", how="left", suffixes=("", "_latest"))
+                if "driverDNFCount_latest" in frame:
+                    frame["driverDNFCount"] = frame.get("driverDNFCount").fillna(frame["driverDNFCount_latest"]) if "driverDNFCount" in frame else frame["driverDNFCount_latest"]
+                if "driverDNFAvg_latest" in frame:
+                    frame["driverDNFAvg"] = frame.get("driverDNFAvg").fillna(frame["driverDNFAvg_latest"]) if "driverDNFAvg" in frame else frame["driverDNFAvg_latest"]
+                frame["driverDNFPercentage"] = (
+                    pd.to_numeric(frame.get("driverDNFAvg"), errors="coerce").fillna(0) * 100
+                ).round(3)
+                frame = frame.drop(columns=["driverDNFCount_latest", "driverDNFAvg_latest"], errors="ignore")
+            if "PredictedDNFProbabilityStd" not in frame:
+                frame["PredictedDNFProbabilityStd"] = np.nan
+
+            sort_col = "Rank" if "Rank" in frame else (
+                "PredictedFinalPosition" if "PredictedFinalPosition" in frame else None
+            )
+            if sort_col:
+                frame = frame.sort_values(sort_col)
+            return records(frame)
     return []
+
+
+@lru_cache(maxsize=1)
+def _position_mae_by_position() -> dict[int, float]:
+    """Return the same per-position holdout MAE mapping used by the Streamlit next-race table."""
+    try:
+        historical = precomputed("historical_validation")
+    except (KeyError, OSError, ValueError):
+        historical = None
+    rows = ((historical or {}).get("holdout") or {}).get("rows", []) if isinstance(historical, dict) else []
+    if not rows:
+        return {}
+    frame = pd.DataFrame(rows)
+    if not {"ActualFinalPosition", "PredictedFinalPosition"}.issubset(frame.columns):
+        return {}
+    frame["ActualFinalPosition"] = pd.to_numeric(frame["ActualFinalPosition"], errors="coerce")
+    frame["PredictedFinalPosition"] = pd.to_numeric(frame["PredictedFinalPosition"], errors="coerce")
+    frame = frame.dropna(subset=["ActualFinalPosition", "PredictedFinalPosition"])
+    frame["absolute_error"] = (frame["ActualFinalPosition"] - frame["PredictedFinalPosition"]).abs()
+    grouped = frame.groupby("ActualFinalPosition")["absolute_error"].mean()
+    return {int(position): float(mae) for position, mae in grouped.items()}
 
 
 @lru_cache(maxsize=1)
@@ -721,6 +764,16 @@ def next_race_bundle() -> dict[str, Any]:
     legacy_predictions = _legacy_prediction_rows(str(race_id), int(year), str(race_name))
     safety_car_predictions = build_safety_car_predictions(row, str(race_name), int(year), weather)
     pit_stops = fastest_pit_stops(str(race_id))
+    position_mae_by_position = _position_mae_by_position()
+    try:
+        manifest = model_manifest("XGBoost") or {}
+    except (KeyError, OSError, ValueError):
+        manifest = {}
+    model_mae = (manifest.get("metrics") or {}).get("mae")
+    if isinstance(predictions, dict) and predictions.get("format") == "json":
+        by_model = predictions.get("predictions_by_model") or {}
+        xgboost_block = by_model.get("xgboost") or (next(iter(by_model.values()), {}) if by_model else {})
+        model_mae = xgboost_block.get("model_mae", model_mae)
     return {
         "next_race": records(next_frame)[0],
         "race_id": None if race_id is None else str(race_id),
@@ -739,4 +792,6 @@ def next_race_bundle() -> dict[str, Any]:
         "predictions": predictions,
         "legacy_predictions": legacy_predictions,
         "safety_car_predictions": safety_car_predictions,
+        "model_mae": model_mae,
+        "position_mae_by_position": position_mae_by_position,
     }
