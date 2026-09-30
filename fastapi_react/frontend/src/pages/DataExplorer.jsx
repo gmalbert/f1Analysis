@@ -15,52 +15,6 @@ const STREAMLIT_COLUMNS = [
 
 const CHECKBOX_COLUMNS = ["streetRace", "trackRace", "resultsPodium", "resultsTop5", "resultsTop10", "DNF", "q1End", "q2End", "q3Top10"];
 
-function FilterEditor({ spec, value, onChange }) {
-  if (spec.kind === "boolean") {
-    return (
-      <label className="streamlit-checkbox">
-        <input
-          type="checkbox"
-          aria-label={spec.label}
-          checked={value === true}
-          onChange={e => onChange(e.target.checked ? true : null)}
-        />
-        <span>{spec.label}</span>
-      </label>
-    );
-  }
-  if (spec.kind === "exact" && spec.options) {
-    return (
-      <label>
-        <span>{spec.label}</span>
-        <select aria-label={spec.label} value={value ?? ""} onChange={e => onChange(e.target.value || null)}>
-          <option value=""> All</option>
-          {spec.options.map(v => <option key={v} value={v}>{v}</option>)}
-        </select>
-      </label>
-    );
-  }
-  if (spec.kind === "range" || spec.kind === "date_range") {
-    const current = Array.isArray(value) ? value : [spec.min, spec.max];
-    const type = spec.kind === "date_range" ? "date" : "number";
-    return (
-      <label>
-        <span>{spec.label}</span>
-        <div className="range-pair">
-          <input aria-label={`${spec.label} minimum`} type={type} value={current[0] ?? ""} onChange={e => onChange([e.target.value, current[1]])} />
-          <input aria-label={`${spec.label} maximum`} type={type} value={current[1] ?? ""} onChange={e => onChange([current[0], e.target.value])} />
-        </div>
-      </label>
-    );
-  }
-  return (
-    <label>
-      <span>{spec.label}</span>
-      <input aria-label={spec.label} value={value ?? ""} onChange={e => onChange(e.target.value || null)} />
-    </label>
-  );
-}
-
 export default function DataExplorer() {
   const [schema, setSchema] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
@@ -122,6 +76,7 @@ export default function DataExplorer() {
   function apply(nextValues = values) {
     const filters = activeFilters(nextValues);
     sessionStorage.setItem("f1analysis.filters", JSON.stringify({ applied: true, filters, values: nextValues }));
+    window.dispatchEvent(new CustomEvent("f1analysis:filters-changed"));
     runQuery(filters);
   }
 
@@ -139,6 +94,7 @@ export default function DataExplorer() {
       setValues({});
       setResult({ rows: [], columns: [], total: 0 });
       sessionStorage.removeItem("f1analysis.filters");
+      window.dispatchEvent(new CustomEvent("f1analysis:filters-changed"));
     }
   }
 
@@ -155,46 +111,25 @@ export default function DataExplorer() {
       </label>
 
       {showFilters && (
-        <div className="explorer-grid">
-          <aside className="filter-card" aria-label="Select filters to apply">
-            <h2>Select filters to apply:</h2>
-            <div className="filter-list">
-              {schema.map(spec => (
-                <div className="filter-row" key={spec.column}>
-                  <FilterEditor
-                    spec={spec}
-                    value={values[spec.column]}
-                    onChange={value => {
-                      const next = { ...values, [spec.column]: value };
-                      setValues(next);
-                      apply(next);
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
-          </aside>
-
-          <section>
-            <p>Number of filtered results: {result.total.toLocaleString()}</p>
-            <Tabs tabs={["Data", "Data & Debug"]} active={innerTab} onChange={setInnerTab} />
-            {innerTab === "Data" && (
-              <Status loading={loading} error={error}>
-                {result.rows?.length ? (
-                  <DataTable
-                    rows={result.rows}
-                    columns={result.columns}
-                    headerMap={headerMap}
-                    checkboxColumns={CHECKBOX_COLUMNS}
-                    maxHeight={600}
-                    ariaLabel="Filtered Formula 1 results"
-                  />
-                ) : <div className="empty">No rows match the current filters.</div>}
-              </Status>
-            )}
-            {innerTab === "Data & Debug" && <div aria-label="Data and debug placeholder" />}
-          </section>
-        </div>
+        <section>
+          <p>Number of filtered results: {result.total.toLocaleString()}</p>
+          <Tabs tabs={["Data", "Data & Debug"]} active={innerTab} onChange={setInnerTab} />
+          {innerTab === "Data" && (
+            <Status loading={loading} error={error}>
+              {result.rows?.length ? (
+                <DataTable
+                  rows={result.rows}
+                  columns={result.columns}
+                  headerMap={headerMap}
+                  checkboxColumns={CHECKBOX_COLUMNS}
+                  maxHeight={600}
+                  ariaLabel="Filtered Formula 1 results"
+                />
+              ) : <div className="empty">No rows match the current filters.</div>}
+            </Status>
+          )}
+          {innerTab === "Data & Debug" && <div aria-label="Data and debug placeholder" />}
+        </section>
       )}
 
       {!showFilters && error && <Status error={error} />}
