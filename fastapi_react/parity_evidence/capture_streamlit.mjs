@@ -59,6 +59,8 @@ async function run() {
           const filterToggle = page.getByRole('checkbox', { name: 'Filter Results' });
           if (!(await filterToggle.isChecked())) await filterToggle.check({ force: true });
           await page.waitForTimeout(WAIT_MS);
+          await page.getByRole('tab', { name: /Analytics & Visualizations/ }).first().click();
+          await page.waitForTimeout(WAIT_MS);
         } else if (section.label) {
           await page.getByRole('tab', { name: section.label }).first().click();
           await page.waitForTimeout(WAIT_MS);
