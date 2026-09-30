@@ -21,21 +21,22 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const OUT = join(__dirname, 'screenshots', 'streamlit');
+const SNAPSHOT_DIR = process.env.PARITY_SCREENSHOT_DIR || join(__dirname, 'visual');
+const OUT = join(SNAPSHOT_DIR, 'streamlit');
 const VIEWS = [
   { name: 'desktop', width: 1280, height: 800 },
   { name: 'tablet', width: 768, height: 1024 },
 ];
 
 const SECTIONS = [
-  { name: 'home' },
-  { name: 'data-explorer' },
-  { name: 'analytics' },
-  { name: 'current-season' },
-  { name: 'next-race' },
-  { name: 'models' },
-  { name: 'raw-data' },
-  { name: 'betting-research' },
+  { name: 'home', label: null },
+  { name: 'data-explorer', label: /Data Explorer/ },
+  { name: 'analytics', label: /Analytics & Visualizations/ },
+  { name: 'current-season', label: /Schedule/ },
+  { name: 'next-race', label: /Next Race/ },
+  { name: 'models', label: /Predictive Models/ },
+  { name: 'raw-data', label: /Data & Debug/ },
+  { name: 'betting-research', label: /Betting Research/ },
 ];
 
 const BASE = process.env.STREAMLIT_BASE_URL || 'http://127.0.0.1:8501';
@@ -50,16 +51,21 @@ async function run() {
       const page = await context.newPage();
       console.log(`[${view.name}] loading ${BASE}/`);
       await page.goto(BASE + '/', { waitUntil: 'networkidle', timeout: 60_000 });
-      await page.addStyleTag({ content: '*{transition:none!important;animation:none!important;}' });
+      await page.addStyleTag({ content: '*{font-family:"Segoe UI",system-ui,sans-serif!important;transition:none!important;animation:none!important;}' });
       await page.waitForTimeout(WAIT_MS);
       for (const section of SECTIONS) {
+        if (section.name === 'analytics') {
+          await page.getByRole('tab', { name: /Data Explorer/ }).first().click();
+          const filterToggle = page.getByRole('checkbox', { name: 'Filter Results' });
+          if (!(await filterToggle.isChecked())) await filterToggle.check({ force: true });
+          await page.waitForTimeout(WAIT_MS);
+        } else if (section.label) {
+          await page.getByRole('tab', { name: section.label }).first().click();
+          await page.waitForTimeout(WAIT_MS);
+        }
         const out = join(OUT, `${view.name}-${section.name}.png`);
         await page.screenshot({ path: out });
         console.log(`  -> ${out}`);
-        // For sections beyond the first, the script relies on the
-        // Streamlit app exposing a way to navigate by URL; if it
-        // does not, the same screenshot is reused and the diff will
-        // be wide. See PARITY_CHECKLIST.md \u00A713 for follow-up work.
       }
       await context.close();
     }

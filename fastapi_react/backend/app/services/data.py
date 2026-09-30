@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import json
 import math
 from functools import lru_cache
@@ -9,7 +10,7 @@ from typing import Any, cast
 import numpy as np
 import pandas as pd
 
-from app.config import DATA_DIR, MAX_TABLE_ROWS, PRECOMPUTED_DIR
+from app.config import DATA_DIR, MAX_TABLE_ROWS, PRECOMPUTED_DIR, REPO_ROOT
 
 MAIN_DATA = DATA_DIR / "f1ForAnalysis.csv"
 
@@ -102,15 +103,42 @@ def apply_filters(df: pd.DataFrame, filters: list[Any]) -> pd.DataFrame:
     return result
 
 
+@lru_cache(maxsize=1)
+def streamlit_filter_rules() -> tuple[dict[str, str], frozenset[str]]:
+    """Read the Streamlit filter labels and exclusions without importing its app."""
+    source_path = REPO_ROOT / "raceAnalysis.py"
+    tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
+    literal_names = {"column_rename_for_filter", "exclusionList", "suffixes_to_exclude"}
+    values: dict[str, Any] = {}
+    for node in tree.body:
+        if not isinstance(node, ast.Assign):
+            continue
+        for target in node.targets:
+            if isinstance(target, ast.Name) and target.id in literal_names:
+                try:
+                    values[target.id] = ast.literal_eval(node.value)
+                except (ValueError, TypeError):
+                    continue
+
+    labels = values.get("column_rename_for_filter", {})
+    excluded = set(values.get("exclusionList", ()))
+    suffixes = values.get("suffixes_to_exclude", ())
+    excluded.update(column for column in load_main_data().columns if column.endswith(tuple(suffixes)))
+    return labels, frozenset(excluded)
+
+
 def filter_schema() -> list[dict[str, Any]]:
     df = load_main_data()
+    labels, excluded = streamlit_filter_rules()
     schema: list[dict[str, Any]] = []
-    for column in df.columns:
+    for column in sorted(df.columns):
+        if column in excluded:
+            continue
         series = df[column]
         non_null = series.dropna()
         if non_null.empty:
             continue
-        item: dict[str, Any] = {"column": column, "label": column}
+        item: dict[str, Any] = {"column": column, "label": labels.get(column, column)}
         unique = non_null.nunique(dropna=True)
         numeric_non_null = pd.to_numeric(non_null, errors="coerce").dropna()
         bool_like = pd.api.types.is_bool_dtype(series) or (

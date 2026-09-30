@@ -17,7 +17,7 @@ from app.schemas import (
     SimulationRequest,
     ToolRunRequest,
 )
-from app.services.analysis import analytics, current_season, next_race_bundle
+from app.services.analysis import analytics, current_season, next_race_bundle, tire_strategy
 from app.services.betting import backtest, calibration, governance, simulate, value_and_stake
 from app.services.data import (
     filter_schema,
@@ -70,6 +70,15 @@ def health() -> dict[str, Any]:
     }
 
 
+@app.get("/api/brand/logo")
+def brand_logo() -> FileResponse:
+    """Serve the same Gridlocked mark used by the Streamlit reference."""
+    logo = DATA_DIR / "gridlocked-logo-with-text.png"
+    if not logo.is_file():
+        raise HTTPException(404, "Brand logo is unavailable")
+    return FileResponse(logo, media_type="image/png")
+
+
 @app.get("/api/meta")
 def meta() -> dict[str, Any]:
     return {
@@ -119,6 +128,15 @@ def season_route() -> dict[str, Any]:
 def next_race_route() -> dict[str, Any]:
     try:
         return next_race_bundle()
+    except Exception as exc:
+        raise _http_error(exc) from None
+
+
+@app.get("/api/analytics/tire-strategy")
+def tire_strategy_route(year: int | None = Query(default=None), event_name: str | None = Query(default=None)) -> dict[str, Any]:
+    """Return the tire-strategy tables and chart data for a year and race."""
+    try:
+        return tire_strategy(year, event_name)
     except Exception as exc:
         raise _http_error(exc) from None
 

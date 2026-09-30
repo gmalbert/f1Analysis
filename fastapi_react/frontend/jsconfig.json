@@ -6,17 +6,18 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
     "allowJs": true,
-    "checkJs": false,
+    "checkJs": true,
     "noEmit": true,
-    "strict": true,
+    "strict": false,
+    "noImplicitAny": false,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
-    "types": ["vitest/globals", "@testing-library/jest-dom"]
+    "types": []
   },
-  "include": ["src/**/*", "vite.config.js", "eslint.config.js"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "coverage", "src/test/**", "**/*.test.js", "**/*.test.jsx"]
 }

@@ -1,4 +1,14 @@
-.venv/
+node_modules/
+**/node_modules/
+frontend/dist/
+frontend/coverage/
+frontend/.vite/
+backend/.coverage
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+backend/__pycache__/
+.runtime/.venv/
 frontend/node_modules/
 # Junction so scripts in parity_evidence/ can resolve playwright/sharp,
 # which are installed under frontend/node_modules.

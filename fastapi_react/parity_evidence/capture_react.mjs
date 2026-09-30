@@ -18,7 +18,8 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const OUT = join(__dirname, 'screenshots', 'react');
+const SNAPSHOT_DIR = process.env.PARITY_SCREENSHOT_DIR || join(__dirname, 'visual');
+const OUT = join(SNAPSHOT_DIR, 'react');
 const VIEWS = [
   { name: 'desktop', width: 1280, height: 800 },
   { name: 'tablet', width: 768, height: 1024 },
@@ -52,9 +53,15 @@ async function run() {
         // navigation), which does not remount the React app, so force a real
         // load to apply the hash on mount.
         await page.goto(url, { waitUntil: 'networkidle', timeout: 30_000 });
+        if (target.name === 'analytics') {
+          await page.evaluate(() => sessionStorage.setItem(
+            'f1analysis.filters',
+            JSON.stringify({ applied: true, filters: [], values: {} }),
+          ));
+        }
         await page.reload({ waitUntil: 'networkidle', timeout: 30_000 });
         // Disable transitions and wait for charts to settle
-        await page.addStyleTag({ content: '*{transition:none!important;animation:none!important;}' });
+        await page.addStyleTag({ content: '*{font-family:"Segoe UI",system-ui,sans-serif!important;transition:none!important;animation:none!important;}' });
         await page.waitForTimeout(WAIT_MS);
         const out = join(OUT, `${view.name}-${target.name}.png`);
         await page.screenshot({ path: out });

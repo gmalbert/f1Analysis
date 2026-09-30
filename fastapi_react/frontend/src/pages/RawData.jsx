@@ -15,11 +15,30 @@ export default function RawData() {
   const [health, setHealth] = useState(null);
   const [toolResult, setToolResult] = useState(null);
   const [toolBusy, setToolBusy] = useState(false);
+  const [showDataset, setShowDataset] = useState(false);
+  const [dataset, setDataset] = useState(null);
+  const [datasetPage, setDatasetPage] = useState(0);
+  const datasetPageSize = 50;
 
   useEffect(() => {
     api.get("/api/raw/files").then(r => { setFiles(r.files); setLoading(false); }).catch(e => { setError(e); setLoading(false); });
     api.get("/api/health").then(setHealth).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!showDataset) return;
+    let cancelled = false;
+    setLoading(true);
+    api.post("/api/data-explorer/query", {
+      limit: datasetPageSize,
+      offset: datasetPage * datasetPageSize,
+    }).then(result => {
+      if (!cancelled) setDataset(result);
+    }).catch(setError).finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [showDataset, datasetPage]);
 
   const shown = useMemo(
     () => files.filter(f => f.path.toLowerCase().includes(query.toLowerCase())).slice(0, 500),
@@ -48,7 +67,23 @@ export default function RawData() {
 
       {tab === "Raw Tables" && <div className="raw-grid">
         <Card title={`Files (${files.length})`}>
-          <input className="search" placeholder="Filter filenames…" value={query} onChange={e => setQuery(e.target.value)} />
+          <label className="dataset-toggle">
+            <input type="checkbox" checked={showDataset} onChange={event => { setShowDataset(event.target.checked); setDatasetPage(0); setError(null); }} />
+            Show complete analysis dataset
+          </label>
+          {showDataset && <>
+            <Status loading={loading} error={error}>
+              {dataset && <>
+                <p className="muted">Rows {dataset.total ? datasetPage * datasetPageSize + 1 : 0}–{Math.min((datasetPage + 1) * datasetPageSize, dataset.total)} of {dataset.total.toLocaleString()}</p>
+                <div className="button-row">
+                  <button disabled={datasetPage === 0 || loading} onClick={() => setDatasetPage(page => page - 1)}>Previous</button>
+                  <button disabled={(datasetPage + 1) * datasetPageSize >= dataset.total || loading} onClick={() => setDatasetPage(page => page + 1)}>Next</button>
+                </div>
+                <DataTable rows={dataset.rows} columns={dataset.columns} maxHeight={620} />
+              </>}
+            </Status>
+          </>}
+          <input className="search" aria-label="Filter filenames" placeholder="Filter filenames…" value={query} onChange={e => setQuery(e.target.value)} />
           <div className="file-list">
             {shown.length === 0 ? (
               <div className="empty">No files in data_files/</div>
@@ -60,7 +95,7 @@ export default function RawData() {
           </div>
         </Card>
         <Card title={selected || "Preview"}>
-          <Status loading={loading} error={error}>
+          <Status loading={loading && !showDataset} error={!showDataset ? error : null}>
             {!selected && <div className="empty">Choose a file to preview.</div>}
             {preview?.kind === "table" && <DataTable rows={preview.rows} columns={preview.columns} />}
             {preview?.kind === "json" && <JsonBlock value={preview.data} />}

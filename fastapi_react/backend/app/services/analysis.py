@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -16,13 +17,37 @@ def _regression(df: pd.DataFrame, x_col: str, y_col: str) -> dict[str, Any] | No
         return None
     x = pd.to_numeric(df[x_col], errors="coerce")
     y = pd.to_numeric(df[y_col], errors="coerce")
-    mask = x.notna() & y.notna() & np.isfinite(x) & np.isfinite(y)
+    if not x.notna().any() or not y.notna().any():
+        return None
+    x = x.fillna(x.mean())
+    y = y.fillna(y.mean())
+    mask = np.isfinite(x) & np.isfinite(y)
     if mask.sum() < 2:
         return None
     slope, intercept, r, p, stderr = linregress(x[mask], y[mask])
     return {
         "x": x_col, "y": y_col, "slope": float(slope), "intercept": float(intercept),
         "r_squared": float(r ** 2), "p_value": float(p), "std_err": float(stderr),
+    }
+
+
+def _regression_series(df: pd.DataFrame, x_col: str, y_col: str) -> dict[str, Any] | None:
+    if x_col not in df or y_col not in df:
+        return None
+    x = pd.to_numeric(df[x_col], errors="coerce")
+    y = pd.to_numeric(df[y_col], errors="coerce")
+    if not x.notna().any() or not y.notna().any():
+        return None
+    points = pd.DataFrame({x_col: x.fillna(x.mean()), y_col: y.fillna(y.mean())})
+    if len(points) < 2:
+        return None
+    slope, intercept, _, _, _ = linregress(points[x_col], points[y_col])
+    endpoints = np.linspace(float(points[x_col].min()), float(points[x_col].max()), num=60)
+    return {
+        "x": x_col,
+        "y": y_col,
+        "points": records(points),
+        "fit": records(pd.DataFrame({x_col: endpoints, y_col: slope * endpoints + intercept})),
     }
 
 
@@ -45,6 +70,16 @@ def analytics(filters: Any, max_rows: int) -> dict[str, Any]:
         result = _regression(df, x, "resultsFinalPositionNumber")
         if result:
             payload["regressions"].append(result)
+    regression_titles = {
+        "averagePracticePosition": ("Linear Regression: Average Practice Position vs Final Position", "Average Practice Position"),
+        "resultsStartingGridPositionNumber": ("Linear Regression: Starting Position vs Final Position", "Starting Position"),
+    }
+    payload["regression_series"] = []
+    for x, (title, x_label) in regression_titles.items():
+        series = _regression_series(df, x, "resultsFinalPositionNumber")
+        if series:
+            series.update(title=title, x_label=x_label, y_label="Final Position")
+            payload["regression_series"].append(series)
 
     corr_cols = [c for c in (
         "lastFPPositionNumber", "resultsFinalPositionNumber", "resultsStartingGridPositionNumber",
@@ -93,6 +128,16 @@ def analytics(filters: Any, max_rows: int) -> dict[str, Any]:
             .sort_values("count", ascending=False)
         )
         payload["dnf_reasons"] = records(dnf)
+    dnf_group_cols = {"DNF", "resultsDriverName", "driverTotalRaceEntries"}
+    if dnf_group_cols.issubset(df.columns):
+        dnf_by_driver = (
+            df[pd.to_numeric(df["DNF"], errors="coerce").eq(1)]
+            .groupby(["resultsDriverName", "driverTotalRaceEntries"])
+            .size().reset_index(name="dnf_count")
+        )
+        entries = pd.to_numeric(dnf_by_driver["driverTotalRaceEntries"], errors="coerce")
+        dnf_by_driver["dnf_pct"] = (dnf_by_driver["dnf_count"] / entries * 100).round(1)
+        payload["dnf_by_driver"] = records(dnf_by_driver.sort_values("dnf_pct", ascending=False))
     return payload
 
 
@@ -135,7 +180,155 @@ def _read_optional(path: Path) -> pd.DataFrame:
             return pd.DataFrame()
 
 
-def find_prediction_artifact(race_id: str, year: str, race_name: str) -> dict[str, Any] | None:
+@lru_cache(maxsize=2)
+def _load_tire_strategy(path_text: str, modified_ns: int) -> pd.DataFrame:
+    del modified_ns
+    return pd.read_csv(path_text, sep="\t", low_memory=False)
+
+
+def tire_strategy(year: int | None = None, event_name: str | None = None) -> dict[str, Any]:
+    """Return Streamlit-equivalent compound, degradation, and yearly tire summaries."""
+    tire_path = DATA_DIR / "tire_strategy_data.csv"
+    if not tire_path.is_file():
+        return {"years": [], "events": [], "race_rows": [], "historical_rows": []}
+    tire = _load_tire_strategy(str(tire_path), tire_path.stat().st_mtime_ns)
+    if tire.empty or not {"year", "event_name", "driver"}.issubset(tire.columns):
+        return {"years": [], "events": [], "race_rows": [], "historical_rows": []}
+
+    years = sorted(
+        (int(value) for value in pd.to_numeric(tire["year"], errors="coerce").dropna().unique()),
+        reverse=True,
+    )
+    selected_year = int(year) if year in years else (years[0] if years else None)
+    year_frame = tire[pd.to_numeric(tire["year"], errors="coerce") == selected_year].copy()
+    events = sorted(year_frame["event_name"].dropna().astype(str).unique())
+    selected_event = event_name if event_name in events else (events[0] if events else None)
+
+    name_map: dict[str, str] = {}
+    main_data = load_main_data()
+    if {"abbreviation", "resultsDriverName"}.issubset(main_data.columns):
+        names = main_data[["abbreviation", "resultsDriverName"]].dropna().drop_duplicates()
+        name_map = names.set_index("abbreviation")["resultsDriverName"].to_dict()
+
+    race_rows: list[dict[str, Any]] = []
+    historical_rows: list[dict[str, Any]] = []
+    if selected_event is not None:
+        selected = year_frame[year_frame["event_name"].astype(str) == selected_event].copy()
+        selected["driver"] = selected["driver"].map(name_map).fillna(selected["driver"])
+        display_names = {
+            "driver": "Driver", "starting_compound": "Start Compound", "num_stints": "Stints",
+            "avg_stint_length": "Avg Stint (laps)", "max_stint_length": "Max Stint (laps)",
+            "soft_ratio": "Soft Lap %", "used_soft": "Used Soft", "used_medium": "Used Medium",
+            "used_hard": "Used Hard", "avg_tire_degradation_sec": "Avg Deg (s/lap)",
+            "total_laps": "Laps",
+        }
+        available = [column for column in display_names if column in selected]
+        display = selected[available].rename(columns=display_names)
+        if "Soft Lap %" in display:
+            display["Soft Lap %"] = (pd.to_numeric(display["Soft Lap %"], errors="coerce") * 100).round(1)
+        if "Avg Stint (laps)" in display:
+            display["Avg Stint (laps)"] = pd.to_numeric(display["Avg Stint (laps)"], errors="coerce").round(1)
+        if "Avg Deg (s/lap)" in display:
+            display["Avg Deg (s/lap)"] = pd.to_numeric(display["Avg Deg (s/lap)"], errors="coerce").round(3)
+            display = display.sort_values("Avg Deg (s/lap)", na_position="last")
+        race_rows = records(display)
+
+    if selected_year is not None and "avg_tire_degradation_sec" in year_frame:
+        yearly = year_frame.copy()
+        yearly["driver"] = yearly["driver"].map(name_map).fillna(yearly["driver"])
+        aggregations: dict[str, tuple[str, str]] = {
+            "avg_deg": ("avg_tire_degradation_sec", "mean"),
+            "races": ("event_name", "count"),
+        }
+        if "num_stints" in yearly:
+            aggregations["avg_stints"] = ("num_stints", "mean")
+        if "soft_ratio" in yearly:
+            aggregations["soft_pct"] = ("soft_ratio", "mean")
+        summary = yearly.groupby("driver").agg(**aggregations).reset_index()
+        summary = summary.rename(columns={
+            "driver": "Driver", "avg_deg": "Avg Deg (s/lap)", "avg_stints": "Avg Stints",
+            "soft_pct": "Soft Lap %", "races": "Races",
+        })
+        summary["Avg Deg (s/lap)"] = summary["Avg Deg (s/lap)"].round(3)
+        if "Avg Stints" in summary:
+            summary["Avg Stints"] = summary["Avg Stints"].round(2)
+        if "Soft Lap %" in summary:
+            summary["Soft Lap %"] = (summary["Soft Lap %"] * 100).round(1)
+        historical_rows = records(summary.sort_values("Avg Deg (s/lap)", na_position="last"))
+
+    degradation_rows = [
+        {"driver": row["Driver"], "degradation": row.get("Avg Deg (s/lap)")}
+        for row in race_rows if row.get("Avg Deg (s/lap)") is not None
+    ]
+    return {
+        "years": years,
+        "events": events,
+        "selected_year": selected_year,
+        "selected_event": selected_event,
+        "race_rows": race_rows,
+        "degradation_rows": degradation_rows,
+        "historical_rows": historical_rows,
+    }
+
+
+def fastest_pit_stops(race_id: str) -> dict[str, Any]:
+    """Return the quickest prior constructor stops at a Grand Prix and stationary time."""
+    pit_path = DATA_DIR / "f1db-races-pit-stops.json"
+    if not pit_path.is_file():
+        return {"rows": [], "total": 0, "pit_lane_time_constant": None}
+    try:
+        stops = pd.read_json(pit_path)
+    except (ValueError, OSError):
+        stops = pd.DataFrame()
+    if stops.empty or not {"raceId", "constructorId", "timeMillis"}.issubset(stops.columns):
+        return {"rows": [], "total": 0, "pit_lane_time_constant": None}
+    stops = stops[pd.to_numeric(stops["year"], errors="coerce") >= 2018].copy()
+    schedule = load_race_schedule()
+    if not {"id", "grandPrixId"}.issubset(schedule.columns):
+        return {"rows": [], "total": 0, "pit_lane_time_constant": None}
+    race_map = schedule[["id", "grandPrixId"]].drop_duplicates()
+    stops = stops.merge(race_map, left_on="raceId", right_on="id", how="left")
+    prior = stops[stops["grandPrixId"].astype(str) == str(race_id)].copy()
+    prior["timeMillis"] = pd.to_numeric(prior["timeMillis"], errors="coerce")
+    prior = prior.dropna(subset=["timeMillis"])
+    if prior.empty:
+        return {"rows": [], "total": 0, "pit_lane_time_constant": None}
+
+    fastest = prior.loc[prior.groupby(["raceId", "constructorId"])["timeMillis"].idxmin()].copy()
+    fastest["pitStopSeconds"] = (fastest["timeMillis"] / 1000).round(3)
+    names = load_main_data()
+    if {"constructorId_results", "constructorName"}.issubset(names.columns):
+        constructor_names = names[["constructorId_results", "constructorName"]].dropna().drop_duplicates()
+        fastest = fastest.merge(
+            constructor_names, left_on="constructorId", right_on="constructorId_results", how="left"
+        )
+    if "constructorName" not in fastest:
+        fastest["constructorName"] = fastest["constructorId"]
+
+    race_rows = names[names["grandPrixRaceId"].astype(str) == str(race_id)]
+    constant = None
+    if "pit_lane_time_constant" in race_rows:
+        values = pd.to_numeric(race_rows["pit_lane_time_constant"], errors="coerce").dropna()
+        if not values.empty:
+            constant = float(values.iloc[0])
+    fastest["pit_time_stationary"] = (fastest["pitStopSeconds"] - constant).round(3) if constant is not None else None
+    columns = [column for column in (
+        "year", "round", "constructorName", "lap", "pitStopSeconds", "pit_time_stationary"
+    ) if column in fastest]
+    fastest = fastest.sort_values([column for column in ("year", "pitStopSeconds") if column in fastest], ascending=[False, True])
+    return {
+        "rows": records(fastest[columns]),
+        "total": len(fastest),
+        "pit_lane_time_constant": constant,
+    }
+
+
+def find_prediction_artifact(
+    race_id: str,
+    year: str,
+    race_name: str,
+    expected_date: Any | None = None,
+) -> dict[str, Any] | None:
     """Select the best committed next-race prediction artifact.
 
     The current precompute workflow writes JSON with predictions_by_model, while
@@ -144,6 +337,7 @@ def find_prediction_artifact(race_id: str, year: str, race_name: str) -> dict[st
     import json
 
     candidates = []
+    expected_day = pd.to_datetime(expected_date, errors="coerce")
     for directory in (DATA_DIR / "precomputed" / "predictions", DATA_DIR):
         if not directory.exists():
             continue
@@ -155,16 +349,28 @@ def find_prediction_artifact(race_id: str, year: str, race_name: str) -> dict[st
                 race_id.lower(), year.lower(), race_name.lower().replace(" ", "_"),
                 race_name.lower().replace(" ", "-"),
             ]
-            score = 1 + sum(1 for term in terms if term and term in low)
-            candidates.append((score, path.name, path))
+            score = sum(20 for term in terms if term and term in low)
+            payload = None
+            if path.suffix.lower() == ".json":
+                try:
+                    payload = json.loads(path.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError):
+                    continue
+                artifact_date = pd.to_datetime(
+                    (payload.get("metadata") or {}).get("next_race", {}).get("date"),
+                    errors="coerce",
+                )
+                if pd.notna(expected_day) and pd.notna(artifact_date) and expected_day.date() == artifact_date.date():
+                    score += 100
+                score += 10 * len(payload.get("predictions_by_model") or {})
+            candidates.append((score, path.stat().st_mtime_ns, path.name, path, payload))
     if not candidates:
         return None
-    candidates.sort(key=lambda item: (item[0], item[1]), reverse=True)
-    chosen = candidates[0][2]
+    candidates.sort(key=lambda item: (item[0], item[1], item[2]), reverse=True)
+    _, _, _, chosen, payload = candidates[0]
     relative = chosen.relative_to(DATA_DIR).as_posix()
 
     if chosen.suffix.lower() == ".json":
-        payload = json.loads(chosen.read_text(encoding="utf-8"))
         by_model = payload.get("predictions_by_model") if isinstance(payload, dict) else None
         return {
             "file": relative,
@@ -244,7 +450,8 @@ def next_race_bundle() -> dict[str, Any]:
     if not messages.empty and "grandPrixId" in messages and race_id is not None:
         messages = messages[messages["grandPrixId"].astype(str) == str(race_id)]
 
-    predictions = find_prediction_artifact(str(race_id), str(year), str(race_name))
+    predictions = find_prediction_artifact(str(race_id), str(year), str(race_name), row[date_col])
+    pit_stops = fastest_pit_stops(str(race_id))
     return {
         "next_race": records(next_frame)[0],
         "race_id": None if race_id is None else str(race_id),
@@ -255,5 +462,6 @@ def next_race_bundle() -> dict[str, Any]:
         "constructor_performance": records(constructor_perf),
         "weather": records(weather.head(500)),
         "race_messages": records(messages.head(500)),
+        "fastest_pit_stops": pit_stops,
         "predictions": predictions,
     }

@@ -27,6 +27,13 @@ def test_health_endpoint() -> None:
     assert "rss_mb" in body
 
 
+def test_brand_logo_endpoint() -> None:
+    response = client.get("/api/brand/logo")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/png"
+    assert response.content.startswith(b"\x89PNG\r\n\x1a\n")
+
+
 def test_meta_contains_parity_tabs() -> None:
     response = client.get("/api/meta")
     assert response.status_code == 200
@@ -79,6 +86,26 @@ def test_data_explorer_query_with_filters() -> None:
         assert 2020 <= int(row["grandPrixYear"]) <= 2025
 
 
+def test_data_explorer_filters_cover_numeric_date_category_and_boolean() -> None:
+    source = data_svc.load_main_data()
+    year = int(source["grandPrixYear"].dropna().iloc[0])
+    race = str(source["grandPrixName"].dropna().iloc[0])
+    date = str(source["short_date"].dropna().iloc[0])
+    dnf_value = bool(source["DNF"].dropna().iloc[0])
+    sample_filters = [
+        {"column": "grandPrixYear", "kind": "range", "value": [year, year]},
+        {"column": "short_date", "kind": "date_range", "value": [date, date]},
+        {"column": "grandPrixName", "kind": "exact", "value": race},
+        {"column": "DNF", "kind": "boolean", "value": dnf_value},
+    ]
+    for spec in sample_filters:
+        response = client.post("/api/data-explorer/query", json={"filters": [spec], "limit": 5})
+        assert response.status_code == 200
+        body = response.json()
+        assert body["total"] > 0
+        assert len(body["rows"]) <= 5
+
+
 def test_data_explorer_query_bad_limit_returns_422() -> None:
     response = client.post("/api/data-explorer/query", json={"limit": 0})
     assert response.status_code == 422
@@ -103,6 +130,17 @@ def test_analytics_service_smoke() -> None:
     assert payload["rows_considered"] > 0
     assert "charts" in payload
     assert "regressions" in payload
+    assert len(payload["regression_series"]) == 2
+
+
+def test_analytics_regression_uses_streamlit_mean_imputation() -> None:
+    frame = pd.DataFrame({"x": [1.0, None, 3.0], "y": [2.0, 4.0, None]})
+    result = analysis._regression(frame, "x", "y")
+    assert result is not None
+    expected = analysis._regression_series(frame, "x", "y")
+    assert expected is not None
+    assert len(expected["points"]) == 3
+    assert len(expected["fit"]) == 60
 
 
 # ----- Current season / Next race ------------------------------------------
@@ -120,6 +158,23 @@ def test_next_race_endpoint() -> None:
     response = client.get("/api/next-race")
     # 200 if a next race is detected, 404 if the season is over
     assert response.status_code in (200, 404)
+    if response.status_code == 200:
+        body = response.json()
+        assert body["predictions"]["format"] == "json"
+        assert body["predictions"]["predictions_by_model"]
+        assert "fastest_pit_stops" in body
+
+
+def test_tire_strategy_endpoint_returns_selected_race_and_year_summary() -> None:
+    response = client.get("/api/analytics/tire-strategy")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["years"]
+    assert body["selected_year"] in body["years"]
+    assert body["events"]
+    assert body["race_rows"]
+    assert body["historical_rows"]
+    assert "Avg Deg (s/lap)" in body["race_rows"][0]
 
 
 # ----- Models ---------------------------------------------------------------
@@ -135,6 +190,17 @@ def test_models_endpoint_lists_all_types() -> None:
 def test_models_manifest_unknown_returns_400() -> None:
     response = client.get("/api/models/manifest", params={"model_type": "nope"})
     assert response.status_code == 400
+
+
+def test_all_model_manifests_have_comparable_metrics_and_features() -> None:
+    models = client.get("/api/models").json()["models"]
+    assert len(models) == 6
+    for model_type in models:
+        response = client.get("/api/models/manifest", params={"model_type": model_type})
+        assert response.status_code == 200
+        manifest = response.json()["manifest"]
+        assert manifest["metrics"]["mae"] > 0
+        assert manifest["feature_names"]
 
 
 def test_models_precomputed_unknown_returns_400() -> None:
@@ -253,6 +319,13 @@ def test_betting_governance_endpoint() -> None:
 def test_tools_disabled_by_default() -> None:
     response = client.post("/api/tools/run", json={"tool": "monte_carlo", "args": []})
     assert response.status_code == 403
+
+
+def test_manual_tool_registry_points_to_existing_scripts() -> None:
+    from app.services.tools import TOOLS
+
+    assert TOOLS
+    assert all((data_svc.REPO_ROOT / script).is_file() for script in TOOLS.values())
 
 
 def test_tools_unknown_tool() -> None:

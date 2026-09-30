@@ -10,7 +10,7 @@ describe('Card', () => {
 
   it('renders title as h3 when provided', () => {
     render(<Card title="My Title">body</Card>);
-    const heading = screen.getByRole('heading', { level: 3, name: 'My Title' });
+    const heading = screen.getByRole('heading', { level: 2, name: 'My Title' });
     expect(heading).toBeInTheDocument();
   });
 });
@@ -29,6 +29,13 @@ describe('Status', () => {
     const node = screen.getByRole('alert');
     expect(node).toHaveAttribute('aria-live', 'assertive');
     expect(node).toHaveTextContent('boom');
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+  });
+
+  it('distinguishes request failures from server failures', () => {
+    const error = Object.assign(new Error('bad request'), { status: 422 });
+    render(<Status error={error} />);
+    expect(screen.getByRole('alert')).toHaveTextContent('Request rejected (4xx): bad request');
   });
 
   it('shows children when neither loading nor error', () => {
@@ -101,6 +108,13 @@ describe('Tabs', () => {
     const onChange = vi.fn();
     render(<Tabs tabs={['one', 'two']} active="one" onChange={onChange} />);
     fireEvent.click(screen.getByRole('button', { name: 'two' }));
+    expect(onChange).toHaveBeenCalledWith('two');
+  });
+
+  it('supports arrow-key navigation between tabs', () => {
+    const onChange = vi.fn();
+    render(<Tabs tabs={['one', 'two']} active="one" onChange={onChange} />);
+    fireEvent.keyDown(screen.getByRole('button', { name: 'one' }), { key: 'ArrowRight' });
     expect(onChange).toHaveBeenCalledWith('two');
   });
 });

@@ -1,21 +1,27 @@
-export function Card({ title, children, className = "" }) {
+/** @param {{ title?: string, children?: import("react").ReactNode, className?: string }} props */
+export function Card(props = {}) {
+  const { title = undefined, children = undefined, className = "" } = props;
   return (
     <section className={`card ${className}`}>
-      {title && <h3>{title}</h3>}
+      {title && <h2>{title}</h2>}
       {children}
     </section>
   );
 }
 
-export function Status({ loading, error, children }) {
+/** @param {{ loading?: boolean, error?: unknown, children?: import("react").ReactNode, onRetry?: () => void, loadingLabel?: string }} props */
+export function Status(props = {}) {
+  const { loading = false, error = null, children = null, onRetry = undefined, loadingLabel = "Loading…" } = props;
   if (loading) return (
     <div
-      className="status"
+      className="loading-state"
       role="status"
       aria-busy="true"
       aria-live="polite"
     >
-      Loading…
+      <span>{loadingLabel}</span>
+      <span className="skeleton-line" aria-hidden="true" />
+      <span className="skeleton-line short" aria-hidden="true" />
     </div>
   );
   if (error) return (
@@ -24,19 +30,24 @@ export function Status({ loading, error, children }) {
       role="alert"
       aria-live="assertive"
     >
-      {String(error.message || error)}
+      {Number(typeof error === "object" && error && "status" in error ? error.status : 0) >= 500 ? "Server error (5xx): " : Number(typeof error === "object" && error && "status" in error ? error.status : 0) >= 400 ? "Request rejected (4xx): " : ""}
+      {String(error instanceof Error ? error.message : error)}
+      <button type="button" onClick={onRetry || (() => window.location.reload())}>Retry</button>
     </div>
   );
   return children || null;
 }
 
-export function DataTable({ rows = [], columns, maxHeight = 560 }) {
+/** @param {{ rows?: Array<Record<string, any>>, columns?: string[], maxHeight?: number, ariaLabel?: string }} props */
+/* eslint-disable jsx-a11y/no-noninteractive-tabindex */
+export function DataTable(props = {}) {
+  const { rows = [], columns = undefined, maxHeight = 560, ariaLabel = "Data table, scrollable region" } = props;
   if (!rows?.length) return <div className="empty">No rows available.</div>;
   const cols = columns?.length ? columns : Object.keys(rows[0] || {});
   return (
-    <div className="table-wrap" style={{ maxHeight }}>
+    <div className="table-wrap" role="region" aria-label={ariaLabel} tabIndex={0} style={{ maxHeight }}>
       <table>
-        <thead><tr>{cols.map(c => <th key={c}>{c}</th>)}</tr></thead>
+        <thead><tr>{cols.map(c => <th key={c} scope="col">{c}</th>)}</tr></thead>
         <tbody>
           {rows.map((row, i) => (
             <tr key={i}>
@@ -49,6 +60,7 @@ export function DataTable({ rows = [], columns, maxHeight = 560 }) {
   );
 }
 
+/** @param {unknown} value */
 function formatCell(value) {
   if (value == null) return "";
   if (typeof value === "number") return Number.isInteger(value) ? value : value.toFixed(3).replace(/\.?0+$/, "");
@@ -56,19 +68,29 @@ function formatCell(value) {
   return String(value);
 }
 
+/** @param {{ value: unknown }} props */
 export function JsonBlock({ value }) {
-  return <pre className="json">{JSON.stringify(value, null, 2)}</pre>;
+  return <pre className="json" tabIndex={0} aria-label="JSON data">{JSON.stringify(value, null, 2)}</pre>;
 }
+/* eslint-enable jsx-a11y/no-noninteractive-tabindex */
 
+/** @param {{ label: string, value?: unknown }} props */
 export function Metric({ label, value }) {
-  return <div className="metric"><span>{label}</span><strong>{value ?? "—"}</strong></div>;
+  return <div className="metric"><span>{label}</span><strong>{value == null ? "—" : String(value)}</strong></div>;
 }
 
+/** @param {{ tabs: string[], active: string, onChange: (tab: string) => void }} props */
 export function Tabs({ tabs, active, onChange }) {
   return (
     <div className="subtabs">
-      {tabs.map(tab => (
-        <button key={tab} className={active === tab ? "active" : ""} onClick={() => onChange(tab)}>
+      {tabs.map((tab, index) => (
+        <button key={tab} type="button" className={active === tab ? "active" : ""} aria-pressed={active === tab} onClick={() => onChange(tab)} onKeyDown={event => {
+          if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(event.key)) return;
+          event.preventDefault();
+          const nextIndex = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : (index + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+          onChange(tabs[nextIndex]);
+          event.currentTarget.parentElement?.querySelectorAll("button")[nextIndex]?.focus();
+        }}>
           {tab}
         </button>
       ))}

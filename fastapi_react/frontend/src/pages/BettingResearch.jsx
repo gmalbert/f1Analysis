@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Papa from "papaparse";
 import { api } from "../api";
 import { Card, DataTable, JsonBlock, Metric, Tabs } from "../components/UI";
@@ -12,22 +12,11 @@ const defaultEntries = [
   { driver_id: "driver-c", constructor_id: "team-2", pace_score: 2.2, dnf_probability: 0.08, uncertainty: 1.0, race_sensitivity: 1.2 }
 ];
 
-function csvDownloadUrl(rows, columns, filename) {
+function csvDataUrl(rows, columns) {
   if (!rows?.length) return "#";
   const cols = columns?.length ? columns : Object.keys(rows[0]);
-  const header = cols.join(",");
-  const body = rows
-    .map(r => cols.map(c => {
-      const v = r[c];
-      if (v == null) return "";
-      if (typeof v === "string" && (v.includes(",") || v.includes('"'))) {
-        return `"${v.replace(/"/g, '""')}"`;
-      }
-      return String(v);
-    }).join(","))
-    .join("\n");
-  const blob = new Blob([header + "\n" + body], { type: "text/csv" });
-  return URL.createObjectURL(blob) + "#" + filename;
+  const csv = Papa.unparse({ fields: cols, data: rows.map(row => cols.map(column => row[column] ?? "")) });
+  return `data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`;
 }
 
 function ReliabilityChart({ rows }) {
@@ -51,12 +40,17 @@ function ReliabilityChart({ rows }) {
   );
 }
 
-function CsvInput({ onRows }) {
+function CsvInput({ onRows, label }) {
   function load(file) {
     if (!file) return;
-    Papa.parse(file, { header: true, dynamicTyping: true, skipEmptyLines: true, complete: result => onRows(result.data) });
+    Papa.parse(file, {
+      header: true,
+      dynamicTyping: true,
+      skipEmptyLines: true,
+      complete: result => onRows(result.data, result.errors),
+    });
   }
-  return <input type="file" accept=".csv,text/csv" onChange={e => load(e.target.files?.[0])} />;
+  return <label className="upload-label">{label}<input aria-label={label} type="file" accept=".csv,text/csv" onChange={e => load(e.target.files?.[0])} /></label>;
 }
 
 export default function BettingResearch() {
@@ -64,30 +58,46 @@ export default function BettingResearch() {
   const [calc, setCalc] = useState({ model_probability: .25, decimal_odds: 2.1, opposing_odds: 1.8, uncertainty: .02, devig_method: "multiplicative", bankroll: 10000 });
   const [calcOut, setCalcOut] = useState(null);
   const [simEntries, setSimEntries] = useState(defaultEntries);
+  const [simulations, setSimulations] = useState(10000);
   const [simOut, setSimOut] = useState(null);
   const [replayRows, setReplayRows] = useState([]);
   const [replayOut, setReplayOut] = useState(null);
   const [calRows, setCalRows] = useState([]);
   const [calOut, setCalOut] = useState(null);
   const [error, setError] = useState(null);
+  const [busy, setBusy] = useState("");
 
-  async function calculate() {
-    try { setError(null); setCalcOut(await api.post("/api/betting/value", calc)); } catch (e) { setError(e.message); }
-  }
+  useEffect(() => {
+    let cancelled = false;
+    setBusy("value");
+    setError(null);
+    api.post("/api/betting/value", calc)
+      .then(result => { if (!cancelled) setCalcOut(result); })
+      .catch(e => { if (!cancelled) setError(e.message); })
+      .finally(() => { if (!cancelled) setBusy(""); });
+    return () => { cancelled = true; };
+  }, [calc]);
+
   async function runSimulation() {
-    try { setError(null); setSimOut(await api.post("/api/betting/simulate", { entries: simEntries, simulations: 10000, seed: 42 })); } catch (e) { setError(e.message); }
+    setBusy("simulation");
+    try { setError(null); setSimOut(await api.post("/api/betting/simulate", { entries: simEntries, simulations, seed: 42 })); } catch (e) { setError(e.message); }
+    finally { setBusy(""); }
   }
   async function runReplay() {
+    setBusy("replay");
     try { setError(null); setReplayOut(await api.post("/api/betting/backtest", { rows: replayRows })); } catch (e) { setError(e.message); }
+    finally { setBusy(""); }
   }
   async function runCalibration() {
+    setBusy("calibration");
     try { setError(null); setCalOut(await api.post("/api/betting/calibration", { rows: calRows })); } catch (e) { setError(e.message); }
+    finally { setBusy(""); }
   }
   return (
     <div>
       <header className="page-header"><div><h1>Probability & Betting Research</h1><p>Value, coherent race simulation, replay and calibration.</p></div></header>
       <Tabs tabs={tabs} active={tab} onChange={setTab} />
-      {error && <div className="status error">{error}</div>}
+      {error && <div className="status error" role="alert" aria-live="assertive">{error}</div>}
 
       {tab === "Value & stake" && <Card title="Value & Stake Calculator">
         <div className="form-grid">
@@ -102,7 +112,7 @@ export default function BettingResearch() {
             <option>multiplicative</option><option>additive</option><option>power</option>
           </select></label>
         </div>
-        <button className="primary" onClick={calculate}>Calculate</button>
+        {busy === "value" && <div className="loading-state" role="status" aria-busy="true">Calculating value…<span className="skeleton-line short" aria-hidden="true" /></div>}
         {calcOut && <div className="metrics">
           <Metric label="De-vigged market probability" value={`${(calcOut.market_probability * 100).toFixed(2)}%`} />
           <Metric label="Raw EV / unit" value={`${(calcOut.raw_ev * 100).toFixed(2)}%`} />
@@ -114,19 +124,21 @@ export default function BettingResearch() {
 
       {tab === "Field simulation" && <Card title="Correlated Field Simulation">
         <p>Upload one row per driver, or use the default three-driver template.</p>
-        <CsvInput onRows={setSimEntries} />
+        <a className="button-link" href={csvDataUrl(defaultEntries, Object.keys(defaultEntries[0]))} download="f1_field_simulation_template.csv">Download input template</a>
+        <CsvInput label="Field CSV" onRows={rows => setSimEntries(rows)} />
         <DataTable rows={simEntries} />
-        <button className="primary" onClick={runSimulation}>Run coherent field simulation</button>
+        <label className="field-label">Simulations<input aria-label="Simulation count" type="range" min="1000" max="50000" step="1000" value={simulations} onChange={event => setSimulations(Number(event.target.value))} /><span>{simulations.toLocaleString()}</span></label>
+        <button className="primary" disabled={busy === "simulation"} onClick={runSimulation}>{busy === "simulation" ? "Simulating…" : "Run coherent field simulation"}</button>
         {simOut && <>
           <DataTable rows={simOut.rows} columns={simOut.columns} />
-          <p><a className="button-link" href={csvDownloadUrl(simOut.rows, simOut.columns, "field_simulation.csv")}>Download CSV</a></p>
+          <p><a className="button-link" href={csvDataUrl(simOut.rows, simOut.columns)} download="f1_market_probabilities.csv">Download probabilities</a></p>
         </>}
       </Card>}
 
       {tab === "Paper replay" && <Card title="Paper Backtest">
         <p>Upload the timestamped ledger used by the existing f1bet backtest engine.</p>
-        <CsvInput onRows={setReplayRows} />
-        <button className="primary" disabled={!replayRows.length} onClick={runReplay}>Run paper backtest</button>
+        <CsvInput label="Backtest ledger CSV" onRows={rows => setReplayRows(rows)} />
+        <button className="primary" disabled={!replayRows.length || busy === "replay"} onClick={runReplay}>{busy === "replay" ? "Running backtest…" : "Run paper backtest"}</button>
         {replayOut && <>
           <JsonBlock value={replayOut.summary} />
           <h4>Placed paper bets</h4><DataTable rows={replayOut.ledger} />
@@ -137,8 +149,8 @@ export default function BettingResearch() {
 
       {tab === "Calibration" && <Card title="Calibration Diagnostics">
         <p>Required columns: <code>probability</code> and <code>outcome</code>. Optional: market and stage.</p>
-        <CsvInput onRows={setCalRows} />
-        <button className="primary" disabled={!calRows.length} onClick={runCalibration}>Analyze calibration</button>
+        <CsvInput label="Calibration CSV" onRows={rows => setCalRows(rows)} />
+        <button className="primary" disabled={!calRows.length || busy === "calibration"} onClick={runCalibration}>{busy === "calibration" ? "Analyzing…" : "Analyze calibration"}</button>
         {calOut && <>
           <DataTable rows={calOut.metrics} />
           <h4>Adaptive reliability</h4>

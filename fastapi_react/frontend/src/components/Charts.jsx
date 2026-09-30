@@ -1,24 +1,43 @@
 import {
   ResponsiveContainer, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip,
-  LineChart, Line, BarChart, Bar, Legend
+  LineChart, Line, BarChart, Bar, Legend, ComposedChart
 } from "recharts";
 import { Card } from "./UI";
 
+/** @type {Record<string, string>} */
+const axisLabels = {
+  averagePracticePosition: "Average Practice Position",
+  averageStopTime: "Avg. Stop Time",
+  grandPrixYear: "Year",
+  positionsGained: "Positions Gained",
+  resultsFinalPositionNumber: "Final Position",
+  resultsStartingGridPositionNumber: "Starting Position",
+  short_date: "Date",
+  yearsActive: "Years Active",
+};
+
+/** @param {string} title @param {Array<Record<string, any>>} rows @param {string} x @param {string} y */
+function chartLabel(title, rows, x, y) {
+  return `${title}. ${rows.length} data points. Horizontal axis: ${axisLabels[x] || x}. Vertical axis: ${axisLabels[y] || y}.`;
+}
+
+/** @param {Array<Record<string, any>>} rows @param {string} key */
 function numericExtent(rows, key) {
   const vals = rows.map(r => Number(r[key])).filter(Number.isFinite);
   return vals.length ? [Math.min(...vals), Math.max(...vals)] : ["auto", "auto"];
 }
 
-export function ScatterPanel({ title, rows = [], x, y }) {
+/** @param {{ title: string, rows?: Array<Record<string, any>>, x: string, y: string, xLabel?: string, yLabel?: string }} props */
+export function ScatterPanel({ title, rows = [], x, y, xLabel = axisLabels[x] || x, yLabel = axisLabels[y] || y }) {
   if (!rows.length) return null;
   return (
     <Card title={title}>
-      <div className="chart">
+      <div className="chart" role="img" aria-label={chartLabel(title, rows, x, y)}>
         <ResponsiveContainer width="100%" height={320}>
           <ScatterChart margin={{ top: 10, right: 20, bottom: 25, left: 15 }}>
             <CartesianGrid />
-            <XAxis dataKey={x} name={x} type="number" domain={numericExtent(rows, x)} label={{ value: x, position: "insideBottom", offset: -15 }} />
-            <YAxis dataKey={y} name={y} type="number" domain={numericExtent(rows, y)} />
+            <XAxis dataKey={x} name={xLabel} type="number" domain={numericExtent(rows, x)} label={{ value: xLabel, position: "insideBottom", offset: -15 }} />
+            <YAxis dataKey={y} name={yLabel} type="number" domain={numericExtent(rows, y)} label={{ value: yLabel, angle: -90, position: "insideLeft" }} />
             <Tooltip cursor={{ strokeDasharray: "3 3" }} />
             <Scatter data={rows} />
           </ScatterChart>
@@ -28,16 +47,17 @@ export function ScatterPanel({ title, rows = [], x, y }) {
   );
 }
 
-export function LinePanel({ title, rows = [], x, y }) {
+/** @param {{ title: string, rows?: Array<Record<string, any>>, x: string, y: string, xLabel?: string, yLabel?: string }} props */
+export function LinePanel({ title, rows = [], x, y, xLabel = axisLabels[x] || x, yLabel = axisLabels[y] || y }) {
   if (!rows.length) return null;
   return (
     <Card title={title}>
-      <div className="chart">
+      <div className="chart" role="img" aria-label={chartLabel(title, rows, x, y)}>
         <ResponsiveContainer width="100%" height={320}>
           <LineChart data={rows}>
             <CartesianGrid />
-            <XAxis dataKey={x} />
-            <YAxis />
+            <XAxis dataKey={x} label={{ value: xLabel, position: "insideBottom", offset: -15 }} />
+            <YAxis label={{ value: yLabel, angle: -90, position: "insideLeft" }} />
             <Tooltip />
             <Line type="monotone" dataKey={y} dot={false} />
           </LineChart>
@@ -47,20 +67,42 @@ export function LinePanel({ title, rows = [], x, y }) {
   );
 }
 
-export function BarPanel({ title, rows = [], x, y }) {
+/** @param {{ title: string, rows?: Array<Record<string, any>>, x: string, y: string, xLabel?: string, yLabel?: string }} props */
+export function BarPanel({ title, rows = [], x, y, xLabel = axisLabels[x] || x, yLabel = axisLabels[y] || y }) {
   if (!rows.length) return null;
   return (
     <Card title={title}>
-      <div className="chart">
+      <div className="chart" role="img" aria-label={chartLabel(title, rows, x, y)}>
         <ResponsiveContainer width="100%" height={340}>
           <BarChart data={rows}>
             <CartesianGrid />
-            <XAxis dataKey={x} interval={0} angle={-30} textAnchor="end" height={90} />
-            <YAxis />
+            <XAxis dataKey={x} interval={0} angle={-30} textAnchor="end" height={90} label={{ value: xLabel, position: "insideBottom", offset: -5 }} />
+            <YAxis label={{ value: yLabel, angle: -90, position: "insideLeft" }} />
             <Tooltip />
             <Legend />
             <Bar dataKey={y} />
           </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </Card>
+  );
+}
+
+/** @param {{ title: string, points?: Array<Record<string, any>>, fit?: Array<Record<string, any>>, x: string, y: string, xLabel: string, yLabel: string }} props */
+export function RegressionPanel({ title, points = [], fit = [], x, y, xLabel, yLabel }) {
+  if (!points.length) return null;
+  return (
+    <Card title={title}>
+      <div className="chart" role="img" aria-label={`${chartLabel(title, points, x, y)} Regression fit shown as a line.`}>
+        <ResponsiveContainer width="100%" height={340}>
+          <ComposedChart margin={{ top: 10, right: 20, bottom: 25, left: 15 }}>
+            <CartesianGrid />
+            <XAxis dataKey={x} type="number" domain={numericExtent(points, x)} label={{ value: xLabel, position: "insideBottom", offset: -15 }} />
+            <YAxis dataKey={y} type="number" domain={numericExtent(points, y)} label={{ value: yLabel, angle: -90, position: "insideLeft" }} />
+            <Tooltip />
+            <Scatter data={points} fill="#e10600" />
+            <Line data={fit} dataKey={y} type="linear" stroke="#f4c542" dot={false} isAnimationActive={false} />
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
     </Card>
