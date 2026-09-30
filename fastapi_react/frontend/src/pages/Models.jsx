@@ -15,7 +15,7 @@ const advancedTabs = [
 const artifactByTab = {
   "📊 Model Performance": ["position_mae", "historical_validation"],
   "🔍 Feature Analysis": ["shap", "permutation"],
-  "🎯 Feature Selection": ["monte_carlo", "monte_carlo_log", "rfe", "boruta"],
+  "🎯 Feature Selection": ["monte_carlo", "monte_carlo_log", "rfe", "boruta", "shap", "permutation"],
   "🏎️ Position-Specific Analysis": ["position_mae", "historical_validation"],
   "⚙️ Hyperparameters": ["hyperparam_bayesian", "hyperparam_grid"],
   "📈 Historical Validation": ["historical_validation"],
