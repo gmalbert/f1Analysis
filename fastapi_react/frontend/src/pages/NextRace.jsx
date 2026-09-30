@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
-import { Card, DataTable, Status } from "../components/UI";
+import { DataTable, Status } from "../components/UI";
 
 const NEXT_RACE_COLUMNS = ["date", "time", "fullName", "courseLength", "turns", "laps"];
 const NEXT_RACE_LABELS = {
