@@ -3,6 +3,10 @@ name: FastAPI + React parity checks
 permissions:
   contents: read
 
+concurrency:
+  group: fastapi-react-parity-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   pull_request:
     paths:
