@@ -24,9 +24,10 @@ import { dirname, join } from 'node:path';
 import sharp from 'sharp';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const REACT_DIR = join(__dirname, 'screenshots', 'react');
-const SL_DIR = join(__dirname, 'screenshots', 'streamlit');
-const OUT = join(__dirname, 'diff');
+const SNAPSHOT_DIR = process.env.PARITY_SCREENSHOT_DIR || join(__dirname, 'visual');
+const REACT_DIR = join(SNAPSHOT_DIR, 'react');
+const SL_DIR = join(SNAPSHOT_DIR, 'streamlit');
+const OUT = join(SNAPSHOT_DIR, 'diff');
 
 // \u00A713 tolerance: <=2% diff at desktop, <=3% at tablet.
 const TOLERANCE = { desktop: 0.02, tablet: 0.03 };

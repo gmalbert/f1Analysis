@@ -3,7 +3,11 @@ const jsonHeaders = { "Content-Type": "application/json" };
 async function parse(response) {
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(body.detail || `${response.status} ${response.statusText}`);
+    const error = Object.assign(
+      new Error(body.detail || `${response.status} ${response.statusText}`),
+      { status: response.status },
+    );
+    throw error;
   }
   return body;
 }

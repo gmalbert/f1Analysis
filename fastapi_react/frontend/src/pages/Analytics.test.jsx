@@ -15,12 +15,15 @@ beforeEach(() => {
   });
   apiMock.get.mockReset();
   apiMock.post.mockReset();
+  apiMock.get.mockResolvedValue({ years: [], events: [], race_rows: [], historical_rows: [] });
+  sessionStorage.clear();
 });
 
 import Analytics from './Analytics.jsx';
 
 describe('Analytics page', () => {
   it('renders headings and metric after data loads', async () => {
+    sessionStorage.setItem('f1analysis.filters', JSON.stringify({ applied: true, filters: [] }));
     apiMock.post.mockResolvedValueOnce({
       rows_considered: 1234,
       charts: {
@@ -37,13 +40,21 @@ describe('Analytics page', () => {
       expect(screen.getByText(/Rows considered/)).toBeInTheDocument();
     });
     expect(screen.getByText('Analytics & Visualizations')).toBeInTheDocument();
+    expect(screen.getByText('Tire Strategy Analysis')).toBeInTheDocument();
   });
 
   it('shows error message on failure', async () => {
+    sessionStorage.setItem('f1analysis.filters', JSON.stringify({ applied: true, filters: [] }));
     apiMock.post.mockRejectedValueOnce(new Error('boom'));
     render(<Analytics />);
     await waitFor(() => {
       expect(screen.getByText('boom')).toBeInTheDocument();
     });
+  });
+
+  it('waits for the Data Explorer filter flow before rendering the analytics', () => {
+    render(<Analytics />);
+    expect(screen.getByText('Please filter results in the Data Explorer tab first to view analytics.')).toBeInTheDocument();
+    expect(apiMock.post).not.toHaveBeenCalled();
   });
 });

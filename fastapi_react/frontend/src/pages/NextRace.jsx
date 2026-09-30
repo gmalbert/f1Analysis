@@ -3,7 +3,7 @@ import { api } from "../api";
 import { Card, DataTable, Metric, Status } from "../components/UI";
 
 function Section({ title, rows }) {
-  return <Card title={title}><DataTable rows={rows || []} /></Card>;
+  return <Card title={title}><DataTable rows={rows || []} ariaLabel={title} /></Card>;
 }
 
 export default function NextRace() {
@@ -26,22 +26,27 @@ export default function NextRace() {
             <Metric label="Race ID" value={data.race_id} />
             <Metric label="Past results" value={data.past_results?.length || 0} />
           </div>
-          <Card title="Race Details"><DataTable rows={[data.next_race]} /></Card>
+          <Card title="Race Details"><DataTable rows={[data.next_race]} ariaLabel="Race details" /></Card>
           {data.predictions?.format === "json" && <Card title={`Predictions — ${data.predictions.file}`}>
-            <div className="button-row">
-              <select value={modelKeys.includes(modelKey) ? modelKey : (modelKeys[0] || "")} onChange={e => setModelKey(e.target.value)}>
+            <div className="button-row"><label className="field-label" htmlFor="prediction-model-select">Model</label>
+              <select id="prediction-model-select" aria-label="Prediction model" value={modelKeys.includes(modelKey) ? modelKey : (modelKeys[0] || "")} onChange={e => setModelKey(e.target.value)}>
                 {modelKeys.map(key => <option key={key} value={key}>{key}</option>)}
               </select>
             </div>
             {modelBlock?.model_mae != null && <p className="muted">Model MAE: {Number(modelBlock.model_mae).toFixed(3)}</p>}
-            <DataTable rows={modelBlock?.predictions || []} />
+            <DataTable rows={modelBlock?.predictions || []} ariaLabel="Model predictions" />
           </Card>}
-          {data.predictions?.format === "csv" && <Card title={`Predictions — ${data.predictions.file}`}><DataTable rows={data.predictions.rows} columns={data.predictions.columns} /></Card>}
+          {data.predictions?.format === "csv" && <Card title={`Predictions — ${data.predictions.file}`}><DataTable rows={data.predictions.rows} columns={data.predictions.columns} ariaLabel="Model predictions" /></Card>}
           {!data.predictions && <Card title="Predictions"><div className="empty">No precomputed prediction artifact matched the upcoming race.</div></Card>}
           <Section title="Past Results" rows={data.past_results} />
           <Section title="Driver Performance at this Grand Prix" rows={data.driver_performance} />
           <Section title="Constructor Performance at this Grand Prix" rows={data.constructor_performance} />
           <Section title="Flags & Safety Cars" rows={data.race_messages} />
+          <Card title="Fastest Individual Pit Stop per Constructor">
+            <Metric label="Total fastest pit stops" value={data.fastest_pit_stops?.total ?? 0} />
+            <Metric label="Pit Time Constant (s)" value={data.fastest_pit_stops?.pit_lane_time_constant ?? "N/A"} />
+            {data.fastest_pit_stops?.total ? <DataTable rows={data.fastest_pit_stops.rows} ariaLabel="Fastest pit stops by constructor" /> : <div className="empty">No individual pit stop data available for prior races at this Grand Prix.</div>}
+          </Card>
           <Section title="Weather" rows={data.weather} />
         </>}
       </Status>

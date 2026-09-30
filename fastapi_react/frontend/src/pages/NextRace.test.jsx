@@ -19,6 +19,7 @@ describe('NextRace page', () => {
     apiMock.get.mockResolvedValueOnce({
       next_race: { grandPrixId: 'australia', year: 2025, grandPrixName: 'Australia', short_date: '2025-03-23' },
       prediction: { model: 'XGBoost', rows: [] },
+      fastest_pit_stops: { total: 0, rows: [], pit_lane_time_constant: null },
     });
     render(<NextRace />);
     await waitFor(() => {

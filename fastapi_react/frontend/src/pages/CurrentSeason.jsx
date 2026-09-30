@@ -15,7 +15,8 @@ export default function CurrentSeason() {
         ) : data && <>
           <div className="metrics"><Metric label="Races" value={data.rows?.length || 0} /></div>
           <Card title={`${data.year} Schedule`}>
-            <div className="table-wrap" style={{maxHeight: 780}}><table><thead><tr>{data.columns.map(c => <th key={c}>{c}</th>)}</tr></thead><tbody>
+            {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- keep wide schedules keyboard-scrollable */}
+            <div className="table-wrap" role="region" aria-label={`${data.year} season schedule`} tabIndex={0} style={{maxHeight: 780}}><table><thead><tr>{data.columns.map(c => <th key={c} scope="col">{c}</th>)}</tr></thead><tbody>
               {data.rows.map((row, i) => <tr key={i} className={row.seasonStatus === "Next Race" ? "next-race-row" : ""}>{data.columns.map(c => <td key={c}>{row[c] == null ? "" : String(row[c])}</td>)}</tr>)}
             </tbody></table></div>
           </Card>
