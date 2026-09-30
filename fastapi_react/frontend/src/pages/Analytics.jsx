@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
-import { BarPanel, LinePanel, MultiLinePanel, PiePanel, RegressionPanel, ScatterPanel } from "../components/Charts";
+import { BarPanel, LinePanel, MultiBarPanel, MultiLinePanel, PiePanel, RegressionPanel, ScatterPanel } from "../components/Charts";
 import { Card, DataTable, Metric, Status } from "../components/UI";
 
 function firstObjectArray(value) {
@@ -90,7 +90,7 @@ export default function Analytics() {
             </Card>
 
             <MultiLinePanel title="Driver Performance Over Time" rows={data.driver_performance || []} x="grandPrixYear" y="average_final_position" series="resultsDriverName" xLabel="Year" yLabel="Average Final Position" />
-            <BarPanel title="Constructor Dominance Over the Years" rows={data.constructor_performance || []} x="grandPrixYear" y="total_wins" xLabel="Year" yLabel="Wins and Podiums" />
+            <MultiBarPanel title="Constructor Dominance Over the Years" rows={data.constructor_performance || []} x="grandPrixYear" ys={["total_wins", "total_podiums"]} xLabel="Year" yLabel="Wins and Podiums" />
 
             <ScatterPanel title="Impact of Starting Grid Position on Final Position" rows={data.charts?.grid_vs_final} x="resultsStartingGridPositionNumber" y="resultsFinalPositionNumber" xLabel="Starting Pos." yLabel="Final Pos." />
             <ScatterPanel title="Pit Stop Analysis" rows={data.charts?.pit_stop_vs_final} x="averageStopTime" y="resultsFinalPositionNumber" xLabel="Avg. Stop Time" yLabel="Final Pos." />
