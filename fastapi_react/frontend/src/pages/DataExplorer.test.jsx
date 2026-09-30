@@ -55,7 +55,7 @@ describe("persistent filter sidebar", () => {
     ] });
     render(<FilterSidebar />);
     expect(await screen.findByText("Select filters to apply:")).toBeInTheDocument();
-    fireEvent.change(screen.getByRole("spinbutton", { name: "Year minimum" }), { target: { value: "2020" } });
+    fireEvent.change(screen.getByRole("slider", { name: "Year minimum" }), { target: { value: "2020" } });
     await waitFor(() => {
       expect(JSON.parse(sessionStorage.getItem("f1analysis.filters"))).toMatchObject({
         applied: true,
