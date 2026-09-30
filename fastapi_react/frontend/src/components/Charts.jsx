@@ -88,6 +88,27 @@ export function BarPanel({ title, rows = [], x, y, xLabel = axisLabels[x] || x, 
   );
 }
 
+/** @param {{ title: string, rows?: Array<Record<string, any>>, x: string, ys: string[], xLabel?: string, yLabel?: string }} props */
+export function MultiBarPanel({ title, rows = [], x, ys, xLabel = axisLabels[x] || x, yLabel = "Count" }) {
+  if (!rows.length) return null;
+  return (
+    <Card title={title}>
+      <div className="chart" role="img" aria-label={`${title}. Grouped bar chart with ${ys.length} series.`}>
+        <ResponsiveContainer width="100%" height={340}>
+          <BarChart data={rows}>
+            <CartesianGrid />
+            <XAxis dataKey={x} interval={0} angle={-30} textAnchor="end" height={90} label={{ value: xLabel, position: "insideBottom", offset: -5 }} />
+            <YAxis label={{ value: yLabel, angle: -90, position: "insideLeft" }} />
+            <Tooltip />
+            <Legend />
+            {ys.map((key, index) => <Bar key={key} dataKey={key} fill={SERIES_COLORS[index % SERIES_COLORS.length]} />)}
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </Card>
+  );
+}
+
 /** @param {{ title: string, points?: Array<Record<string, any>>, fit?: Array<Record<string, any>>, x: string, y: string, xLabel: string, yLabel: string }} props */
 export function RegressionPanel({ title, points = [], fit = [], x, y, xLabel, yLabel }) {
   if (!points.length) return null;
