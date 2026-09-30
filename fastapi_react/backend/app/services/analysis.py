@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import pickle
 from functools import lru_cache
 from pathlib import Path
-import pickle
 from typing import Any
 
 import numpy as np
@@ -524,7 +524,7 @@ def _load_safety_car_model() -> Any:
         return pickle.load(handle)  # noqa: S301 - trusted model artifact committed by this repository
 
 
-def safety_car_predictions(
+def build_safety_car_predictions(
     next_race: pd.Series,
     race_name: str,
     year: int,
@@ -695,7 +695,7 @@ def next_race_bundle() -> dict[str, Any]:
 
     predictions = find_prediction_artifact(str(race_id), str(year), str(race_name), row[date_col])
     legacy_predictions = _legacy_prediction_rows(str(race_id), int(year), str(race_name))
-    safety_car_predictions = safety_car_predictions(row, str(race_name), int(year), weather)
+    safety_car_predictions = build_safety_car_predictions(row, str(race_name), int(year), weather)
     pit_stops = fastest_pit_stops(str(race_id))
     return {
         "next_race": records(next_frame)[0],
