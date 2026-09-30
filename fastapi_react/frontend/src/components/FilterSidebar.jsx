@@ -28,25 +28,52 @@ function FilterControl({ spec, value, onChange }) {
     );
   }
 
-  if (spec.kind === "range" || spec.kind === "date_range") {
+  if (spec.kind === "range") {
+    const low = Number(Array.isArray(value) ? value[0] : spec.min);
+    const high = Number(Array.isArray(value) ? value[1] : spec.max);
+    const min = Math.trunc(Number(spec.min));
+    const max = Math.trunc(Number(spec.max));
+    const currentLow = Math.trunc(Number.isFinite(low) ? low : min);
+    const currentHigh = Math.trunc(Number.isFinite(high) ? high : max);
+    return (
+      <label>
+        <span>{spec.label}</span>
+        <div className="streamlit-range">
+          <div className="streamlit-range-values" aria-hidden="true">
+            <span>{currentLow}</span><span>{currentHigh}</span>
+          </div>
+          <div className="streamlit-range-track" aria-hidden="true" />
+          <input
+            aria-label={`${spec.label} minimum`}
+            type="range"
+            min={min}
+            max={max}
+            step="1"
+            value={currentLow}
+            onChange={event => onChange([Math.min(Number(event.target.value), currentHigh), currentHigh])}
+          />
+          <input
+            aria-label={`${spec.label} maximum`}
+            type="range"
+            min={min}
+            max={max}
+            step="1"
+            value={currentHigh}
+            onChange={event => onChange([currentLow, Math.max(Number(event.target.value), currentLow)])}
+          />
+        </div>
+      </label>
+    );
+  }
+
+  if (spec.kind === "date_range") {
     const current = Array.isArray(value) ? value : [spec.min, spec.max];
-    const type = spec.kind === "date_range" ? "date" : "number";
     return (
       <label>
         <span>{spec.label}</span>
         <div className="range-pair">
-          <input
-            aria-label={`${spec.label} minimum`}
-            type={type}
-            value={current[0] ?? ""}
-            onChange={event => onChange([event.target.value, current[1]])}
-          />
-          <input
-            aria-label={`${spec.label} maximum`}
-            type={type}
-            value={current[1] ?? ""}
-            onChange={event => onChange([current[0], event.target.value])}
-          />
+          <input aria-label={`${spec.label} minimum`} type="date" value={current[0] ?? ""} onChange={event => onChange([event.target.value, current[1]])} />
+          <input aria-label={`${spec.label} maximum`} type="date" value={current[1] ?? ""} onChange={event => onChange([current[0], event.target.value])} />
         </div>
       </label>
     );
