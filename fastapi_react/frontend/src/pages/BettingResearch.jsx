@@ -114,7 +114,7 @@ export default function BettingResearch() {
         <p><a className="button-link" href={csvDataUrl(defaultEntries, Object.keys(defaultEntries[0]))} download="f1_field_simulation_template.csv">Download input template</a></p>
         <CsvInput label="Field CSV" onRows={rows => setSimEntries(rows)} />
         <label className="field-label">Simulations
-          <input type="range" min="1000" max="50000" step="1000" value={simulations} onChange={e => setSimulations(Number(e.target.value))} />
+          <input aria-label="Simulations" type="range" min="1000" max="50000" step="1000" value={simulations} onChange={e => setSimulations(Number(e.target.value))} />
           <span>{simulations.toLocaleString()}</span>
         </label>
         <p><button onClick={runSimulation} disabled={busy === "simulation"}>{busy === "simulation" ? "Running…" : "Run coherent field simulation"}</button></p>
