@@ -7,6 +7,7 @@ import NextRace from "./pages/NextRace";
 import Models from "./pages/Models";
 import RawData from "./pages/RawData";
 import BettingResearch from "./pages/BettingResearch";
+import FilterSidebar from "./components/FilterSidebar";
 
 const pages = [
   { key: "Data Explorer", label: "📊 Data Explorer", Component: DataExplorer },
@@ -23,11 +24,24 @@ const BASE_TITLE = "Gridlocked - Formula 1 Betting & Analytics";
 export default function App() {
   const [active, setActive] = useState("Data Explorer");
   const [meta, setMeta] = useState(null);
+  const [filterRevision, setFilterRevision] = useState(0);
+  const [filtersActive, setFiltersActive] = useState(() => {
+    try { return Boolean(JSON.parse(sessionStorage.getItem("f1analysis.filters") || "null")?.applied); }
+    catch { return false; }
+  });
 
   useEffect(() => {
     api.get("/api/meta").then(setMeta).catch(() => {});
     const hash = decodeURIComponent(location.hash.replace("#/", ""));
     if (pages.some(page => page.key === hash)) setActive(hash);
+
+    const syncFilters = () => {
+      try { setFiltersActive(Boolean(JSON.parse(sessionStorage.getItem("f1analysis.filters") || "null")?.applied)); }
+      catch { setFiltersActive(false); }
+      setFilterRevision(value => value + 1);
+    };
+    window.addEventListener("f1analysis:filters-changed", syncFilters);
+    return () => window.removeEventListener("f1analysis:filters-changed", syncFilters);
   }, []);
 
   useEffect(() => {
@@ -46,8 +60,9 @@ export default function App() {
   const currentYear = meta?.current_year ?? new Date().getFullYear();
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${filtersActive ? "filters-active" : ""}`}>
       <a className="skip-link" href="#main-content">Skip to main content</a>
+      {filtersActive && <FilterSidebar />}
       <main className="streamlit-main" id="main-content" tabIndex={-1}>
         <div className="block-container">
           <header className="streamlit-hero">
@@ -73,7 +88,7 @@ export default function App() {
           </nav>
 
           <section className="page-content">
-            <Page />
+            <Page key={`${active}-${filterRevision}`} />
           </section>
 
           <footer className="site-footer">
