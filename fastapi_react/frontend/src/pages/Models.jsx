@@ -22,8 +22,8 @@ const artifactByTab = {
 
 function firstObjectArray(payload) {
   if (!payload || typeof payload !== "object") return null;
-  for (const [name, value] of Object.entries(payload)) {
-    if (Array.isArray(value) && value.length && typeof value[0] === "object") return [name, value];
+  for (const value of Object.values(payload)) {
+    if (Array.isArray(value) && value.length && typeof value[0] === "object") return value;
   }
   return null;
 }
@@ -35,7 +35,7 @@ function Artifact({ name, data }) {
   return (
     <Card title={name.replaceAll("_", " ")}>
       {payload.metadata && <p className="caption">Precomputed artifact metadata is shown below.</p>}
-      {table ? <DataTable rows={table[1]} maxHeight={650} /> : <JsonBlock value={payload} />}
+      {table ? <DataTable rows={table} maxHeight={650} /> : <JsonBlock value={payload} />}
     </Card>
   );
 }
