@@ -21,9 +21,11 @@
 import { readdir, mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import sharp from 'sharp';
+import { createRequire } from 'node:module';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const requireFromFrontend = createRequire(join(__dirname, '../frontend/package.json'));
+const sharp = requireFromFrontend('sharp');
 const SNAPSHOT_DIR = process.env.PARITY_SCREENSHOT_DIR || join(__dirname, 'visual');
 const REACT_DIR = join(SNAPSHOT_DIR, 'react');
 const SL_DIR = join(SNAPSHOT_DIR, 'streamlit');
