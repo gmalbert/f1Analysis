@@ -39,7 +39,7 @@ export function ScatterPanel({ title, rows = [], x, y, xLabel = axisLabels[x] ||
             <XAxis dataKey={x} name={xLabel} type="number" domain={numericExtent(rows, x)} label={{ value: xLabel, position: "insideBottom", offset: -15 }} />
             <YAxis dataKey={y} name={yLabel} type="number" domain={numericExtent(rows, y)} label={{ value: yLabel, angle: -90, position: "insideLeft" }} />
             <Tooltip cursor={{ strokeDasharray: "3 3" }} />
-            <Scatter data={rows} />
+            <Scatter data={rows} fill="#0068c9" />
           </ScatterChart>
         </ResponsiveContainer>
       </div>
@@ -59,7 +59,7 @@ export function LinePanel({ title, rows = [], x, y, xLabel = axisLabels[x] || x,
             <XAxis dataKey={x} label={{ value: xLabel, position: "insideBottom", offset: -15 }} />
             <YAxis label={{ value: yLabel, angle: -90, position: "insideLeft" }} />
             <Tooltip />
-            <Line type="monotone" dataKey={y} dot={false} />
+            <Line type="monotone" dataKey={y} stroke="#0068c9" dot={false} />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -80,7 +80,7 @@ export function BarPanel({ title, rows = [], x, y, xLabel = axisLabels[x] || x, 
             <YAxis label={{ value: yLabel, angle: -90, position: "insideLeft" }} />
             <Tooltip />
             <Legend />
-            <Bar dataKey={y} />
+            <Bar dataKey={y} fill="#0068c9" />
           </BarChart>
         </ResponsiveContainer>
       </div>
