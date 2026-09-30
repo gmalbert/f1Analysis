@@ -16,9 +16,9 @@ describe("RawData page", () => {
     apiMock.get.mockResolvedValue({ status: "ok", expensive_tools_enabled: false });
     render(<RawData />);
     expect(screen.getByText("Data & Debug Tools")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Raw Data" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Temporal Leakage Audit" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Hyperparameter Tuning" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Raw Data" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Temporal Leakage Audit" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Hyperparameter Tuning" })).toBeInTheDocument();
   });
 
   it("shows the complete unfiltered dataset on demand", async () => {
@@ -33,7 +33,7 @@ describe("RawData page", () => {
   it("keeps the leakage audit gated in hosted mode", async () => {
     apiMock.get.mockResolvedValue({ status: "ok", expensive_tools_enabled: false });
     render(<RawData />);
-    fireEvent.click(screen.getByRole("button", { name: "Temporal Leakage Audit" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Temporal Leakage Audit" }));
     expect(await screen.findByRole("button", { name: "Run Leakage Audit" })).toBeDisabled();
     expect(screen.getByText("Research controls are disabled in hosted mode.")).toBeInTheDocument();
   });
