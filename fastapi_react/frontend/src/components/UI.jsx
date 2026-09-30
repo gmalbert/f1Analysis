@@ -44,9 +44,9 @@ export function DataTable(props = {}) {
   const { rows = [], columns = undefined, maxHeight = 560, ariaLabel = undefined, headerMap = {}, checkboxColumns = [] } = props;
   if (!rows?.length) return <div className="empty">No rows available.</div>;
   const cols = columns?.length ? columns : Object.keys(rows[0] || {});
-  const landmarkProps = ariaLabel ? { role: "region", "aria-label": ariaLabel, tabIndex: 0 } : {};
+  const landmarkProps = ariaLabel ? { role: "region", "aria-label": ariaLabel } : {};
   return (
-    <div className="table-wrap" {...landmarkProps} style={{ maxHeight }}>
+    <div className="table-wrap" {...landmarkProps} tabIndex={0} style={{ maxHeight }}>
       <table>
         <thead><tr>{cols.map(c => <th key={c} scope="col">{headerMap[c] || c}</th>)}</tr></thead>
         <tbody>
