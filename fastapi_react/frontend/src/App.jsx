@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "./api";
 import DataExplorer from "./pages/DataExplorer";
 import Analytics from "./pages/Analytics";
@@ -24,7 +24,7 @@ const BASE_TITLE = "Gridlocked - Formula 1 Betting & Analytics";
 export default function App() {
   const [active, setActive] = useState("Data Explorer");
   const [meta, setMeta] = useState(null);
-  const [filterRevision, setFilterRevision] = useState(0);
+  const [filterRevision, setFilterRevision] = useState(0);\n  const tabStripRef = useRef(null);
   const [filtersActive, setFiltersActive] = useState(() => {
     try { return Boolean(JSON.parse(sessionStorage.getItem("f1analysis.filters") || "null")?.applied); }
     catch { return false; }
@@ -71,7 +71,7 @@ export default function App() {
             <p className="caption">Code deployed at: {meta?.code_deployed_at || "Loading…"}</p>
           </header>
 
-          <nav className="streamlit-tabs" aria-label="Main sections">
+          <nav ref={tabStripRef} className="streamlit-tabs" aria-label="Main sections">
             <div className="streamlit-tablist" role="tablist" aria-label="Main sections">
               {pages.map(({ key, label }) => (
                 <button
