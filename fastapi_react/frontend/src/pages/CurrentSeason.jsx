@@ -5,15 +5,15 @@ import { Status } from "../components/UI";
 const COLUMNS = ["round", "fullName", "date", "time", "circuitType", "courseLength", "laps", "turns", "distance", "totalRacesHeld"];
 const LABELS = {
   round: "Round",
-  fullName: "Grand Prix",
+  fullName: "Name",
   date: "Date",
   time: "Time",
-  circuitType: "Circuit Type",
-  courseLength: "Course Length",
-  laps: "Laps",
-  turns: "Turns",
-  distance: "Distance",
-  totalRacesHeld: "Total Races Held",
+  circuitType: "Type",
+  courseLength: "Lap Length (km)",
+  laps: "Number of Laps",
+  turns: "Number of Turns",
+  distance: "Distance (km)",
+  totalRacesHeld: "Races Held",
 };
 
 export default function CurrentSeason() {
