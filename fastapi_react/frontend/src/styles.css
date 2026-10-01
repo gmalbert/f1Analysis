@@ -178,7 +178,7 @@ button:disabled { opacity: .5; cursor: not-allowed; }
   border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: .6rem .05rem; background: transparent;
   color: #586069; white-space: nowrap;
 }
-.subtabs button.active { background: transparent; border-color: var(--accent); color: var(--text); font-weight: 600; }
+.subtabs button.active { background: transparent; border-color: var(--accent); color: var(--accent); font-weight: 400; }
 
 details { margin: .7rem 0 1.2rem; border: 1px solid #d7d8da; border-radius: .5rem; padding: .7rem .85rem; }
 details summary { cursor: pointer; font-weight: 600; }
@@ -197,6 +197,13 @@ details[open] summary { margin-bottom: .8rem; }
 .form-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(190px,1fr)); gap: .8rem 1rem; margin: .7rem 0 1rem; }
 .form-grid label, .field-label { color: var(--text); font-size: .9rem; }
 .form-grid input, .form-grid select { margin-top: .3rem; }
+#model-type-select,
+.page-content .form-grid input,
+.page-content .field-label > input,
+.page-content .field-label > select {
+  background: var(--secondary-bg);
+  border-color: transparent;
+}
 
 .raw-grid { display: grid; grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
 .file-list { max-height: 620px; overflow-y: auto; display: grid; gap: .15rem; }
