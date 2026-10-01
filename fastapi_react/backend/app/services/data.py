@@ -49,6 +49,29 @@ def load_main_data() -> pd.DataFrame:
     if not MAIN_DATA.exists():
         raise FileNotFoundError(f"Missing required dataset: {MAIN_DATA}")
     df = pd.read_csv(MAIN_DATA, sep="\t", low_memory=False)
+
+    # Streamlit's get_shared_dataset() recreates several canonical driver/constructor
+    # statistics from legacy merge-suffixed columns before it builds the filter
+    # sidebar. Mirror those aliases here so the API exposes the same filters and
+    # query semantics instead of silently dropping them.
+    streamlit_aliases = {
+        "bestChampionshipPosition": "bestChampionshipPosition_results_with_qualifying",
+        "bestStartingGridPosition": "bestStartingGridPosition_results_with_qualifying",
+        "bestRaceResult": "bestRaceResult_results_with_qualifying",
+        "totalChampionshipWins": "totalChampionshipWins_results_with_qualifying",
+        "totalRaceStarts": "totalRaceStarts_results_with_qualifying",
+        "totalRaceWins": "totalRaceWins_results_with_qualifying",
+        "totalRaceLaps": "totalRaceLaps_results_with_qualifying",
+        "totalPodiums": "totalPodiums_results_with_qualifying",
+        "totalPoints": "totalPoints_results_with_qualifying",
+        "totalChampionshipPoints": "totalChampionshipPoints_results_with_qualifying",
+        "totalFastestLaps": "totalFastestLaps_results_with_qualifying",
+        "totalRaceEntries": "totalRaceEntries_results_with_qualifying",
+    }
+    for canonical, legacy in streamlit_aliases.items():
+        if canonical not in df.columns and legacy in df.columns:
+            df[canonical] = df[legacy]
+
     for candidate in ("short_date", "date", "grandPrixDate"):
         if candidate in df.columns:
             df[candidate] = pd.to_datetime(df[candidate], errors="coerce")
