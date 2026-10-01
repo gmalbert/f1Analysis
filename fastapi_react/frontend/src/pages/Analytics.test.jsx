@@ -52,9 +52,10 @@ describe('Analytics page', () => {
     });
   });
 
-  it('waits for the Data Explorer filter flow before rendering the analytics', () => {
+  it('waits for the Data Explorer filter flow before rendering the analytics', async () => {
     render(<Analytics />);
     expect(screen.getByText('Please filter results in the Data Explorer tab first to view analytics.')).toBeInTheDocument();
     expect(apiMock.post).not.toHaveBeenCalled();
+    await waitFor(() => expect(apiMock.get).toHaveBeenCalled());
   });
 });

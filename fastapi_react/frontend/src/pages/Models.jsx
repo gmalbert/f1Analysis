@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from "../api";
-import { Card, DataTable, JsonBlock, Status, Tabs } from "../components/UI";
+import { Card, DataTable, Status, Tabs } from "../components/UI";
 
 const advancedTabs = [
   "Performance", "Feature Importance", "Feature Selection", "Position Analysis",
@@ -19,12 +19,31 @@ function Artifact({ name, data }) {
   const payload = data?.data;
   if (payload == null) return <Card title={name}><div className="empty">No precomputed artifact found.</div></Card>;
   const firstArray = Object.entries(payload).find(([, value]) => Array.isArray(value) && value.length && typeof value[0] === "object");
+  const summary = Object.fromEntries([
+    ...Object.entries(payload).filter(([key]) => key !== firstArray?.[0] && key !== "metadata"),
+    ...Object.entries(payload.metadata || {}).map(([key, value]) => [`metadata.${key}`, value]),
+  ]);
   return (
     <Card title={name.replaceAll("_", " ")}>
-      {payload.metadata && <JsonBlock value={payload.metadata} />}
-      {firstArray ? <DataTable rows={firstArray[1]} /> : <JsonBlock value={payload} />}
+      {Object.keys(summary).length > 0 && <ValueSummary value={summary} />}
+      {firstArray ? <DataTable rows={firstArray[1]} /> : <div className="empty">No tabular details available.</div>}
     </Card>
   );
+}
+
+function describeValue(value) {
+  if (value == null) return "—";
+  if (Array.isArray(value)) return `${value.length} items`;
+  if (typeof value === "object") return `${Object.keys(value).length} fields`;
+  return String(value);
+}
+
+function ValueSummary({ value }) {
+  const rows = Object.entries(value || {}).map(([field, fieldValue]) => ({
+    field,
+    value: describeValue(fieldValue),
+  }));
+  return rows.length ? <DataTable rows={rows} /> : <div className="empty">No summary available.</div>;
 }
 
 export default function Models() {
@@ -92,7 +111,6 @@ export default function Models() {
               <div className="metric"><span>R²</span><strong>{manifest?.metrics?.r2?.toFixed?.(3) ?? "—"}</strong></div>
               <div className="metric"><span>Features</span><strong>{manifest?.feature_names?.length ?? "—"}</strong></div>
             </div>
-            <JsonBlock value={manifest || { selected_model: selectedModel, artifact_policy: "precomputed-only" }} />
           </Card>
         )}
 
@@ -106,7 +124,7 @@ export default function Models() {
         {tab === "Debug" && (
           <>
             <Card title="Runtime">
-              <JsonBlock value={health} />
+              <ValueSummary value={health} />
             </Card>
             <Card title="Manual / Expensive Analysis Tools">
               <p className="muted">These controls mirror the Streamlit research tools but are disabled by default. Set <code>ENABLE_EXPENSIVE_TOOLS=1</code> only on a test host.</p>
@@ -117,7 +135,7 @@ export default function Models() {
                   </button>
                 ))}
               </div>
-              {toolOutput && <JsonBlock value={toolOutput} />}
+              {toolOutput && <ValueSummary value={toolOutput} />}
             </Card>
           </>
         )}

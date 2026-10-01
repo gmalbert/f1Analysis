@@ -39,6 +39,7 @@ describe('DataExplorer page', () => {
     await waitFor(() => {
       expect(apiMock.get).toHaveBeenCalledWith('/api/data-explorer/schema');
     });
+    expect(screen.queryByText('0 rows')).not.toBeInTheDocument();
     expect(apiMock.post).not.toHaveBeenCalled();
     expect(screen.queryByText('Find one of the dataset fields…')).not.toBeInTheDocument();
   });
@@ -77,7 +78,10 @@ describe('DataExplorer page', () => {
     apiMock.post.mockResolvedValue({ total: 12, columns: ['grandPrixYear'], rows: [{ grandPrixYear: 2025 }] });
     render(<DataExplorer />);
     fireEvent.click(await screen.findByRole('checkbox', { name: 'Filter Results' }));
-    await waitFor(() => expect(apiMock.post).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ filters: [] })));
+    await waitFor(() => expect(apiMock.post).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+      filters: [],
+      limit: 5000,
+    })));
     expect(await screen.findByText('2025')).toBeInTheDocument();
   });
 });

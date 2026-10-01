@@ -1,45 +1,49 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import App from "./App";
-
-vi.mock("./api", () => ({
-  api: { get: vi.fn().mockResolvedValue({ status: "ok", rss_mb: 120 }) },
-}));
-vi.mock("./pages/DataExplorer", () => ({ default: () => <h1>Explorer page</h1> }));
-vi.mock("./pages/Analytics", () => ({ default: () => <h1>Analytics page</h1> }));
-vi.mock("./pages/CurrentSeason", () => ({ default: () => <h1>Season page</h1> }));
-vi.mock("./pages/NextRace", () => ({ default: () => <h1>Next race page</h1> }));
-vi.mock("./pages/Models", () => ({ default: () => <h1>Models page</h1> }));
-vi.mock("./pages/RawData", () => ({ default: () => <h1>Raw data page</h1> }));
-vi.mock("./pages/BettingResearch", () => ({ default: () => <h1>Betting page</h1> }));
-
-describe("application shell", () => {
-  beforeEach(() => {
-    window.history.replaceState({}, "", "/");
-    Object.defineProperty(window, "scrollTo", { configurable: true, value: vi.fn() });
-    document.title = "";
+import {fireEvent,render,screen,waitFor} from '@testing-library/react';
+import {beforeEach,describe,expect,it,vi} from 'vitest';
+import App from './App';
+import {api} from './api';
+vi.mock('./api',()=>({api:{post:vi.fn()}}));
+vi.mock('./components/ViewTable',()=>({ViewTable:()=>null}));
+const nodes=[{type:'heading',level:2,text:'Data Explorer'},{type:'checkbox',key:'filter_results_main',label:'Filter Results',value:false}];
+describe('reference application shell',()=>{
+  beforeEach(()=>{
+    window.history.replaceState({},'','/');sessionStorage.clear();localStorage.clear();
+    Object.defineProperty(window,'scrollTo',{configurable:true,value:vi.fn()});
+    api.post.mockImplementation(async(_,payload)=>({shell:[{type:'heading',level:1,text:'F1 Races from 2016 to 2026'}],nodes:payload.page===1?nodes:[{type:'heading',level:2,text:`Page ${payload.page}`}],sidebar:[{type:'heading',level:2,text:'Select filters to apply:'}]}));
   });
-
-  it("renders the reference brand, section navigation, and API status", async () => {
-    render(<App />);
-    expect(screen.getByRole("img", { name: "Gridlocked" })).toHaveAttribute("src", "/api/brand/logo");
-    expect(screen.getByText(/F1 Races from 2016 to/)).toBeInTheDocument();
-    expect(screen.getByRole("navigation", { name: "Sections" })).toBeInTheDocument();
-    expect(await screen.findByText("API connected")).toBeInTheDocument();
+  it('renders the reference heading, brand and seven accessible tabs',async()=>{
+    render(<App/>);
+    expect(await screen.findByRole('heading',{name:'Data Explorer'})).toBeInTheDocument();
+    expect(screen.getByRole('img',{name:'Gridlocked'})).toHaveAttribute('src','/api/brand/logo');
+    expect(screen.getAllByRole('tab')).toHaveLength(7);
+    expect(document.title).toBe('Gridlocked - Formula 1 Betting & Analytics');
   });
-
-  it("switches sections from the horizontal navigation and updates the title", async () => {
-    render(<App />);
-    fireEvent.click(screen.getByRole("button", { name: "Analytics" }));
-    expect(await screen.findByRole("heading", { name: "Analytics page" })).toBeInTheDocument();
-    await waitFor(() => expect(document.title).toBe("Analytics — F1 Analysis"));
-    expect(window.location.hash).toBe("#/Analytics");
+  it('navigates and carries filter state into the next page',async()=>{
+    render(<App/>);fireEvent.click(await screen.findByRole('checkbox',{name:'Filter Results'}));
+    expect(await screen.findByRole('complementary',{name:'Data filters'})).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab',{name:/Analytics & Visualizations/}));
+    expect(await screen.findByRole('heading',{name:'Page 2'})).toBeInTheDocument();
+    expect(api.post).toHaveBeenLastCalledWith('/api/views',expect.objectContaining({page:2,values:{filter_results_main:true}}));
+    expect(window.location.hash).toBe('#/Analytics');
+    expect(JSON.parse(sessionStorage.getItem('f1analysis.view-values'))).toEqual({filter_results_main:true});
+    fireEvent.click(screen.getByRole('button',{name:'Close sidebar'}));
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button',{name:'Open sidebar'}));
+    expect(screen.getByRole('complementary')).toBeInTheDocument();
   });
-
-  it("persists the light theme toggle", async () => {
-    render(<App />);
-    fireEvent.click(screen.getByRole("checkbox", { name: "Use light theme" }));
-    await waitFor(() => expect(document.documentElement).toHaveAttribute("data-theme", "light"));
-    expect(localStorage.getItem("f1analysis.theme")).toBe("light");
+  it('supports keyboard tab navigation and persistent theme selection',async()=>{
+    render(<App/>);await screen.findByRole('heading',{name:'Data Explorer'});
+    fireEvent.keyDown(screen.getByRole('tab',{name:/Data Explorer/}),{key:'ArrowRight'});
+    expect(await screen.findByRole('heading',{name:'Page 2'})).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button',{name:'Settings'}));
+    fireEvent.click(screen.getByRole('checkbox',{name:'Use light theme'}));
+    await waitFor(()=>expect(document.documentElement.dataset.theme).toBe('dark'));
+    expect(localStorage.getItem('f1analysis.theme')).toBe('dark');
+  });
+  it('shows a failed request and successfully retries it',async()=>{
+    api.post.mockRejectedValueOnce(new Error('Unable to load analysis'));
+    render(<App/>);expect(await screen.findByRole('alert')).toHaveTextContent('Unable to load analysis');
+    fireEvent.click(screen.getByRole('button',{name:'Retry'}));
+    expect(await screen.findByRole('heading',{name:'Data Explorer'})).toBeInTheDocument();
   });
 });

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import os
+from datetime import UTC, datetime
 from typing import Any
 
 import psutil
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 
 from app.config import DATA_DIR, ENABLE_EXPENSIVE_TOOLS, MODEL_TYPES, REPO_ROOT
@@ -16,6 +18,7 @@ from app.schemas import (
     RowsPayload,
     SimulationRequest,
     ToolRunRequest,
+    ViewRequest,
 )
 from app.services.analysis import analytics, current_season, next_race_bundle, tire_strategy
 from app.services.betting import backtest, calibration, governance, simulate, value_and_stake
@@ -25,9 +28,12 @@ from app.services.data import (
     model_manifest,
     precomputed,
     query_main,
+    query_streamlit_raw_data,
     read_table,
     resolve_data_file,
+    streamlit_table_schema,
 )
+from app.services.presentation import render_view
 from app.services.tools import TOOLS, run_tool
 
 app = FastAPI(
@@ -37,6 +43,20 @@ app = FastAPI(
     docs_url="/api/docs",
     openapi_url="/api/openapi.json",
 )
+CODE_DEPLOYED_AT = datetime.now(UTC)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+
+@app.post("/api/views")
+def view(payload: ViewRequest) -> dict[str, Any]:
+    try:
+        return render_view(payload.page, payload.values, payload.action)
+    except Exception as exc:
+        import logging
+
+        logging.getLogger(__name__).exception("Could not render analysis page %s", payload.page)
+        raise _http_error(exc) from exc
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -73,7 +93,11 @@ def health() -> dict[str, Any]:
 @app.get("/api/brand/logo")
 def brand_logo() -> FileResponse:
     """Serve the same Gridlocked mark used by the Streamlit reference."""
-    logo = DATA_DIR / "gridlocked-logo-with-text.png"
+    # Match the reference's 450px PNG encoding rather than resizing the
+    # original full-resolution asset independently in each browser.
+    logo = REPO_ROOT / "fastapi_react" / "frontend" / "public" / "gridlocked-logo.png"
+    if not logo.is_file():
+        logo = DATA_DIR / "gridlocked-logo-with-text.png"
     if not logo.is_file():
         raise HTTPException(404, "Brand logo is unavailable")
     return FileResponse(logo, media_type="image/png")
@@ -81,10 +105,23 @@ def brand_logo() -> FileResponse:
 
 @app.get("/api/meta")
 def meta() -> dict[str, Any]:
+    data_files = [path for path in DATA_DIR.iterdir() if path.is_file()] if DATA_DIR.is_dir() else []
+    latest_data_file = max(data_files, key=lambda path: path.stat().st_mtime, default=None)
     return {
+        "last_updated": (
+            datetime.fromtimestamp(latest_data_file.stat().st_mtime).strftime("%Y-%m-%d %I:%M %p")
+            if latest_data_file is not None
+            else "No data files found"
+        ),
+        "deployed_at": CODE_DEPLOYED_AT.strftime("%Y-%m-%d %H:%M:%S UTC"),
         "tabs": [
-            "Data Explorer", "Analytics", "Current Season", "Next Race",
-            "Predictive Models", "Raw Data", "Betting Research",
+            "Data Explorer",
+            "Analytics",
+            "Current Season",
+            "Next Race",
+            "Predictive Models",
+            "Raw Data",
+            "Betting Research",
         ],
         "models": MODEL_TYPES,
         "expensive_tools_enabled": ENABLE_EXPENSIVE_TOOLS,
@@ -96,6 +133,22 @@ def meta() -> dict[str, Any]:
 def data_explorer_schema() -> dict[str, Any]:
     try:
         return {"filters": filter_schema()}
+    except Exception as exc:
+        raise _http_error(exc) from None
+
+
+@app.get("/api/data-explorer/display-schema")
+def data_explorer_display_schema() -> dict[str, Any]:
+    try:
+        return streamlit_table_schema()
+    except Exception as exc:
+        raise _http_error(exc) from None
+
+
+@app.post("/api/raw/analysis-data")
+def raw_analysis_data(request: QueryRequest) -> dict[str, Any]:
+    try:
+        return query_streamlit_raw_data(request.offset, request.limit)
     except Exception as exc:
         raise _http_error(exc) from None
 
@@ -133,7 +186,9 @@ def next_race_route() -> dict[str, Any]:
 
 
 @app.get("/api/analytics/tire-strategy")
-def tire_strategy_route(year: int | None = Query(default=None), event_name: str | None = Query(default=None)) -> dict[str, Any]:
+def tire_strategy_route(
+    year: int | None = Query(default=None), event_name: str | None = Query(default=None)
+) -> dict[str, Any]:
     """Return the tire-strategy tables and chart data for a year and race."""
     try:
         return tire_strategy(year, event_name)

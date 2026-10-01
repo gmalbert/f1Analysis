@@ -87,7 +87,7 @@ export default function DataExplorer() {
   async function runQuery(filters = activeFilters(), columns = preferredColumns) {
     setLoading(true); setError(null);
     try {
-      const body = { filters, columns, sort: ["grandPrixYear", "resultsFinalPositionNumber"], descending: true, offset: 0, limit: 500 };
+      const body = { filters, columns, sort: ["grandPrixYear", "resultsFinalPositionNumber"], descending: true, offset: 0, limit: 5000 };
       const r = /** @type {{ total: number, columns: string[], rows: Array<Record<string, any>> }} */ (
         await api.post("/api/data-explorer/query", body)
       );
@@ -131,7 +131,7 @@ export default function DataExplorer() {
     <div>
       <header className="page-header">
         <div><h1>Data Explorer</h1><p>Filter and explore F1 race data from multiple perspectives.</p></div>
-        <div className="count-pill">{result.total.toLocaleString()} rows</div>
+        {hasAppliedFilters && <div className="count-pill">{result.total.toLocaleString()} rows</div>}
       </header>
 
       <label className="filter-results-toggle">

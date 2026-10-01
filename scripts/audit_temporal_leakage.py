@@ -29,6 +29,82 @@ def find_date_column(df):
     return None
 
 
+def run_audit(nrows=None):
+    """Return the structured report expected by both application audit panels.
+
+    The command-line entry point remains available. This callable performs
+    the panel's name, equality, correlation, lag and future-date heuristics
+    without changing the analysis dataset or fitting a prediction model.
+    """
+    if nrows is not None and (not isinstance(nrows, int) or nrows < 1):
+        raise ValueError('Rows to read must be a positive integer or None.')
+    data_dir = Path(__file__).resolve().parents[1] / 'data_files'
+    df = pd.read_csv(data_dir / 'f1ForAnalysis.csv', sep='\t', low_memory=False, nrows=nrows)
+    findings = []
+    columns = ['feature', 'issue_type', 'target', 'metric', 'metric2', 'metric_name', 'explanation', 'diff', 'extra_info']
+
+    def flag(feature, issue, target='', metric=None, metric2=None, name='', explanation='', diff=None, note=''):
+        findings.append(dict(zip(columns, [feature, issue, target, metric, metric2, name, explanation, diff, note])))
+
+    targets = [c for c in ['resultsFinalPositionNumber', 'DNF', 'SafetyCarStatus'] if c in df]
+    patterns = ['post', 'after', 'final', 'result', 'total', 'future', 'next_', 'lead', 'target']
+    for column in df:
+        if column not in targets and any(pattern in column.lower() for pattern in patterns):
+            flag(column, 'name_pattern', explanation='Name may describe a post-event result or accumulated statistic; review availability at prediction time.')
+
+    numeric = df.select_dtypes(include=['number', 'bool']).astype(float)
+    for target in targets:
+        if target not in numeric or numeric[target].nunique() < 2:
+            continue
+        for column in numeric:
+            if column == target:
+                continue
+            valid = numeric[[column, target]].dropna()
+            if len(valid) < 10 or valid[column].nunique() < 2 or valid[target].nunique() < 2:
+                continue
+            correlation = valid[column].corr(valid[target])
+            if pd.notna(correlation) and abs(correlation) >= .95:
+                flag(column, 'high_correlation', target, float(correlation), name='pearson', explanation='Feature is very strongly correlated with the same-event target.', note=f'{len(valid)} non-missing pairs')
+            equality = float((valid[column] == valid[target]).mean())
+            if equality > .5:
+                flag(column, 'exact_equality', target, equality, name='fraction_equal', explanation='Feature equals the target in more than half of non-missing pairs.', note=f'{len(valid)} pairs')
+
+    driver = next((c for c in ['resultsDriverId', 'driverId', 'resultsDriverName'] if c in df), None)
+    date_column = find_date_column(df)
+    if driver and date_column:
+        ordered = df.assign(_audit_date=pd.to_datetime(df[date_column], errors='coerce')).sort_values('_audit_date')
+        for target in targets:
+            next_target = pd.to_numeric(ordered.groupby(driver)[target].shift(-1), errors='coerce')
+            current_target = pd.to_numeric(ordered[target], errors='coerce')
+            for column in numeric:
+                if column in targets:
+                    continue
+                feature = pd.to_numeric(ordered[column], errors='coerce')
+                paired = pd.DataFrame({'feature': feature, 'next': next_target, 'current': current_target}).dropna()
+                if len(paired) < 10 or any(paired[c].nunique() < 2 for c in paired):
+                    continue
+                future = paired['feature'].corr(paired['next'])
+                current = paired['feature'].corr(paired['current'])
+                if pd.notna(future) and pd.notna(current) and abs(future) >= .7 and abs(future) > abs(current) + .1:
+                    flag(column, 'lagged_correlation', target, float(future), float(current), 'pearson_next_vs_current', 'Association with the next driver event is substantially stronger than with the current event.', float(abs(future) - abs(current)))
+
+    races = pd.read_json(data_dir / 'f1db-races.json')
+    race_date = find_date_column(races)
+    if race_date and 'raceId' in df and 'id' in races:
+        dates = pd.to_datetime(df['raceId'].map(races.set_index('id')[race_date]), errors='coerce')
+        if date_column:
+            after = pd.to_datetime(df[date_column], errors='coerce') > dates
+            if after.any():
+                flag(date_column, 'date_after_race', metric=int(after.sum()), name='rows', explanation='Analysis date occurs after the scheduled race date.')
+        future = dates > pd.Timestamp.now().normalize()
+        for column in df:
+            if any(word in column.lower() for word in ['practice', 'qual', 'best_qual']):
+                present = int(df.loc[future, column].notna().sum())
+                if present:
+                    flag(column, 'future_event_data', metric=present, name='rows', explanation='Practice or qualifying values are present for a future scheduled race.')
+    return pd.DataFrame(findings, columns=columns)
+
+
 def main():
     p = argparse.ArgumentParser(description='Audit temporal leakage in f1ForAnalysis.csv')
     p.add_argument('--data', default='data_files/f1ForAnalysis.csv')
