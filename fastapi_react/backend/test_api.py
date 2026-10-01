@@ -59,6 +59,28 @@ def test_data_explorer_schema_returns_filters() -> None:
     assert body["filters"], "schema should return at least one filterable column"
 
 
+def test_data_explorer_schema_matches_streamlit_standings_filters() -> None:
+    response = client.get("/api/data-explorer/schema")
+    assert response.status_code == 200
+    filters = {item["column"]: item for item in response.json()["filters"]}
+
+    expected_labels = {
+        "Points": "Current Year Points (Driver)",
+        "bestChampionshipPosition": "Best Champ Pos.",
+        "bestRaceResult": "Best Race Result",
+        "bestStartingGridPosition": "Best Starting Grid Pos.",
+        "constructorRank": "Constructor Rank",
+        "driverRank": "Driver Rank",
+    }
+    for column, label in expected_labels.items():
+        assert column in filters
+        assert filters[column]["label"] == label
+
+    assert filters["Points"]["kind"] == "range"
+    assert filters["bestChampionshipPosition"]["kind"] == "range"
+    assert filters["constructorRank"]["kind"] == "range"
+
+
 def test_data_explorer_query_unfiltered() -> None:
     response = client.post("/api/data-explorer/query", json={"limit": 5})
     assert response.status_code == 200
