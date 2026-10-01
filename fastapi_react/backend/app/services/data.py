@@ -72,6 +72,28 @@ def load_main_data() -> pd.DataFrame:
         if canonical not in df.columns and legacy in df.columns:
             df[canonical] = df[legacy]
 
+    # The Streamlit dataset then merges the current constructor and driver
+    # standings before column_names is created. Use key-based maps rather
+    # than a dataframe merge so the API keeps one row per race/driver while
+    # exposing the identical current-standings filter fields.
+    constructor_standings_path = DATA_DIR / "constructor_standings.csv"
+    if constructor_standings_path.exists() and "constructorId_results" in df.columns:
+        standings = pd.read_csv(constructor_standings_path, sep="\t", low_memory=False)
+        if "id" in standings.columns:
+            keyed = standings.drop_duplicates("id").set_index("id")
+            for column in standings.columns:
+                if column in {"id", "name", "fullName", "countryId", "TeamName"}:
+                    continue
+                df[column] = df["constructorId_results"].map(keyed[column])
+
+    driver_standings_path = DATA_DIR / "driver_standings.csv"
+    if driver_standings_path.exists() and "resultsDriverId" in df.columns:
+        standings = pd.read_csv(driver_standings_path, sep="\t", low_memory=False)
+        if "driverId" in standings.columns:
+            keyed = standings.drop_duplicates("driverId").set_index("driverId")
+            if "driverRank" in keyed.columns:
+                df["driverRank"] = df["resultsDriverId"].map(keyed["driverRank"])
+
     for candidate in ("short_date", "date", "grandPrixDate"):
         if candidate in df.columns:
             df[candidate] = pd.to_datetime(df[candidate], errors="coerce")
