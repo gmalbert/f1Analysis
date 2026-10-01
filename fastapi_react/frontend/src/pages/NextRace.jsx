@@ -4,8 +4,8 @@ import { DataTable, Status } from "../components/UI";
 
 const NEXT_RACE_COLUMNS = ["date", "time", "fullName", "courseLength", "turns", "laps"];
 const NEXT_RACE_LABELS = {
-  date: "Date", time: "Time", fullName: "Grand Prix", courseLength: "Course Length",
-  turns: "Turns", laps: "Laps",
+  date: "Date", time: "Time", fullName: "Grand Prix", courseLength: "Lap Length (km)",
+  turns: "Number of Turns", laps: "Number of Laps",
 };
 
 const PIT_LABELS = {
