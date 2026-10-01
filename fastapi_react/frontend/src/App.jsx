@@ -24,7 +24,8 @@ const BASE_TITLE = "Gridlocked - Formula 1 Betting & Analytics";
 export default function App() {
   const [active, setActive] = useState("Data Explorer");
   const [meta, setMeta] = useState(null);
-  const [filterRevision, setFilterRevision] = useState(0);\n  const tabStripRef = useRef(null);
+  const [filterRevision, setFilterRevision] = useState(0);
+  const tabStripRef = useRef(null);
   const [filtersActive, setFiltersActive] = useState(() => {
     try { return Boolean(JSON.parse(sessionStorage.getItem("f1analysis.filters") || "null")?.applied); }
     catch { return false; }
