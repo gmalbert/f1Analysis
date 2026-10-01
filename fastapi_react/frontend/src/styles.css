@@ -50,7 +50,7 @@ main:focus { outline: none; }
   line-height: 1.3;
 }
 .global-filter-sidebar .filter-list { gap: .9rem; }
-.global-filter-sidebar .filter-row > label { display: block; width: 100%; }
+.global-filter-sidebar .filter-row > label:not(.streamlit-checkbox) { display: block; width: 100%; }
 .global-filter-sidebar .filter-row label > span:first-child { display: block; margin-bottom: .3rem; font-size: .86rem; }
 .global-filter-sidebar .streamlit-checkbox { display: flex; align-items: center; gap: .45rem; }
 .global-filter-sidebar .streamlit-checkbox > span { margin: 0; }
