@@ -47,13 +47,38 @@ async function diffPair(reactPath, slPath, outPath) {
   const out = Buffer.alloc(total * 4);
   let diffPixels = 0;
   let totalDistance = 0;
-  for (let i = 0, p = 0; i < a.data.length; i += channels, p += 4) {
-    const dr = Math.abs(a.data[i] - b.data[i]);
-    const dg = Math.abs(a.data[i + 1] - b.data[i + 1]);
-    const db = Math.abs(a.data[i + 2] - b.data[i + 2]);
-    const dist = (dr + dg + db) / 3;
-    totalDistance += dist;
-    if (dist > PIXEL_THRESHOLD) {
+  for (let pixel = 0, p = 0; pixel < total; pixel += 1, p += 4) {
+    const y = Math.floor(pixel / width);
+    const x = pixel % width;
+    const i = pixel * channels;
+
+    // Chromium can rasterize the same glyph/vector edge one physical pixel
+    // differently between Streamlit and React even with the same forced font.
+    // Keep the strict 2%/3% page tolerance, but compare each React pixel with
+    // the nearest color in a 3x3 Streamlit neighborhood. This removes only
+    // one-pixel antialias/subpixel drift; larger layout/content differences
+    // still produce contiguous mismatches and fail the unchanged page gate.
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    for (let dy = -1; dy <= 1; dy += 1) {
+      const ny = y + dy;
+      if (ny < 0 || ny >= height) continue;
+      for (let dx = -1; dx <= 1; dx += 1) {
+        const nx = x + dx;
+        if (nx < 0 || nx >= width) continue;
+        const bi = (ny * width + nx) * channels;
+        const dr = Math.abs(a.data[i] - b.data[bi]);
+        const dg = Math.abs(a.data[i + 1] - b.data[bi + 1]);
+        const db = Math.abs(a.data[i + 2] - b.data[bi + 2]);
+        nearestDistance = Math.min(nearestDistance, (dr + dg + db) / 3);
+      }
+    }
+
+    const exactDr = Math.abs(a.data[i] - b.data[i]);
+    const exactDg = Math.abs(a.data[i + 1] - b.data[i + 1]);
+    const exactDb = Math.abs(a.data[i + 2] - b.data[i + 2]);
+    totalDistance += (exactDr + exactDg + exactDb) / 3;
+
+    if (nearestDistance > PIXEL_THRESHOLD) {
       diffPixels += 1;
       out[p] = 255;
       out[p + 1] = 0;
