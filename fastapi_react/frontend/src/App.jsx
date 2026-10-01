@@ -46,7 +46,9 @@ export default function App() {
 
   useEffect(() => {
     document.title = BASE_TITLE;
-  }, [active]);
+    const activeTab = tabStripRef.current?.querySelector('[aria-selected="true"]');
+    activeTab?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  }, [active, filtersActive]);
 
   function navigate(page) {
     setActive(page);
