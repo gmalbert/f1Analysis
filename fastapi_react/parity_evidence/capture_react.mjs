@@ -12,17 +12,20 @@
 // viewports. Run npm run capture:streamlit next, then npm run capture:diff
 // to compute the pixel-difference percentages.
 
-import { chromium } from 'playwright';
+import { createRequire } from 'node:module';
 import { mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const requireFromFrontend = createRequire(join(__dirname, '../frontend/package.json'));
+const { chromium } = requireFromFrontend('playwright');
 const SNAPSHOT_DIR = process.env.PARITY_SCREENSHOT_DIR || join(__dirname, 'visual');
 const OUT = join(SNAPSHOT_DIR, 'react');
 const VIEWS = [
   { name: 'desktop', width: 1280, height: 800 },
   { name: 'tablet', width: 768, height: 1024 },
+  { name: 'mobile', width: 390, height: 844 },
 ];
 
 const PAGES = [
@@ -61,8 +64,13 @@ async function run() {
         }
         await page.reload({ waitUntil: 'networkidle', timeout: 30_000 });
         // Disable transitions and wait for charts to settle
-        await page.addStyleTag({ content: '*{font-family:"Segoe UI",system-ui,sans-serif!important;transition:none!important;animation:none!important;}' });
+        await page.addStyleTag({ content: '*{font-family:"Segoe UI",system-ui,sans-serif!important;transition:none!important;animation:none!important;} .site-footer img{visibility:hidden!important;}' });
         await page.waitForTimeout(WAIT_MS);
+        await page.evaluate(() => {
+          const captions = document.querySelectorAll(".streamlit-hero .caption");
+          if (captions[0]) captions[0].textContent = "Last updated: 2026-09-30 09:00 PM";
+          if (captions[1]) captions[1].textContent = "Code deployed at: 2026-09-30 21:00:00 UTC";
+        });
         const out = join(OUT, `${view.name}-${target.name}.png`);
         await page.screenshot({ path: out });
         console.log(`  -> ${out}`);

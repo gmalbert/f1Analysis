@@ -6,6 +6,7 @@ they double as a smoke test for the migration.
 """
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
@@ -56,6 +57,28 @@ def test_data_explorer_schema_returns_filters() -> None:
     assert "filters" in body
     assert isinstance(body["filters"], list)
     assert body["filters"], "schema should return at least one filterable column"
+
+
+def test_data_explorer_schema_matches_streamlit_standings_filters() -> None:
+    response = client.get("/api/data-explorer/schema")
+    assert response.status_code == 200
+    filters = {item["column"]: item for item in response.json()["filters"]}
+
+    expected_labels = {
+        "Points": "Current Year Points (Driver)",
+        "bestChampionshipPosition": "Best Champ Pos.",
+        "bestRaceResult": "Best Race Result",
+        "bestStartingGridPosition": "Best Starting Grid Pos.",
+        "constructorRank": "Constructor Rank",
+        "driverRank": "Driver Rank",
+    }
+    for column, label in expected_labels.items():
+        assert column in filters
+        assert filters[column]["label"] == label
+
+    assert filters["Points"]["kind"] == "range"
+    assert filters["bestChampionshipPosition"]["kind"] == "range"
+    assert filters["constructorRank"]["kind"] == "range"
 
 
 def test_data_explorer_query_unfiltered() -> None:
@@ -163,6 +186,53 @@ def test_next_race_endpoint() -> None:
         assert body["predictions"]["format"] == "json"
         assert body["predictions"]["predictions_by_model"]
         assert "fastest_pit_stops" in body
+
+
+def test_safety_car_loader_matches_streamlit_search_order(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    import pickle
+
+    models = tmp_path / "models"
+    xgboost = models / "xgboost"
+    xgboost.mkdir(parents=True)
+    with (xgboost / "safetycar_model.pkl").open("wb") as handle:
+        pickle.dump({"model": "wrapped-safety-model"}, handle)
+
+    monkeypatch.setattr(analysis, "DATA_DIR", tmp_path)
+    analysis._load_safety_car_model.cache_clear()
+    try:
+        assert analysis._load_safety_car_model() == "wrapped-safety-model"
+    finally:
+        analysis._load_safety_car_model.cache_clear()
+
+
+def test_safety_car_predictions_include_historical_and_next_race(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FakeSafetyModel:
+        def predict_proba(self, frame: pd.DataFrame) -> np.ndarray:
+            return np.tile(np.array([[0.25, 0.75]]), (len(frame), 1))
+
+    history = pd.DataFrame({
+        "grandPrixName": ["Singapore Grand Prix", "Singapore Grand Prix"],
+        "grandPrixYear": [2024, 2025],
+        "turns": [19, 19],
+        "SafetyCarStatus": [1, 0],
+    })
+    monkeypatch.setattr(analysis, "_load_safety_car_inputs", lambda: history)
+    monkeypatch.setattr(analysis, "_load_safety_car_model", lambda: FakeSafetyModel())
+
+    payload = analysis.build_safety_car_predictions(
+        pd.Series({"turns": 19}),
+        "Singapore Grand Prix",
+        2026,
+        pd.DataFrame(),
+    )
+
+    assert payload["mean"] == pytest.approx(75.0)
+    assert payload["rows"][0]["grandPrixYear"] == 2026
+    assert payload["rows"][0]["Type"] == "Next Race"
+    assert len(payload["rows"]) == 3
 
 
 def test_tire_strategy_endpoint_returns_selected_race_and_year_summary() -> None:

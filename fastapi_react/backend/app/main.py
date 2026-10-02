@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import os
 from typing import Any
 
@@ -22,6 +23,7 @@ from app.services.betting import backtest, calibration, governance, simulate, va
 from app.services.data import (
     filter_schema,
     list_data_files,
+    load_main_data,
     model_manifest,
     precomputed,
     query_main,
@@ -81,6 +83,16 @@ def brand_logo() -> FileResponse:
 
 @app.get("/api/meta")
 def meta() -> dict[str, Any]:
+    data = load_main_data()
+    years = data.get("grandPrixYear")
+    race_start_year = int(years.min()) if years is not None and years.notna().any() else 2016
+    current_year = int(years.max()) if years is not None and years.notna().any() else datetime.datetime.now().year
+    candidates = [path for path in DATA_DIR.iterdir() if path.is_file()] if DATA_DIR.exists() else []
+    latest = max(candidates, key=lambda path: path.stat().st_mtime, default=None)
+    last_updated = (
+        datetime.datetime.fromtimestamp(latest.stat().st_mtime).strftime("%Y-%m-%d %I:%M %p")
+        if latest is not None else "No data files found"
+    )
     return {
         "tabs": [
             "Data Explorer", "Analytics", "Current Season", "Next Race",
@@ -89,6 +101,10 @@ def meta() -> dict[str, Any]:
         "models": MODEL_TYPES,
         "expensive_tools_enabled": ENABLE_EXPENSIVE_TOOLS,
         "manual_tools": list(TOOLS),
+        "race_start_year": race_start_year,
+        "current_year": current_year,
+        "last_updated": last_updated,
+        "code_deployed_at": datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d %H:%M:%S UTC"),
     }
 
 

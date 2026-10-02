@@ -99,7 +99,7 @@ describe('Tabs', () => {
   it('renders all tabs and marks active', () => {
     const onChange = vi.fn();
     render(<Tabs tabs={['one', 'two', 'three']} active="two" onChange={onChange} />);
-    const buttons = screen.getAllByRole('button');
+    const buttons = screen.getAllByRole('tab');
     expect(buttons).toHaveLength(3);
     expect(buttons[1]).toHaveClass('active');
   });
@@ -107,14 +107,14 @@ describe('Tabs', () => {
   it('invokes onChange when a tab is clicked', () => {
     const onChange = vi.fn();
     render(<Tabs tabs={['one', 'two']} active="one" onChange={onChange} />);
-    fireEvent.click(screen.getByRole('button', { name: 'two' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'two' }));
     expect(onChange).toHaveBeenCalledWith('two');
   });
 
   it('supports arrow-key navigation between tabs', () => {
     const onChange = vi.fn();
     render(<Tabs tabs={['one', 'two']} active="one" onChange={onChange} />);
-    fireEvent.keyDown(screen.getByRole('button', { name: 'one' }), { key: 'ArrowRight' });
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'one' }), { key: 'ArrowRight' });
     expect(onChange).toHaveBeenCalledWith('two');
   });
 });

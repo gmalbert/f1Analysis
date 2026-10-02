@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pickle
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -9,7 +10,14 @@ import pandas as pd
 from scipy.stats import linregress
 
 from app.config import DATA_DIR
-from app.services.data import apply_filters, load_main_data, load_race_schedule, records
+from app.services.data import (
+    apply_filters,
+    load_main_data,
+    load_race_schedule,
+    model_manifest,
+    precomputed,
+    records,
+)
 
 
 def _regression(df: pd.DataFrame, x_col: str, y_col: str) -> dict[str, Any] | None:
@@ -52,8 +60,12 @@ def _regression_series(df: pd.DataFrame, x_col: str, y_col: str) -> dict[str, An
 
 
 def analytics(filters: Any, max_rows: int) -> dict[str, Any]:
+    """Return every lightweight analysis block rendered by the Streamlit Analytics tab."""
     df = apply_filters(load_main_data(), filters).head(max_rows).copy()
     payload: dict[str, Any] = {"rows_considered": len(df), "charts": {}, "regressions": []}
+    if df.empty:
+        return payload
+
     pairs = {
         "active_years_vs_final": ("resultsFinalPositionNumber", "yearsActive"),
         "positions_gained_over_time": ("short_date", "positionsGained"),
@@ -61,6 +73,7 @@ def analytics(filters: Any, max_rows: int) -> dict[str, Any]:
         "grid_vs_final": ("resultsStartingGridPositionNumber", "resultsFinalPositionNumber"),
         "avg_practice_vs_final": ("averagePracticePosition", "resultsFinalPositionNumber"),
         "pit_stop_vs_final": ("averageStopTime", "resultsFinalPositionNumber"),
+        "track_turns_vs_final": ("turns", "resultsFinalPositionNumber"),
     }
     for name, (x, y) in pairs.items():
         if x in df and y in df:
@@ -71,8 +84,14 @@ def analytics(filters: Any, max_rows: int) -> dict[str, Any]:
         if result:
             payload["regressions"].append(result)
     regression_titles = {
-        "averagePracticePosition": ("Linear Regression: Average Practice Position vs Final Position", "Average Practice Position"),
-        "resultsStartingGridPositionNumber": ("Linear Regression: Starting Position vs Final Position", "Starting Position"),
+        "averagePracticePosition": (
+            "Linear Regression: Average Practice Position vs Final Position",
+            "Average Practice Position",
+        ),
+        "resultsStartingGridPositionNumber": (
+            "Linear Regression: Starting Position vs. Final Position",
+            "Starting Position",
+        ),
     }
     payload["regression_series"] = []
     for x, (title, x_label) in regression_titles.items():
@@ -90,19 +109,22 @@ def analytics(filters: Any, max_rows: int) -> dict[str, Any]:
         "driverBestRaceResult", "driverTotalChampionshipWins", "driverTotalPolePositions",
         "driverTotalRaceEntries", "driverTotalRaceStarts", "driverTotalRaceWins",
         "driverTotalRaceLaps", "driverTotalPodiums", "avgLapPace", "finishingTime",
+        "resultsQualificationPositionNumber", "numberOfStops",
     ) if c in df]
     if corr_cols:
         corr = df[corr_cols].apply(pd.to_numeric, errors="coerce").corr()
         payload["correlation"] = {
             "columns": list(corr.columns),
             "rows": [
-                {"feature": idx, **{col: (None if pd.isna(v) else float(v)) for col, v in row.items()}}
+                {"Feature": idx, **{col: (None if pd.isna(v) else float(v)) for col, v in row.items()}}
                 for idx, row in corr.iterrows()
             ],
         }
 
     if {"grandPrixYear", "resultsDriverName", "resultsFinalPositionNumber"}.issubset(df.columns):
-        agg = {"average_final_position": ("resultsFinalPositionNumber", "mean")}
+        agg: dict[str, tuple[str, Any]] = {
+            "average_final_position": ("resultsFinalPositionNumber", "mean"),
+        }
         if "resultsPodium" in df:
             agg["total_podiums"] = ("resultsPodium", "sum")
         driver = df.groupby(["grandPrixYear", "resultsDriverName"]).agg(**agg).reset_index()
@@ -112,34 +134,127 @@ def analytics(filters: Any, max_rows: int) -> dict[str, Any]:
         constructor = (
             df.groupby(["grandPrixYear", "constructorName"])
             .agg(
-                total_wins=("resultsFinalPositionNumber", lambda s: int((s == 1).sum())),
+                total_wins=("resultsFinalPositionNumber", lambda values: int((values == 1).sum())),
                 average_final_position=("resultsFinalPositionNumber", "mean"),
             ).reset_index()
         )
         if "resultsPodium" in df:
-            podium = df.groupby(["grandPrixYear", "constructorName"])["resultsPodium"].sum().reset_index(name="total_podiums")
+            podium = (
+                df.groupby(["grandPrixYear", "constructorName"])["resultsPodium"]
+                .sum().reset_index(name="total_podiums")
+            )
             constructor = constructor.merge(podium, on=["grandPrixYear", "constructorName"], how="left")
         payload["constructor_performance"] = records(constructor)
 
-    if {"DNF", "resultsReasonRetired"}.issubset(df.columns):
+    if {"constructorName", "resultsDriverName", "positionsGained", "resultsFinalPositionNumber"}.issubset(df.columns):
+        driver_vs_constructor = (
+            df.groupby(["constructorName", "resultsDriverName"])
+            .agg(
+                positionsGained=("positionsGained", "sum"),
+                average_final_position=("resultsFinalPositionNumber", "mean"),
+            )
+            .reset_index()
+            .sort_values("average_final_position")
+        )
+        driver_vs_constructor["average_final_position"] = driver_vs_constructor["average_final_position"].round(2)
+        payload["driver_vs_constructor"] = records(driver_vs_constructor)
+
+    dnf_rows = pd.DataFrame()
+    if "DNF" in df:
+        dnf_rows = df[pd.to_numeric(df["DNF"], errors="coerce").fillna(0).eq(1)].copy()
+    if not dnf_rows.empty and "resultsReasonRetired" in dnf_rows:
         dnf = (
-            df[pd.to_numeric(df["DNF"], errors="coerce").fillna(0).eq(1)]
-            .groupby("resultsReasonRetired").size().reset_index(name="count")
+            dnf_rows.groupby("resultsReasonRetired").size().reset_index(name="count")
             .sort_values("count", ascending=False)
         )
         payload["dnf_reasons"] = records(dnf)
-    dnf_group_cols = {"DNF", "resultsDriverName", "driverTotalRaceEntries"}
-    if dnf_group_cols.issubset(df.columns):
-        dnf_by_driver = (
-            df[pd.to_numeric(df["DNF"], errors="coerce").eq(1)]
-            .groupby(["resultsDriverName", "driverTotalRaceEntries"])
-            .size().reset_index(name="dnf_count")
+    if not dnf_rows.empty and {"resultsDriverName", "driverTotalRaceEntries"}.issubset(dnf_rows.columns):
+        grouped = (
+            dnf_rows.groupby(["resultsDriverName", "driverTotalRaceEntries"]).size()
+            .reset_index(name="dnf_count")
         )
-        entries = pd.to_numeric(dnf_by_driver["driverTotalRaceEntries"], errors="coerce")
-        dnf_by_driver["dnf_pct"] = (dnf_by_driver["dnf_count"] / entries * 100).round(1)
-        payload["dnf_by_driver"] = records(dnf_by_driver.sort_values("dnf_pct", ascending=False))
-    return payload
+        entries = pd.to_numeric(grouped["driverTotalRaceEntries"], errors="coerce")
+        grouped["dnf_pct"] = (grouped["dnf_count"] / entries * 100).round(1)
+        payload["dnf_by_driver"] = records(grouped.sort_values("dnf_pct", ascending=False))
+    if "grandPrixName" in df:
+        entries = df.groupby("grandPrixName").size().reset_index(name="race_entry_count")
+        if not dnf_rows.empty:
+            dnfs = dnf_rows.groupby("grandPrixName").size().reset_index(name="dnf_count")
+            entries = entries.merge(dnfs, on="grandPrixName", how="left")
+        else:
+            entries["dnf_count"] = 0
+        entries["dnf_count"] = entries["dnf_count"].fillna(0).astype(int)
+        entries["dnf_pct"] = (entries["dnf_count"] / entries["race_entry_count"] * 100).round(1)
+        payload["dnf_by_race"] = records(entries.sort_values("dnf_pct", ascending=False))
+    if "constructorName" in df:
+        entries = df.groupby("constructorName").size().reset_index(name="constructor_entry_count")
+        if not dnf_rows.empty:
+            dnfs = dnf_rows.groupby("constructorName").size().reset_index(name="dnf_count")
+            entries = entries.merge(dnfs, on="constructorName", how="left")
+        else:
+            entries["dnf_count"] = 0
+        entries["dnf_count"] = entries["dnf_count"].fillna(0).astype(int)
+        entries["dnf_pct"] = (
+            entries["dnf_count"] / entries["constructor_entry_count"] * 100
+        ).round(1)
+        payload["dnf_by_constructor"] = records(entries.sort_values("dnf_pct", ascending=False))
 
+    if {"grandPrixYear", "resultsDriverName", "positionsGained", "resultsPodium"}.issubset(df.columns):
+        year = int(pd.to_numeric(df["grandPrixYear"], errors="coerce").max())
+        season = (
+            df[pd.to_numeric(df["grandPrixYear"], errors="coerce") == year]
+            .groupby("resultsDriverName")
+            .agg(positions_gained=("positionsGained", "sum"), total_podiums=("resultsPodium", "sum"))
+            .reset_index()
+        )
+        payload["season_year"] = year
+        payload["season_summary"] = records(season)
+
+    if {"resultsDriverName", "resultsFinalPositionNumber"}.issubset(df.columns):
+        consistency = (
+            df.groupby("resultsDriverName")
+            .agg(finishing_position_std=("resultsFinalPositionNumber", "std"))
+            .reset_index()
+            .sort_values("finishing_position_std")
+        )
+        payload["driver_consistency"] = records(consistency)
+
+    try:
+        manifest = model_manifest("XGBoost")
+    except (KeyError, OSError, ValueError):
+        manifest = None
+    payload["model_summary"] = manifest
+
+    try:
+        importance = precomputed("permutation")
+    except (KeyError, OSError, ValueError):
+        importance = None
+    payload["feature_importance"] = importance
+
+    try:
+        historical = precomputed("historical_validation")
+    except (KeyError, OSError, ValueError):
+        historical = None
+    holdout = (historical or {}).get("holdout", {}) if isinstance(historical, dict) else {}
+    holdout_rows = holdout.get("rows", []) if isinstance(holdout, dict) else []
+    if isinstance(holdout_rows, list) and holdout_rows:
+        holdout_frame = pd.DataFrame(holdout_rows)
+        expected = {"ActualFinalPosition", "PredictedFinalPosition", "Error"}
+        if expected.issubset(holdout_frame.columns):
+            holdout_frame = holdout_frame.sort_values("ActualFinalPosition")
+            top3 = holdout_frame[pd.to_numeric(holdout_frame["ActualFinalPosition"], errors="coerce") <= 3].copy()
+            if not top3.empty:
+                payload["top3_mae"] = float(
+                    np.mean(
+                        np.abs(
+                            pd.to_numeric(top3["ActualFinalPosition"], errors="coerce")
+                            - pd.to_numeric(top3["PredictedFinalPosition"], errors="coerce")
+                        )
+                    )
+                )
+                payload["top3_predictions"] = records(top3.head(100))
+            payload["first_30_predictions"] = records(holdout_frame.head(30))
+    return payload
 
 def current_season() -> dict[str, Any]:
     schedule = load_race_schedule().copy()
@@ -388,6 +503,350 @@ def find_prediction_artifact(
     }
 
 
+def _legacy_prediction_rows(race_id: str, year: int | str, race_name: str) -> list[dict[str, Any]]:
+    """Return the committed Streamlit-style CSV prediction rows when an exact race artifact exists."""
+    slugs = {
+        str(race_id).strip().lower().replace("_", "-").replace(" ", "-"),
+        str(race_name).lower().replace(" grand prix", "").replace(" ", "-"),
+    }
+    candidates: list[Path] = []
+    for slug in sorted(slugs):
+        if slug:
+            candidates.extend([
+                DATA_DIR / f"predictions_{slug}_{year}.csv",
+                DATA_DIR / f"predictions_{slug.replace('-', '_')}_{year}.csv",
+            ])
+    for candidate in candidates:
+        if candidate.is_file():
+            frame = _read_optional(candidate)
+            if frame.empty:
+                continue
+
+            data = load_main_data()
+            if "resultsDriverName" in frame and {"resultsDriverName", "driverDNFCount", "driverDNFAvg"}.issubset(data.columns):
+                latest = (
+                    data.sort_values("grandPrixYear")
+                    .groupby("resultsDriverName", as_index=False)
+                    .tail(1)[["resultsDriverName", "driverDNFCount", "driverDNFAvg"]]
+                    .drop_duplicates("resultsDriverName")
+                )
+                frame = frame.merge(latest, on="resultsDriverName", how="left", suffixes=("", "_latest"))
+                if "driverDNFCount_latest" in frame:
+                    frame["driverDNFCount"] = frame.get("driverDNFCount").fillna(frame["driverDNFCount_latest"]) if "driverDNFCount" in frame else frame["driverDNFCount_latest"]
+                if "driverDNFAvg_latest" in frame:
+                    frame["driverDNFAvg"] = frame.get("driverDNFAvg").fillna(frame["driverDNFAvg_latest"]) if "driverDNFAvg" in frame else frame["driverDNFAvg_latest"]
+                frame["driverDNFPercentage"] = (
+                    pd.to_numeric(frame.get("driverDNFAvg"), errors="coerce").fillna(0) * 100
+                ).round(3)
+                frame = frame.drop(columns=["driverDNFCount_latest", "driverDNFAvg_latest"], errors="ignore")
+            if "PredictedDNFProbabilityStd" not in frame:
+                frame["PredictedDNFProbabilityStd"] = np.nan
+
+            sort_col = "Rank" if "Rank" in frame else (
+                "PredictedFinalPosition" if "PredictedFinalPosition" in frame else None
+            )
+            if sort_col:
+                frame = frame.sort_values(sort_col)
+            return records(frame)
+    return []
+
+
+@lru_cache(maxsize=1)
+def _position_mae_by_position() -> dict[int, float]:
+    """Return the same per-position holdout MAE mapping used by the Streamlit next-race table."""
+    try:
+        historical = precomputed("historical_validation")
+    except (KeyError, OSError, ValueError):
+        historical = None
+    rows = ((historical or {}).get("holdout") or {}).get("rows", []) if isinstance(historical, dict) else []
+    if not rows:
+        return {}
+    frame = pd.DataFrame(rows)
+    if not {"ActualFinalPosition", "PredictedFinalPosition"}.issubset(frame.columns):
+        return {}
+    frame["ActualFinalPosition"] = pd.to_numeric(frame["ActualFinalPosition"], errors="coerce")
+    frame["PredictedFinalPosition"] = pd.to_numeric(frame["PredictedFinalPosition"], errors="coerce")
+    frame = frame.dropna(subset=["ActualFinalPosition", "PredictedFinalPosition"])
+    frame["absolute_error"] = (frame["ActualFinalPosition"] - frame["PredictedFinalPosition"]).abs()
+    grouped = frame.groupby("ActualFinalPosition")["absolute_error"].mean()
+    return {int(position): float(mae) for position, mae in grouped.items()}
+
+
+@lru_cache(maxsize=1)
+def _load_dnf_model() -> Any:
+    """Load the trusted, workflow-generated DNF inference artifact."""
+    path = DATA_DIR / "models" / "dnf_model.pkl"
+    if not path.is_file():
+        return None
+    with path.open("rb") as handle:
+        artifact = pickle.load(handle)  # noqa: S301 - trusted model artifact committed by this repository
+    return artifact.get("model") if isinstance(artifact, dict) else artifact
+
+
+@lru_cache(maxsize=1)
+def _dnf_feature_names() -> tuple[str, ...]:
+    """Read the authoritative DNF feature order from the committed manifest."""
+    import json
+
+    path = DATA_DIR / "models" / "dnf_manifest.json"
+    if not path.is_file():
+        return ()
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ()
+    return tuple(str(value) for value in payload.get("feature_names", ()))
+
+
+@lru_cache(maxsize=1)
+def dnf_diagnostics() -> dict[str, float | None]:
+    """Return min/max/mean saved-model DNF probabilities over the historical analysis rows."""
+    model = _load_dnf_model()
+    feature_names = _dnf_feature_names()
+    if model is None or not feature_names:
+        return {"min": None, "max": None, "mean": None}
+    frame = load_main_data().copy()
+    for column in feature_names:
+        if column not in frame:
+            frame[column] = np.nan
+    try:
+        probabilities = model.predict_proba(frame[list(feature_names)])[:, 1]
+    except Exception:
+        return {"min": None, "max": None, "mean": None}
+    finite = np.asarray(probabilities, dtype=float)
+    finite = finite[np.isfinite(finite)]
+    if not finite.size:
+        return {"min": None, "max": None, "mean": None}
+    return {
+        "min": float(finite.min()),
+        "max": float(finite.max()),
+        "mean": float(finite.mean()),
+    }
+
+
+def build_dnf_predictions(
+    position_predictions: dict[str, Any] | None,
+    next_race: pd.Series,
+    race_name: str,
+    weather: pd.DataFrame,
+) -> list[dict[str, Any]]:
+    """Generate Streamlit-equivalent DNF rows from the committed inference artifact."""
+    model = _load_dnf_model()
+    feature_names = _dnf_feature_names()
+    if model is None or not feature_names or not isinstance(position_predictions, dict):
+        return []
+
+    by_model = position_predictions.get("predictions_by_model") or {}
+    block = by_model.get("xgboost") or (next(iter(by_model.values()), {}) if by_model else {})
+    prediction_rows = block.get("predictions") or []
+    if not prediction_rows:
+        return []
+
+    data = load_main_data().copy()
+    if "resultsDriverName" not in data:
+        return []
+    sort_column = "grandPrixYear" if "grandPrixYear" in data else None
+    if sort_column:
+        data = data.sort_values(sort_column)
+    latest = data.groupby("resultsDriverName", as_index=False).tail(1).copy()
+    latest = latest.set_index("resultsDriverName", drop=False)
+
+    schedule_map = {
+        "turns": "turns",
+        "trackRace": "trackRace",
+        "streetRace": "streetRace",
+    }
+    weather_row = weather.iloc[0] if not weather.empty else pd.Series(dtype=object)
+    rows: list[dict[str, Any]] = []
+    feature_rows: list[dict[str, Any]] = []
+    for prediction in prediction_rows:
+        driver = str(prediction.get("driverName", ""))
+        if not driver or driver not in latest.index:
+            continue
+        source = latest.loc[driver]
+        if isinstance(source, pd.DataFrame):
+            source = source.iloc[-1]
+        feature_row = {name: source.get(name, np.nan) for name in feature_names}
+        feature_row["grandPrixName"] = race_name
+        if prediction.get("constructor"):
+            feature_row["constructorName"] = prediction["constructor"]
+        feature_row["resultsDriverName"] = driver
+        for target, source_name in schedule_map.items():
+            if target in feature_row and source_name in next_race.index and pd.notna(next_race[source_name]):
+                feature_row[target] = next_race[source_name]
+        for column in ("average_temp", "average_humidity", "average_wind_speed", "total_precipitation"):
+            if column in feature_row and column in weather_row.index and pd.notna(weather_row[column]):
+                feature_row[column] = weather_row[column]
+        feature_rows.append(feature_row)
+        rows.append({
+            "constructorName": prediction.get("constructor", source.get("constructorName")),
+            "resultsDriverName": driver,
+            "driverDNFCount": source.get("driverDNFCount"),
+            "driverDNFPercentage": (
+                round(float(source.get("driverDNFAvg", 0) or 0) * 100, 3)
+                if pd.notna(source.get("driverDNFAvg"))
+                else 0.0
+            ),
+            "PredictedDNFProbabilityStd": None,
+        })
+
+    if not feature_rows:
+        return []
+    frame = pd.DataFrame(feature_rows, columns=list(feature_names))
+    try:
+        probabilities = model.predict_proba(frame)[:, 1]
+    except Exception:
+        return []
+    for row, probability in zip(rows, probabilities, strict=True):
+        row["PredictedDNFProbabilityPercentage"] = round(float(probability) * 100, 3)
+    rows.sort(key=lambda row: float(row["PredictedDNFProbabilityPercentage"]), reverse=True)
+    return rows
+
+
+@lru_cache(maxsize=1)
+def _load_safety_car_inputs() -> pd.DataFrame:
+    """Load the same historical safety-car feature frame used by Streamlit."""
+    path = DATA_DIR / "f1SafetyCarFeatures.csv"
+    if not path.is_file():
+        return pd.DataFrame()
+    return pd.read_csv(path, sep="\t", low_memory=False)
+
+
+@lru_cache(maxsize=1)
+def _load_safety_car_model() -> Any:
+    """Load the same trusted safety-car artifact search order used by Streamlit."""
+    candidates = [
+        DATA_DIR / "models" / "xgboost" / "safetycar_model.pkl",
+        DATA_DIR / "models" / "lightgbm" / "safetycar_model.pkl",
+        DATA_DIR / "models" / "catboost" / "safetycar_model.pkl",
+        DATA_DIR / "models" / "ensemble" / "safetycar_model.pkl",
+        DATA_DIR / "models" / "safetycar_model.pkl",
+    ]
+    for path in candidates:
+        if not path.is_file():
+            continue
+        try:
+            with path.open("rb") as handle:
+                artifact = pickle.load(handle)  # noqa: S301 - trusted repository artifact
+        except (OSError, pickle.UnpicklingError, AttributeError, EOFError, ImportError, ValueError):
+            continue
+        if isinstance(artifact, dict):
+            model = artifact.get("model")
+            if model is not None:
+                return model
+            continue
+        if hasattr(artifact, "predict_proba"):
+            return artifact
+    return None
+
+
+def build_safety_car_predictions(
+    next_race: pd.Series,
+    race_name: str,
+    year: int,
+    weather: pd.DataFrame,
+) -> dict[str, Any]:
+    """Mirror Streamlit's historical + synthetic next-race safety-car inference."""
+    frame = _load_safety_car_inputs().copy()
+    model = _load_safety_car_model()
+    if frame.empty or model is None or "SafetyCarStatus" not in frame:
+        return {"rows": [], "mean": None, "min": None, "max": None}
+
+    manifest_path = DATA_DIR / "models" / "safetycar_manifest.json"
+    if not manifest_path.is_file():
+        return {"rows": [], "mean": None, "min": None, "max": None}
+    import json
+
+    try:
+        feature_names = json.loads(manifest_path.read_text(encoding="utf-8")).get("feature_names", [])
+    except (OSError, json.JSONDecodeError):
+        feature_names = []
+    if not feature_names:
+        return {"rows": [], "mean": None, "min": None, "max": None}
+
+    for column in feature_names:
+        if column not in frame:
+            frame[column] = np.nan
+    features = frame[feature_names].copy()
+    try:
+        probabilities = model.predict_proba(features)[:, 1]
+    except Exception:
+        return {"rows": [], "mean": None, "min": None, "max": None}
+
+    history = pd.DataFrame({
+        "grandPrixName": frame.get("grandPrixName"),
+        "grandPrixYear": frame.get("grandPrixYear"),
+        "PredictedSafetyCarProbabilityPercentage": (probabilities * 100).round(3),
+    })
+    history["Type"] = "Historical"
+
+    synthetic: dict[str, Any] = dict.fromkeys(feature_names, np.nan)
+    synthetic["grandPrixYear"] = year
+    synthetic["grandPrixName"] = race_name
+    schedule_map = {
+        "circuitId": "circuitId",
+        "grandPrixLaps": "laps",
+        "turns": "turns",
+        "streetRace": "streetRace",
+        "trackRace": "trackRace",
+    }
+    for target, source in schedule_map.items():
+        if target in synthetic and source in next_race.index and pd.notna(next_race[source]):
+            synthetic[target] = next_race[source]
+
+    if not weather.empty:
+        weather_row = weather.iloc[0]
+        for column in ("average_temp", "average_humidity", "average_wind_speed", "total_precipitation"):
+            if column in synthetic and column in weather_row.index and pd.notna(weather_row[column]):
+                synthetic[column] = weather_row[column]
+
+    same_gp = frame[frame.get("grandPrixName", pd.Series(index=frame.index, dtype=object)) == race_name]
+    for column in feature_names:
+        if not pd.isna(synthetic[column]) or column not in frame:
+            continue
+        if pd.api.types.is_numeric_dtype(frame[column]):
+            values = pd.Series(dtype=float)
+            if not same_gp.empty and "grandPrixYear" in same_gp:
+                per_race = same_gp.groupby("grandPrixYear")[column].mean(numeric_only=True).dropna()
+                if not per_race.empty:
+                    values = per_race.sort_index().tail(2)
+            synthetic[column] = (
+                values.median()
+                if not values.empty
+                else pd.to_numeric(frame[column], errors="coerce").dropna().median()
+            )
+
+    synthetic_frame = pd.DataFrame([synthetic], columns=feature_names)
+    try:
+        next_probability = float(model.predict_proba(synthetic_frame)[:, 1][0])
+    except Exception:
+        next_probability = float("nan")
+
+    current = history[
+        (history["grandPrixName"].astype(str) == race_name)
+        & (pd.to_numeric(history["grandPrixYear"], errors="coerce") != year)
+    ].drop_duplicates(subset=["grandPrixYear"])
+
+    if np.isfinite(next_probability):
+        current = pd.concat([
+            current,
+            pd.DataFrame([{
+                "grandPrixName": race_name,
+                "grandPrixYear": year,
+                "PredictedSafetyCarProbabilityPercentage": round(next_probability * 100, 3),
+                "Type": "Next Race",
+            }]),
+        ], ignore_index=True)
+
+    current = current.sort_values("grandPrixYear", ascending=False)
+    percentage = history["PredictedSafetyCarProbabilityPercentage"]
+    return {
+        "rows": records(current),
+        "mean": float(percentage.mean()),
+        "min": float(percentage.min()),
+        "max": float(percentage.max()),
+    }
+
 def next_race_bundle() -> dict[str, Any]:
     schedule = load_race_schedule().copy()
     date_col = "date" if "date" in schedule else ("short_date" if "short_date" in schedule else None)
@@ -451,17 +910,40 @@ def next_race_bundle() -> dict[str, Any]:
         messages = messages[messages["grandPrixId"].astype(str) == str(race_id)]
 
     predictions = find_prediction_artifact(str(race_id), str(year), str(race_name), row[date_col])
+    legacy_predictions = _legacy_prediction_rows(str(race_id), int(year), str(race_name))
+    dnf_predictions = legacy_predictions or build_dnf_predictions(predictions, row, str(race_name), weather)
+    safety_car_predictions = build_safety_car_predictions(row, str(race_name), int(year), weather)
     pit_stops = fastest_pit_stops(str(race_id))
+    position_mae_by_position = _position_mae_by_position()
+    try:
+        manifest = model_manifest("XGBoost") or {}
+    except (KeyError, OSError, ValueError):
+        manifest = {}
+    model_mae = (manifest.get("metrics") or {}).get("mae")
+    if isinstance(predictions, dict) and predictions.get("format") == "json":
+        by_model = predictions.get("predictions_by_model") or {}
+        xgboost_block = by_model.get("xgboost") or (next(iter(by_model.values()), {}) if by_model else {})
+        model_mae = xgboost_block.get("model_mae", model_mae)
     return {
         "next_race": records(next_frame)[0],
         "race_id": None if race_id is None else str(race_id),
         "race_name": str(race_name),
         "year": int(year) if pd.notna(year) else None,
-        "past_results": records(past.drop_duplicates().head(1000)),
+        "past_results": records(
+            past.drop_duplicates(
+                subset=[column for column in ("resultsDriverName", "grandPrixYear") if column in past.columns]
+            ).head(1000)
+        ),
         "driver_performance": records(driver_perf),
         "constructor_performance": records(constructor_perf),
         "weather": records(weather.head(500)),
         "race_messages": records(messages.head(500)),
         "fastest_pit_stops": pit_stops,
         "predictions": predictions,
+        "legacy_predictions": legacy_predictions,
+        "dnf_predictions": dnf_predictions,
+        "dnf_diagnostics": dnf_diagnostics(),
+        "safety_car_predictions": safety_car_predictions,
+        "model_mae": model_mae,
+        "position_mae_by_position": position_mae_by_position,
     }

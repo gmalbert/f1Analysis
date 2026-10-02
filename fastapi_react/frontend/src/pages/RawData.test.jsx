@@ -1,74 +1,40 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 const apiMock = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
-vi.mock('../api.js', () => ({
-  api: apiMock,
-  downloadUrl: (p) => `/api/raw/download?path=${encodeURIComponent(p)}`,
-}));
+vi.mock("../api.js", () => ({ api: apiMock }));
 
-import RawData from './RawData.jsx';
+import RawData from "./RawData.jsx";
 
 beforeEach(() => {
   apiMock.get.mockReset();
   apiMock.post.mockReset();
 });
 
-describe('RawData page', () => {
-  it('renders the page heading after data loads', async () => {
-    apiMock.get.mockImplementation((url) => {
-      if (url === '/api/raw/files') {
-        return Promise.resolve({
-          files: [
-            { path: 'active_drivers.csv', size: 100, suffix: '.csv' },
-            { path: 'notes.txt', size: 50, suffix: '.txt' },
-          ],
-        });
-      }
-      if (url === '/api/health') return Promise.resolve({ status: 'ok' });
-      return Promise.resolve({});
-    });
+describe("RawData page", () => {
+  it("matches the Streamlit Data & Debug tab structure", async () => {
+    apiMock.get.mockResolvedValue({ status: "ok", expensive_tools_enabled: false });
     render(<RawData />);
-    expect(screen.getByText(/Data & Debug Tools/i)).toBeInTheDocument();
-    await waitFor(() => {
-      expect(apiMock.get).toHaveBeenCalledWith('/api/raw/files');
-    });
+    expect(screen.getByText("Data & Debug Tools")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Raw Data" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Temporal Leakage Audit" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Hyperparameter Tuning" })).toBeInTheDocument();
   });
 
-  it('previews and downloads a selected source file', async () => {
-    apiMock.get.mockImplementation(url => {
-      if (url === '/api/raw/files') return Promise.resolve({ files: [{ path: 'active_drivers.csv', size: 100, suffix: '.csv' }] });
-      if (url === '/api/health') return Promise.resolve({ status: 'ok' });
-      if (url.startsWith('/api/raw/preview')) return Promise.resolve({ kind: 'table', columns: ['driver'], rows: [{ driver: 'Max' }] });
-      return Promise.resolve({});
-    });
+  it("shows the complete unfiltered dataset on demand", async () => {
+    apiMock.get.mockResolvedValue({ status: "ok", expensive_tools_enabled: false });
+    apiMock.post.mockResolvedValue({ total: 2, columns: ["grandPrixYear"], rows: [{ grandPrixYear: 2025 }, { grandPrixYear: 2026 }] });
     render(<RawData />);
-    fireEvent.click(await screen.findByRole('button', { name: /active_drivers.csv/ }));
-    expect(await screen.findByText('Max')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Download original' })).toHaveAttribute(
-      'href', '/api/raw/download?path=active_drivers.csv',
-    );
+    fireEvent.click(screen.getByRole("checkbox", { name: "Show Raw Data" }));
+    await waitFor(() => expect(apiMock.post).toHaveBeenCalledWith("/api/data-explorer/query", expect.objectContaining({ filters: [] })));
+    expect(await screen.findByText("Total number of results: 2")).toBeInTheDocument();
   });
 
-  it('pages through the full analysis table without requesting all rows at once', async () => {
-    apiMock.get.mockImplementation(url => url === '/api/raw/files'
-      ? Promise.resolve({ files: [] })
-      : Promise.resolve({ status: 'ok' }));
-    apiMock.post.mockResolvedValue({ total: 51, columns: ['grandPrixYear'], rows: [{ grandPrixYear: 2025 }] });
+  it("keeps the leakage audit gated in hosted mode", async () => {
+    apiMock.get.mockResolvedValue({ status: "ok", expensive_tools_enabled: false });
     render(<RawData />);
-    fireEvent.click(await screen.findByRole('checkbox', { name: 'Show complete analysis dataset' }));
-    await screen.findByText(/Rows 1–50 of 51/);
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-    await waitFor(() => expect(apiMock.post).toHaveBeenLastCalledWith('/api/data-explorer/query', expect.objectContaining({ offset: 50, limit: 50 })));
-  });
-
-  it('keeps expensive tools disabled with an actionable environment hint', async () => {
-    apiMock.get.mockImplementation(url => url === '/api/raw/files'
-      ? Promise.resolve({ files: [] })
-      : Promise.resolve({ status: 'ok', expensive_tools_enabled: false }));
-    render(<RawData />);
-    fireEvent.click(screen.getByRole('button', { name: 'Temporal Leakage Audit' }));
-    expect(await screen.findByRole('button', { name: 'Run Leakage Audit' })).toBeDisabled();
-    expect(screen.getByText('ENABLE_EXPENSIVE_TOOLS=1')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Temporal Leakage Audit" }));
+    expect(await screen.findByRole("button", { name: "Run Leakage Audit" })).toBeDisabled();
+    expect(screen.getByText("Research controls are disabled in hosted mode.")).toBeInTheDocument();
   });
 });

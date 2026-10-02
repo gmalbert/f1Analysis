@@ -1,15 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState } from "react";
 import Papa from "papaparse";
 import { api } from "../api";
-import { Card, DataTable, JsonBlock, Metric, Tabs } from "../components/UI";
+import { DataTable, JsonBlock, Metric, Tabs } from "../components/UI";
 import { LinePanel } from "../components/Charts";
 
 const tabs = ["Value & stake", "Field simulation", "Paper replay", "Calibration"];
-
 const defaultEntries = [
   { driver_id: "driver-a", constructor_id: "team-1", pace_score: 1.0, dnf_probability: 0.05, uncertainty: 0.8, race_sensitivity: 0.8 },
   { driver_id: "driver-b", constructor_id: "team-1", pace_score: 1.4, dnf_probability: 0.06, uncertainty: 0.9, race_sensitivity: 1.0 },
-  { driver_id: "driver-c", constructor_id: "team-2", pace_score: 2.2, dnf_probability: 0.08, uncertainty: 1.0, race_sensitivity: 1.2 }
+  { driver_id: "driver-c", constructor_id: "team-2", pace_score: 2.2, dnf_probability: 0.08, uncertainty: 1.0, race_sensitivity: 1.2 },
 ];
 
 function csvDataUrl(rows, columns) {
@@ -19,43 +18,20 @@ function csvDataUrl(rows, columns) {
   return `data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`;
 }
 
-function ReliabilityChart({ rows }) {
-  // The reliability table from f1bet has a 'reliability'/'reliability_observed'
-  // bin-mean field. Plot observed rate vs predicted mean with the y=x reference.
-  const mapped = rows
-    .map(r => ({
-      predicted: Number(r.bin ?? r.predicted ?? r.reliability ?? r.center),
-      observed: Number(r.observed ?? r.observed_rate ?? r.reliability_observed),
-    }))
-    .filter(p => Number.isFinite(p.predicted) && Number.isFinite(p.observed));
-  if (mapped.length < 2) return null;
-  const chartRows = mapped.map(p => ({ ...p, perfect: p.predicted }));
-  return (
-    <LinePanel
-      title="Reliability curve"
-      rows={chartRows}
-      x="predicted"
-      y="observed"
-    />
-  );
-}
-
 function CsvInput({ onRows, label }) {
-  function load(file) {
+  return <label className="upload-label">{label}<input aria-label={label} type="file" accept=".csv,text/csv" onChange={event => {
+    const file = event.target.files?.[0];
     if (!file) return;
-    Papa.parse(file, {
-      header: true,
-      dynamicTyping: true,
-      skipEmptyLines: true,
-      complete: result => onRows(result.data, result.errors),
-    });
-  }
-  return <label className="upload-label">{label}<input aria-label={label} type="file" accept=".csv,text/csv" onChange={e => load(e.target.files?.[0])} /></label>;
+    Papa.parse(file, { header: true, dynamicTyping: true, skipEmptyLines: true, complete: result => onRows(result.data, result.errors) });
+  }} /></label>;
 }
 
 export default function BettingResearch() {
   const [tab, setTab] = useState(tabs[0]);
-  const [calc, setCalc] = useState({ model_probability: .25, decimal_odds: 2.1, opposing_odds: 1.8, uncertainty: .02, devig_method: "multiplicative", bankroll: 10000 });
+  const [calc, setCalc] = useState({
+    model_probability: .25, decimal_odds: 2.10, opposing_odds: 1.80,
+    uncertainty: .02, devig_method: "multiplicative", bankroll: 10000,
+  });
   const [calcOut, setCalcOut] = useState(null);
   const [simEntries, setSimEntries] = useState(defaultEntries);
   const [simulations, setSimulations] = useState(10000);
@@ -70,97 +46,110 @@ export default function BettingResearch() {
   useEffect(() => {
     let cancelled = false;
     setBusy("value");
-    setError(null);
     api.post("/api/betting/value", calc)
       .then(result => { if (!cancelled) setCalcOut(result); })
-      .catch(e => { if (!cancelled) setError(e.message); })
+      .catch(err => { if (!cancelled) setError(err.message); })
       .finally(() => { if (!cancelled) setBusy(""); });
     return () => { cancelled = true; };
   }, [calc]);
 
+  useEffect(() => {
+    if (!calRows.length) { setCalOut(null); return; }
+    let cancelled = false;
+    setBusy("calibration");
+    api.post("/api/betting/calibration", { rows: calRows })
+      .then(result => { if (!cancelled) setCalOut(result); })
+      .catch(err => { if (!cancelled) setError(`Calibration input is invalid: ${err.message}`); })
+      .finally(() => { if (!cancelled) setBusy(""); });
+    return () => { cancelled = true; };
+  }, [calRows]);
+
   async function runSimulation() {
     setBusy("simulation");
-    try { setError(null); setSimOut(await api.post("/api/betting/simulate", { entries: simEntries, simulations, seed: 42 })); } catch (e) { setError(e.message); }
+    setError(null);
+    try { setSimOut(await api.post("/api/betting/simulate", { entries: simEntries, simulations, seed: 42 })); }
+    catch (err) { setError(`Simulation input is invalid: ${err.message}`); }
     finally { setBusy(""); }
   }
+
   async function runReplay() {
     setBusy("replay");
-    try { setError(null); setReplayOut(await api.post("/api/betting/backtest", { rows: replayRows })); } catch (e) { setError(e.message); }
+    setError(null);
+    try { setReplayOut(await api.post("/api/betting/backtest", { rows: replayRows })); }
+    catch (err) { setError(`Backtest rejected: ${err.message}`); }
     finally { setBusy(""); }
   }
-  async function runCalibration() {
-    setBusy("calibration");
-    try { setError(null); setCalOut(await api.post("/api/betting/calibration", { rows: calRows })); } catch (e) { setError(e.message); }
-    finally { setBusy(""); }
-  }
+
   return (
     <div>
-      <header className="page-header"><div><h1>Probability & Betting Research</h1><p>Value, coherent race simulation, replay and calibration.</p></div></header>
+      <header className="page-header"><h1>Probability & Betting Research</h1></header>
       <Tabs tabs={tabs} active={tab} onChange={setTab} />
-      {error && <div className="status error" role="alert" aria-live="assertive">{error}</div>}
+      {error && <div className="status error" role="alert">{error}</div>}
 
-      {tab === "Value & stake" && <Card title="Value & Stake Calculator">
-        <div className="form-grid">
-          {[
-            ["Model probability", "model_probability", .001],
-            ["Selection decimal odds", "decimal_odds", .01],
-            ["Opposing decimal odds", "opposing_odds", .01],
-            ["Probability uncertainty", "uncertainty", .005],
-            ["Bankroll", "bankroll", 100]
-          ].map(([label, key, step]) => <label key={key}>{label}<input type="number" step={step} value={calc[key]} onChange={e => setCalc({ ...calc, [key]: Number(e.target.value) })} /></label>)}
-          <label>De-vig method<select value={calc.devig_method} onChange={e => setCalc({ ...calc, devig_method: e.target.value })}>
-            <option>multiplicative</option><option>additive</option><option>power</option>
-          </select></label>
+      {tab === "Value & stake" && <>
+        <div className="form-grid betting-three">
+          <label>Model probability<input type="number" min=".001" max=".999" step=".005" value={calc.model_probability} onChange={e => setCalc({ ...calc, model_probability: Number(e.target.value) })} /></label>
+          <label>Selection decimal odds<input type="number" min="1.01" max="1000" step=".05" value={calc.decimal_odds} onChange={e => setCalc({ ...calc, decimal_odds: Number(e.target.value) })} /></label>
+          <label>Probability uncertainty<input type="number" min="0" max=".5" step=".005" value={calc.uncertainty} onChange={e => setCalc({ ...calc, uncertainty: Number(e.target.value) })} /></label>
         </div>
-        {busy === "value" && <div className="loading-state" role="status" aria-busy="true">Calculating value…<span className="skeleton-line short" aria-hidden="true" /></div>}
+        <label className="field-label">Opposing decimal odds (complete two-way market)
+          <input type="number" min="1.01" max="1000" step=".05" value={calc.opposing_odds} onChange={e => setCalc({ ...calc, opposing_odds: Number(e.target.value) })} />
+        </label>
+        <label className="field-label">De-vig method
+          <select value={calc.devig_method} onChange={e => setCalc({ ...calc, devig_method: e.target.value })}>
+            <option>multiplicative</option><option>additive</option><option>power</option>
+          </select>
+        </label>
         {calcOut && <div className="metrics">
           <Metric label="De-vigged market probability" value={`${(calcOut.market_probability * 100).toFixed(2)}%`} />
-          <Metric label="Raw EV / unit" value={`${(calcOut.raw_ev * 100).toFixed(2)}%`} />
+          <Metric label="Raw EV / unit" value={`${calcOut.raw_ev >= 0 ? "+" : ""}${(calcOut.raw_ev * 100).toFixed(2)}%`} />
           <Metric label="Conservative probability" value={`${(calcOut.adjusted_probability * 100).toFixed(2)}%`} />
-          <Metric label={`Paper stake on $${calc.bankroll.toLocaleString()}`} value={`$${calcOut.stake.toFixed(2)}`} />
+          <Metric label="Paper stake on $10k" value={`$${calcOut.stake.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
         </div>}
-        {calcOut && <p className="muted">Decision: {calcOut.reason_code}</p>}
-      </Card>}
+        {calcOut && <p className="caption">Decision: {calcOut.reason_code}.</p>}
+      </>}
 
-      {tab === "Field simulation" && <Card title="Correlated Field Simulation">
-        <p>Upload one row per driver, or use the default three-driver template.</p>
-        <a className="button-link" href={csvDataUrl(defaultEntries, Object.keys(defaultEntries[0]))} download="f1_field_simulation_template.csv">Download input template</a>
+      {tab === "Field simulation" && <>
+        <p>Upload one row per driver. Pace is an arbitrary lower-is-faster score; drivers sharing a constructor receive correlated shocks and all simulations produce unique finishing positions.</p>
+        <p><a className="button-link" href={csvDataUrl(defaultEntries, Object.keys(defaultEntries[0]))} download="f1_field_simulation_template.csv">Download input template</a></p>
         <CsvInput label="Field CSV" onRows={rows => setSimEntries(rows)} />
-        <DataTable rows={simEntries} />
-        <label className="field-label">Simulations<input aria-label="Simulation count" type="range" min="1000" max="50000" step="1000" value={simulations} onChange={event => setSimulations(Number(event.target.value))} /><span>{simulations.toLocaleString()}</span></label>
-        <button className="primary" disabled={busy === "simulation"} onClick={runSimulation}>{busy === "simulation" ? "Simulating…" : "Run coherent field simulation"}</button>
+        <label className="field-label">Simulations
+          <input aria-label="Simulations" type="range" min="1000" max="50000" step="1000" value={simulations} onChange={e => setSimulations(Number(e.target.value))} />
+          <span>{simulations.toLocaleString()}</span>
+        </label>
+        <p><button onClick={runSimulation} disabled={busy === "simulation"}>{busy === "simulation" ? "Running…" : "Run coherent field simulation"}</button></p>
         {simOut && <>
           <DataTable rows={simOut.rows} columns={simOut.columns} />
           <p><a className="button-link" href={csvDataUrl(simOut.rows, simOut.columns)} download="f1_market_probabilities.csv">Download probabilities</a></p>
         </>}
-      </Card>}
+      </>}
 
-      {tab === "Paper replay" && <Card title="Paper Backtest">
-        <p>Upload the timestamped ledger used by the existing f1bet backtest engine.</p>
-        <CsvInput label="Backtest ledger CSV" onRows={rows => setReplayRows(rows)} />
-        <button className="primary" disabled={!replayRows.length || busy === "replay"} onClick={runReplay}>{busy === "replay" ? "Running backtest…" : "Run paper backtest"}</button>
+      {tab === "Paper replay" && <>
+        <p>Replay requires timestamps, real pre-event prices, de-vigged market probability, and settled outcomes. Records using a forecast or quote after event start are rejected.</p>
+        <CsvInput label="Backtest ledger CSV" onRows={rows => { setReplayRows(rows); setReplayOut(null); }} />
+        {!replayRows.length ? <div className="status">No odds ledger is bundled, so profitability is intentionally not estimated.</div> : (
+          <p><button onClick={runReplay} disabled={busy === "replay"}>{busy === "replay" ? "Running…" : "Run paper backtest"}</button></p>
+        )}
         {replayOut && <>
           <JsonBlock value={replayOut.summary} />
-          <h4>Placed paper bets</h4><DataTable rows={replayOut.ledger} />
-          <h4>All decisions and abstentions</h4><DataTable rows={replayOut.decisions} />
-          <h4>Staking sensitivity</h4><DataTable rows={replayOut.sensitivity} />
+          <h2>Placed paper bets</h2><DataTable rows={replayOut.ledger} />
+          <h2>All decisions and abstentions</h2><DataTable rows={replayOut.decisions} />
+          <h2>Required staking sensitivity</h2><DataTable rows={replayOut.sensitivity} />
         </>}
-      </Card>}
+      </>}
 
-      {tab === "Calibration" && <Card title="Calibration Diagnostics">
-        <p>Required columns: <code>probability</code> and <code>outcome</code>. Optional: market and stage.</p>
+      {tab === "Calibration" && <>
+        <p>Upload frozen probabilities and binary outcomes. Diagnostics include Brier score, log loss, adaptive reliability bins, ECE, calibration slope/intercept, and ROC AUC.</p>
         <CsvInput label="Calibration CSV" onRows={rows => setCalRows(rows)} />
-        <button className="primary" disabled={!calRows.length || busy === "calibration"} onClick={runCalibration}>{busy === "calibration" ? "Analyzing…" : "Analyze calibration"}</button>
+        {!calRows.length && <div className="status">Required columns: probability and outcome. Optional columns: market and stage.</div>}
+        {busy === "calibration" && <div className="status">Analyzing calibration…</div>}
         {calOut && <>
           <DataTable rows={calOut.metrics} />
-          <h4>Adaptive reliability</h4>
+          <h2>Adaptive reliability table</h2>
           <DataTable rows={calOut.reliability} />
-          {calOut.reliability?.length > 1 && (
-            <ReliabilityChart rows={calOut.reliability} />
-          )}
+          <LinePanel title="" rows={calOut.reliability || []} x="mean_probability" y="observed_rate" />
         </>}
-      </Card>}
-
+      </>}
     </div>
   );
 }

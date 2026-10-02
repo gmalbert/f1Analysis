@@ -1,9 +1,11 @@
-import { chromium } from 'playwright';
+import { createRequire } from 'node:module';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const requireFromFrontend = createRequire(join(__dirname, '../frontend/package.json'));
+const { chromium } = requireFromFrontend('playwright');
 const OUT_DIR = join(__dirname);
 const OUT = join(OUT_DIR, 'accessibility.json');
 const BASE = process.env.REACT_BASE_URL || 'http://127.0.0.1:5173';

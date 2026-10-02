@@ -38,20 +38,21 @@ export function Status(props = {}) {
   return children || null;
 }
 
-/** @param {{ rows?: Array<Record<string, any>>, columns?: string[], maxHeight?: number, ariaLabel?: string }} props */
+/** @param {{ rows?: Array<Record<string, any>>, columns?: string[], maxHeight?: number, ariaLabel?: string, headerMap?: Record<string,string>, checkboxColumns?: string[] }} props */
 /* eslint-disable jsx-a11y/no-noninteractive-tabindex */
 export function DataTable(props = {}) {
-  const { rows = [], columns = undefined, maxHeight = 560, ariaLabel = "Data table, scrollable region" } = props;
+  const { rows = [], columns = undefined, maxHeight = 560, ariaLabel = undefined, headerMap = {}, checkboxColumns = [] } = props;
   if (!rows?.length) return <div className="empty">No rows available.</div>;
   const cols = columns?.length ? columns : Object.keys(rows[0] || {});
+  const landmarkProps = ariaLabel ? { role: "region", "aria-label": ariaLabel } : {};
   return (
-    <div className="table-wrap" role="region" aria-label={ariaLabel} tabIndex={0} style={{ maxHeight }}>
+    <div className="table-wrap" {...landmarkProps} tabIndex={0} style={{ maxHeight }}>
       <table>
-        <thead><tr>{cols.map(c => <th key={c} scope="col">{c}</th>)}</tr></thead>
+        <thead><tr>{cols.map(c => <th key={c} scope="col">{headerMap[c] || c}</th>)}</tr></thead>
         <tbody>
           {rows.map((row, i) => (
             <tr key={i}>
-              {cols.map(c => <td key={c}>{formatCell(row[c])}</td>)}
+              {cols.map(c => <td key={c}>{checkboxColumns.includes(c) ? <input type="checkbox" checked={Boolean(row[c])} readOnly aria-label={`${headerMap[c] || c}: ${Boolean(row[c])}`} /> : formatCell(row[c])}</td>)}
             </tr>
           ))}
         </tbody>
@@ -82,9 +83,9 @@ export function Metric({ label, value }) {
 /** @param {{ tabs: string[], active: string, onChange: (tab: string) => void }} props */
 export function Tabs({ tabs, active, onChange }) {
   return (
-    <div className="subtabs">
+    <div className="subtabs" role="tablist">
       {tabs.map((tab, index) => (
-        <button key={tab} type="button" className={active === tab ? "active" : ""} aria-pressed={active === tab} onClick={() => onChange(tab)} onKeyDown={event => {
+        <button key={tab} type="button" role="tab" className={active === tab ? "active" : ""} aria-selected={active === tab} onClick={() => onChange(tab)} onKeyDown={event => {
           if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(event.key)) return;
           event.preventDefault();
           const nextIndex = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : (index + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;

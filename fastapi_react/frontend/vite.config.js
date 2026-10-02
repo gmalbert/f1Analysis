@@ -29,14 +29,9 @@ export default defineConfig({
       reporter: ['text', 'html'],
       include: ['src/**/*.{js,jsx}'],
       exclude: ['src/test/**', 'src/main.jsx', '**/*.test.{js,jsx}'],
-      // Thresholds are intentionally below the §14 80% target: page-level
-      // tests for App.jsx, the full Betting Research workflow, and
-      // interactive Data Explorer filter combinations are tracked as
-      // follow-up work in PARITY_REPORT.md. The infrastructure (vitest,
-      // coverage, the api mock pattern, and 30+ component tests) is in
-      // place; only the additional tests are deferred.
+      // PARITY_CHECKLIST §14 requires at least 80% frontend line coverage.
       thresholds: {
-        lines: 60,
+        lines: 80,
         functions: 40,
         branches: 60,
         statements: 60,

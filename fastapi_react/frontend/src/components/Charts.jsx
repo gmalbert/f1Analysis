@@ -1,6 +1,6 @@
 import {
   ResponsiveContainer, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip,
-  LineChart, Line, BarChart, Bar, Legend, ComposedChart
+  LineChart, Line, BarChart, Bar, Legend, ComposedChart, PieChart, Pie, Cell
 } from "recharts";
 import { Card } from "./UI";
 
@@ -39,7 +39,7 @@ export function ScatterPanel({ title, rows = [], x, y, xLabel = axisLabels[x] ||
             <XAxis dataKey={x} name={xLabel} type="number" domain={numericExtent(rows, x)} label={{ value: xLabel, position: "insideBottom", offset: -15 }} />
             <YAxis dataKey={y} name={yLabel} type="number" domain={numericExtent(rows, y)} label={{ value: yLabel, angle: -90, position: "insideLeft" }} />
             <Tooltip cursor={{ strokeDasharray: "3 3" }} />
-            <Scatter data={rows} />
+            <Scatter data={rows} fill="#0068c9" />
           </ScatterChart>
         </ResponsiveContainer>
       </div>
@@ -59,7 +59,7 @@ export function LinePanel({ title, rows = [], x, y, xLabel = axisLabels[x] || x,
             <XAxis dataKey={x} label={{ value: xLabel, position: "insideBottom", offset: -15 }} />
             <YAxis label={{ value: yLabel, angle: -90, position: "insideLeft" }} />
             <Tooltip />
-            <Line type="monotone" dataKey={y} dot={false} />
+            <Line type="monotone" dataKey={y} stroke="#0068c9" dot={false} />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -80,7 +80,28 @@ export function BarPanel({ title, rows = [], x, y, xLabel = axisLabels[x] || x, 
             <YAxis label={{ value: yLabel, angle: -90, position: "insideLeft" }} />
             <Tooltip />
             <Legend />
-            <Bar dataKey={y} />
+            <Bar dataKey={y} fill="#0068c9" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </Card>
+  );
+}
+
+/** @param {{ title: string, rows?: Array<Record<string, any>>, x: string, ys: string[], xLabel?: string, yLabel?: string }} props */
+export function MultiBarPanel({ title, rows = [], x, ys, xLabel = axisLabels[x] || x, yLabel = "Count" }) {
+  if (!rows.length) return null;
+  return (
+    <Card title={title}>
+      <div className="chart" role="img" aria-label={`${title}. Grouped bar chart with ${ys.length} series.`}>
+        <ResponsiveContainer width="100%" height={340}>
+          <BarChart data={rows}>
+            <CartesianGrid />
+            <XAxis dataKey={x} interval={0} angle={-30} textAnchor="end" height={90} label={{ value: xLabel, position: "insideBottom", offset: -5 }} />
+            <YAxis label={{ value: yLabel, angle: -90, position: "insideLeft" }} />
+            <Tooltip />
+            <Legend />
+            {ys.map((key, index) => <Bar key={key} dataKey={key} fill={SERIES_COLORS[index % SERIES_COLORS.length]} />)}
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -103,6 +124,65 @@ export function RegressionPanel({ title, points = [], fit = [], x, y, xLabel, yL
             <Scatter data={points} fill="#e10600" />
             <Line data={fit} dataKey={y} type="linear" stroke="#f4c542" dot={false} isAnimationActive={false} />
           </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+    </Card>
+  );
+}
+
+
+const SERIES_COLORS = [
+  "#0068c9", "#ff4b4b", "#00a86b", "#7d3cff", "#f0a202", "#2a9d8f",
+  "#e76f51", "#264653", "#8d99ae", "#9b5de5", "#00bbf9", "#f15bb5",
+];
+
+/** @param {{ title: string, rows?: Array<Record<string, any>>, x: string, y: string, series: string, xLabel?: string, yLabel?: string }} props */
+export function MultiLinePanel({ title, rows = [], x, y, series, xLabel = axisLabels[x] || x, yLabel = axisLabels[y] || y }) {
+  if (!rows.length) return null;
+  const seriesNames = [...new Set(rows.map(row => String(row[series] ?? "")).filter(Boolean))];
+  const xValues = [...new Set(rows.map(row => row[x]))];
+  const byX = xValues.map(xValue => {
+    /** @type {Record<string, any>} */
+    const point = { [x]: xValue };
+    for (const row of rows.filter(item => item[x] === xValue)) {
+      point[String(row[series])] = row[y];
+    }
+    return point;
+  });
+  return (
+    <Card title={title}>
+      <div className="chart" role="img" aria-label={`${title}. ${seriesNames.length} series across ${xValues.length} x-axis values.`}>
+        <ResponsiveContainer width="100%" height={400}>
+          <LineChart data={byX}>
+            <CartesianGrid />
+            <XAxis dataKey={x} label={{ value: xLabel, position: "insideBottom", offset: -15 }} />
+            <YAxis label={{ value: yLabel, angle: -90, position: "insideLeft" }} />
+            <Tooltip />
+            <Legend />
+            {seriesNames.map((name, index) => (
+              <Line key={name} type="monotone" dataKey={name} stroke={SERIES_COLORS[index % SERIES_COLORS.length]} dot={false} connectNulls />
+            ))}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </Card>
+  );
+}
+
+/** @param {{ title: string, rows?: Array<Record<string, any>>, nameKey: string, valueKey: string }} props */
+export function PiePanel({ title, rows = [], nameKey, valueKey }) {
+  if (!rows.length) return null;
+  return (
+    <Card title={title}>
+      <div className="chart" role="img" aria-label={`${title}. Pie chart with ${rows.length} categories.`}>
+        <ResponsiveContainer width="100%" height={400}>
+          <PieChart>
+            <Pie data={rows} dataKey={valueKey} nameKey={nameKey} outerRadius={140} label>
+              {rows.map((row, index) => <Cell key={String(row[nameKey] ?? index)} fill={SERIES_COLORS[index % SERIES_COLORS.length]} />)}
+            </Pie>
+            <Tooltip />
+            <Legend />
+          </PieChart>
         </ResponsiveContainer>
       </div>
     </Card>

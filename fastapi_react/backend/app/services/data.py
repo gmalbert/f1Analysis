@@ -49,6 +49,51 @@ def load_main_data() -> pd.DataFrame:
     if not MAIN_DATA.exists():
         raise FileNotFoundError(f"Missing required dataset: {MAIN_DATA}")
     df = pd.read_csv(MAIN_DATA, sep="\t", low_memory=False)
+
+    # Streamlit's get_shared_dataset() recreates several canonical driver/constructor
+    # statistics from legacy merge-suffixed columns before it builds the filter
+    # sidebar. Mirror those aliases here so the API exposes the same filters and
+    # query semantics instead of silently dropping them.
+    streamlit_aliases = {
+        "bestChampionshipPosition": "bestChampionshipPosition_results_with_qualifying",
+        "bestStartingGridPosition": "bestStartingGridPosition_results_with_qualifying",
+        "bestRaceResult": "bestRaceResult_results_with_qualifying",
+        "totalChampionshipWins": "totalChampionshipWins_results_with_qualifying",
+        "totalRaceStarts": "totalRaceStarts_results_with_qualifying",
+        "totalRaceWins": "totalRaceWins_results_with_qualifying",
+        "totalRaceLaps": "totalRaceLaps_results_with_qualifying",
+        "totalPodiums": "totalPodiums_results_with_qualifying",
+        "totalPoints": "totalPoints_results_with_qualifying",
+        "totalChampionshipPoints": "totalChampionshipPoints_results_with_qualifying",
+        "totalFastestLaps": "totalFastestLaps_results_with_qualifying",
+        "totalRaceEntries": "totalRaceEntries_results_with_qualifying",
+    }
+    for canonical, legacy in streamlit_aliases.items():
+        if canonical not in df.columns and legacy in df.columns:
+            df[canonical] = df[legacy]
+
+    # The Streamlit dataset then merges the current constructor and driver
+    # standings before column_names is created. Use key-based maps rather
+    # than a dataframe merge so the API keeps one row per race/driver while
+    # exposing the identical current-standings filter fields.
+    constructor_standings_path = DATA_DIR / "constructor_standings.csv"
+    if constructor_standings_path.exists() and "constructorId_results" in df.columns:
+        standings = pd.read_csv(constructor_standings_path, sep="\t", low_memory=False)
+        if "id" in standings.columns:
+            keyed = standings.drop_duplicates("id").set_index("id")
+            for column in standings.columns:
+                if column in {"id", "name", "fullName", "countryId", "TeamName"}:
+                    continue
+                df[column] = df["constructorId_results"].map(keyed[column])
+
+    driver_standings_path = DATA_DIR / "driver_standings.csv"
+    if driver_standings_path.exists() and "resultsDriverId" in df.columns:
+        standings = pd.read_csv(driver_standings_path, sep="\t", low_memory=False)
+        if "driverId" in standings.columns:
+            keyed = standings.drop_duplicates("driverId").set_index("driverId")
+            if "driverRank" in keyed.columns:
+                df["driverRank"] = df["resultsDriverId"].map(keyed["driverRank"])
+
     for candidate in ("short_date", "date", "grandPrixDate"):
         if candidate in df.columns:
             df[candidate] = pd.to_datetime(df[candidate], errors="coerce")
@@ -104,13 +149,15 @@ def apply_filters(df: pd.DataFrame, filters: list[Any]) -> pd.DataFrame:
 
 
 @lru_cache(maxsize=1)
-def streamlit_filter_rules() -> tuple[dict[str, str], frozenset[str]]:
-    """Read the Streamlit filter labels and exclusions without importing its app."""
+def streamlit_filter_rules() -> tuple[dict[str, str], frozenset[str], frozenset[str]]:
+    """Read Streamlit filter labels, exclusions, and its loaded-column contract."""
     source_path = REPO_ROOT / "raceAnalysis.py"
     tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
-    literal_names = {"column_rename_for_filter", "exclusionList", "suffixes_to_exclude"}
+    literal_names = {"column_rename_for_filter", "exclusionList", "suffixes_to_exclude", "selected_columns"}
     values: dict[str, Any] = {}
-    for node in tree.body:
+    # selected_columns lives inside load_data(); walk the tree so the API
+    # follows the same authoritative loaded-column contract as Streamlit.
+    for node in ast.walk(tree):
         if not isinstance(node, ast.Assign):
             continue
         for target in node.targets:
@@ -124,15 +171,20 @@ def streamlit_filter_rules() -> tuple[dict[str, str], frozenset[str]]:
     excluded = set(values.get("exclusionList", ()))
     suffixes = values.get("suffixes_to_exclude", ())
     excluded.update(column for column in load_main_data().columns if column.endswith(tuple(suffixes)))
-    return labels, frozenset(excluded)
-
+    selected = set(values.get("selected_columns", ()))
+    # These friendly-name fields include columns introduced by the standings
+    # merges (for example Points and bestChampionshipPosition).
+    selected.update(labels)
+    return labels, frozenset(excluded), frozenset(selected)
 
 def filter_schema() -> list[dict[str, Any]]:
     df = load_main_data()
-    labels, excluded = streamlit_filter_rules()
+    labels, excluded, selected = streamlit_filter_rules()
     schema: list[dict[str, Any]] = []
+    # Streamlit explicitly sorts `column_names` before building sidebar controls.
+    # Preserve that raw-field alphabetical order; labels are applied only for display.
     for column in sorted(df.columns):
-        if column in excluded:
+        if column in excluded or (selected and column not in selected):
             continue
         series = df[column]
         non_null = series.dropna()
@@ -168,7 +220,13 @@ def query_main(request: Any) -> dict[str, Any]:
     if request.sort:
         valid = [c for c in request.sort if c in df.columns]
         if valid:
-            df = df.sort_values(valid, ascending=not request.descending)
+            sort_ascending: bool | list[bool]
+            if request.ascending and len(request.ascending) == len(request.sort):
+                direction_map = dict(zip(request.sort, request.ascending, strict=True))
+                sort_ascending = [direction_map[column] for column in valid]
+            else:
+                sort_ascending = not request.descending
+            df = df.sort_values(valid, ascending=sort_ascending)
     if request.columns:
         valid = [c for c in request.columns if c in df.columns]
         if valid:

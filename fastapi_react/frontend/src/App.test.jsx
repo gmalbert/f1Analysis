@@ -3,7 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 
 vi.mock("./api", () => ({
-  api: { get: vi.fn().mockResolvedValue({ status: "ok", rss_mb: 120 }) },
+  api: { get: vi.fn().mockResolvedValue({
+    race_start_year: 2016,
+    current_year: 2026,
+    last_updated: "2026-09-29 09:00 PM",
+    code_deployed_at: "2026-09-30 01:00:00 UTC",
+  }) },
 }));
 vi.mock("./pages/DataExplorer", () => ({ default: () => <h1>Explorer page</h1> }));
 vi.mock("./pages/Analytics", () => ({ default: () => <h1>Analytics page</h1> }));
@@ -20,26 +25,21 @@ describe("application shell", () => {
     document.title = "";
   });
 
-  it("renders the reference brand, section navigation, and API status", async () => {
+  it("renders the Streamlit reference brand, title, captions, and seven tabs", async () => {
     render(<App />);
     expect(screen.getByRole("img", { name: "Gridlocked" })).toHaveAttribute("src", "/api/brand/logo");
-    expect(screen.getByText(/F1 Races from 2016 to/)).toBeInTheDocument();
-    expect(screen.getByRole("navigation", { name: "Sections" })).toBeInTheDocument();
-    expect(await screen.findByText("API connected")).toBeInTheDocument();
+    expect(await screen.findByText("F1 Races from 2016 to 2026")).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Main sections" })).toBeInTheDocument();
+    expect(screen.getAllByRole("tab")).toHaveLength(7);
+    expect(screen.getByRole("tab", { name: "📊 Data Explorer" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "💾 Data & Debug" })).toBeInTheDocument();
   });
 
-  it("switches sections from the horizontal navigation and updates the title", async () => {
+  it("switches sections from the Streamlit-style tab row and preserves the Streamlit page title", async () => {
     render(<App />);
-    fireEvent.click(screen.getByRole("button", { name: "Analytics" }));
+    fireEvent.click(screen.getByRole("tab", { name: "📈 Analytics & Visualizations" }));
     expect(await screen.findByRole("heading", { name: "Analytics page" })).toBeInTheDocument();
-    await waitFor(() => expect(document.title).toBe("Analytics — F1 Analysis"));
+    await waitFor(() => expect(document.title).toBe("Gridlocked - Formula 1 Betting & Analytics"));
     expect(window.location.hash).toBe("#/Analytics");
-  });
-
-  it("persists the light theme toggle", async () => {
-    render(<App />);
-    fireEvent.click(screen.getByRole("checkbox", { name: "Use light theme" }));
-    await waitFor(() => expect(document.documentElement).toHaveAttribute("data-theme", "light"));
-    expect(localStorage.getItem("f1analysis.theme")).toBe("light");
   });
 });
