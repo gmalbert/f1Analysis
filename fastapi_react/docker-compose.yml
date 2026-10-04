@@ -6,6 +6,7 @@ services:
     environment:
       F1_REPO_ROOT: /repo
       ENABLE_EXPENSIVE_TOOLS: "0"
+      F1_TRUSTED_LOCAL: "0"
       OMP_NUM_THREADS: "1"
       OPENBLAS_NUM_THREADS: "1"
       MKL_NUM_THREADS: "1"

@@ -1,10 +1,32 @@
 import {fireEvent,render,screen,waitFor} from '@testing-library/react';
 import {describe,expect,it,vi} from 'vitest';
-import {ViewNodes,displayCell} from './Presentation';
+import {ViewNodes,displayCell,isTireChartPair,selectedTireChart} from './Presentation';
 
 vi.mock('./ViewTable',()=>({ViewTable:()=>null}));
 
 describe('reference presentation controls',()=>{
+  it('links only the corresponding tire chart and filters original chart values without mutating the source',()=>{
+    const chart={type:'vega',spec:{data:{name:'tire'},encoding:{x:{field:'driver',sort:null},y:{field:'Degradation (s/lap)'}},datasets:{tire:[
+      {driver:'George Russell','Degradation (s/lap)':-4.223456},
+      {driver:'Kimi Antonelli','Degradation (s/lap)':-4.178},
+      {driver:'Esteban Ocon','Degradation (s/lap)':-3.987},
+      {driver:'Other driver','Degradation (s/lap)':-3.1},
+    ]}}};
+    const nodes=[{type:'table',columns:[{key:'Driver'},{key:'Avg Deg (s/lap)'}]},{type:'markdown',text:'**Avg Tire Degradation by Driver (s/lap)**'},chart];
+    expect(isTireChartPair(nodes,0)).toBe(true);
+    const selected=['George Russell','Kimi Antonelli','Esteban Ocon'];
+    const filtered=selectedTireChart(chart,selected);
+    expect(filtered.spec.datasets.tire.map(row=>row.driver)).toEqual(selected);
+    expect(filtered.spec.datasets.tire[0]['Degradation (s/lap)']).toBe(-4.223456);
+    expect(filtered.spec.encoding.x.sort).toEqual(selected);
+    expect(chart.spec.datasets.tire).toHaveLength(4);
+    expect(chart.spec.encoding.x.sort).toBeNull();
+    expect(selectedTireChart(chart,[])).toBe(chart);
+    expect(isTireChartPair([{...nodes[0],columns:[{key:'Driver'}]},...nodes.slice(1)],0)).toBe(false);
+    expect(isTireChartPair([nodes[0],{type:'markdown',text:'Unrelated chart'},chart],0)).toBe(false);
+    const inline={...chart,spec:{...chart.spec,data:{values:chart.spec.datasets.tire},datasets:undefined}};
+    expect(selectedTireChart(inline,['Esteban Ocon']).spec.data.values).toEqual([chart.spec.datasets.tire[2]]);
+  });
   it('preserves explicit precision, percent, missing and date formatting',()=>{
     expect(displayCell(1.23456,{format:'%.3f'})).toBe('1.235');
     expect(displayCell(.25,{format:'percent'})).toBe('25.00%');
@@ -12,6 +34,14 @@ describe('reference presentation controls',()=>{
     expect(displayCell(null,{})).toBe('None');
     expect(displayCell('2026-10-01T12:30:00',{kind:'DateColumn'})).toBe('2026-10-01');
     expect(displayCell(1.2,{},'1.200')).toBe('1.200');
+  });
+  it('displays calendar years without grouping while preserving ordinary numeric formatting',()=>{
+    expect(displayCell(2026,{key:'year'})).toBe('2026');
+    expect(displayCell(2026,{key:'grandPrixYear'},'2,026')).toBe('2026');
+    expect(displayCell(2016,{label:'Year',format:'%.2f'})).toBe('2016');
+    expect(displayCell(2026,{key:'start_year'})).toBe('2026');
+    expect(displayCell(4629,{key:'rows'})).toBe('4,629');
+    expect(displayCell(2026,{key:'yearsActive'})).toBe('2,026');
   });
   it('commits numbers on Enter and clamps to the reference limits',()=>{
     const change=vi.fn();

@@ -64,6 +64,25 @@ def clean(value: Any) -> Any:
     return scalar(value)
 
 
+def table_rows(frame: pd.DataFrame) -> list[list[Any]]:
+    """Normalize whole numeric columns without rounding values or visiting each cell.
+
+    Mixed/text/date columns retain scalar normalization. An object matrix keeps
+    Python integers, booleans and float precision when converted back to rows.
+    """
+    values = frame.to_numpy(dtype=object, copy=True)
+    for index, (_name, series) in enumerate(frame.items()):
+        if pd.api.types.is_numeric_dtype(series):
+            numeric = series.to_numpy(dtype=np.float64, na_value=np.nan)
+            values[~np.isfinite(numeric), index] = None
+        else:
+            values[:, index] = np.fromiter(
+                (scalar(value) for value in values[:, index]), dtype=object, count=len(frame)
+            )
+    rows: list[list[Any]] = values.tolist()
+    return rows
+
+
 class State(dict[str, Any]):
     def __getattr__(self, key: str) -> Any:
         return self.get(key)
@@ -379,7 +398,7 @@ class Presentation:
                     **definition,
                 }
             )
-        values = [[scalar(v) for v in row] for row in frame[cols].itertuples(index=False, name=None)]
+        values = table_rows(frame[cols])
         # Preserve original row/column positions for Styler formatting/highlights.
         source_positions = {c: frame.columns.get_loc(c) for c in cols}
         cell_styles = (

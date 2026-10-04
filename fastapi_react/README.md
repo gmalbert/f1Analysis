@@ -5,6 +5,12 @@ fields, formatting and workflows. The current local parity results and evidence
 are in [PARITY_REPORT.md](PARITY_REPORT.md) and
 [PARITY_CHECKLIST.md](PARITY_CHECKLIST.md).
 
+The [enhancement guide](enhancement_proposals/2026-10-01/README.md) contains
+17 optional design, feature, backend, and deployment proposals, real preview
+screenshots, complete implementation files, and validation/rollback instructions.
+All 17 enhancements (D1–D4, F1–F6, B1–B5 and O1–O2) are now implemented in the main application. See
+[ENHANCEMENTS.md](ENHANCEMENTS.md) for current behavior and verification.
+
 ## Architecture
 
 React/Vite renders a native interface from POST /api/views. FastAPI returns a
@@ -38,18 +44,31 @@ visibility, pinning, formatting, CSV download and fullscreen.
 7. 📐 Betting Research
 
 Models include all seven original nested panels and six estimator choices.
-Betting Research includes Value & stake, Field simulation, Paper replay and
-Calibration. Uploads and downloads use the original CSV contracts and f1bet
-calculations. Filters and selected panels persist across navigation.
+Betting Research exposes the Value & stake calculator. Field simulation, Paper
+replay and Calibration uploads and their compatibility API endpoints are disabled
+in the public React application. Offline research functions remain available.
+Downloads retain the original CSV contracts. Filters and selected panels persist
+across navigation. API request bodies default to a 1 MiB limit, matching Nginx;
+`F1_MAX_REQUEST_BYTES` overrides the backend limit only.
 
 ## Local development
 
-From the repository root, activate a Python environment with the backend
+From the repository root in PowerShell, use the project's `.venv` with the backend
 requirements installed, then start the API:
 
-    cd fastapi_react/backend
-    pip install -r requirements.txt -r requirements-dev.txt
-    python -m uvicorn app.main:app --reload --port 8000
+    .\.venv\Scripts\python.exe -m pip install -r fastapi_react/backend/requirements.txt -r fastapi_react/backend/requirements-dev.txt
+    .\fastapi_react\start-local.ps1
+
+The local launcher enables research tools and diagnostics without an administrator
+token. It binds the API to `127.0.0.1:8000`, disables forwarded-header trust, and
+limits browser access to the configured local app addresses. The React research
+form automatically omits the token field. Calculations still start only when you
+press **Queue calculation**. Stop this API with Ctrl+C.
+
+For another local port, see `F1_LOCAL_ORIGINS` in the
+[backend guide](backend/ENHANCEMENTS.md). For hosted use, leave
+`F1_TRUSTED_LOCAL=0` (the default) and configure `F1_ADMIN_TOKEN` on the server.
+Do not use the local launcher behind a public proxy.
 
 In a second terminal:
 
@@ -73,7 +92,9 @@ From the repository root:
     cd fastapi_react
     docker compose up --build
 
-Open http://localhost:8080. Compose mounts the repository read-only at /repo
+Open http://localhost:8080. Compose explicitly keeps trusted local mode off;
+research jobs and diagnostics require server-configured administrator credentials.
+Compose mounts the repository read-only at /repo
 and sets F1_REPO_ROOT=/repo. This avoids copying large data/model artifacts into
 the image. Docker deployment was not rerun as part of the latest local parity
 verification.
@@ -82,7 +103,9 @@ verification.
 
 Page loads use existing model artifacts; they do not train models. The reference's
 research-only training controls remain disabled. The bin-count comparison and
-temporal leakage audit retain their explicit button-triggered behavior. The
+temporal leakage audit now open an explicit research queue, which runs calculations
+in a separate process. The local launcher needs no token; hosted use retains
+administrator authentication. The
 shared audit implementation returns findings without rewriting the dataset.
 
 The separate compatibility API's expensive tools remain disabled by default

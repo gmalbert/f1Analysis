@@ -1,0 +1,40 @@
+{
+  "recorded_at": "2026-10-02T10:46:53.852103+00:00",
+  "scope": "Isolated integrated proposal preview; main application enhancements remain disabled.",
+  "backend": {
+    "pytest_passed": 66,
+    "coverage_percent": 87.9,
+    "existing_threshold_percent": 80,
+    "ruff": "passed",
+    "strict_mypy": "passed, 18 source files",
+    "py_compile": "passed",
+    "compiled_python_files": 22
+  },
+  "frontend": {
+    "vitest_passed": 63,
+    "statement_and_line_coverage_percent": 73.78,
+    "branch_coverage_percent": 73.24,
+    "function_coverage_percent": 57.65,
+    "eslint": "passed, no warnings",
+    "typescript": "passed",
+    "vite_build": "passed",
+    "gzip_budget": "passed"
+  },
+  "standalone": {
+    "python_contract_tests_passed": 4,
+    "frontend_contracts": "passed"
+  },
+  "documentation": {
+    "markdown_guides": 8,
+    "screenshots": 8,
+    "local_links": "verified",
+    "complete_source_appendices": "verified",
+    "source_hashes": "verified"
+  },
+  "not_performed": [
+    "Production Nginx deployment",
+    "Multi-user load benchmark",
+    "Complete accessibility audit",
+    "Actual expensive research calculation"
+  ]
+}

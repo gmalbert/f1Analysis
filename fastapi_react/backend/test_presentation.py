@@ -10,7 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.services.presentation import Presentation, clean, render_view
+from app.services.presentation import Presentation, clean, render_view, scalar, table_rows
 
 
 def walk(nodes):
@@ -89,9 +89,37 @@ def test_controls_downloads_and_charts():
     assert all(n["spec"] for n in ui.nodes if n["type"] == "vega")
 
 
-def test_betting_actions_and_upload():
-    result = render_view(7, {"_tabs:Value & stake": 1, "Simulations": 1000}, "run_f1bet_simulation")
-    assert any(n["type"] == "table" for n in walk(result["nodes"]))
+def test_batched_table_values_preserve_numeric_precision_missing_types_dates_and_duplicates():
+    frame = pd.DataFrame(
+        {
+            "float": [np.nextafter(1.0, 2.0), np.inf, -np.inf, np.nan],
+            "integer": pd.Series([2**60 + 1, None, -2**60, 0], dtype="Int64"),
+            "boolean": pd.Series([True, False, None, True], dtype="boolean"),
+            "timestamp": pd.to_datetime(["2026-01-01T12:34:56.123456789", None, None, None]),
+            "mixed": [np.float64(1.25), dt.date(2026, 1, 2), np.inf, pd.NA],
+            "category": pd.Categorical(["a", "b", None, "a"]),
+            "nested": [["a", "b"], {"value": 2}, [], None],
+        }
+    )
+    selected = frame[["integer", "float", "boolean", "timestamp", "mixed", "category", "nested", "integer"]]
+    expected = [[scalar(value) for value in row] for row in selected.itertuples(index=False, name=None)]
+    assert table_rows(selected) == expected
+    assert table_rows(selected)[0][0] == 2**60 + 1
+    json.dumps(table_rows(selected), allow_nan=False)
+    assert table_rows(frame.iloc[:0]) == []
+    assert table_rows(pd.DataFrame(index=range(2))) == [[], []]
+
+
+def test_betting_calculator_remains_available_without_upload_tools():
+    # Old browser state/actions must not restore disabled tools or hide the calculator.
+    result = render_view(7, {
+        "_tabs:Value & stake": 1, "Simulations": 1000,
+        "f1bet_field_upload": {"name": "old.csv", "content": "invalid csv"},
+    }, "run_f1bet_simulation")
+    nodes = list(walk(result["nodes"]))
+    assert not any(n["type"] in {"upload", "table"} for n in nodes)
+    assert len([n for n in nodes if n["type"] == "metric"]) == 4
+    assert not any(n.get("label") in {"Field simulation", "Paper replay", "Calibration"} for n in nodes)
     baseline = render_view(7, {})
     changed = render_view(7, {"Model probability": 0.8})
     a = [n["value"] for n in walk(baseline["nodes"]) if n["type"] == "metric"]

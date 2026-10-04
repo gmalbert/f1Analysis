@@ -1,0 +1,51 @@
+{
+  "pass": true,
+  "base": "http://127.0.0.1:8180",
+  "checks": [
+    {
+      "path": "/index.html",
+      "status": 200,
+      "cache_control": "no-cache"
+    },
+    {
+      "path": "/route-that-uses-the-spa-fallback",
+      "status": 200,
+      "cache_control": "no-cache"
+    },
+    {
+      "path": "/assets/index-DO_MS5ek.js",
+      "status": 200,
+      "cache_control": "public, max-age=31536000, immutable"
+    },
+    {
+      "path": "/betting-oracle-logo-60.webp",
+      "status": 200,
+      "cache_control": "public, max-age=3600"
+    },
+    {
+      "path": "/favicon.png",
+      "status": 200,
+      "cache_control": "public, max-age=3600"
+    },
+    {
+      "path": "/assets/index-DO_MS5ek.js.map",
+      "status": 404,
+      "cache_control": "no-store"
+    },
+    {
+      "path": "/api/health",
+      "status": 200,
+      "cache_control": "no-store"
+    },
+    {
+      "path": "/api/missing.png",
+      "status": 404,
+      "cache_control": "no-store"
+    },
+    {
+      "path": "/api/missing.map",
+      "status": 404,
+      "cache_control": "no-store"
+    }
+  ]
+}

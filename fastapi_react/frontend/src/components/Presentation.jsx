@@ -1,11 +1,34 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import Markdown from 'react-markdown';
-import {ViewTable} from './ViewTable';
+import {EnhancedTable} from '../enhancements/EnhancedTable';
+import {SafePlotlyChart} from '../enhancements/SafePlotlyChart';
 import {TabScroll} from './TabScroll';
 import {useTheme} from './useTheme';
 
 const numberFormat = new Intl.NumberFormat('en-US', { maximumFractionDigits: 4 });
 
+function isYearField(column) {
+  return [column.key, column.label, column.field, column.title].some(name =>
+    typeof name === 'string' && /\byear\b/i.test(name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]/g, ' '))
+  );
+}
+
+function formatYearEncodings(spec) {
+  if (!spec || typeof spec !== 'object') return;
+  if (spec.encoding) {
+    for (const [channel, definition] of Object.entries(spec.encoding)) {
+      for (const field of Array.isArray(definition) ? definition : [definition]) {
+        if (!field || !isYearField(field) || field.type === 'temporal') continue;
+        if (channel === 'tooltip' || channel === 'text') field.format = 'd';
+        else if ((channel === 'x' || channel === 'y') && field.axis !== null) field.axis = {...field.axis, format: 'd'};
+      }
+    }
+  }
+  for (const key of ['layer', 'hconcat', 'vconcat', 'concat']) {
+    for (const child of spec[key] || []) formatYearEncodings(child);
+  }
+  if (spec.spec) formatYearEncodings(spec.spec);
+}
 
 export function displayCell(value, column, styled) {
   if (value == null) return 'None';
@@ -21,6 +44,7 @@ export function displayCell(value, column, styled) {
     return time;
   }
   if (typeof value === 'number') {
+    if (isYearField(column)) return String(Math.trunc(value));
     const format = column.format;
     if (format === '%d') return String(Math.trunc(value));
     const precision = /^%\.(\d+)f$/.exec(format || '');
@@ -44,6 +68,7 @@ function VegaChart({ node }) {
     const el = ref.current;
     import('vega-embed').then(async ({default: embed}) => {
       const spec = structuredClone(node.spec);
+      formatYearEncodings(spec);
       const dark = theme === 'dark';
       const text = dark ? '#fafafa' : '#31333f';
       spec.width = Math.max(120, el.clientWidth);
@@ -66,19 +91,9 @@ function VegaChart({ node }) {
   const keys=records.length?Object.keys(records[0]):[];
   const table={rows:records.map(row=>keys.map(key=>row[key])),columns:keys.map(key=>({key,label:key,kind:typeof records[0]?.[key]==='number'?'NumberColumn':'TextColumn'})),hide_index:true,height:350};
   async function download(){const url=await viewRef.current?.toImageURL('png',Math.max(2,window.devicePixelRatio || 1));if(url){const link=document.createElement('a');link.href=url;link.download=`${new Date().toISOString().slice(0,16).replaceAll(':','-')}_chart.png`;link.click();}}
-  return <div className="chart-shell" ref={outer} role="group" aria-label={node.label || 'Interactive analysis chart'}><div className="table-toolbar"><button aria-label={showData?'Show chart':'Show data'} title={showData?'Show chart':'Show data'} onClick={()=>setShowData(s=>!s)}>▥</button><button aria-label="Download chart as PNG" title="Download as PNG" onClick={download}>⇩</button><button aria-label="Copy Vega-Lite spec" title="Copy Vega-Lite spec" onClick={()=>navigator.clipboard?.writeText(JSON.stringify(node.spec,null,2)).catch(()=>{})}>⧉</button><button aria-label="Fullscreen chart" title="Fullscreen" onClick={()=>document.fullscreenElement?document.exitFullscreen():outer.current?.requestFullscreen?.()}>⛶</button></div><div className="view-chart" ref={ref} style={{display:showData?'none':undefined}}>{error && <div role="alert">{error}</div>}</div>{showData && <ViewTable node={table}/>}</div>;
+  return <div className="chart-shell" ref={outer} role="group" aria-label={node.label || 'Interactive analysis chart'}><div className="table-toolbar"><button aria-label={showData?'Show chart':'Show data'} title={showData?'Show chart':'Show data'} onClick={()=>setShowData(s=>!s)}>▥</button><button aria-label="Download chart as PNG" title="Download as PNG" onClick={download}>⇩</button><button aria-label="Copy Vega-Lite spec" title="Copy Vega-Lite spec" onClick={()=>navigator.clipboard?.writeText(JSON.stringify(node.spec,null,2)).catch(()=>{})}>⧉</button><button aria-label="Fullscreen chart" title="Fullscreen" onClick={()=>document.fullscreenElement?document.exitFullscreen():outer.current?.requestFullscreen?.()}>⛶</button></div><div className="view-chart" ref={ref} style={{display:showData?'none':undefined}}>{error && <div role="alert">{error}</div>}</div>{showData && <EnhancedTable node={table}/>}</div>;
 }
 
-function PlotlyChart({ node }) {
-  const ref = useRef(null);
-  useEffect(() => {
-    let chart;
-    const el = ref.current;
-    import('plotly.js-dist-min').then(({default: plotly}) => {chart = plotly; chart.newPlot(el, node.spec.data, {...node.spec.layout, autosize: true}, {responsive: true});});
-    return () => {if (chart && el) chart.purge(el);};
-  }, [node.spec]);
-  return <div className="view-chart" ref={ref} role="img" aria-label="Interactive analysis chart" />;
-}
 
 function Slider({ node, change }) {
   const dates = typeof node.min === 'string';
@@ -142,10 +157,62 @@ function MultiSelect({node,values,change}) {
   return <div className="view-field multiselect-field"><label htmlFor={id}>{node.label}</label><div className="multiselect-box">{selected.map(value=><span className="select-tag" key={value}>{value}<button aria-label={`Remove ${value}`} onClick={()=>change(node.key,selected.filter(v=>v!==value))}>×</button></span>)}<input id={id} role="combobox" aria-expanded={open} aria-controls={`${id}-options`} aria-autocomplete="list" value={search} onFocus={()=>setOpen(true)} onChange={e=>{setSearch(e.target.value);setOpen(true);}} onKeyDown={e=>{if(e.key==='Escape')setOpen(false);if(e.key==='Backspace' && !search && selected.length)change(node.key,selected.slice(0,-1));if(e.key==='Enter'){const option=node.options.find(v=>!selected.includes(v) && String(v).includes(search));if(option!==undefined){change(node.key,[...selected,option]);setSearch('');}e.preventDefault();}}}/><button aria-label={`Clear ${node.label}`} onClick={()=>change(node.key,[])}>×</button><button aria-label={`Toggle ${node.label} options`} onClick={()=>setOpen(s=>!s)}>⌄</button></div><div id={`${id}-options`} role="listbox" aria-label={node.label} hidden={!open} className="multiselect-options">{node.options.filter(v=>!selected.includes(v) && String(v).toLowerCase().includes(search.toLowerCase())).map(v=><button role="option" aria-selected="false" key={v} onClick={()=>{change(node.key,[...selected,v]);setSearch('');}}>{v}</button>)}</div></div>;
 }
 
-export function ViewNodes({ nodes = [], values = {}, change = (_key, _value) => {}, action = (_key) => {} }) {
+function tireContextFrom(nodes) {
+  const context = {};
+  function read(items) {
+    for (const node of items || []) {
+      if (node.key === 'tire_year_select') context.year = node.value;
+      if (node.key === 'tire_race_select') context.event = node.value;
+      read(node.children);
+    }
+  }
+  read(nodes);
+  return context;
+}
+
+export function isTireChartPair(nodes, index) {
+  const table = nodes[index], heading = nodes[index + 1], chart = nodes[index + 2];
+  const inlineData = chart?.spec?.data?.values || chart?.spec?.datasets?.[chart?.spec?.data?.name];
+  return import.meta.env.VITE_F1_ENHANCEMENTS !== '0' && table?.type === 'table'
+    && table.columns.some(column => column.key === 'Avg Deg (s/lap)')
+    && heading?.type === 'markdown' && heading.text.includes('Avg Tire Degradation by Driver')
+    && chart?.type === 'vega' && chart.spec.encoding?.x?.field === 'driver'
+    && chart.spec.encoding?.y?.field === 'Degradation (s/lap)' && Array.isArray(inlineData);
+}
+
+export function selectedTireChart(chart, drivers) {
+  if (!drivers.length) return chart;
+  const spec = structuredClone(chart.spec), selected = new Set(drivers);
+  const filter = rows => rows.filter(row => selected.has(row.driver));
+  if (Array.isArray(spec.data?.values)) spec.data.values = filter(spec.data.values);
+  const name = spec.data?.name;
+  if (name && Array.isArray(spec.datasets?.[name])) spec.datasets[name] = filter(spec.datasets[name]);
+  spec.encoding.x.sort = drivers;
+  spec.encoding.x.title = 'Selected drivers';
+  spec.encoding.y.title = 'Tire degradation (s/lap)';
+  return {...chart, spec};
+}
+
+function TireDriverComparison({table, heading, chart, context}) {
+  const [drivers, setDrivers] = useState([]);
+  const filtered = useMemo(() => selectedTireChart(chart, drivers), [chart, drivers]);
+  const scope = `${context?.event || 'Selected race'}${context?.year ? ' ' + context.year : ''}`;
+  return <section aria-label="Race tire strategy comparison">
+    <EnhancedTable node={table} context={context} chartLinked onSelectionChange={setDrivers}/>
+    <div className="view-markdown"><Markdown>{heading.text}</Markdown></div>
+    <p className="view-caption">{drivers.length ? `Showing only ${drivers.length} selected driver${drivers.length === 1 ? '' : 's'}: ${drivers.join(', ')}.` : 'Showing all drivers.'} {scope}.</p>
+    <VegaChart node={{...filtered, label: `Tire degradation — ${scope} — ${drivers.length ? drivers.join(', ') : 'all drivers'}`}}/>
+  </section>;
+}
+
+export function ViewNodes({ nodes = [], values = {}, change = (_key, _value) => {}, action = (_key) => {}, tireContext = null }) {
+  const context = tireContext || tireContextFrom(nodes);
+  const paired = new Set(nodes.map((_, index) => isTireChartPair(nodes, index) ? index : -1).filter(index => index >= 0));
   return nodes.map((node, index) => {
+    if (paired.has(index - 1) || paired.has(index - 2)) return null;
     const key = `${index}-${node.type}-${node.label || ''}`;
-    const children = () => <ViewNodes nodes={node.children} values={values} change={change} action={action} />;
+    if (paired.has(index)) return <TireDriverComparison key={key} table={node} heading={nodes[index + 1]} chart={nodes[index + 2]} context={context}/>;
+    const children = () => <ViewNodes nodes={node.children} values={values} change={change} action={action} tireContext={context}/>;
     switch (node.type) {
       case 'heading': {const Heading = /** @type {keyof import('react').JSX.IntrinsicElements} */ (`h${node.level}`); return <Heading key={key} className="view-heading">{node.text}</Heading>;}
       case 'markdown': return <div className="view-markdown" key={key}><Markdown>{node.text}</Markdown></div>;
@@ -153,14 +220,16 @@ export function ViewNodes({ nodes = [], values = {}, change = (_key, _value) => 
       case 'html': return <div key={key} className="view-html" dangerouslySetInnerHTML={{__html: node.text}} />;
       case 'text': case 'code': return <pre key={key} className="view-code">{node.text}</pre>;
       case 'json': return <pre key={key} className="view-json">{JSON.stringify(node.value, null, 2)}</pre>;
-      case 'notice': return <div key={key} className={`view-notice ${node.severity}`} role={node.severity === 'error' ? 'alert' : 'status'}>{node.icon && <span>{node.icon}</span>}<Markdown>{node.text}</Markdown></div>;
+      case 'notice':
+        if (node.text === 'Research controls are disabled in hosted mode. Enable F1_RESEARCH_MODE=1 only for a trusted local/admin session; precomputed analyses remain available below.') return null;
+        return <div key={key} className={`view-notice ${node.severity}`} role={node.severity === 'error' ? 'alert' : 'status'}>{node.icon && <span>{node.icon}</span>}<Markdown>{node.text}</Markdown></div>;
       case 'metric': return <div key={key} className="view-metric"><span>{node.label}</span><strong>{node.value}</strong>{node.delta != null && <small>{node.delta}</small>}</div>;
       case 'divider': return <hr key={key} className="view-divider" />;
       case 'image': return <img key={key} alt={node.alt || 'Analysis visualization'} src={node.src} className="view-image" style={{width: node.width === 'stretch' ? '100%' : node.width, maxWidth: '100%'}} />;
-      case 'table': return <ViewTable key={key} node={node} />;
+      case 'table': return <EnhancedTable key={key} node={node} context={context} />;
       case 'vega': return <VegaChart key={key} node={node} />;
-      case 'plotly': return <PlotlyChart key={key} node={node} />;
-      case 'columns': return <div key={key} className="view-columns" style={{gridTemplateColumns: node.widths.map(w => `minmax(0, ${w}fr)`).join(' ')}}>{node.children.map((col, i) => <div className="view-flow" key={i}><ViewNodes nodes={col.children} values={values} change={change} action={action} /></div>)}</div>;
+      case 'plotly': return <SafePlotlyChart key={key} node={node} />;
+      case 'columns': return <div key={key} className="view-columns" style={{gridTemplateColumns: node.widths.map(w => `minmax(0, ${w}fr)`).join(' ')}}>{node.children.map((col, i) => <div className="view-flow" key={i}><ViewNodes nodes={col.children} values={values} change={change} action={action} tireContext={context}/></div>)}</div>;
       case 'tabs': return <ViewTabs key={key} node={node} values={values} change={change} action={action} />;
       case 'expander': return <Expander key={key} node={node}>{children()}</Expander>;
       case 'checkbox': return <label className="view-checkbox" key={key}><input aria-label={node.label} type="checkbox" checked={Boolean(values[node.key] ?? node.value)} disabled={node.disabled} onChange={e => change(node.key, e.target.checked)} /><span>{node.label}</span></label>;

@@ -14,9 +14,10 @@ export default defineConfig({
     },
   },
   build: {
-    sourcemap: true,
-    // Per PARITY_CHECKLIST §14: production main chunk must be < 500 KB gzipped.
-    // Vite fails the build if any individual chunk exceeds this budget.
+    sourcemap: false,
+    manifest: true,
+    // npm run build enforces the 500,000-byte gzip entry budget, including
+    // statically imported chunks. Vite's separate raw-size warnings remain useful.
     chunkSizeWarningLimit: 500,
   },
   test: {

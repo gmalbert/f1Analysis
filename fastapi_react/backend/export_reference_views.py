@@ -145,6 +145,22 @@ for node in betting.body:
         node.level = 0
     if isinstance(node, ast.FunctionDef) and node.name == "render_betting_research":
         node.args.args.insert(0, ast.arg(arg="ui"))
+        # Public React deployment exposes only the calculator. Keep upload-based
+        # simulation, replay and calibration in the offline research source.
+        calculator = next(
+            item for item in node.body
+            if isinstance(item, ast.With)
+            and isinstance(item.items[0].context_expr, ast.Name)
+            and item.items[0].context_expr.id == "calculator"
+        )
+        node.body = [node.body[0], *ast.parse("ui.subheader('Value & stake')").body, *calculator.body]
+betting.body = [
+    node for node in betting.body
+    if not (isinstance(node, ast.FunctionDef) and node.name == "_simulation_template")
+    and not (isinstance(node, ast.ImportFrom) and node.module in {
+        "f1bet.backtest", "f1bet.calibration", "f1bet.simulation"
+    })
+]
 ast.fix_missing_locations(betting)
 (OUT / "betting_view.py").write_text(
     "# Generated offline; no Streamlit dependency.\n" + ast.unparse(betting) + "\n", encoding="utf-8"

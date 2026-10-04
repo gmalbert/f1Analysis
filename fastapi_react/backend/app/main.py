@@ -1,27 +1,31 @@
 from __future__ import annotations
 
 import os
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from typing import Any
 
 import psutil
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
+from starlette.concurrency import run_in_threadpool
 
 from app.config import DATA_DIR, ENABLE_EXPENSIVE_TOOLS, MODEL_TYPES, REPO_ROOT
+from app.enhancements.auth import local_origins, trusted_local_enabled
+from app.enhancements.cache import NegotiatedGZipMiddleware
+from app.enhancements.metrics import BodyLimit
+from app.enhancements.service import ArtifactChangedError, Enhancements, enabled
 from app.schemas import (
     AnalyticsRequest,
     BettingValueRequest,
     QueryRequest,
-    RowsPayload,
-    SimulationRequest,
     ToolRunRequest,
     ViewRequest,
 )
 from app.services.analysis import analytics, current_season, next_race_bundle, tire_strategy
-from app.services.betting import backtest, calibration, governance, simulate, value_and_stake
+from app.services.betting import governance, value_and_stake
 from app.services.data import (
     filter_schema,
     list_data_files,
@@ -36,21 +40,44 @@ from app.services.data import (
 from app.services.presentation import render_view
 from app.services.tools import TOOLS, run_tool
 
+enhancements = Enhancements() if enabled("F1_ENHANCEMENTS") else None
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    try:
+        yield
+    finally:
+        if enhancements is not None:
+            await run_in_threadpool(enhancements.close)
+
+
 app = FastAPI(
     title="F1 Analysis API",
     version="1.0.0",
     description="FastAPI backend for the React parity migration of raceAnalysis.py",
     docs_url="/api/docs",
     openapi_url="/api/openapi.json",
+    dependencies=[Depends(enhancements.refresh_sources)] if enhancements is not None else [],
+    lifespan=lifespan,
 )
 CODE_DEPLOYED_AT = datetime.now(UTC)
-app.add_middleware(GZipMiddleware, minimum_size=1000)
+app.add_middleware(NegotiatedGZipMiddleware, minimum_size=1000, compresslevel=5)
+app.add_middleware(BodyLimit, max_bytes=int(os.environ.get("F1_MAX_REQUEST_BYTES", str(1024 * 1024))))
 
 
-@app.post("/api/views")
-def view(payload: ViewRequest) -> dict[str, Any]:
+@app.post("/api/views", response_model=dict[str, Any])
+def view(payload: ViewRequest, request: Request) -> Response:
     try:
-        return render_view(payload.page, payload.values, payload.action)
+        if enhancements is not None:
+            return enhancements.render(payload, request)
+        # The presentation protocol already normalizes values to JSON primitives.
+        # Avoid FastAPI recursively converting millions of table cells again.
+        return JSONResponse(render_view(payload.page, payload.values, payload.action))
+    except ArtifactChangedError as exc:
+        raise HTTPException(503, str(exc), headers={"Retry-After": "1"}) from exc
+    except HTTPException:
+        raise
     except Exception as exc:
         import logging
 
@@ -60,10 +87,11 @@ def view(payload: ViewRequest) -> dict[str, Any]:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=local_origins() if trusted_local_enabled() else ["*"],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Request-ID", "Server-Timing", "X-F1-Cache", "X-F1-Revision"],
 )
 
 
@@ -248,30 +276,6 @@ def betting_value(payload: BettingValueRequest) -> dict[str, Any]:
         raise _http_error(exc) from None
 
 
-@app.post("/api/betting/simulate")
-def betting_simulate(payload: SimulationRequest) -> dict[str, Any]:
-    try:
-        return simulate(payload)
-    except Exception as exc:
-        raise _http_error(exc) from None
-
-
-@app.post("/api/betting/backtest")
-def betting_backtest(payload: RowsPayload) -> dict[str, Any]:
-    try:
-        return backtest(payload.rows)
-    except Exception as exc:
-        raise _http_error(exc) from None
-
-
-@app.post("/api/betting/calibration")
-def betting_calibration(payload: RowsPayload) -> dict[str, Any]:
-    try:
-        return calibration(payload.rows)
-    except Exception as exc:
-        raise _http_error(exc) from None
-
-
 @app.get("/api/betting/governance")
 def betting_governance() -> dict[str, Any]:
     try:
@@ -286,3 +290,7 @@ def tools_run(payload: ToolRunRequest) -> dict[str, Any]:
         return run_tool(payload.tool, payload.args)
     except Exception as exc:
         raise _http_error(exc) from None
+
+
+if enhancements is not None:
+    enhancements.install(app)

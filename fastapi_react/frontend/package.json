@@ -6,7 +6,11 @@
   "scripts": {
     "postinstall": "node scripts/patch-glide.mjs",
     "dev": "vite",
-    "build": "vite build",
+    "prebuild": "node scripts/optimize-assets.mjs",
+    "build": "vite build && node scripts/check-budgets.mjs",
+    "assets:optimize": "node scripts/optimize-assets.mjs",
+    "check:budgets": "node scripts/check-budgets.mjs",
+    "check:hosting": "node scripts/check-hosting.mjs",
     "preview": "vite preview",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",

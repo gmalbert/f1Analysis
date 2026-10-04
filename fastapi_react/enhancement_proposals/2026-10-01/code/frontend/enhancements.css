@@ -1,0 +1,63 @@
+/* Opt-in presentation profile. Load after parity.css. */
+:root[data-enhancements='on']:not([data-theme='dark']) {
+  --accent:#b4232d; --muted:#596273; --border:#cbd2dc;
+}
+:root[data-enhancements='on'][data-theme='dark'] {
+  --accent:#ffb4ab; --muted:#c5cbd7; --border:#626b7c;
+}
+:root[data-enhancements='on'] .view-caption {opacity:1;color:var(--muted)}
+:root[data-enhancements='on'] .main-shell {padding-top:40px;padding-bottom:64px}
+:root[data-enhancements='on'] .parity-header>img {width:280px;height:auto}
+:root[data-enhancements='on'] .view-help {color:var(--muted);border-color:currentColor}
+:root[data-enhancements='on'] .view-notice.info {color:#17436a}
+:root[data-enhancements='on'] .slider-values {font-weight:600}
+:root[data-enhancements='on'] .table-toolbar {
+  position:relative;top:auto;right:auto;opacity:1;pointer-events:auto;
+  height:auto;min-height:44px;width:max-content;max-width:100%;margin-left:auto;z-index:5;
+}
+:root[data-enhancements='on'] .table-toolbar button {min-width:44px;min-height:44px;color:var(--text)}
+:root[data-enhancements='on'] .canvas-table .column-picker {top:44px}
+:root[data-enhancements='on'] button:focus-visible,
+:root[data-enhancements='on'] a:focus-visible,
+:root[data-enhancements='on'] input:focus-visible,
+:root[data-enhancements='on'] select:focus-visible {outline:3px solid var(--accent);outline-offset:3px}
+:root[data-enhancements='on'] .parity-nav {position:sticky;top:0;background:var(--page-bg);z-index:10}
+:root[data-enhancements='on'] .parity-nav button {min-height:44px}
+:root[data-enhancements='on'] .parity-footer {font-family:'Source Sans',sans-serif;color:var(--muted)}
+:root[data-enhancements='on'] .parity-footer p+p {color:var(--muted)}
+.enhancement-bar {display:flex;gap:12px;flex-wrap:wrap;align-items:center;padding:12px 0;font-family:'Source Sans',sans-serif}
+.enhancement-bar button,.enhancement-bar select,.enhancement-bar input,.accessible-table button,.accessible-table select {min-height:44px}
+.enhancement-error {color:#b4232d}
+.load-feedback {position:fixed;bottom:12px;right:12px;max-width:calc(100vw - 24px);background:var(--page-bg);border:1px solid var(--border);padding:12px 16px;border-radius:8px;z-index:11}
+.command-dialog {background:var(--page-bg);color:var(--text);border:1px solid var(--border);border-radius:12px;width:min(520px,calc(100vw - 32px));max-height:80vh}
+.command-dialog::backdrop {background:#0008}
+.command-dialog input {width:100%;min-height:44px}
+.command-dialog ul {padding:0;list-style:none}
+.command-dialog li button {width:100%;min-height:44px;text-align:left}
+.accessible-table {max-width:100%;margin:16px 0}
+.accessible-table .table-viewport {overflow:auto;max-height:500px}
+.accessible-table table {border-collapse:collapse;width:100%;font-family:'Source Sans',sans-serif}
+.accessible-table th,.accessible-table td {padding:8px;border:1px solid var(--border);text-align:left}
+.accessible-table th {position:sticky;top:0;background:var(--page-bg)}
+.accessible-table .columns-list {display:flex;gap:12px;flex-wrap:wrap;max-height:200px;overflow:auto}
+.provenance {font-size:14px;color:var(--muted);padding:8px 0}
+.research-job {border:1px solid var(--border);border-radius:8px;padding:16px;margin:16px 0}
+@media(max-width:640px) {
+  :root[data-enhancements='on'] .main-shell {padding-top:56px}
+  :root[data-enhancements='on'] .parity-header>img {width:210px}
+  :root[data-enhancements='on'] h1.view-heading,
+  :root[data-enhancements='on'] .shell-title {font-size:30px}
+  :root[data-enhancements='on'] .filter-sidebar {width:min(300px,calc(100vw - 56px));padding-bottom:80px}
+  .enhancement-bar>* {max-width:100%}
+}
+@media(prefers-reduced-motion:reduce) {
+  :root[data-enhancements='on'] * {scroll-behavior:auto!important;animation:none!important;transition:none!important}
+}
+@media print {
+  :root[data-enhancements='on'] .app-toolbar,
+  :root[data-enhancements='on'] .filter-sidebar,
+  :root[data-enhancements='on'] .parity-nav,
+  .enhancement-bar,.table-toolbar,.load-feedback {display:none!important}
+  :root[data-enhancements='on'] .main-shell {margin:0!important;width:100%!important;padding:0!important}
+  .accessible-table .table-viewport {max-height:none;overflow:visible}
+}

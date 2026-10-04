@@ -68,7 +68,7 @@ export function ViewTable({node}) {
     const themeOverride={bgCell:style?.['background-color'] || bg,textDark:style?.color || text};
     if(column.kind==='CheckboxColumn')return {kind:GridCellKind.Boolean,data:value==null?null:Boolean(value),allowOverlay:false,readonly:true,maxSize:16,themeOverride};
     const displayData=displayCell(value,formats[index]?{...column,format:formats[index]}:column,node.display?.[rowIndex]?.[index]);
-    if(typeof value==='number')return {kind:GridCellKind.Number,data:value,displayData,allowOverlay:true,readonly:true,contentAlign:'right',themeOverride:{...themeOverride,fontFamily:'Source Code',baseFontStyle:'12px'}};
+    if(typeof value==='number')return {kind:GridCellKind.Number,data:value,displayData,allowOverlay:true,readonly:true,contentAlign:'right',themeOverride};
     return {kind:GridCellKind.Text,data:value==null?'':String(value),displayData,allowOverlay:true,readonly:true,style:value==null?'faded':'normal',themeOverride};
   },[indices,visible,node,rows,dark,bg,text,formats]);
   function download(){

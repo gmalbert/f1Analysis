@@ -309,8 +309,10 @@ def test_betting_simulation_endpoint() -> None:
         "seed": 7,
     }
     response = client.post("/api/betting/simulate", json=payload)
-    assert response.status_code == 200
-    body = response.json()
+    assert response.status_code == 404
+    assert "/api/betting/simulate" not in app.openapi()["paths"]
+    from app.schemas import SimulationRequest
+    body = betting.simulate(SimulationRequest(**payload))
     assert "columns" in body
     assert "rows" in body
 
@@ -331,8 +333,9 @@ def test_betting_backtest_endpoint() -> None:
         "outcome": 1,
     }]
     response = client.post("/api/betting/backtest", json={"rows": rows})
-    assert response.status_code == 200
-    body = response.json()
+    assert response.status_code == 404
+    assert "/api/betting/backtest" not in app.openapi()["paths"]
+    body = betting.backtest(rows)
     assert "summary" in body
     assert "ledger" in body
     assert "decisions" in body
@@ -347,8 +350,9 @@ def test_betting_calibration_endpoint() -> None:
         {"probability": 0.9, "outcome": 1},
     ]
     response = client.post("/api/betting/calibration", json={"rows": rows})
-    assert response.status_code == 200
-    body = response.json()
+    assert response.status_code == 404
+    assert "/api/betting/calibration" not in app.openapi()["paths"]
+    body = betting.calibration(rows)
     assert "metrics" in body
     assert "reliability" in body
 
