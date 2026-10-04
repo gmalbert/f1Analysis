@@ -3,6 +3,7 @@
 import datetime as dt
 import io
 import json
+from collections import Counter
 
 import numpy as np
 import pandas as pd
@@ -10,6 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.services.data import load_streamlit_raw_data
 from app.services.presentation import Presentation, clean, render_view, scalar, table_rows
 
 
@@ -33,7 +35,16 @@ def test_filters_and_all_model_panels():
     result = render_view(1, {"filter_results_main": True})
     assert result["sidebar"]
     table = next(node for node in walk(result["nodes"]) if node["type"] == "table")
-    assert len(table["rows"]) == 4629
+    # Default filters must preserve every source race entry as the dataset grows.
+    source = load_streamlit_raw_data()
+    assert not source.empty
+    assert len(table["rows"]) == len(source)
+    identity_columns = ["grandPrixYear", "grandPrixName", "resultsDriverName"]
+    indexes = [next(i for i, column in enumerate(table["columns"]) if column["key"] == key)
+               for key in identity_columns]
+    assert Counter(tuple(row[i] for i in indexes) for row in table["rows"]) == Counter(
+        source[identity_columns].itertuples(index=False, name=None)
+    )
     assert len(table["columns"]) == 34
     assert sum(c["key"] == "positionsGained" for c in table["columns"]) == 2
     for subtab in range(7):
