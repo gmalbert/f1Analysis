@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "generated_at": "2026-10-04T06:52:06.097929+00:00",
+    "generated_at": "2026-10-04T08:01:16.892348+00:00",
     "model_type": "XGBoost",
     "folds": 5,
     "validation": "race-grouped expanding window with one-event embargo",
@@ -12,12 +12,12 @@
     }
   },
   "position_cv": {
-    "mse_mean": 8.443901740986481,
-    "mse_std": 7.822437998503974,
+    "mse_mean": 8.045479118052915,
+    "mse_std": 7.147607179638955,
     "sample_count": 4039
   },
   "dnf_validation": {
-    "test_mae": 0.2743275748672873,
+    "test_mae": 0.274327574867494,
     "roc_auc_mean": 0.5108287407214467,
     "roc_auc_std": 0.020397490598676,
     "sample_count": 4651
@@ -29,3208 +29,3208 @@
   },
   "holdout": {
     "metrics": {
-      "mse": 31.23456366049572,
-      "r2": 0.09290639255463162,
-      "mae": 3.401143620150131,
-      "mean_error": -1.4679274587777622
+      "mse": 30.276285215399408,
+      "r2": 0.12073608344283637,
+      "mae": 3.351928566892942,
+      "mean_error": -1.3925019970588517
     },
     "position_mae": {
-      "Podium (1-3)": 7.3037080087445,
-      "Winners": 1.0015866322950884,
-      "Points (1-10)": 4.055069763760467
+      "Podium (1-3)": 7.177838584690383,
+      "Winners": 1.1154914552515203,
+      "Points (1-10)": 4.011612285684039
     },
     "rows": [
       {
         "constructorName": "Williams",
         "resultsDriverName": "Alexander Albon",
         "ActualFinalPosition": 14.0,
-        "PredictedFinalPosition": 10.6708402633667,
-        "Error": 3.329159736633301
+        "PredictedFinalPosition": 10.102242469787598,
+        "Error": 3.8977575302124023
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Carlos Sainz Jr.",
         "ActualFinalPosition": 10.0,
-        "PredictedFinalPosition": 11.002595901489258,
-        "Error": -1.0025959014892578
+        "PredictedFinalPosition": 11.298151969909668,
+        "Error": -1.298151969909668
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Charles Leclerc",
         "ActualFinalPosition": 6.0,
-        "PredictedFinalPosition": 6.938406944274902,
-        "Error": -0.9384069442749023
+        "PredictedFinalPosition": 6.135528564453125,
+        "Error": -0.135528564453125
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Esteban Ocon",
         "ActualFinalPosition": 18.0,
-        "PredictedFinalPosition": 15.671070098876953,
-        "Error": 2.328929901123047
+        "PredictedFinalPosition": 15.656669616699219,
+        "Error": 2.3433303833007812
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Fernando Alonso",
         "ActualFinalPosition": 7.0,
-        "PredictedFinalPosition": 10.387479782104492,
-        "Error": -3.387479782104492
+        "PredictedFinalPosition": 10.306806564331055,
+        "Error": -3.3068065643310547
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Franco Colapinto",
         "ActualFinalPosition": 16.0,
-        "PredictedFinalPosition": 15.653984069824219,
-        "Error": 0.34601593017578125
+        "PredictedFinalPosition": 15.462261199951172,
+        "Error": 0.5377388000488281
       },
       {
         "constructorName": "Kick Sauber",
         "resultsDriverName": "Gabriel Bortoleto",
         "ActualFinalPosition": 17.0,
-        "PredictedFinalPosition": 16.56783676147461,
-        "Error": 0.4321632385253906
+        "PredictedFinalPosition": 16.9316463470459,
+        "Error": 0.06835365295410156
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "George Russell",
         "ActualFinalPosition": 1.0,
-        "PredictedFinalPosition": 2.4444169998168945,
-        "Error": -1.4444169998168945
+        "PredictedFinalPosition": 2.1412320137023926,
+        "Error": -1.1412320137023926
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Isack Hadjar",
         "ActualFinalPosition": 11.0,
-        "PredictedFinalPosition": 10.623407363891602,
-        "Error": 0.37659263610839844
+        "PredictedFinalPosition": 11.213173866271973,
+        "Error": -0.21317386627197266
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "Kimi Antonelli",
         "ActualFinalPosition": 5.0,
-        "PredictedFinalPosition": 6.677917957305908,
-        "Error": -1.6779179573059082
+        "PredictedFinalPosition": 5.8515424728393555,
+        "Error": -0.8515424728393555
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Lance Stroll",
         "ActualFinalPosition": 13.0,
-        "PredictedFinalPosition": 12.460537910461426,
-        "Error": 0.5394620895385742
+        "PredictedFinalPosition": 12.37668514251709,
+        "Error": 0.6233148574829102
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Lando Norris",
         "ActualFinalPosition": 3.0,
-        "PredictedFinalPosition": 2.660979747772217,
-        "Error": 0.3390202522277832
+        "PredictedFinalPosition": 2.1838293075561523,
+        "Error": 0.8161706924438477
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Lewis Hamilton",
         "ActualFinalPosition": 8.0,
-        "PredictedFinalPosition": 7.415372848510742,
-        "Error": 0.5846271514892578
+        "PredictedFinalPosition": 6.532401084899902,
+        "Error": 1.4675989151000977
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Liam Lawson",
         "ActualFinalPosition": 15.0,
-        "PredictedFinalPosition": 13.322763442993164,
-        "Error": 1.677236557006836
+        "PredictedFinalPosition": 12.814020156860352,
+        "Error": 2.1859798431396484
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Max Verstappen",
         "ActualFinalPosition": 2.0,
-        "PredictedFinalPosition": 1.5517644882202148,
-        "Error": 0.44823551177978516
+        "PredictedFinalPosition": 1.613524317741394,
+        "Error": 0.38647568225860596
       },
       {
         "constructorName": "Kick Sauber",
         "resultsDriverName": "Nico H\u00fclkenberg",
         "ActualFinalPosition": 20.0,
-        "PredictedFinalPosition": 14.381962776184082,
-        "Error": 5.618037223815918
+        "PredictedFinalPosition": 13.741949081420898,
+        "Error": 6.258050918579102
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Oliver Bearman",
         "ActualFinalPosition": 9.0,
-        "PredictedFinalPosition": 9.680932998657227,
-        "Error": -0.6809329986572266
+        "PredictedFinalPosition": 9.522332191467285,
+        "Error": -0.5223321914672852
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Oscar Piastri",
         "ActualFinalPosition": 4.0,
-        "PredictedFinalPosition": 2.998699426651001,
-        "Error": 1.001300573348999
+        "PredictedFinalPosition": 2.737168073654175,
+        "Error": 1.2628319263458252
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Pierre Gasly",
         "ActualFinalPosition": 19.0,
-        "PredictedFinalPosition": 16.469619750976562,
-        "Error": 2.5303802490234375
+        "PredictedFinalPosition": 17.035228729248047,
+        "Error": 1.9647712707519531
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Yuki Tsunoda",
         "ActualFinalPosition": 12.0,
-        "PredictedFinalPosition": 13.169820785522461,
-        "Error": -1.169820785522461
+        "PredictedFinalPosition": 12.835994720458984,
+        "Error": -0.8359947204589844
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Alexander Albon",
         "ActualFinalPosition": 14.0,
-        "PredictedFinalPosition": 12.405475616455078,
-        "Error": 1.5945243835449219
+        "PredictedFinalPosition": 11.891301155090332,
+        "Error": 2.108698844909668
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Charles Leclerc",
         "ActualFinalPosition": 3.0,
-        "PredictedFinalPosition": 2.517458915710449,
-        "Error": 0.4825410842895508
+        "PredictedFinalPosition": 2.0411906242370605,
+        "Error": 0.9588093757629395
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Esteban Ocon",
         "ActualFinalPosition": 15.0,
-        "PredictedFinalPosition": 12.937686920166016,
-        "Error": 2.0623130798339844
+        "PredictedFinalPosition": 13.389364242553711,
+        "Error": 1.610635757446289
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Fernando Alonso",
         "ActualFinalPosition": 10.0,
-        "PredictedFinalPosition": 8.5828275680542,
-        "Error": 1.4171724319458008
+        "PredictedFinalPosition": 9.290392875671387,
+        "Error": 0.7096071243286133
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Franco Colapinto",
         "ActualFinalPosition": 17.0,
-        "PredictedFinalPosition": 15.4866304397583,
-        "Error": 1.5133695602416992
+        "PredictedFinalPosition": 15.527430534362793,
+        "Error": 1.472569465637207
       },
       {
         "constructorName": "Kick Sauber",
         "resultsDriverName": "Gabriel Bortoleto",
         "ActualFinalPosition": 18.0,
-        "PredictedFinalPosition": 18.940645217895508,
-        "Error": -0.9406452178955078
+        "PredictedFinalPosition": 18.641357421875,
+        "Error": -0.641357421875
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "George Russell",
         "ActualFinalPosition": 6.0,
-        "PredictedFinalPosition": 3.437973976135254,
-        "Error": 2.562026023864746
+        "PredictedFinalPosition": 3.311148166656494,
+        "Error": 2.688851833343506
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Isack Hadjar",
         "ActualFinalPosition": 16.0,
-        "PredictedFinalPosition": 14.855127334594727,
-        "Error": 1.1448726654052734
+        "PredictedFinalPosition": 15.777627944946289,
+        "Error": 0.22237205505371094
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "Kimi Antonelli",
         "ActualFinalPosition": 13.0,
-        "PredictedFinalPosition": 11.255999565124512,
-        "Error": 1.7440004348754883
+        "PredictedFinalPosition": 10.878866195678711,
+        "Error": 2.121133804321289
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Lance Stroll",
         "ActualFinalPosition": 12.0,
-        "PredictedFinalPosition": 12.504809379577637,
-        "Error": -0.5048093795776367
+        "PredictedFinalPosition": 12.241382598876953,
+        "Error": -0.24138259887695312
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Lando Norris",
         "ActualFinalPosition": 2.0,
-        "PredictedFinalPosition": 2.0988590717315674,
-        "Error": -0.09885907173156738
+        "PredictedFinalPosition": 2.2920610904693604,
+        "Error": -0.29206109046936035
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Lewis Hamilton",
         "ActualFinalPosition": 4.0,
-        "PredictedFinalPosition": 4.231446743011475,
-        "Error": -0.2314467430114746
+        "PredictedFinalPosition": 4.093210220336914,
+        "Error": -0.09321022033691406
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Liam Lawson",
         "ActualFinalPosition": 11.0,
-        "PredictedFinalPosition": 10.25660514831543,
-        "Error": 0.7433948516845703
+        "PredictedFinalPosition": 9.968605995178223,
+        "Error": 1.0313940048217773
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Max Verstappen",
         "ActualFinalPosition": 1.0,
-        "PredictedFinalPosition": 1.3888211250305176,
-        "Error": -0.3888211250305176
+        "PredictedFinalPosition": 1.4876809120178223,
+        "Error": -0.48768091201782227
       },
       {
         "constructorName": "Kick Sauber",
         "resultsDriverName": "Nico H\u00fclkenberg",
         "ActualFinalPosition": 8.0,
-        "PredictedFinalPosition": 7.462704181671143,
-        "Error": 0.5372958183288574
+        "PredictedFinalPosition": 7.095669746398926,
+        "Error": 0.9043302536010742
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Oliver Bearman",
         "ActualFinalPosition": 9.0,
-        "PredictedFinalPosition": 8.069316864013672,
-        "Error": 0.9306831359863281
+        "PredictedFinalPosition": 8.752925872802734,
+        "Error": 0.24707412719726562
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Oscar Piastri",
         "ActualFinalPosition": 5.0,
-        "PredictedFinalPosition": 4.766148567199707,
-        "Error": 0.23385143280029297
+        "PredictedFinalPosition": 4.723463535308838,
+        "Error": 0.2765364646911621
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Pierre Gasly",
         "ActualFinalPosition": 19.0,
-        "PredictedFinalPosition": 15.653885841369629,
-        "Error": 3.346114158630371
+        "PredictedFinalPosition": 16.766403198242188,
+        "Error": 2.2335968017578125
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Yuki Tsunoda",
         "ActualFinalPosition": 7.0,
-        "PredictedFinalPosition": 7.422572612762451,
-        "Error": -0.42257261276245117
+        "PredictedFinalPosition": 6.648718357086182,
+        "Error": 0.35128164291381836
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Alexander Albon",
         "ActualFinalPosition": 12.0,
-        "PredictedFinalPosition": 10.62765121459961,
-        "Error": 1.3723487854003906
+        "PredictedFinalPosition": 10.842092514038086,
+        "Error": 1.157907485961914
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Carlos Sainz Jr.",
         "ActualFinalPosition": 17.0,
-        "PredictedFinalPosition": 16.483745574951172,
-        "Error": 0.5162544250488281
+        "PredictedFinalPosition": 17.209121704101562,
+        "Error": -0.2091217041015625
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Charles Leclerc",
         "ActualFinalPosition": 2.0,
-        "PredictedFinalPosition": 2.4651663303375244,
-        "Error": -0.4651663303375244
+        "PredictedFinalPosition": 2.3347370624542236,
+        "Error": -0.33473706245422363
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Esteban Ocon",
         "ActualFinalPosition": 9.0,
-        "PredictedFinalPosition": 10.721409797668457,
-        "Error": -1.721409797668457
+        "PredictedFinalPosition": 10.90092945098877,
+        "Error": -1.9009294509887695
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Franco Colapinto",
         "ActualFinalPosition": 16.0,
-        "PredictedFinalPosition": 15.724053382873535,
-        "Error": 0.27594661712646484
+        "PredictedFinalPosition": 15.517953872680664,
+        "Error": 0.48204612731933594
       },
       {
         "constructorName": "Kick Sauber",
         "resultsDriverName": "Gabriel Bortoleto",
         "ActualFinalPosition": 10.0,
-        "PredictedFinalPosition": 10.60515308380127,
-        "Error": -0.6051530838012695
+        "PredictedFinalPosition": 11.024515151977539,
+        "Error": -1.024515151977539
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "George Russell",
         "ActualFinalPosition": 7.0,
-        "PredictedFinalPosition": 6.08900785446167,
-        "Error": 0.9109921455383301
+        "PredictedFinalPosition": 5.395955562591553,
+        "Error": 1.6040444374084473
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Isack Hadjar",
         "ActualFinalPosition": 13.0,
-        "PredictedFinalPosition": 12.739143371582031,
-        "Error": 0.26085662841796875
+        "PredictedFinalPosition": 12.37961196899414,
+        "Error": 0.6203880310058594
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "Kimi Antonelli",
         "ActualFinalPosition": 6.0,
-        "PredictedFinalPosition": 6.546709060668945,
-        "Error": -0.5467090606689453
+        "PredictedFinalPosition": 6.9174299240112305,
+        "Error": -0.9174299240112305
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Lance Stroll",
         "ActualFinalPosition": 14.0,
-        "PredictedFinalPosition": 14.867112159729004,
-        "Error": -0.8671121597290039
+        "PredictedFinalPosition": 13.942595481872559,
+        "Error": 0.057404518127441406
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Lando Norris",
         "ActualFinalPosition": 1.0,
-        "PredictedFinalPosition": 1.4552685022354126,
-        "Error": -0.4552685022354126
+        "PredictedFinalPosition": 1.4704817533493042,
+        "Error": -0.4704817533493042
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Lewis Hamilton",
         "ActualFinalPosition": 8.0,
-        "PredictedFinalPosition": 7.147045612335205,
-        "Error": 0.8529543876647949
+        "PredictedFinalPosition": 7.058743476867676,
+        "Error": 0.9412565231323242
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Max Verstappen",
         "ActualFinalPosition": 3.0,
-        "PredictedFinalPosition": 2.7714006900787354,
-        "Error": 0.22859930992126465
+        "PredictedFinalPosition": 2.322364568710327,
+        "Error": 0.6776354312896729
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Oliver Bearman",
         "ActualFinalPosition": 4.0,
-        "PredictedFinalPosition": 5.6827311515808105,
-        "Error": -1.6827311515808105
+        "PredictedFinalPosition": 5.276500701904297,
+        "Error": -1.2765007019042969
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Oscar Piastri",
         "ActualFinalPosition": 5.0,
-        "PredictedFinalPosition": 5.255127429962158,
-        "Error": -0.2551274299621582
+        "PredictedFinalPosition": 5.288094997406006,
+        "Error": -0.28809499740600586
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Pierre Gasly",
         "ActualFinalPosition": 15.0,
-        "PredictedFinalPosition": 15.113696098327637,
-        "Error": -0.11369609832763672
+        "PredictedFinalPosition": 14.28064250946045,
+        "Error": 0.7193574905395508
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Yuki Tsunoda",
         "ActualFinalPosition": 11.0,
-        "PredictedFinalPosition": 10.79582691192627,
-        "Error": 0.20417308807373047
+        "PredictedFinalPosition": 10.789076805114746,
+        "Error": 0.2109231948852539
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Alexander Albon",
         "ActualFinalPosition": 11.0,
-        "PredictedFinalPosition": 11.319013595581055,
-        "Error": -0.3190135955810547
+        "PredictedFinalPosition": 11.475290298461914,
+        "Error": -0.47529029846191406
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Carlos Sainz Jr.",
         "ActualFinalPosition": 13.0,
-        "PredictedFinalPosition": 10.612367630004883,
-        "Error": 2.387632369995117
+        "PredictedFinalPosition": 11.290543556213379,
+        "Error": 1.709456443786621
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Esteban Ocon",
         "ActualFinalPosition": 12.0,
-        "PredictedFinalPosition": 10.763737678527832,
-        "Error": 1.236262321472168
+        "PredictedFinalPosition": 11.691059112548828,
+        "Error": 0.3089408874511719
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Fernando Alonso",
         "ActualFinalPosition": 14.0,
-        "PredictedFinalPosition": 9.664854049682617,
-        "Error": 4.335145950317383
+        "PredictedFinalPosition": 9.099003791809082,
+        "Error": 4.900996208190918
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Franco Colapinto",
         "ActualFinalPosition": 15.0,
-        "PredictedFinalPosition": 13.960919380187988,
-        "Error": 1.0390806198120117
+        "PredictedFinalPosition": 14.490479469299316,
+        "Error": 0.5095205307006836
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "George Russell",
         "ActualFinalPosition": 4.0,
-        "PredictedFinalPosition": 4.776183128356934,
-        "Error": -0.7761831283569336
+        "PredictedFinalPosition": 4.934474468231201,
+        "Error": -0.9344744682312012
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Isack Hadjar",
         "ActualFinalPosition": 8.0,
-        "PredictedFinalPosition": 5.6455912590026855,
-        "Error": 2.3544087409973145
+        "PredictedFinalPosition": 5.49565315246582,
+        "Error": 2.5043468475341797
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "Kimi Antonelli",
         "ActualFinalPosition": 2.0,
-        "PredictedFinalPosition": 2.343942403793335,
-        "Error": -0.34394240379333496
+        "PredictedFinalPosition": 2.2139902114868164,
+        "Error": -0.2139902114868164
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Lance Stroll",
         "ActualFinalPosition": 16.0,
-        "PredictedFinalPosition": 13.419171333312988,
-        "Error": 2.5808286666870117
+        "PredictedFinalPosition": 12.614742279052734,
+        "Error": 3.3852577209472656
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Lando Norris",
         "ActualFinalPosition": 1.0,
-        "PredictedFinalPosition": 2.3324286937713623,
-        "Error": -1.3324286937713623
+        "PredictedFinalPosition": 2.4014575481414795,
+        "Error": -1.4014575481414795
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Liam Lawson",
         "ActualFinalPosition": 7.0,
-        "PredictedFinalPosition": 5.651915550231934,
-        "Error": 1.3480844497680664
+        "PredictedFinalPosition": 6.004388809204102,
+        "Error": 0.9956111907958984
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Max Verstappen",
         "ActualFinalPosition": 3.0,
-        "PredictedFinalPosition": 3.341204881668091,
-        "Error": -0.3412048816680908
+        "PredictedFinalPosition": 2.7515220642089844,
+        "Error": 0.24847793579101562
       },
       {
         "constructorName": "Kick Sauber",
         "resultsDriverName": "Nico H\u00fclkenberg",
         "ActualFinalPosition": 9.0,
-        "PredictedFinalPosition": 9.547845840454102,
-        "Error": -0.5478458404541016
+        "PredictedFinalPosition": 9.359045028686523,
+        "Error": -0.35904502868652344
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Oliver Bearman",
         "ActualFinalPosition": 6.0,
-        "PredictedFinalPosition": 5.363680362701416,
-        "Error": 0.636319637298584
+        "PredictedFinalPosition": 5.201565265655518,
+        "Error": 0.7984347343444824
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Oscar Piastri",
         "ActualFinalPosition": 5.0,
-        "PredictedFinalPosition": 5.762717247009277,
-        "Error": -0.7627172470092773
+        "PredictedFinalPosition": 5.612125396728516,
+        "Error": -0.6121253967285156
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Pierre Gasly",
         "ActualFinalPosition": 10.0,
-        "PredictedFinalPosition": 8.78661823272705,
-        "Error": 1.2133817672729492
+        "PredictedFinalPosition": 8.765817642211914,
+        "Error": 1.234182357788086
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Yuki Tsunoda",
         "ActualFinalPosition": 17.0,
-        "PredictedFinalPosition": 15.232194900512695,
-        "Error": 1.7678050994873047
+        "PredictedFinalPosition": 15.119171142578125,
+        "Error": 1.880828857421875
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Carlos Sainz Jr.",
         "ActualFinalPosition": 5.0,
-        "PredictedFinalPosition": 6.642902851104736,
-        "Error": -1.6429028511047363
+        "PredictedFinalPosition": 6.628147602081299,
+        "Error": -1.6281476020812988
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Charles Leclerc",
         "ActualFinalPosition": 4.0,
-        "PredictedFinalPosition": 4.420355796813965,
-        "Error": -0.42035579681396484
+        "PredictedFinalPosition": 4.406908988952637,
+        "Error": -0.4069089889526367
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Esteban Ocon",
         "ActualFinalPosition": 9.0,
-        "PredictedFinalPosition": 11.563639640808105,
-        "Error": -2.5636396408081055
+        "PredictedFinalPosition": 11.340066909790039,
+        "Error": -2.340066909790039
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Fernando Alonso",
         "ActualFinalPosition": 11.0,
-        "PredictedFinalPosition": 10.092239379882812,
-        "Error": 0.9077606201171875
+        "PredictedFinalPosition": 10.06591796875,
+        "Error": 0.93408203125
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Franco Colapinto",
         "ActualFinalPosition": 15.0,
-        "PredictedFinalPosition": 16.125171661376953,
-        "Error": -1.1251716613769531
+        "PredictedFinalPosition": 15.188811302185059,
+        "Error": -0.1888113021850586
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "George Russell",
         "ActualFinalPosition": 2.0,
-        "PredictedFinalPosition": 3.154801845550537,
-        "Error": -1.154801845550537
+        "PredictedFinalPosition": 2.9672672748565674,
+        "Error": -0.9672672748565674
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Isack Hadjar",
         "ActualFinalPosition": 6.0,
-        "PredictedFinalPosition": 6.820700645446777,
-        "Error": -0.8207006454467773
+        "PredictedFinalPosition": 7.416423797607422,
+        "Error": -1.4164237976074219
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "Kimi Antonelli",
         "ActualFinalPosition": 3.0,
-        "PredictedFinalPosition": 4.346688747406006,
-        "Error": -1.3466887474060059
+        "PredictedFinalPosition": 4.240200519561768,
+        "Error": -1.2402005195617676
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Lewis Hamilton",
         "ActualFinalPosition": 8.0,
-        "PredictedFinalPosition": 8.786242485046387,
-        "Error": -0.7862424850463867
+        "PredictedFinalPosition": 9.391216278076172,
+        "Error": -1.3912162780761719
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Liam Lawson",
         "ActualFinalPosition": 14.0,
-        "PredictedFinalPosition": 14.865158081054688,
-        "Error": -0.8651580810546875
+        "PredictedFinalPosition": 14.211162567138672,
+        "Error": -0.21116256713867188
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Max Verstappen",
         "ActualFinalPosition": 1.0,
-        "PredictedFinalPosition": 1.5178289413452148,
-        "Error": -0.5178289413452148
+        "PredictedFinalPosition": 1.5792268514633179,
+        "Error": -0.5792268514633179
       },
       {
         "constructorName": "Kick Sauber",
         "resultsDriverName": "Nico H\u00fclkenberg",
         "ActualFinalPosition": 7.0,
-        "PredictedFinalPosition": 11.93570327758789,
-        "Error": -4.935703277587891
+        "PredictedFinalPosition": 11.780428886413574,
+        "Error": -4.780428886413574
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Oliver Bearman",
         "ActualFinalPosition": 10.0,
-        "PredictedFinalPosition": 12.232686996459961,
-        "Error": -2.232686996459961
+        "PredictedFinalPosition": 10.922957420349121,
+        "Error": -0.9229574203491211
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Pierre Gasly",
         "ActualFinalPosition": 13.0,
-        "PredictedFinalPosition": 13.184706687927246,
-        "Error": -0.1847066879272461
+        "PredictedFinalPosition": 12.468681335449219,
+        "Error": 0.5313186645507812
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Yuki Tsunoda",
         "ActualFinalPosition": 12.0,
-        "PredictedFinalPosition": 14.25280475616455,
-        "Error": -2.252804756164551
+        "PredictedFinalPosition": 13.95483112335205,
+        "Error": -1.9548311233520508
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Alexander Albon",
         "ActualFinalPosition": 11.0,
-        "PredictedFinalPosition": 13.101822853088379,
-        "Error": -2.101822853088379
+        "PredictedFinalPosition": 12.248729705810547,
+        "Error": -1.2487297058105469
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Carlos Sainz Jr.",
         "ActualFinalPosition": 3.0,
-        "PredictedFinalPosition": 4.465188026428223,
-        "Error": -1.4651880264282227
+        "PredictedFinalPosition": 4.405615329742432,
+        "Error": -1.4056153297424316
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Charles Leclerc",
         "ActualFinalPosition": 8.0,
-        "PredictedFinalPosition": 9.000897407531738,
-        "Error": -1.0008974075317383
+        "PredictedFinalPosition": 8.763152122497559,
+        "Error": -0.7631521224975586
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Esteban Ocon",
         "ActualFinalPosition": 15.0,
-        "PredictedFinalPosition": 13.411212921142578,
-        "Error": 1.5887870788574219
+        "PredictedFinalPosition": 13.706612586975098,
+        "Error": 1.2933874130249023
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Fernando Alonso",
         "ActualFinalPosition": 7.0,
-        "PredictedFinalPosition": 7.468583583831787,
-        "Error": -0.4685835838317871
+        "PredictedFinalPosition": 8.250777244567871,
+        "Error": -1.250777244567871
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Franco Colapinto",
         "ActualFinalPosition": 14.0,
-        "PredictedFinalPosition": 15.985499382019043,
-        "Error": -1.985499382019043
+        "PredictedFinalPosition": 15.732440948486328,
+        "Error": -1.7324409484863281
       },
       {
         "constructorName": "Kick Sauber",
         "resultsDriverName": "Gabriel Bortoleto",
         "ActualFinalPosition": 13.0,
-        "PredictedFinalPosition": 13.001508712768555,
-        "Error": -0.0015087127685546875
+        "PredictedFinalPosition": 12.78229808807373,
+        "Error": 0.21770191192626953
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "George Russell",
         "ActualFinalPosition": 6.0,
-        "PredictedFinalPosition": 5.6190080642700195,
-        "Error": 0.38099193572998047
+        "PredictedFinalPosition": 5.621277332305908,
+        "Error": 0.3787226676940918
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Isack Hadjar",
         "ActualFinalPosition": 18.0,
-        "PredictedFinalPosition": 18.94040870666504,
-        "Error": -0.9404087066650391
+        "PredictedFinalPosition": 18.021081924438477,
+        "Error": -0.021081924438476562
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "Kimi Antonelli",
         "ActualFinalPosition": 5.0,
-        "PredictedFinalPosition": 3.98742938041687,
-        "Error": 1.0125706195831299
+        "PredictedFinalPosition": 4.353294849395752,
+        "Error": 0.646705150604248
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Lance Stroll",
         "ActualFinalPosition": 17.0,
-        "PredictedFinalPosition": 17.268856048583984,
-        "Error": -0.2688560485839844
+        "PredictedFinalPosition": 16.650680541992188,
+        "Error": 0.3493194580078125
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Lando Norris",
         "ActualFinalPosition": 4.0,
-        "PredictedFinalPosition": 3.199892520904541,
-        "Error": 0.800107479095459
+        "PredictedFinalPosition": 3.140155792236328,
+        "Error": 0.8598442077636719
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Lewis Hamilton",
         "ActualFinalPosition": 12.0,
-        "PredictedFinalPosition": 12.228362083435059,
-        "Error": -0.2283620834350586
+        "PredictedFinalPosition": 12.18802261352539,
+        "Error": -0.18802261352539062
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Liam Lawson",
         "ActualFinalPosition": 9.0,
-        "PredictedFinalPosition": 13.099711418151855,
-        "Error": -4.0997114181518555
+        "PredictedFinalPosition": 12.834263801574707,
+        "Error": -3.834263801574707
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Max Verstappen",
         "ActualFinalPosition": 1.0,
-        "PredictedFinalPosition": 2.01241397857666,
-        "Error": -1.0124139785766602
+        "PredictedFinalPosition": 1.9187955856323242,
+        "Error": -0.9187955856323242
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Oscar Piastri",
         "ActualFinalPosition": 2.0,
-        "PredictedFinalPosition": 2.409755229949951,
-        "Error": -0.40975522994995117
+        "PredictedFinalPosition": 2.546018123626709,
+        "Error": -0.546018123626709
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Pierre Gasly",
         "ActualFinalPosition": 16.0,
-        "PredictedFinalPosition": 13.472550392150879,
-        "Error": 2.527449607849121
+        "PredictedFinalPosition": 13.44553279876709,
+        "Error": 2.55446720123291
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Yuki Tsunoda",
         "ActualFinalPosition": 10.0,
-        "PredictedFinalPosition": 13.052045822143555,
-        "Error": -3.0520458221435547
+        "PredictedFinalPosition": 13.788825035095215,
+        "Error": -3.788825035095215
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Alexander Albon",
         "ActualFinalPosition": 16.0,
-        "PredictedFinalPosition": 11.914880752563477,
-        "Error": 4.085119247436523
+        "PredictedFinalPosition": 10.882015228271484,
+        "Error": 5.117984771728516
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Carlos Sainz Jr.",
         "ActualFinalPosition": 13.0,
-        "PredictedFinalPosition": 10.01106071472168,
-        "Error": 2.9889392852783203
+        "PredictedFinalPosition": 9.704468727111816,
+        "Error": 3.2955312728881836
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Charles Leclerc",
         "ActualFinalPosition": 4.0,
-        "PredictedFinalPosition": 4.584831237792969,
-        "Error": -0.5848312377929688
+        "PredictedFinalPosition": 4.47981071472168,
+        "Error": -0.4798107147216797
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Esteban Ocon",
         "ActualFinalPosition": 7.0,
-        "PredictedFinalPosition": 6.8735857009887695,
-        "Error": 0.12641429901123047
+        "PredictedFinalPosition": 6.792163372039795,
+        "Error": 0.20783662796020508
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Fernando Alonso",
         "ActualFinalPosition": 6.0,
-        "PredictedFinalPosition": 6.596227169036865,
-        "Error": -0.5962271690368652
+        "PredictedFinalPosition": 6.063629150390625,
+        "Error": -0.063629150390625
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Franco Colapinto",
         "ActualFinalPosition": 20.0,
-        "PredictedFinalPosition": 19.11201286315918,
-        "Error": 0.8879871368408203
+        "PredictedFinalPosition": 19.29334831237793,
+        "Error": 0.7066516876220703
       },
       {
         "constructorName": "Kick Sauber",
         "resultsDriverName": "Gabriel Bortoleto",
         "ActualFinalPosition": 11.0,
-        "PredictedFinalPosition": 9.219303131103516,
-        "Error": 1.7806968688964844
+        "PredictedFinalPosition": 8.592869758605957,
+        "Error": 2.407130241394043
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "George Russell",
         "ActualFinalPosition": 5.0,
-        "PredictedFinalPosition": 3.8184406757354736,
-        "Error": 1.1815593242645264
+        "PredictedFinalPosition": 3.6863815784454346,
+        "Error": 1.3136184215545654
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Isack Hadjar",
         "ActualFinalPosition": 17.0,
-        "PredictedFinalPosition": 15.732807159423828,
-        "Error": 1.2671928405761719
+        "PredictedFinalPosition": 15.830440521240234,
+        "Error": 1.1695594787597656
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "Kimi Antonelli",
         "ActualFinalPosition": 15.0,
-        "PredictedFinalPosition": 14.436540603637695,
-        "Error": 0.5634593963623047
+        "PredictedFinalPosition": 14.910797119140625,
+        "Error": 0.089202880859375
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Lance Stroll",
         "ActualFinalPosition": 10.0,
-        "PredictedFinalPosition": 11.299556732177734,
-        "Error": -1.2995567321777344
+        "PredictedFinalPosition": 10.399497032165527,
+        "Error": -0.39949703216552734
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Lando Norris",
         "ActualFinalPosition": 3.0,
-        "PredictedFinalPosition": 2.8818557262420654,
-        "Error": 0.11814427375793457
+        "PredictedFinalPosition": 2.3581860065460205,
+        "Error": 0.6418139934539795
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Lewis Hamilton",
         "ActualFinalPosition": 8.0,
-        "PredictedFinalPosition": 6.364475727081299,
-        "Error": 1.6355242729187012
+        "PredictedFinalPosition": 6.771383762359619,
+        "Error": 1.2286162376403809
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Liam Lawson",
         "ActualFinalPosition": 18.0,
-        "PredictedFinalPosition": 17.261333465576172,
-        "Error": 0.7386665344238281
+        "PredictedFinalPosition": 16.78432273864746,
+        "Error": 1.215677261352539
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Max Verstappen",
         "ActualFinalPosition": 1.0,
-        "PredictedFinalPosition": 1.339648962020874,
-        "Error": -0.339648962020874
+        "PredictedFinalPosition": 1.4341473579406738,
+        "Error": -0.43414735794067383
       },
       {
         "constructorName": "Kick Sauber",
         "resultsDriverName": "Nico H\u00fclkenberg",
         "ActualFinalPosition": 9.0,
-        "PredictedFinalPosition": 10.82620906829834,
-        "Error": -1.8262090682983398
+        "PredictedFinalPosition": 10.96790599822998,
+        "Error": -1.9679059982299805
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Oliver Bearman",
         "ActualFinalPosition": 12.0,
-        "PredictedFinalPosition": 11.31015396118164,
-        "Error": 0.6898460388183594
+        "PredictedFinalPosition": 10.552753448486328,
+        "Error": 1.4472465515136719
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Oscar Piastri",
         "ActualFinalPosition": 2.0,
-        "PredictedFinalPosition": 2.50349497795105,
-        "Error": -0.5034949779510498
+        "PredictedFinalPosition": 1.9682879447937012,
+        "Error": 0.03171205520629883
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Pierre Gasly",
         "ActualFinalPosition": 19.0,
-        "PredictedFinalPosition": 18.00340461730957,
-        "Error": 0.9965953826904297
+        "PredictedFinalPosition": 17.486841201782227,
+        "Error": 1.5131587982177734
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Yuki Tsunoda",
         "ActualFinalPosition": 14.0,
-        "PredictedFinalPosition": 9.795648574829102,
-        "Error": 4.204351425170898
+        "PredictedFinalPosition": 10.14553451538086,
+        "Error": 3.8544654846191406
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Alexander Albon",
         "ActualFinalPosition": 12.0,
-        "PredictedFinalPosition": 10.47500991821289,
-        "Error": 1.5249900817871094
+        "PredictedFinalPosition": 10.345152854919434,
+        "Error": 1.6548471450805664
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Arvid Lindblad",
         "ActualFinalPosition": 8.0,
-        "PredictedFinalPosition": 8.26307201385498,
-        "Error": -0.26307201385498047
+        "PredictedFinalPosition": 7.897227764129639,
+        "Error": 0.10277223587036133
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Carlos Sainz Jr.",
         "ActualFinalPosition": 15.0,
-        "PredictedFinalPosition": 10.774380683898926,
-        "Error": 4.225619316101074
+        "PredictedFinalPosition": 11.302550315856934,
+        "Error": 3.6974496841430664
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Charles Leclerc",
         "ActualFinalPosition": 3.0,
-        "PredictedFinalPosition": 4.046086311340332,
-        "Error": -1.046086311340332
+        "PredictedFinalPosition": 3.4376182556152344,
+        "Error": -0.4376182556152344
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Esteban Ocon",
         "ActualFinalPosition": 11.0,
-        "PredictedFinalPosition": 9.602500915527344,
-        "Error": 1.3974990844726562
+        "PredictedFinalPosition": 9.03800106048584,
+        "Error": 1.9619989395141602
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Fernando Alonso",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 14.252939224243164,
-        "Error": -14.252939224243164
+        "PredictedFinalPosition": 13.327534675598145,
+        "Error": -13.327534675598145
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Franco Colapinto",
         "ActualFinalPosition": 14.0,
-        "PredictedFinalPosition": 13.05262565612793,
-        "Error": 0.9473743438720703
+        "PredictedFinalPosition": 13.075438499450684,
+        "Error": 0.9245615005493164
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Gabriel Bortoleto",
         "ActualFinalPosition": 9.0,
-        "PredictedFinalPosition": 8.507317543029785,
-        "Error": 0.49268245697021484
+        "PredictedFinalPosition": 7.202132701873779,
+        "Error": 1.7978672981262207
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "George Russell",
         "ActualFinalPosition": 1.0,
-        "PredictedFinalPosition": 2.737490653991699,
-        "Error": -1.7374906539916992
+        "PredictedFinalPosition": 3.0358901023864746,
+        "Error": -2.0358901023864746
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Isack Hadjar",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 13.157524108886719,
-        "Error": -13.157524108886719
+        "PredictedFinalPosition": 12.510976791381836,
+        "Error": -12.510976791381836
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "Kimi Antonelli",
         "ActualFinalPosition": 2.0,
-        "PredictedFinalPosition": 3.4510397911071777,
-        "Error": -1.4510397911071777
+        "PredictedFinalPosition": 3.635408639907837,
+        "Error": -1.635408639907837
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Lance Stroll",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 10.789246559143066,
-        "Error": -10.789246559143066
+        "PredictedFinalPosition": 9.46351146697998,
+        "Error": -9.46351146697998
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Lando Norris",
         "ActualFinalPosition": 5.0,
-        "PredictedFinalPosition": 7.117806911468506,
-        "Error": -2.117806911468506
+        "PredictedFinalPosition": 6.980585098266602,
+        "Error": -1.9805850982666016
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Lewis Hamilton",
         "ActualFinalPosition": 4.0,
-        "PredictedFinalPosition": 5.880648612976074,
-        "Error": -1.8806486129760742
+        "PredictedFinalPosition": 6.116715908050537,
+        "Error": -2.116715908050537
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Liam Lawson",
         "ActualFinalPosition": 13.0,
-        "PredictedFinalPosition": 9.489543914794922,
-        "Error": 3.510456085205078
+        "PredictedFinalPosition": 8.889079093933105,
+        "Error": 4.1109209060668945
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Max Verstappen",
         "ActualFinalPosition": 6.0,
-        "PredictedFinalPosition": 7.449432849884033,
-        "Error": -1.4494328498840332
+        "PredictedFinalPosition": 7.553990364074707,
+        "Error": -1.553990364074707
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Nico H\u00fclkenberg",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 12.372743606567383,
-        "Error": -12.372743606567383
+        "PredictedFinalPosition": 13.2204008102417,
+        "Error": -13.2204008102417
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Oliver Bearman",
         "ActualFinalPosition": 7.0,
-        "PredictedFinalPosition": 9.928088188171387,
-        "Error": -2.9280881881713867
+        "PredictedFinalPosition": 8.731853485107422,
+        "Error": -1.7318534851074219
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Oscar Piastri",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 14.811895370483398,
-        "Error": -14.811895370483398
+        "PredictedFinalPosition": 13.782533645629883,
+        "Error": -13.782533645629883
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Pierre Gasly",
         "ActualFinalPosition": 10.0,
-        "PredictedFinalPosition": 12.00949764251709,
-        "Error": -2.00949764251709
+        "PredictedFinalPosition": 11.124072074890137,
+        "Error": -1.1240720748901367
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Sergio P\u00e9rez",
         "ActualFinalPosition": 16.0,
-        "PredictedFinalPosition": 11.839662551879883,
-        "Error": 4.160337448120117
+        "PredictedFinalPosition": 11.884648323059082,
+        "Error": 4.115351676940918
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Valtteri Bottas",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 14.126687049865723,
-        "Error": -14.126687049865723
+        "PredictedFinalPosition": 15.360557556152344,
+        "Error": -15.360557556152344
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Alexander Albon",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 13.341779708862305,
-        "Error": -13.341779708862305
+        "PredictedFinalPosition": 12.96384334564209,
+        "Error": -12.96384334564209
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Arvid Lindblad",
         "ActualFinalPosition": 12.0,
-        "PredictedFinalPosition": 11.41561222076416,
-        "Error": 0.5843877792358398
+        "PredictedFinalPosition": 10.871596336364746,
+        "Error": 1.128403663635254
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Carlos Sainz Jr.",
         "ActualFinalPosition": 9.0,
-        "PredictedFinalPosition": 10.49923038482666,
-        "Error": -1.4992303848266602
+        "PredictedFinalPosition": 10.804471969604492,
+        "Error": -1.8044719696044922
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Charles Leclerc",
         "ActualFinalPosition": 4.0,
-        "PredictedFinalPosition": 4.383544921875,
-        "Error": -0.383544921875
+        "PredictedFinalPosition": 4.237943172454834,
+        "Error": -0.23794317245483398
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Esteban Ocon",
         "ActualFinalPosition": 14.0,
-        "PredictedFinalPosition": 10.774659156799316,
-        "Error": 3.2253408432006836
+        "PredictedFinalPosition": 10.472840309143066,
+        "Error": 3.5271596908569336
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Fernando Alonso",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 13.542576789855957,
-        "Error": -13.542576789855957
+        "PredictedFinalPosition": 13.249605178833008,
+        "Error": -13.249605178833008
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Franco Colapinto",
         "ActualFinalPosition": 10.0,
-        "PredictedFinalPosition": 9.646791458129883,
-        "Error": 0.3532085418701172
+        "PredictedFinalPosition": 8.89763355255127,
+        "Error": 1.1023664474487305
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Gabriel Bortoleto",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 12.972343444824219,
-        "Error": -12.972343444824219
+        "PredictedFinalPosition": 12.8678617477417,
+        "Error": -12.8678617477417
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "George Russell",
         "ActualFinalPosition": 2.0,
-        "PredictedFinalPosition": 2.300499200820923,
-        "Error": -0.30049920082092285
+        "PredictedFinalPosition": 2.550814151763916,
+        "Error": -0.550814151763916
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Isack Hadjar",
         "ActualFinalPosition": 8.0,
-        "PredictedFinalPosition": 8.864225387573242,
-        "Error": -0.8642253875732422
+        "PredictedFinalPosition": 9.617137908935547,
+        "Error": -1.6171379089355469
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "Kimi Antonelli",
         "ActualFinalPosition": 1.0,
-        "PredictedFinalPosition": 1.6265877485275269,
-        "Error": -0.6265877485275269
+        "PredictedFinalPosition": 2.102234125137329,
+        "Error": -1.102234125137329
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Lance Stroll",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 14.252495765686035,
-        "Error": -14.252495765686035
+        "PredictedFinalPosition": 14.569645881652832,
+        "Error": -14.569645881652832
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Lando Norris",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 14.307229042053223,
-        "Error": -14.307229042053223
+        "PredictedFinalPosition": 12.837933540344238,
+        "Error": -12.837933540344238
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Lewis Hamilton",
         "ActualFinalPosition": 3.0,
-        "PredictedFinalPosition": 3.013237237930298,
-        "Error": -0.013237237930297852
+        "PredictedFinalPosition": 2.5033955574035645,
+        "Error": 0.49660444259643555
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Liam Lawson",
         "ActualFinalPosition": 7.0,
-        "PredictedFinalPosition": 9.782069206237793,
-        "Error": -2.782069206237793
+        "PredictedFinalPosition": 9.090455055236816,
+        "Error": -2.0904550552368164
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Max Verstappen",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 14.306761741638184,
-        "Error": -14.306761741638184
+        "PredictedFinalPosition": 13.988325119018555,
+        "Error": -13.988325119018555
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Nico H\u00fclkenberg",
         "ActualFinalPosition": 11.0,
-        "PredictedFinalPosition": 10.488123893737793,
-        "Error": 0.511876106262207
+        "PredictedFinalPosition": 10.131800651550293,
+        "Error": 0.868199348449707
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Oliver Bearman",
         "ActualFinalPosition": 5.0,
-        "PredictedFinalPosition": 8.163801193237305,
-        "Error": -3.1638011932373047
+        "PredictedFinalPosition": 7.911647319793701,
+        "Error": -2.911647319793701
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Oscar Piastri",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 14.377861976623535,
-        "Error": -14.377861976623535
+        "PredictedFinalPosition": 12.547808647155762,
+        "Error": -12.547808647155762
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Pierre Gasly",
         "ActualFinalPosition": 6.0,
-        "PredictedFinalPosition": 8.100194931030273,
-        "Error": -2.1001949310302734
+        "PredictedFinalPosition": 8.204282760620117,
+        "Error": -2.204282760620117
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Sergio P\u00e9rez",
         "ActualFinalPosition": 15.0,
-        "PredictedFinalPosition": 13.053899765014648,
-        "Error": 1.9461002349853516
+        "PredictedFinalPosition": 13.423726081848145,
+        "Error": 1.5762739181518555
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Valtteri Bottas",
         "ActualFinalPosition": 13.0,
-        "PredictedFinalPosition": 11.014878273010254,
-        "Error": 1.985121726989746
+        "PredictedFinalPosition": 12.172773361206055,
+        "Error": 0.8272266387939453
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Alexander Albon",
         "ActualFinalPosition": 20.0,
-        "PredictedFinalPosition": 12.687685012817383,
-        "Error": 7.312314987182617
+        "PredictedFinalPosition": 12.582837104797363,
+        "Error": 7.417162895202637
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Arvid Lindblad",
         "ActualFinalPosition": 14.0,
-        "PredictedFinalPosition": 12.29494571685791,
-        "Error": 1.7050542831420898
+        "PredictedFinalPosition": 12.517317771911621,
+        "Error": 1.482682228088379
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Carlos Sainz Jr.",
         "ActualFinalPosition": 15.0,
-        "PredictedFinalPosition": 12.5929536819458,
-        "Error": 2.407046318054199
+        "PredictedFinalPosition": 12.663439750671387,
+        "Error": 2.3365602493286133
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Charles Leclerc",
         "ActualFinalPosition": 3.0,
-        "PredictedFinalPosition": 3.186551332473755,
-        "Error": -0.18655133247375488
+        "PredictedFinalPosition": 2.6548573970794678,
+        "Error": 0.3451426029205322
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Esteban Ocon",
         "ActualFinalPosition": 10.0,
-        "PredictedFinalPosition": 9.466285705566406,
-        "Error": 0.5337142944335938
+        "PredictedFinalPosition": 9.92212963104248,
+        "Error": 0.07787036895751953
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Fernando Alonso",
         "ActualFinalPosition": 18.0,
-        "PredictedFinalPosition": 13.507495880126953,
-        "Error": 4.492504119873047
+        "PredictedFinalPosition": 12.978778839111328,
+        "Error": 5.021221160888672
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Franco Colapinto",
         "ActualFinalPosition": 16.0,
-        "PredictedFinalPosition": 13.832937240600586,
-        "Error": 2.167062759399414
+        "PredictedFinalPosition": 13.550811767578125,
+        "Error": 2.449188232421875
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Gabriel Bortoleto",
         "ActualFinalPosition": 13.0,
-        "PredictedFinalPosition": 11.527512550354004,
-        "Error": 1.472487449645996
+        "PredictedFinalPosition": 12.007307052612305,
+        "Error": 0.9926929473876953
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "George Russell",
         "ActualFinalPosition": 4.0,
-        "PredictedFinalPosition": 2.2956736087799072,
-        "Error": 1.7043263912200928
+        "PredictedFinalPosition": 2.683370351791382,
+        "Error": 1.3166296482086182
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Isack Hadjar",
         "ActualFinalPosition": 12.0,
-        "PredictedFinalPosition": 8.114737510681152,
-        "Error": 3.8852624893188477
+        "PredictedFinalPosition": 8.658638000488281,
+        "Error": 3.3413619995117188
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "Kimi Antonelli",
         "ActualFinalPosition": 1.0,
-        "PredictedFinalPosition": 1.8949742317199707,
-        "Error": -0.8949742317199707
+        "PredictedFinalPosition": 2.0407471656799316,
+        "Error": -1.0407471656799316
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Lance Stroll",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 15.508084297180176,
-        "Error": -15.508084297180176
+        "PredictedFinalPosition": 15.696228981018066,
+        "Error": -15.696228981018066
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Lando Norris",
         "ActualFinalPosition": 5.0,
-        "PredictedFinalPosition": 4.2442545890808105,
-        "Error": 0.7557454109191895
+        "PredictedFinalPosition": 4.67033576965332,
+        "Error": 0.3296642303466797
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Lewis Hamilton",
         "ActualFinalPosition": 6.0,
-        "PredictedFinalPosition": 4.187745094299316,
-        "Error": 1.8122549057006836
+        "PredictedFinalPosition": 3.9805657863616943,
+        "Error": 2.0194342136383057
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Liam Lawson",
         "ActualFinalPosition": 9.0,
-        "PredictedFinalPosition": 10.816816329956055,
-        "Error": -1.8168163299560547
+        "PredictedFinalPosition": 11.351400375366211,
+        "Error": -2.351400375366211
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Max Verstappen",
         "ActualFinalPosition": 8.0,
-        "PredictedFinalPosition": 5.331242561340332,
-        "Error": 2.668757438659668
+        "PredictedFinalPosition": 5.255491256713867,
+        "Error": 2.744508743286133
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Nico H\u00fclkenberg",
         "ActualFinalPosition": 11.0,
-        "PredictedFinalPosition": 11.79115104675293,
-        "Error": -0.7911510467529297
+        "PredictedFinalPosition": 10.886573791503906,
+        "Error": 0.11342620849609375
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Oliver Bearman",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 12.87673568725586,
-        "Error": -12.87673568725586
+        "PredictedFinalPosition": 13.051987648010254,
+        "Error": -13.051987648010254
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Oscar Piastri",
         "ActualFinalPosition": 2.0,
-        "PredictedFinalPosition": 3.7826292514801025,
-        "Error": -1.7826292514801025
+        "PredictedFinalPosition": 3.1490228176116943,
+        "Error": -1.1490228176116943
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Pierre Gasly",
         "ActualFinalPosition": 7.0,
-        "PredictedFinalPosition": 6.348435878753662,
-        "Error": 0.6515641212463379
+        "PredictedFinalPosition": 6.006496906280518,
+        "Error": 0.9935030937194824
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Sergio P\u00e9rez",
         "ActualFinalPosition": 17.0,
-        "PredictedFinalPosition": 14.05572509765625,
-        "Error": 2.94427490234375
+        "PredictedFinalPosition": 13.686702728271484,
+        "Error": 3.3132972717285156
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Valtteri Bottas",
         "ActualFinalPosition": 19.0,
-        "PredictedFinalPosition": 14.155624389648438,
-        "Error": 4.8443756103515625
+        "PredictedFinalPosition": 15.82884693145752,
+        "Error": 3.1711530685424805
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Alexander Albon",
         "ActualFinalPosition": 10.0,
-        "PredictedFinalPosition": 11.423566818237305,
-        "Error": -1.4235668182373047
+        "PredictedFinalPosition": 11.66419792175293,
+        "Error": -1.6641979217529297
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Arvid Lindblad",
         "ActualFinalPosition": 14.0,
-        "PredictedFinalPosition": 12.395217895507812,
-        "Error": 1.6047821044921875
+        "PredictedFinalPosition": 12.070618629455566,
+        "Error": 1.9293813705444336
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Carlos Sainz Jr.",
         "ActualFinalPosition": 9.0,
-        "PredictedFinalPosition": 9.786316871643066,
-        "Error": -0.7863168716430664
+        "PredictedFinalPosition": 10.536332130432129,
+        "Error": -1.536332130432129
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Charles Leclerc",
         "ActualFinalPosition": 8.0,
-        "PredictedFinalPosition": 6.391870021820068,
-        "Error": 1.6081299781799316
+        "PredictedFinalPosition": 6.283445835113525,
+        "Error": 1.7165541648864746
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Esteban Ocon",
         "ActualFinalPosition": 13.0,
-        "PredictedFinalPosition": 11.20492172241211,
-        "Error": 1.7950782775878906
+        "PredictedFinalPosition": 10.319503784179688,
+        "Error": 2.6804962158203125
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Fernando Alonso",
         "ActualFinalPosition": 15.0,
-        "PredictedFinalPosition": 12.072835922241211,
-        "Error": 2.927164077758789
+        "PredictedFinalPosition": 12.284586906433105,
+        "Error": 2.7154130935668945
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Franco Colapinto",
         "ActualFinalPosition": 7.0,
-        "PredictedFinalPosition": 7.796908378601074,
-        "Error": -0.7969083786010742
+        "PredictedFinalPosition": 8.122411727905273,
+        "Error": -1.1224117279052734
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Gabriel Bortoleto",
         "ActualFinalPosition": 12.0,
-        "PredictedFinalPosition": 12.153864860534668,
-        "Error": -0.15386486053466797
+        "PredictedFinalPosition": 11.80067253112793,
+        "Error": 0.1993274688720703
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "George Russell",
         "ActualFinalPosition": 4.0,
-        "PredictedFinalPosition": 4.503722667694092,
-        "Error": -0.5037226676940918
+        "PredictedFinalPosition": 4.621567726135254,
+        "Error": -0.6215677261352539
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Isack Hadjar",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 12.124438285827637,
-        "Error": -12.124438285827637
+        "PredictedFinalPosition": 11.48935317993164,
+        "Error": -11.48935317993164
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "Kimi Antonelli",
         "ActualFinalPosition": 1.0,
-        "PredictedFinalPosition": 1.9424556493759155,
-        "Error": -0.9424556493759155
+        "PredictedFinalPosition": 1.7857340574264526,
+        "Error": -0.7857340574264526
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Lance Stroll",
         "ActualFinalPosition": 17.0,
-        "PredictedFinalPosition": 14.352545738220215,
-        "Error": 2.647454261779785
+        "PredictedFinalPosition": 13.429060935974121,
+        "Error": 3.570939064025879
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Lando Norris",
         "ActualFinalPosition": 2.0,
-        "PredictedFinalPosition": 2.640812635421753,
-        "Error": -0.6408126354217529
+        "PredictedFinalPosition": 2.763594388961792,
+        "Error": -0.763594388961792
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Lewis Hamilton",
         "ActualFinalPosition": 6.0,
-        "PredictedFinalPosition": 6.895237922668457,
-        "Error": -0.895237922668457
+        "PredictedFinalPosition": 6.763609886169434,
+        "Error": -0.7636098861694336
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Liam Lawson",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 10.727383613586426,
-        "Error": -10.727383613586426
+        "PredictedFinalPosition": 10.567689895629883,
+        "Error": -10.567689895629883
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Max Verstappen",
         "ActualFinalPosition": 5.0,
-        "PredictedFinalPosition": 4.85228967666626,
-        "Error": 0.14771032333374023
+        "PredictedFinalPosition": 5.5235419273376465,
+        "Error": -0.5235419273376465
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Nico H\u00fclkenberg",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 13.378198623657227,
-        "Error": -13.378198623657227
+        "PredictedFinalPosition": 12.095261573791504,
+        "Error": -12.095261573791504
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Oliver Bearman",
         "ActualFinalPosition": 11.0,
-        "PredictedFinalPosition": 9.432958602905273,
-        "Error": 1.5670413970947266
+        "PredictedFinalPosition": 8.910600662231445,
+        "Error": 2.0893993377685547
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Oscar Piastri",
         "ActualFinalPosition": 3.0,
-        "PredictedFinalPosition": 3.7139954566955566,
-        "Error": -0.7139954566955566
+        "PredictedFinalPosition": 4.224576950073242,
+        "Error": -1.2245769500732422
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Pierre Gasly",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 13.48054027557373,
-        "Error": -13.48054027557373
+        "PredictedFinalPosition": 12.827874183654785,
+        "Error": -12.827874183654785
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Sergio P\u00e9rez",
         "ActualFinalPosition": 16.0,
-        "PredictedFinalPosition": 13.11133098602295,
-        "Error": 2.888669013977051
+        "PredictedFinalPosition": 13.991165161132812,
+        "Error": 2.0088348388671875
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Valtteri Bottas",
         "ActualFinalPosition": 18.0,
-        "PredictedFinalPosition": 15.535058975219727,
-        "Error": 2.4649410247802734
+        "PredictedFinalPosition": 15.796323776245117,
+        "Error": 2.203676223754883
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Alexander Albon",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 12.63692569732666,
-        "Error": -12.63692569732666
+        "PredictedFinalPosition": 12.631571769714355,
+        "Error": -12.631571769714355
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Arvid Lindblad",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 11.994009017944336,
-        "Error": -11.994009017944336
+        "PredictedFinalPosition": 12.113600730895996,
+        "Error": -12.113600730895996
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Carlos Sainz Jr.",
         "ActualFinalPosition": 9.0,
-        "PredictedFinalPosition": 9.580178260803223,
-        "Error": -0.5801782608032227
+        "PredictedFinalPosition": 9.544034004211426,
+        "Error": -0.5440340042114258
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Charles Leclerc",
         "ActualFinalPosition": 4.0,
-        "PredictedFinalPosition": 6.377513408660889,
-        "Error": -2.3775134086608887
+        "PredictedFinalPosition": 6.1733903884887695,
+        "Error": -2.1733903884887695
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Esteban Ocon",
         "ActualFinalPosition": 14.0,
-        "PredictedFinalPosition": 11.438824653625488,
-        "Error": 2.5611753463745117
+        "PredictedFinalPosition": 11.323086738586426,
+        "Error": 2.676913261413574
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Fernando Alonso",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 12.263692855834961,
-        "Error": -12.263692855834961
+        "PredictedFinalPosition": 12.70881462097168,
+        "Error": -12.70881462097168
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Franco Colapinto",
         "ActualFinalPosition": 6.0,
-        "PredictedFinalPosition": 11.158380508422852,
-        "Error": -5.158380508422852
+        "PredictedFinalPosition": 9.932636260986328,
+        "Error": -3.932636260986328
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Gabriel Bortoleto",
         "ActualFinalPosition": 13.0,
-        "PredictedFinalPosition": 12.028985977172852,
-        "Error": 0.9710140228271484
+        "PredictedFinalPosition": 12.001572608947754,
+        "Error": 0.9984273910522461
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "George Russell",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 13.480321884155273,
-        "Error": -13.480321884155273
+        "PredictedFinalPosition": 11.967771530151367,
+        "Error": -11.967771530151367
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Isack Hadjar",
         "ActualFinalPosition": 5.0,
-        "PredictedFinalPosition": 9.029802322387695,
-        "Error": -4.029802322387695
+        "PredictedFinalPosition": 8.532912254333496,
+        "Error": -3.532912254333496
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "Kimi Antonelli",
         "ActualFinalPosition": 1.0,
-        "PredictedFinalPosition": 1.7473660707473755,
-        "Error": -0.7473660707473755
+        "PredictedFinalPosition": 1.760749340057373,
+        "Error": -0.760749340057373
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Lance Stroll",
         "ActualFinalPosition": 15.0,
-        "PredictedFinalPosition": 10.388266563415527,
-        "Error": 4.611733436584473
+        "PredictedFinalPosition": 9.62015438079834,
+        "Error": 5.37984561920166
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Lando Norris",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 13.813457489013672,
-        "Error": -13.813457489013672
+        "PredictedFinalPosition": 13.369012832641602,
+        "Error": -13.369012832641602
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Lewis Hamilton",
         "ActualFinalPosition": 2.0,
-        "PredictedFinalPosition": 4.339089393615723,
-        "Error": -2.3390893936157227
+        "PredictedFinalPosition": 3.6931095123291016,
+        "Error": -1.6931095123291016
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Liam Lawson",
         "ActualFinalPosition": 7.0,
-        "PredictedFinalPosition": 8.942495346069336,
-        "Error": -1.942495346069336
+        "PredictedFinalPosition": 8.3075590133667,
+        "Error": -1.3075590133666992
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Max Verstappen",
         "ActualFinalPosition": 3.0,
-        "PredictedFinalPosition": 5.3313469886779785,
-        "Error": -2.3313469886779785
+        "PredictedFinalPosition": 4.351478576660156,
+        "Error": -1.3514785766601562
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Nico H\u00fclkenberg",
         "ActualFinalPosition": 12.0,
-        "PredictedFinalPosition": 10.932415008544922,
-        "Error": 1.0675849914550781
+        "PredictedFinalPosition": 10.763510704040527,
+        "Error": 1.2364892959594727
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Oliver Bearman",
         "ActualFinalPosition": 10.0,
-        "PredictedFinalPosition": 9.781789779663086,
-        "Error": 0.21821022033691406
+        "PredictedFinalPosition": 8.767168998718262,
+        "Error": 1.2328310012817383
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Oscar Piastri",
         "ActualFinalPosition": 11.0,
-        "PredictedFinalPosition": 8.31750202178955,
-        "Error": 2.682497978210449
+        "PredictedFinalPosition": 8.171040534973145,
+        "Error": 2.8289594650268555
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Pierre Gasly",
         "ActualFinalPosition": 8.0,
-        "PredictedFinalPosition": 10.363306045532227,
-        "Error": -2.3633060455322266
+        "PredictedFinalPosition": 9.977499008178711,
+        "Error": -1.977499008178711
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Sergio P\u00e9rez",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 14.356216430664062,
-        "Error": -14.356216430664062
+        "PredictedFinalPosition": 14.166739463806152,
+        "Error": -14.166739463806152
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Valtteri Bottas",
         "ActualFinalPosition": 16.0,
-        "PredictedFinalPosition": 14.46111011505127,
-        "Error": 1.5388898849487305
+        "PredictedFinalPosition": 14.725164413452148,
+        "Error": 1.2748355865478516
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Alexander Albon",
         "ActualFinalPosition": 8.0,
-        "PredictedFinalPosition": 9.182978630065918,
-        "Error": -1.182978630065918
+        "PredictedFinalPosition": 8.672978401184082,
+        "Error": -0.672978401184082
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Arvid Lindblad",
         "ActualFinalPosition": 6.0,
-        "PredictedFinalPosition": 6.161349296569824,
-        "Error": -0.16134929656982422
+        "PredictedFinalPosition": 5.65191125869751,
+        "Error": 0.34808874130249023
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Carlos Sainz Jr.",
         "ActualFinalPosition": 16.0,
-        "PredictedFinalPosition": 12.110834121704102,
-        "Error": 3.8891658782958984
+        "PredictedFinalPosition": 12.100555419921875,
+        "Error": 3.899444580078125
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Charles Leclerc",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 15.099922180175781,
-        "Error": -15.099922180175781
+        "PredictedFinalPosition": 13.858254432678223,
+        "Error": -13.858254432678223
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Esteban Ocon",
         "ActualFinalPosition": 9.0,
-        "PredictedFinalPosition": 8.56972885131836,
-        "Error": 0.4302711486816406
+        "PredictedFinalPosition": 9.913729667663574,
+        "Error": -0.9137296676635742
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Fernando Alonso",
         "ActualFinalPosition": 10.0,
-        "PredictedFinalPosition": 11.177919387817383,
-        "Error": -1.1779193878173828
+        "PredictedFinalPosition": 11.384140014648438,
+        "Error": -1.3841400146484375
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Franco Colapinto",
         "ActualFinalPosition": 14.0,
-        "PredictedFinalPosition": 11.123675346374512,
-        "Error": 2.8763246536254883
+        "PredictedFinalPosition": 11.443779945373535,
+        "Error": 2.556220054626465
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Gabriel Bortoleto",
         "ActualFinalPosition": 11.0,
-        "PredictedFinalPosition": 11.675117492675781,
-        "Error": -0.6751174926757812
+        "PredictedFinalPosition": 11.447879791259766,
+        "Error": -0.4478797912597656
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "George Russell",
         "ActualFinalPosition": 12.0,
-        "PredictedFinalPosition": 8.507004737854004,
-        "Error": 3.492995262145996
+        "PredictedFinalPosition": 8.700873374938965,
+        "Error": 3.299126625061035
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Isack Hadjar",
         "ActualFinalPosition": 3.0,
-        "PredictedFinalPosition": 3.2727556228637695,
-        "Error": -0.27275562286376953
+        "PredictedFinalPosition": 3.4807119369506836,
+        "Error": -0.4807119369506836
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "Kimi Antonelli",
         "ActualFinalPosition": 1.0,
-        "PredictedFinalPosition": 1.979743480682373,
-        "Error": -0.979743480682373
+        "PredictedFinalPosition": 3.3539037704467773,
+        "Error": -2.3539037704467773
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Lance Stroll",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 15.132426261901855,
-        "Error": -15.132426261901855
+        "PredictedFinalPosition": 14.742730140686035,
+        "Error": -14.742730140686035
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Lando Norris",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 13.205924987792969,
-        "Error": -13.205924987792969
+        "PredictedFinalPosition": 13.050597190856934,
+        "Error": -13.050597190856934
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Lewis Hamilton",
         "ActualFinalPosition": 2.0,
-        "PredictedFinalPosition": 2.9543139934539795,
-        "Error": -0.9543139934539795
+        "PredictedFinalPosition": 3.0941691398620605,
+        "Error": -1.0941691398620605
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Liam Lawson",
         "ActualFinalPosition": 5.0,
-        "PredictedFinalPosition": 5.183897018432617,
-        "Error": -0.1838970184326172
+        "PredictedFinalPosition": 5.576776027679443,
+        "Error": -0.5767760276794434
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Max Verstappen",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 14.755456924438477,
-        "Error": -14.755456924438477
+        "PredictedFinalPosition": 13.870890617370605,
+        "Error": -13.870890617370605
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Nico H\u00fclkenberg",
         "ActualFinalPosition": 13.0,
-        "PredictedFinalPosition": 11.42504596710205,
-        "Error": 1.5749540328979492
+        "PredictedFinalPosition": 12.057426452636719,
+        "Error": 0.9425735473632812
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Oliver Bearman",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 13.154288291931152,
-        "Error": -13.154288291931152
+        "PredictedFinalPosition": 12.847976684570312,
+        "Error": -12.847976684570312
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Oscar Piastri",
         "ActualFinalPosition": 4.0,
-        "PredictedFinalPosition": 3.9435040950775146,
-        "Error": 0.05649590492248535
+        "PredictedFinalPosition": 4.737234115600586,
+        "Error": -0.7372341156005859
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Pierre Gasly",
         "ActualFinalPosition": 7.0,
-        "PredictedFinalPosition": 6.721556186676025,
-        "Error": 0.2784438133239746
+        "PredictedFinalPosition": 6.318138599395752,
+        "Error": 0.681861400604248
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Sergio P\u00e9rez",
         "ActualFinalPosition": 15.0,
-        "PredictedFinalPosition": 11.424748420715332,
-        "Error": 3.575251579284668
+        "PredictedFinalPosition": 12.858856201171875,
+        "Error": 2.141143798828125
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Valtteri Bottas",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 14.33873462677002,
-        "Error": -14.33873462677002
+        "PredictedFinalPosition": 14.439380645751953,
+        "Error": -14.439380645751953
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Alexander Albon",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 13.566001892089844,
-        "Error": -13.566001892089844
+        "PredictedFinalPosition": 14.067889213562012,
+        "Error": -14.067889213562012
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Arvid Lindblad",
         "ActualFinalPosition": 9.0,
-        "PredictedFinalPosition": 9.139665603637695,
-        "Error": -0.1396656036376953
+        "PredictedFinalPosition": 8.85853099822998,
+        "Error": 0.14146900177001953
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Carlos Sainz Jr.",
         "ActualFinalPosition": 12.0,
-        "PredictedFinalPosition": 10.871954917907715,
-        "Error": 1.1280450820922852
+        "PredictedFinalPosition": 11.930438995361328,
+        "Error": 0.06956100463867188
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Charles Leclerc",
         "ActualFinalPosition": 15.0,
-        "PredictedFinalPosition": 14.939191818237305,
-        "Error": 0.06080818176269531
+        "PredictedFinalPosition": 13.560552597045898,
+        "Error": 1.4394474029541016
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Esteban Ocon",
         "ActualFinalPosition": 13.0,
-        "PredictedFinalPosition": 12.040013313293457,
-        "Error": 0.959986686706543
+        "PredictedFinalPosition": 11.650829315185547,
+        "Error": 1.3491706848144531
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Fernando Alonso",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 14.644262313842773,
-        "Error": -14.644262313842773
+        "PredictedFinalPosition": 13.691629409790039,
+        "Error": -13.691629409790039
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Franco Colapinto",
         "ActualFinalPosition": 10.0,
-        "PredictedFinalPosition": 10.300843238830566,
-        "Error": -0.3008432388305664
+        "PredictedFinalPosition": 9.520140647888184,
+        "Error": 0.4798593521118164
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Gabriel Bortoleto",
         "ActualFinalPosition": 11.0,
-        "PredictedFinalPosition": 10.957462310791016,
-        "Error": 0.042537689208984375
+        "PredictedFinalPosition": 10.4817476272583,
+        "Error": 0.5182523727416992
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "George Russell",
         "ActualFinalPosition": 2.0,
-        "PredictedFinalPosition": 3.1137619018554688,
-        "Error": -1.1137619018554688
+        "PredictedFinalPosition": 2.6581320762634277,
+        "Error": -0.6581320762634277
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Isack Hadjar",
         "ActualFinalPosition": 6.0,
-        "PredictedFinalPosition": 5.504025459289551,
-        "Error": 0.4959745407104492
+        "PredictedFinalPosition": 5.3219685554504395,
+        "Error": 0.6780314445495605
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "Kimi Antonelli",
         "ActualFinalPosition": 16.0,
-        "PredictedFinalPosition": 14.165310859680176,
-        "Error": 1.8346891403198242
+        "PredictedFinalPosition": 14.199331283569336,
+        "Error": 1.800668716430664
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Lance Stroll",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 14.586650848388672,
-        "Error": -14.586650848388672
+        "PredictedFinalPosition": 13.470783233642578,
+        "Error": -13.470783233642578
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Lando Norris",
         "ActualFinalPosition": 3.0,
-        "PredictedFinalPosition": 5.756619453430176,
-        "Error": -2.756619453430176
+        "PredictedFinalPosition": 5.273421764373779,
+        "Error": -2.2734217643737793
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Lewis Hamilton",
         "ActualFinalPosition": 1.0,
-        "PredictedFinalPosition": 1.6730520725250244,
-        "Error": -0.6730520725250244
+        "PredictedFinalPosition": 1.3630614280700684,
+        "Error": -0.36306142807006836
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Liam Lawson",
         "ActualFinalPosition": 8.0,
-        "PredictedFinalPosition": 7.969642162322998,
-        "Error": 0.030357837677001953
+        "PredictedFinalPosition": 8.527206420898438,
+        "Error": -0.5272064208984375
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Max Verstappen",
         "ActualFinalPosition": 4.0,
-        "PredictedFinalPosition": 5.3948235511779785,
-        "Error": -1.3948235511779785
+        "PredictedFinalPosition": 6.034531116485596,
+        "Error": -2.0345311164855957
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Nico H\u00fclkenberg",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 14.200772285461426,
-        "Error": -14.200772285461426
+        "PredictedFinalPosition": 13.469478607177734,
+        "Error": -13.469478607177734
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Oliver Bearman",
         "ActualFinalPosition": 17.0,
-        "PredictedFinalPosition": 14.012784957885742,
-        "Error": 2.987215042114258
+        "PredictedFinalPosition": 15.316740036010742,
+        "Error": 1.6832599639892578
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Oscar Piastri",
         "ActualFinalPosition": 5.0,
-        "PredictedFinalPosition": 6.853663444519043,
-        "Error": -1.853663444519043
+        "PredictedFinalPosition": 7.016178131103516,
+        "Error": -2.0161781311035156
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Pierre Gasly",
         "ActualFinalPosition": 7.0,
-        "PredictedFinalPosition": 10.484451293945312,
-        "Error": -3.4844512939453125
+        "PredictedFinalPosition": 9.562633514404297,
+        "Error": -2.562633514404297
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Sergio P\u00e9rez",
         "ActualFinalPosition": 14.0,
-        "PredictedFinalPosition": 11.325862884521484,
-        "Error": 2.6741371154785156
+        "PredictedFinalPosition": 12.805898666381836,
+        "Error": 1.194101333618164
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Valtteri Bottas",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 14.386916160583496,
-        "Error": -14.386916160583496
+        "PredictedFinalPosition": 14.741180419921875,
+        "Error": -14.741180419921875
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Alexander Albon",
         "ActualFinalPosition": 17.0,
-        "PredictedFinalPosition": 12.395631790161133,
-        "Error": 4.604368209838867
+        "PredictedFinalPosition": 11.45754623413086,
+        "Error": 5.542453765869141
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Arvid Lindblad",
         "ActualFinalPosition": 10.0,
-        "PredictedFinalPosition": 8.129244804382324,
-        "Error": 1.8707551956176758
+        "PredictedFinalPosition": 7.445981025695801,
+        "Error": 2.554018974304199
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Carlos Sainz Jr.",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 13.746711730957031,
-        "Error": -13.746711730957031
+        "PredictedFinalPosition": 14.367440223693848,
+        "Error": -14.367440223693848
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Charles Leclerc",
         "ActualFinalPosition": 8.0,
-        "PredictedFinalPosition": 5.4390764236450195,
-        "Error": 2.5609235763549805
+        "PredictedFinalPosition": 5.069108963012695,
+        "Error": 2.9308910369873047
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Esteban Ocon",
         "ActualFinalPosition": 16.0,
-        "PredictedFinalPosition": 11.123233795166016,
-        "Error": 4.876766204833984
+        "PredictedFinalPosition": 10.589631080627441,
+        "Error": 5.410368919372559
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Fernando Alonso",
         "ActualFinalPosition": 18.0,
-        "PredictedFinalPosition": 13.674285888671875,
-        "Error": 4.325714111328125
+        "PredictedFinalPosition": 13.409403800964355,
+        "Error": 4.5905961990356445
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Franco Colapinto",
         "ActualFinalPosition": 15.0,
-        "PredictedFinalPosition": 11.797493934631348,
-        "Error": 3.2025060653686523
+        "PredictedFinalPosition": 12.39101791381836,
+        "Error": 2.6089820861816406
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Gabriel Bortoleto",
         "ActualFinalPosition": 11.0,
-        "PredictedFinalPosition": 9.574402809143066,
-        "Error": 1.4255971908569336
+        "PredictedFinalPosition": 8.651287078857422,
+        "Error": 2.348712921142578
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "George Russell",
         "ActualFinalPosition": 1.0,
-        "PredictedFinalPosition": 1.4846495389938354,
-        "Error": -0.48464953899383545
+        "PredictedFinalPosition": 1.20553719997406,
+        "Error": -0.20553719997406006
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Isack Hadjar",
         "ActualFinalPosition": 6.0,
-        "PredictedFinalPosition": 7.107186794281006,
-        "Error": -1.1071867942810059
+        "PredictedFinalPosition": 6.575371265411377,
+        "Error": -0.575371265411377
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "Kimi Antonelli",
         "ActualFinalPosition": 3.0,
-        "PredictedFinalPosition": 2.662379264831543,
-        "Error": 0.33762073516845703
+        "PredictedFinalPosition": 2.3293488025665283,
+        "Error": 0.6706511974334717
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Lance Stroll",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 14.352792739868164,
-        "Error": -14.352792739868164
+        "PredictedFinalPosition": 15.033455848693848,
+        "Error": -15.033455848693848
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Lando Norris",
         "ActualFinalPosition": 7.0,
-        "PredictedFinalPosition": 5.205016136169434,
-        "Error": 1.7949838638305664
+        "PredictedFinalPosition": 4.911630630493164,
+        "Error": 2.088369369506836
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Lewis Hamilton",
         "ActualFinalPosition": 5.0,
-        "PredictedFinalPosition": 4.7830810546875,
-        "Error": 0.2169189453125
+        "PredictedFinalPosition": 4.347685813903809,
+        "Error": 0.6523141860961914
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Liam Lawson",
         "ActualFinalPosition": 9.0,
-        "PredictedFinalPosition": 6.773959159851074,
-        "Error": 2.226040840148926
+        "PredictedFinalPosition": 6.092551231384277,
+        "Error": 2.9074487686157227
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Max Verstappen",
         "ActualFinalPosition": 2.0,
-        "PredictedFinalPosition": 3.071645736694336,
-        "Error": -1.071645736694336
+        "PredictedFinalPosition": 2.6193792819976807,
+        "Error": -0.6193792819976807
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Nico H\u00fclkenberg",
         "ActualFinalPosition": 12.0,
-        "PredictedFinalPosition": 11.499055862426758,
-        "Error": 0.5009441375732422
+        "PredictedFinalPosition": 10.78360366821289,
+        "Error": 1.2163963317871094
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Oliver Bearman",
         "ActualFinalPosition": 14.0,
-        "PredictedFinalPosition": 10.158699989318848,
-        "Error": 3.8413000106811523
+        "PredictedFinalPosition": 9.840097427368164,
+        "Error": 4.159902572631836
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Oscar Piastri",
         "ActualFinalPosition": 4.0,
-        "PredictedFinalPosition": 5.346216678619385,
-        "Error": -1.3462166786193848
+        "PredictedFinalPosition": 4.9176249504089355,
+        "Error": -0.9176249504089355
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Pierre Gasly",
         "ActualFinalPosition": 13.0,
-        "PredictedFinalPosition": 10.285404205322266,
-        "Error": 2.7145957946777344
+        "PredictedFinalPosition": 8.988500595092773,
+        "Error": 4.011499404907227
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Sergio P\u00e9rez",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 13.69925308227539,
-        "Error": -13.69925308227539
+        "PredictedFinalPosition": 13.340838432312012,
+        "Error": -13.340838432312012
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Valtteri Bottas",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 14.221803665161133,
-        "Error": -14.221803665161133
+        "PredictedFinalPosition": 13.36631965637207,
+        "Error": -13.36631965637207
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Alexander Albon",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 12.9296293258667,
-        "Error": -12.9296293258667
+        "PredictedFinalPosition": 13.567445755004883,
+        "Error": -13.567445755004883
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Arvid Lindblad",
         "ActualFinalPosition": 7.0,
-        "PredictedFinalPosition": 6.444303512573242,
-        "Error": 0.5556964874267578
+        "PredictedFinalPosition": 7.172097682952881,
+        "Error": -0.17209768295288086
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Carlos Sainz Jr.",
         "ActualFinalPosition": 17.0,
-        "PredictedFinalPosition": 11.821955680847168,
-        "Error": 5.178044319152832
+        "PredictedFinalPosition": 12.349349975585938,
+        "Error": 4.6506500244140625
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Charles Leclerc",
         "ActualFinalPosition": 1.0,
-        "PredictedFinalPosition": 3.1590163707733154,
-        "Error": -2.1590163707733154
+        "PredictedFinalPosition": 3.866013765335083,
+        "Error": -2.866013765335083
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Esteban Ocon",
         "ActualFinalPosition": 13.0,
-        "PredictedFinalPosition": 10.994733810424805,
-        "Error": 2.0052661895751953
+        "PredictedFinalPosition": 12.396552085876465,
+        "Error": 0.6034479141235352
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Fernando Alonso",
         "ActualFinalPosition": 18.0,
-        "PredictedFinalPosition": 10.576598167419434,
-        "Error": 7.423401832580566
+        "PredictedFinalPosition": 10.017072677612305,
+        "Error": 7.982927322387695
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Franco Colapinto",
         "ActualFinalPosition": 9.0,
-        "PredictedFinalPosition": 9.491387367248535,
-        "Error": -0.49138736724853516
+        "PredictedFinalPosition": 10.071798324584961,
+        "Error": -1.071798324584961
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Gabriel Bortoleto",
         "ActualFinalPosition": 8.0,
-        "PredictedFinalPosition": 6.557902812957764,
-        "Error": 1.4420971870422363
+        "PredictedFinalPosition": 6.8208417892456055,
+        "Error": 1.1791582107543945
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "George Russell",
         "ActualFinalPosition": 2.0,
-        "PredictedFinalPosition": 4.503314018249512,
-        "Error": -2.5033140182495117
+        "PredictedFinalPosition": 4.990092754364014,
+        "Error": -2.9900927543640137
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Isack Hadjar",
         "ActualFinalPosition": 5.0,
-        "PredictedFinalPosition": 6.1182661056518555,
-        "Error": -1.1182661056518555
+        "PredictedFinalPosition": 7.199643611907959,
+        "Error": -2.199643611907959
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "Kimi Antonelli",
         "ActualFinalPosition": 15.0,
-        "PredictedFinalPosition": 10.217451095581055,
-        "Error": 4.782548904418945
+        "PredictedFinalPosition": 11.225756645202637,
+        "Error": 3.7742433547973633
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Lance Stroll",
         "ActualFinalPosition": 19.0,
-        "PredictedFinalPosition": 13.552145957946777,
-        "Error": 5.447854042053223
+        "PredictedFinalPosition": 14.418176651000977,
+        "Error": 4.581823348999023
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Lando Norris",
         "ActualFinalPosition": 4.0,
-        "PredictedFinalPosition": 5.962426662445068,
-        "Error": -1.9624266624450684
+        "PredictedFinalPosition": 5.885960578918457,
+        "Error": -1.885960578918457
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Lewis Hamilton",
         "ActualFinalPosition": 3.0,
-        "PredictedFinalPosition": 3.8243772983551025,
-        "Error": -0.8243772983551025
+        "PredictedFinalPosition": 3.8720123767852783,
+        "Error": -0.8720123767852783
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Liam Lawson",
         "ActualFinalPosition": 6.0,
-        "PredictedFinalPosition": 6.686206817626953,
-        "Error": -0.6862068176269531
+        "PredictedFinalPosition": 6.131593227386475,
+        "Error": -0.1315932273864746
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Max Verstappen",
         "ActualFinalPosition": 20.0,
-        "PredictedFinalPosition": 13.978754043579102,
-        "Error": 6.021245956420898
+        "PredictedFinalPosition": 14.121843338012695,
+        "Error": 5.878156661987305
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Nico H\u00fclkenberg",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 12.882820129394531,
-        "Error": -12.882820129394531
+        "PredictedFinalPosition": 13.885150909423828,
+        "Error": -13.885150909423828
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Oliver Bearman",
         "ActualFinalPosition": 12.0,
-        "PredictedFinalPosition": 10.209733009338379,
-        "Error": 1.790266990661621
+        "PredictedFinalPosition": 10.982745170593262,
+        "Error": 1.0172548294067383
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Oscar Piastri",
         "ActualFinalPosition": 11.0,
-        "PredictedFinalPosition": 9.465374946594238,
-        "Error": 1.5346250534057617
+        "PredictedFinalPosition": 10.66695785522461,
+        "Error": 0.3330421447753906
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Pierre Gasly",
         "ActualFinalPosition": 10.0,
-        "PredictedFinalPosition": 10.41834545135498,
-        "Error": -0.41834545135498047
+        "PredictedFinalPosition": 11.47761058807373,
+        "Error": -1.4776105880737305
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Sergio P\u00e9rez",
         "ActualFinalPosition": 14.0,
-        "PredictedFinalPosition": 11.665130615234375,
-        "Error": 2.334869384765625
+        "PredictedFinalPosition": 12.037810325622559,
+        "Error": 1.9621896743774414
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Valtteri Bottas",
         "ActualFinalPosition": 16.0,
-        "PredictedFinalPosition": 10.84058952331543,
-        "Error": 5.15941047668457
+        "PredictedFinalPosition": 12.259531021118164,
+        "Error": 3.740468978881836
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Alexander Albon",
         "ActualFinalPosition": 15.0,
-        "PredictedFinalPosition": 10.965468406677246,
-        "Error": 4.034531593322754
+        "PredictedFinalPosition": 10.988734245300293,
+        "Error": 4.011265754699707
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Arvid Lindblad",
         "ActualFinalPosition": 9.0,
-        "PredictedFinalPosition": 8.248287200927734,
-        "Error": 0.7517127990722656
+        "PredictedFinalPosition": 7.999420166015625,
+        "Error": 1.000579833984375
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Carlos Sainz Jr.",
         "ActualFinalPosition": 16.0,
-        "PredictedFinalPosition": 13.298644065856934,
-        "Error": 2.7013559341430664
+        "PredictedFinalPosition": 14.792268753051758,
+        "Error": 1.2077312469482422
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Charles Leclerc",
         "ActualFinalPosition": 2.0,
-        "PredictedFinalPosition": 2.1421682834625244,
-        "Error": -0.14216828346252441
+        "PredictedFinalPosition": 2.289588689804077,
+        "Error": -0.28958868980407715
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Esteban Ocon",
         "ActualFinalPosition": 17.0,
-        "PredictedFinalPosition": 14.717000961303711,
-        "Error": 2.282999038696289
+        "PredictedFinalPosition": 14.526945114135742,
+        "Error": 2.473054885864258
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Fernando Alonso",
         "ActualFinalPosition": 19.0,
-        "PredictedFinalPosition": 13.35466194152832,
-        "Error": 5.64533805847168
+        "PredictedFinalPosition": 12.049952507019043,
+        "Error": 6.950047492980957
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Franco Colapinto",
         "ActualFinalPosition": 10.0,
-        "PredictedFinalPosition": 12.594423294067383,
-        "Error": -2.594423294067383
+        "PredictedFinalPosition": 12.541244506835938,
+        "Error": -2.5412445068359375
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Gabriel Bortoleto",
         "ActualFinalPosition": 8.0,
-        "PredictedFinalPosition": 6.610195636749268,
-        "Error": 1.3898043632507324
+        "PredictedFinalPosition": 6.5239033699035645,
+        "Error": 1.4760966300964355
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "George Russell",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 13.468544960021973,
-        "Error": -13.468544960021973
+        "PredictedFinalPosition": 11.97754192352295,
+        "Error": -11.97754192352295
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Isack Hadjar",
         "ActualFinalPosition": 6.0,
-        "PredictedFinalPosition": 6.998094081878662,
-        "Error": -0.9980940818786621
+        "PredictedFinalPosition": 7.274768829345703,
+        "Error": -1.2747688293457031
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "Kimi Antonelli",
         "ActualFinalPosition": 1.0,
-        "PredictedFinalPosition": 1.172358751296997,
-        "Error": -0.17235875129699707
+        "PredictedFinalPosition": 2.1092591285705566,
+        "Error": -1.1092591285705566
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Lance Stroll",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 15.657998085021973,
-        "Error": -15.657998085021973
+        "PredictedFinalPosition": 15.44728946685791,
+        "Error": -15.44728946685791
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Lando Norris",
         "ActualFinalPosition": 7.0,
-        "PredictedFinalPosition": 5.747129440307617,
-        "Error": 1.2528705596923828
+        "PredictedFinalPosition": 5.746918201446533,
+        "Error": 1.2530817985534668
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Lewis Hamilton",
         "ActualFinalPosition": 4.0,
-        "PredictedFinalPosition": 4.447277545928955,
-        "Error": -0.4472775459289551
+        "PredictedFinalPosition": 4.02985143661499,
+        "Error": -0.029851436614990234
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Liam Lawson",
         "ActualFinalPosition": 12.0,
-        "PredictedFinalPosition": 9.257533073425293,
-        "Error": 2.742466926574707
+        "PredictedFinalPosition": 9.541189193725586,
+        "Error": 2.458810806274414
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Max Verstappen",
         "ActualFinalPosition": 3.0,
-        "PredictedFinalPosition": 2.5191268920898438,
-        "Error": 0.48087310791015625
+        "PredictedFinalPosition": 2.2950708866119385,
+        "Error": 0.7049291133880615
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Nico H\u00fclkenberg",
         "ActualFinalPosition": 13.0,
-        "PredictedFinalPosition": 11.840104103088379,
-        "Error": 1.159895896911621
+        "PredictedFinalPosition": 11.11104679107666,
+        "Error": 1.8889532089233398
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Oliver Bearman",
         "ActualFinalPosition": 14.0,
-        "PredictedFinalPosition": 12.921226501464844,
-        "Error": 1.0787734985351562
+        "PredictedFinalPosition": 13.633155822753906,
+        "Error": 0.36684417724609375
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Oscar Piastri",
         "ActualFinalPosition": 5.0,
-        "PredictedFinalPosition": 4.6118974685668945,
-        "Error": 0.38810253143310547
+        "PredictedFinalPosition": 4.656896114349365,
+        "Error": 0.34310388565063477
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Pierre Gasly",
         "ActualFinalPosition": 11.0,
-        "PredictedFinalPosition": 9.499290466308594,
-        "Error": 1.5007095336914062
+        "PredictedFinalPosition": 9.10791301727295,
+        "Error": 1.8920869827270508
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Sergio P\u00e9rez",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 14.137850761413574,
-        "Error": -14.137850761413574
+        "PredictedFinalPosition": 14.47533130645752,
+        "Error": -14.47533130645752
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Valtteri Bottas",
         "ActualFinalPosition": 18.0,
-        "PredictedFinalPosition": 14.234562873840332,
-        "Error": 3.765437126159668
+        "PredictedFinalPosition": 15.312346458435059,
+        "Error": 2.6876535415649414
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Alexander Albon",
         "ActualFinalPosition": 17.0,
-        "PredictedFinalPosition": 13.73229694366455,
-        "Error": 3.267703056335449
+        "PredictedFinalPosition": 13.22910213470459,
+        "Error": 3.77089786529541
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Arvid Lindblad",
         "ActualFinalPosition": 10.0,
-        "PredictedFinalPosition": 7.39595890045166,
-        "Error": 2.60404109954834
+        "PredictedFinalPosition": 7.348895072937012,
+        "Error": 2.6511049270629883
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Carlos Sainz Jr.",
         "ActualFinalPosition": 18.0,
-        "PredictedFinalPosition": 13.119418144226074,
-        "Error": 4.880581855773926
+        "PredictedFinalPosition": 13.821940422058105,
+        "Error": 4.1780595779418945
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Charles Leclerc",
         "ActualFinalPosition": 4.0,
-        "PredictedFinalPosition": 6.067019939422607,
-        "Error": -2.0670199394226074
+        "PredictedFinalPosition": 4.98346471786499,
+        "Error": -0.9834647178649902
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Esteban Ocon",
         "ActualFinalPosition": 16.0,
-        "PredictedFinalPosition": 11.995681762695312,
-        "Error": 4.0043182373046875
+        "PredictedFinalPosition": 12.007000923156738,
+        "Error": 3.9929990768432617
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Fernando Alonso",
         "ActualFinalPosition": 14.0,
-        "PredictedFinalPosition": 11.083317756652832,
-        "Error": 2.916682243347168
+        "PredictedFinalPosition": 11.138919830322266,
+        "Error": 2.8610801696777344
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Franco Colapinto",
         "ActualFinalPosition": 15.0,
-        "PredictedFinalPosition": 12.662562370300293,
-        "Error": 2.337437629699707
+        "PredictedFinalPosition": 13.974764823913574,
+        "Error": 1.0252351760864258
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Gabriel Bortoleto",
         "ActualFinalPosition": 11.0,
-        "PredictedFinalPosition": 8.158883094787598,
-        "Error": 2.8411169052124023
+        "PredictedFinalPosition": 8.178053855895996,
+        "Error": 2.821946144104004
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "George Russell",
         "ActualFinalPosition": 7.0,
-        "PredictedFinalPosition": 5.72523832321167,
-        "Error": 1.27476167678833
+        "PredictedFinalPosition": 5.771615028381348,
+        "Error": 1.2283849716186523
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Isack Hadjar",
         "ActualFinalPosition": 6.0,
-        "PredictedFinalPosition": 6.923355579376221,
-        "Error": -0.9233555793762207
+        "PredictedFinalPosition": 7.5510358810424805,
+        "Error": -1.5510358810424805
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "Kimi Antonelli",
         "ActualFinalPosition": 3.0,
-        "PredictedFinalPosition": 3.93565034866333,
-        "Error": -0.9356503486633301
+        "PredictedFinalPosition": 3.395434617996216,
+        "Error": -0.3954346179962158
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Lance Stroll",
         "ActualFinalPosition": 13.0,
-        "PredictedFinalPosition": 12.824956893920898,
-        "Error": 0.17504310607910156
+        "PredictedFinalPosition": 13.606803894042969,
+        "Error": -0.6068038940429688
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Lando Norris",
         "ActualFinalPosition": 1.0,
-        "PredictedFinalPosition": 2.244762897491455,
-        "Error": -1.244762897491455
+        "PredictedFinalPosition": 2.1172776222229004,
+        "Error": -1.1172776222229004
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Lewis Hamilton",
         "ActualFinalPosition": 5.0,
-        "PredictedFinalPosition": 5.8468146324157715,
-        "Error": -0.8468146324157715
+        "PredictedFinalPosition": 5.519524097442627,
+        "Error": -0.519524097442627
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Liam Lawson",
         "ActualFinalPosition": 8.0,
-        "PredictedFinalPosition": 7.205420017242432,
-        "Error": 0.7945799827575684
+        "PredictedFinalPosition": 5.941611289978027,
+        "Error": 2.0583887100219727
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Max Verstappen",
         "ActualFinalPosition": 2.0,
-        "PredictedFinalPosition": 2.7641005516052246,
-        "Error": -0.7641005516052246
+        "PredictedFinalPosition": 2.4526009559631348,
+        "Error": -0.45260095596313477
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Nico H\u00fclkenberg",
         "ActualFinalPosition": 9.0,
-        "PredictedFinalPosition": 9.318292617797852,
-        "Error": -0.31829261779785156
+        "PredictedFinalPosition": 10.575288772583008,
+        "Error": -1.5752887725830078
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Oliver Bearman",
         "ActualFinalPosition": 19.0,
-        "PredictedFinalPosition": 16.950862884521484,
-        "Error": 2.0491371154785156
+        "PredictedFinalPosition": 16.13031578063965,
+        "Error": 2.8696842193603516
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Oscar Piastri",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 14.275389671325684,
-        "Error": -14.275389671325684
+        "PredictedFinalPosition": 12.690364837646484,
+        "Error": -12.690364837646484
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Pierre Gasly",
         "ActualFinalPosition": 12.0,
-        "PredictedFinalPosition": 9.91745662689209,
-        "Error": 2.08254337310791
+        "PredictedFinalPosition": 9.144145965576172,
+        "Error": 2.855854034423828
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Sergio P\u00e9rez",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 13.13851547241211,
-        "Error": -13.13851547241211
+        "PredictedFinalPosition": 14.00560188293457,
+        "Error": -14.00560188293457
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Valtteri Bottas",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 13.894708633422852,
-        "Error": -13.894708633422852
+        "PredictedFinalPosition": 13.071829795837402,
+        "Error": -13.071829795837402
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Alexander Albon",
         "ActualFinalPosition": 17.0,
-        "PredictedFinalPosition": 13.384927749633789,
-        "Error": 3.615072250366211
+        "PredictedFinalPosition": 13.26569938659668,
+        "Error": 3.7343006134033203
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Arvid Lindblad",
         "ActualFinalPosition": 12.0,
-        "PredictedFinalPosition": 9.611889839172363,
-        "Error": 2.3881101608276367
+        "PredictedFinalPosition": 9.02747917175293,
+        "Error": 2.9725208282470703
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Carlos Sainz Jr.",
         "ActualFinalPosition": 16.0,
-        "PredictedFinalPosition": 13.483805656433105,
-        "Error": 2.5161943435668945
+        "PredictedFinalPosition": 12.807104110717773,
+        "Error": 3.1928958892822266
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Charles Leclerc",
         "ActualFinalPosition": 5.0,
-        "PredictedFinalPosition": 6.323797702789307,
-        "Error": -1.3237977027893066
+        "PredictedFinalPosition": 6.47300910949707,
+        "Error": -1.4730091094970703
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Esteban Ocon",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 12.816858291625977,
-        "Error": -12.816858291625977
+        "PredictedFinalPosition": 11.841963768005371,
+        "Error": -11.841963768005371
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Fernando Alonso",
         "ActualFinalPosition": 9.0,
-        "PredictedFinalPosition": 10.96460247039795,
-        "Error": -1.9646024703979492
+        "PredictedFinalPosition": 11.119524955749512,
+        "Error": -2.1195249557495117
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Franco Colapinto",
         "ActualFinalPosition": 14.0,
-        "PredictedFinalPosition": 10.839111328125,
-        "Error": 3.160888671875
+        "PredictedFinalPosition": 11.522825241088867,
+        "Error": 2.477174758911133
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Gabriel Bortoleto",
         "ActualFinalPosition": 13.0,
-        "PredictedFinalPosition": 11.68663501739502,
-        "Error": 1.3133649826049805
+        "PredictedFinalPosition": 11.428834915161133,
+        "Error": 1.5711650848388672
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "George Russell",
         "ActualFinalPosition": 3.0,
-        "PredictedFinalPosition": 3.6393375396728516,
-        "Error": -0.6393375396728516
+        "PredictedFinalPosition": 3.372208595275879,
+        "Error": -0.3722085952758789
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "Kimi Antonelli",
         "ActualFinalPosition": 2.0,
-        "PredictedFinalPosition": 4.480049133300781,
-        "Error": -2.4800491333007812
+        "PredictedFinalPosition": 4.060542106628418,
+        "Error": -2.060542106628418
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Lance Stroll",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 14.448450088500977,
-        "Error": -14.448450088500977
+        "PredictedFinalPosition": 14.64236831665039,
+        "Error": -14.64236831665039
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Lando Norris",
         "ActualFinalPosition": 1.0,
-        "PredictedFinalPosition": 1.8604354858398438,
-        "Error": -0.8604354858398438
+        "PredictedFinalPosition": 1.6276428699493408,
+        "Error": -0.6276428699493408
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Lewis Hamilton",
         "ActualFinalPosition": 4.0,
-        "PredictedFinalPosition": 5.540427207946777,
-        "Error": -1.5404272079467773
+        "PredictedFinalPosition": 6.010952472686768,
+        "Error": -2.0109524726867676
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Liam Lawson",
         "ActualFinalPosition": 7.0,
-        "PredictedFinalPosition": 8.768503189086914,
-        "Error": -1.768503189086914
+        "PredictedFinalPosition": 7.791260719299316,
+        "Error": -0.7912607192993164
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Max Verstappen",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 12.309591293334961,
-        "Error": -12.309591293334961
+        "PredictedFinalPosition": 12.585540771484375,
+        "Error": -12.585540771484375
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Nico H\u00fclkenberg",
         "ActualFinalPosition": 8.0,
-        "PredictedFinalPosition": 10.509183883666992,
-        "Error": -2.509183883666992
+        "PredictedFinalPosition": 10.060948371887207,
+        "Error": -2.060948371887207
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Oliver Bearman",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 12.524398803710938,
-        "Error": -12.524398803710938
+        "PredictedFinalPosition": 12.025083541870117,
+        "Error": -12.025083541870117
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Oscar Piastri",
         "ActualFinalPosition": 6.0,
-        "PredictedFinalPosition": 6.8417253494262695,
-        "Error": -0.8417253494262695
+        "PredictedFinalPosition": 6.966191291809082,
+        "Error": -0.966191291809082
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Pierre Gasly",
         "ActualFinalPosition": 10.0,
-        "PredictedFinalPosition": 9.264531135559082,
-        "Error": 0.735468864440918
+        "PredictedFinalPosition": 8.255956649780273,
+        "Error": 1.7440433502197266
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Sergio P\u00e9rez",
         "ActualFinalPosition": 15.0,
-        "PredictedFinalPosition": 9.816317558288574,
-        "Error": 5.183682441711426
+        "PredictedFinalPosition": 9.28359317779541,
+        "Error": 5.71640682220459
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Valtteri Bottas",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 14.101311683654785,
-        "Error": -14.101311683654785
+        "PredictedFinalPosition": 14.480572700500488,
+        "Error": -14.480572700500488
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Yuki Tsunoda",
         "ActualFinalPosition": 11.0,
-        "PredictedFinalPosition": 10.53846549987793,
-        "Error": 0.4615345001220703
+        "PredictedFinalPosition": 10.405793190002441,
+        "Error": 0.5942068099975586
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Alexander Albon",
         "ActualFinalPosition": 17.0,
-        "PredictedFinalPosition": 12.95911979675293,
-        "Error": 4.04088020324707
+        "PredictedFinalPosition": 11.686663627624512,
+        "Error": 5.313336372375488
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Arvid Lindblad",
         "ActualFinalPosition": 8.0,
-        "PredictedFinalPosition": 6.104953289031982,
-        "Error": 1.8950467109680176
+        "PredictedFinalPosition": 6.322025775909424,
+        "Error": 1.6779742240905762
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Carlos Sainz Jr.",
         "ActualFinalPosition": 13.0,
-        "PredictedFinalPosition": 12.181279182434082,
-        "Error": 0.818720817565918
+        "PredictedFinalPosition": 12.11174201965332,
+        "Error": 0.8882579803466797
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Charles Leclerc",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 14.276084899902344,
-        "Error": -14.276084899902344
+        "PredictedFinalPosition": 12.825074195861816,
+        "Error": -12.825074195861816
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Esteban Ocon",
         "ActualFinalPosition": 16.0,
-        "PredictedFinalPosition": 12.515007019042969,
-        "Error": 3.4849929809570312
+        "PredictedFinalPosition": 12.0952730178833,
+        "Error": 3.904726982116699
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Fernando Alonso",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 14.418729782104492,
-        "Error": -14.418729782104492
+        "PredictedFinalPosition": 14.125799179077148,
+        "Error": -14.125799179077148
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Franco Colapinto",
         "ActualFinalPosition": 9.0,
-        "PredictedFinalPosition": 7.581258296966553,
-        "Error": 1.4187417030334473
+        "PredictedFinalPosition": 8.623889923095703,
+        "Error": 0.3761100769042969
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Gabriel Bortoleto",
         "ActualFinalPosition": 11.0,
-        "PredictedFinalPosition": 8.344847679138184,
-        "Error": 2.6551523208618164
+        "PredictedFinalPosition": 8.035259246826172,
+        "Error": 2.964740753173828
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "George Russell",
         "ActualFinalPosition": 2.0,
-        "PredictedFinalPosition": 2.733351707458496,
-        "Error": -0.7333517074584961
+        "PredictedFinalPosition": 2.27512788772583,
+        "Error": -0.2751278877258301
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "Kimi Antonelli",
         "ActualFinalPosition": 1.0,
-        "PredictedFinalPosition": 3.9996862411499023,
-        "Error": -2.9996862411499023
+        "PredictedFinalPosition": 3.581036329269409,
+        "Error": -2.581036329269409
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Lance Stroll",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 15.089909553527832,
-        "Error": -15.089909553527832
+        "PredictedFinalPosition": 14.613702774047852,
+        "Error": -14.613702774047852
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Lando Norris",
         "ActualFinalPosition": 4.0,
-        "PredictedFinalPosition": 2.4241764545440674,
-        "Error": 1.5758235454559326
+        "PredictedFinalPosition": 2.7720553874969482,
+        "Error": 1.2279446125030518
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Lewis Hamilton",
         "ActualFinalPosition": 6.0,
-        "PredictedFinalPosition": 4.263755798339844,
-        "Error": 1.7362442016601562
+        "PredictedFinalPosition": 4.748175144195557,
+        "Error": 1.2518248558044434
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Liam Lawson",
         "ActualFinalPosition": 14.0,
-        "PredictedFinalPosition": 9.505812644958496,
-        "Error": 4.494187355041504
+        "PredictedFinalPosition": 10.63296890258789,
+        "Error": 3.3670310974121094
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Max Verstappen",
         "ActualFinalPosition": 3.0,
-        "PredictedFinalPosition": 3.5016989707946777,
-        "Error": -0.5016989707946777
+        "PredictedFinalPosition": 2.9035909175872803,
+        "Error": 0.09640908241271973
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Nico H\u00fclkenberg",
         "ActualFinalPosition": 12.0,
-        "PredictedFinalPosition": 11.800759315490723,
-        "Error": 0.19924068450927734
+        "PredictedFinalPosition": 11.778596878051758,
+        "Error": 0.2214031219482422
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Oliver Bearman",
         "ActualFinalPosition": 15.0,
-        "PredictedFinalPosition": 10.905905723571777,
-        "Error": 4.094094276428223
+        "PredictedFinalPosition": 11.157328605651855,
+        "Error": 3.8426713943481445
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Oscar Piastri",
         "ActualFinalPosition": 5.0,
-        "PredictedFinalPosition": 4.2568535804748535,
-        "Error": 0.7431464195251465
+        "PredictedFinalPosition": 4.67974328994751,
+        "Error": 0.32025671005249023
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Pierre Gasly",
         "ActualFinalPosition": 7.0,
-        "PredictedFinalPosition": 5.150176048278809,
-        "Error": 1.8498239517211914
+        "PredictedFinalPosition": 5.325128555297852,
+        "Error": 1.6748714447021484
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Sergio P\u00e9rez",
         "ActualFinalPosition": 18.0,
-        "PredictedFinalPosition": 13.02584457397461,
-        "Error": 4.974155426025391
+        "PredictedFinalPosition": 13.81978702545166,
+        "Error": 4.18021297454834
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Valtteri Bottas",
         "ActualFinalPosition": 19.0,
-        "PredictedFinalPosition": 13.795303344726562,
-        "Error": 5.2046966552734375
+        "PredictedFinalPosition": 14.486037254333496,
+        "Error": 4.513962745666504
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Yuki Tsunoda",
         "ActualFinalPosition": 10.0,
-        "PredictedFinalPosition": 9.764155387878418,
-        "Error": 0.23584461212158203
+        "PredictedFinalPosition": 10.399022102355957,
+        "Error": -0.39902210235595703
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Alexander Albon",
         "ActualFinalPosition": 15.0,
-        "PredictedFinalPosition": 13.676719665527344,
-        "Error": 1.3232803344726562
+        "PredictedFinalPosition": 13.977965354919434,
+        "Error": 1.0220346450805664
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Arvid Lindblad",
         "ActualFinalPosition": 9.0,
-        "PredictedFinalPosition": 9.747047424316406,
-        "Error": -0.7470474243164062
+        "PredictedFinalPosition": 9.25782585144043,
+        "Error": -0.2578258514404297
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Carlos Sainz Jr.",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 13.229565620422363,
-        "Error": -13.229565620422363
+        "PredictedFinalPosition": 14.206465721130371,
+        "Error": -14.206465721130371
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Charles Leclerc",
         "ActualFinalPosition": 4.0,
-        "PredictedFinalPosition": 5.696672439575195,
-        "Error": -1.6966724395751953
+        "PredictedFinalPosition": 6.249953269958496,
+        "Error": -2.249953269958496
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Esteban Ocon",
         "ActualFinalPosition": 11.0,
-        "PredictedFinalPosition": 10.066040992736816,
-        "Error": 0.9339590072631836
+        "PredictedFinalPosition": 10.748937606811523,
+        "Error": 0.25106239318847656
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Fernando Alonso",
         "ActualFinalPosition": 17.0,
-        "PredictedFinalPosition": 14.529400825500488,
-        "Error": 2.4705991744995117
+        "PredictedFinalPosition": 15.006148338317871,
+        "Error": 1.993851661682129
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Franco Colapinto",
         "ActualFinalPosition": 7.0,
-        "PredictedFinalPosition": 7.866673469543457,
-        "Error": -0.866673469543457
+        "PredictedFinalPosition": 8.627565383911133,
+        "Error": -1.6275653839111328
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Gabriel Bortoleto",
         "ActualFinalPosition": 13.0,
-        "PredictedFinalPosition": 12.052677154541016,
-        "Error": 0.9473228454589844
+        "PredictedFinalPosition": 10.523590087890625,
+        "Error": 2.476409912109375
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "George Russell",
         "ActualFinalPosition": 5.0,
-        "PredictedFinalPosition": 6.926187038421631,
-        "Error": -1.9261870384216309
+        "PredictedFinalPosition": 7.561458110809326,
+        "Error": -2.561458110809326
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "Kimi Antonelli",
         "ActualFinalPosition": 1.0,
-        "PredictedFinalPosition": 1.6817163228988647,
-        "Error": -0.6817163228988647
+        "PredictedFinalPosition": 2.069464683532715,
+        "Error": -1.0694646835327148
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Lance Stroll",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 11.644207000732422,
-        "Error": -11.644207000732422
+        "PredictedFinalPosition": 13.089080810546875,
+        "Error": -13.089080810546875
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Lando Norris",
         "ActualFinalPosition": 3.0,
-        "PredictedFinalPosition": 1.6467005014419556,
-        "Error": 1.3532994985580444
+        "PredictedFinalPosition": 2.477969169616699,
+        "Error": 0.5220308303833008
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Lewis Hamilton",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 13.147026062011719,
-        "Error": -13.147026062011719
+        "PredictedFinalPosition": 13.397294998168945,
+        "Error": -13.397294998168945
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Liam Lawson",
         "ActualFinalPosition": 6.0,
-        "PredictedFinalPosition": 8.073588371276855,
-        "Error": -2.0735883712768555
+        "PredictedFinalPosition": 7.738376140594482,
+        "Error": -1.7383761405944824
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Max Verstappen",
         "ActualFinalPosition": 2.0,
-        "PredictedFinalPosition": 2.9185569286346436,
-        "Error": -0.9185569286346436
+        "PredictedFinalPosition": 2.80147647857666,
+        "Error": -0.8014764785766602
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Nico H\u00fclkenberg",
         "ActualFinalPosition": 10.0,
-        "PredictedFinalPosition": 9.954524040222168,
-        "Error": 0.04547595977783203
+        "PredictedFinalPosition": 9.0381441116333,
+        "Error": 0.9618558883666992
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Oliver Bearman",
         "ActualFinalPosition": 16.0,
-        "PredictedFinalPosition": 12.216601371765137,
-        "Error": 3.7833986282348633
+        "PredictedFinalPosition": 11.788196563720703,
+        "Error": 4.211803436279297
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Oscar Piastri",
         "ActualFinalPosition": 8.0,
-        "PredictedFinalPosition": 8.14677619934082,
-        "Error": -0.1467761993408203
+        "PredictedFinalPosition": 8.351816177368164,
+        "Error": -0.35181617736816406
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Pierre Gasly",
         "ActualFinalPosition": 12.0,
-        "PredictedFinalPosition": 10.830492973327637,
-        "Error": 1.1695070266723633
+        "PredictedFinalPosition": 10.398321151733398,
+        "Error": 1.6016788482666016
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Sergio P\u00e9rez",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 12.218578338623047,
-        "Error": -12.218578338623047
+        "PredictedFinalPosition": 13.879066467285156,
+        "Error": -13.879066467285156
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Valtteri Bottas",
         "ActualFinalPosition": 18.0,
-        "PredictedFinalPosition": 16.991504669189453,
-        "Error": 1.0084953308105469
+        "PredictedFinalPosition": 16.92989730834961,
+        "Error": 1.0701026916503906
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Yuki Tsunoda",
         "ActualFinalPosition": 14.0,
-        "PredictedFinalPosition": 11.85667896270752,
-        "Error": 2.1433210372924805
+        "PredictedFinalPosition": 12.088628768920898,
+        "Error": 1.9113712310791016
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Alexander Albon",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 12.782363891601562,
-        "Error": -12.782363891601562
+        "PredictedFinalPosition": 11.605668067932129,
+        "Error": -11.605668067932129
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Arvid Lindblad",
         "ActualFinalPosition": 7.0,
-        "PredictedFinalPosition": 8.118368148803711,
-        "Error": -1.118368148803711
+        "PredictedFinalPosition": 7.518071174621582,
+        "Error": -0.518071174621582
       },
       {
         "constructorName": "Williams",
         "resultsDriverName": "Carlos Sainz Jr.",
         "ActualFinalPosition": 10.0,
-        "PredictedFinalPosition": 9.93652057647705,
-        "Error": 0.06347942352294922
+        "PredictedFinalPosition": 10.03436279296875,
+        "Error": -0.03436279296875
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Charles Leclerc",
         "ActualFinalPosition": 4.0,
-        "PredictedFinalPosition": 4.822272300720215,
-        "Error": -0.8222723007202148
+        "PredictedFinalPosition": 4.380039215087891,
+        "Error": -0.3800392150878906
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Esteban Ocon",
         "ActualFinalPosition": 8.0,
-        "PredictedFinalPosition": 10.52708911895752,
-        "Error": -2.5270891189575195
+        "PredictedFinalPosition": 10.53154182434082,
+        "Error": -2.5315418243408203
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Fernando Alonso",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 14.917105674743652,
-        "Error": -14.917105674743652
+        "PredictedFinalPosition": 14.736750602722168,
+        "Error": -14.736750602722168
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Franco Colapinto",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 12.140190124511719,
-        "Error": -12.140190124511719
+        "PredictedFinalPosition": 12.73344898223877,
+        "Error": -12.73344898223877
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Gabriel Bortoleto",
         "ActualFinalPosition": 15.0,
-        "PredictedFinalPosition": 11.546191215515137,
-        "Error": 3.4538087844848633
+        "PredictedFinalPosition": 10.589766502380371,
+        "Error": 4.410233497619629
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "George Russell",
         "ActualFinalPosition": 1.0,
-        "PredictedFinalPosition": 2.339783191680908,
-        "Error": -1.3397831916809082
+        "PredictedFinalPosition": 2.089238405227661,
+        "Error": -1.0892384052276611
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Isack Hadjar",
         "ActualFinalPosition": 3.0,
-        "PredictedFinalPosition": 4.225109100341797,
-        "Error": -1.2251091003417969
+        "PredictedFinalPosition": 4.172966003417969,
+        "Error": -1.1729660034179688
       },
       {
         "constructorName": "Mercedes",
         "resultsDriverName": "Kimi Antonelli",
         "ActualFinalPosition": 5.0,
-        "PredictedFinalPosition": 4.532747745513916,
-        "Error": 0.467252254486084
+        "PredictedFinalPosition": 4.6293625831604,
+        "Error": 0.3706374168395996
       },
       {
         "constructorName": "Aston Martin",
         "resultsDriverName": "Lance Stroll",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 16.15601921081543,
-        "Error": -16.15601921081543
+        "PredictedFinalPosition": 15.469584465026855,
+        "Error": -15.469584465026855
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Lando Norris",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 15.617593765258789,
-        "Error": -15.617593765258789
+        "PredictedFinalPosition": 14.714872360229492,
+        "Error": -14.714872360229492
       },
       {
         "constructorName": "Ferrari",
         "resultsDriverName": "Lewis Hamilton",
         "ActualFinalPosition": 6.0,
-        "PredictedFinalPosition": 5.161590576171875,
-        "Error": 0.838409423828125
+        "PredictedFinalPosition": 5.449769973754883,
+        "Error": 0.5502300262451172
       },
       {
         "constructorName": "Racing Bulls",
         "resultsDriverName": "Liam Lawson",
         "ActualFinalPosition": 12.0,
-        "PredictedFinalPosition": 8.241267204284668,
-        "Error": 3.758732795715332
+        "PredictedFinalPosition": 8.669675827026367,
+        "Error": 3.330324172973633
       },
       {
         "constructorName": "Red Bull",
         "resultsDriverName": "Max Verstappen",
         "ActualFinalPosition": 2.0,
-        "PredictedFinalPosition": 2.9174773693084717,
-        "Error": -0.9174773693084717
+        "PredictedFinalPosition": 3.330899953842163,
+        "Error": -1.330899953842163
       },
       {
         "constructorName": "Audi",
         "resultsDriverName": "Nico H\u00fclkenberg",
         "ActualFinalPosition": 11.0,
-        "PredictedFinalPosition": 12.594352722167969,
-        "Error": -1.5943527221679688
+        "PredictedFinalPosition": 11.853102684020996,
+        "Error": -0.8531026840209961
       },
       {
         "constructorName": "Haas",
         "resultsDriverName": "Oliver Bearman",
         "ActualFinalPosition": 9.0,
-        "PredictedFinalPosition": 8.788864135742188,
-        "Error": 0.2111358642578125
+        "PredictedFinalPosition": 8.800063133239746,
+        "Error": 0.1999368667602539
       },
       {
         "constructorName": "McLaren",
         "resultsDriverName": "Oscar Piastri",
         "ActualFinalPosition": 13.0,
-        "PredictedFinalPosition": 6.369367599487305,
-        "Error": 6.630632400512695
+        "PredictedFinalPosition": 6.7784223556518555,
+        "Error": 6.2215776443481445
       },
       {
         "constructorName": "Alpine",
         "resultsDriverName": "Pierre Gasly",
         "ActualFinalPosition": 0.0,
-        "PredictedFinalPosition": 14.010092735290527,
-        "Error": -14.010092735290527
+        "PredictedFinalPosition": 14.564558029174805,
+        "Error": -14.564558029174805
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Sergio P\u00e9rez",
         "ActualFinalPosition": 14.0,
-        "PredictedFinalPosition": 11.541703224182129,
-        "Error": 2.458296775817871
+        "PredictedFinalPosition": 12.048111915588379,
+        "Error": 1.951888084411621
       },
       {
         "constructorName": "Cadillac",
         "resultsDriverName": "Valtteri Bottas",
         "ActualFinalPosition": 16.0,
-        "PredictedFinalPosition": 15.437437057495117,
-        "Error": 0.5625629425048828
+        "PredictedFinalPosition": 15.580205917358398,
+        "Error": 0.41979408264160156
       }
     ]
   }
