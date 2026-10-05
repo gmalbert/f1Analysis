@@ -7,7 +7,8 @@ requires-python = ">=3.12"
 [tool.ruff]
 line-length = 110
 target-version = "py312"
-extend-exclude = [".venv", "build", "dist"]
+extend-exclude = [".venv", "build", "dist", "reference_views.py", "betting_view.py", "chart_builder.py", "chart_colors.py"]
+force-exclude = true
 
 [tool.ruff.lint]
 # BLE001 is allowed at HTTP request boundaries where the handler maps
@@ -35,6 +36,7 @@ ignore = [
 known-first-party = ["app", "f1bet"]
 
 [tool.mypy]
+exclude = '(reference_views|betting_view|chart_builder|chart_colors)\.py$'
 python_version = "3.12"
 strict = true
 ignore_missing_imports = true
@@ -42,6 +44,7 @@ warn_unused_ignores = true
 warn_return_any = true
 no_implicit_optional = true
 check_untyped_defs = true
+explicit_package_bases = true
 disallow_untyped_defs = true
 # pandas / numpy / sklearn stubs are incomplete; relax on those modules
 [[tool.mypy.overrides]]
@@ -49,8 +52,18 @@ module = ["pandas.*", "numpy.*", "sklearn.*", "xgboost.*", "lightgbm.*", "catboo
 ignore_missing_imports = true
 ignore_errors = true
 
+[[tool.mypy.overrides]]
+module = ["app.services.chart_builder", "app.services.chart_colors"]
+ignore_errors = true
+
 [tool.pytest.ini_options]
 testpaths = ["."]
 python_files = ["test_*.py"]
 addopts = "-q --cov=app --cov-report=term-missing --cov-fail-under=80"
 filterwarnings = ["ignore::DeprecationWarning"]
+
+# Source exports are checked against the original app by reference_oracle.py;
+# upstream chart code retains its own contract tests and license headers.
+# Coverage here measures handwritten API and presentation integration code.
+[tool.coverage.run]
+omit = ["*/reference_views.py", "*/betting_view.py", "*/chart_builder.py", "*/chart_colors.py"]

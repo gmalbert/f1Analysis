@@ -1,106 +1,159 @@
-import { useEffect, useState } from 'react'
-import { api } from "./api";
-import DataExplorer from "./pages/DataExplorer";
-import Analytics from "./pages/Analytics";
-import CurrentSeason from "./pages/CurrentSeason";
-import NextRace from "./pages/NextRace";
-import Models from "./pages/Models";
-import RawData from "./pages/RawData";
-import BettingResearch from "./pages/BettingResearch";
+import { useEffect, useRef, useState } from 'react';
+import { viewClient } from './enhancements/viewClient';
+import { FeatureBar, LoadingFeedback, readOptions } from './enhancements/FeatureBar';
+import { readSharedView, safeValues } from './enhancements/preferences';
+import { ResearchJobs } from './enhancements/ResearchJobs';
+import { ViewNodes } from './components/Presentation';
+import { TabScroll } from './components/TabScroll';
 
-const pages = {
-  "Data Explorer": DataExplorer,
-  "Analytics": Analytics,
-  "Current Season": CurrentSeason,
-  "Next Race": NextRace,
-  "Predictive Models": Models,
-  "Raw Data": RawData,
-  "Betting Research": BettingResearch,
-};
+const labels = ['📊 Data Explorer', '📈 Analytics & Visualizations', '🏎️ Schedule', '🏁 Next Race', '🤖 Predictive Models', '💾 Data & Debug', '📐 Betting Research'];
+const routes = ['Data Explorer', 'Analytics', 'Current Season', 'Next Race', 'Predictive Models', 'Raw Data', 'Betting Research'];
+const FEATURES_ENABLED = import.meta.env.VITE_F1_ENHANCEMENTS !== '0';
+const BASE_TITLE = 'Gridlocked - Formula 1 Betting & Analytics';
 
-const icons = {
-  "Data Explorer": "\u25A6",
-  "Analytics": "\u2301",
-  "Current Season": "\u25F7",
-  "Next Race": "\uD83C\uDFC1",
-  "Predictive Models": "\u25C6",
-  "Raw Data": "\u2261",
-  "Betting Research": "\uD83D\uDCD0",
-};
+function sharedView() {
+  try {return FEATURES_ENABLED ? readSharedView() : null;} catch {return null;}
+}
 
-const BASE_TITLE = "F1 Analysis";
+function readPage() {
+  const shared = sharedView();
+  if (shared) return shared.page;
+  let route;
+  try {route = decodeURIComponent(location.hash.replace('#/', '').split('?')[0]);} catch {return 1;}
+  const index = routes.indexOf(route);
+  return index < 0 ? 1 : index + 1;
+}
+
+function readValues() {
+  const shared = sharedView();
+  if (shared) return shared.values;
+  try {
+    const values = safeValues(JSON.parse(sessionStorage.getItem('f1analysis.view-values') || '{}'));
+    const oldFilters = JSON.parse(sessionStorage.getItem('f1analysis.filters') || 'null');
+    if (!Object.hasOwn(values, 'filter_results_main') && oldFilters?.applied) values.filter_results_main = true;
+    return values;
+  } catch { return {}; }
+}
+
+function readTheme() {
+  try {return localStorage.getItem('f1analysis.theme') === 'dark' ? 'dark' : 'light';}
+  catch {return 'light';}
+}
 
 export default function App() {
-  const [active, setActive] = useState("Data Explorer");
-  const [health, setHealth] = useState(null);
-  const [theme, setTheme] = useState(() => {
-    try { return localStorage.getItem("f1analysis.theme") === "light" ? "light" : "dark"; }
-    catch { return "dark"; }
-  });
+  const [options, setOptions] = useState(readOptions);
+  const [page, setPage] = useState(readPage);
+  const [values, setValues] = useState(readValues);
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(true);
+  const [request, setRequest] = useState(null);
+  const [sidebarClosed, setSidebarClosed] = useState(false);
+  const [settings, setSettings] = useState(false);
+  const [theme, setTheme] = useState(readTheme);
+  const generation = useRef(0);
+  const navigation = useRef(null);
 
   useEffect(() => {
-    api.get("/api/health").then(setHealth).catch(() => {});
-    const hash = decodeURIComponent(location.hash.replace("#/", ""));
-    if (pages[hash]) setActive(hash);
+    document.title = BASE_TITLE;
+    const update = () => {
+      const shared = sharedView();
+      if (shared) {setValues(shared.values);setRequest(null);}
+      setPage(readPage());
+    };
+    window.addEventListener('hashchange', update);
+    return () => window.removeEventListener('hashchange', update);
   }, []);
 
   useEffect(() => {
-    document.title = `${active} \u2014 ${BASE_TITLE}`;
-  }, [active]);
-
-  useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    try { localStorage.setItem("f1analysis.theme", theme); } catch { /* storage is optional */ }
+    try {localStorage.setItem('f1analysis.theme', theme);} catch { /* Optional storage. */ }
   }, [theme]);
 
-  function navigate(page) {
-    setActive(page);
-    location.hash = `/${encodeURIComponent(page)}`;
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  useEffect(() => {
+    document.documentElement.dataset.enhancements = FEATURES_ENABLED && options.design ? 'on' : 'off';
+  }, [options.design]);
+
+  useEffect(() => {
+    const persisted = safeValues(values);
+    try {
+      sessionStorage.setItem('f1analysis.view-values', JSON.stringify(persisted));
+      sessionStorage.setItem('f1analysis.filters', JSON.stringify({applied: Boolean(persisted.filter_results_main), values: persisted}));
+    } catch { /* Browser storage is optional; private uploads remain in memory. */ }
+  }, [values]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const current = ++generation.current;
+    setBusy(true); setError(null);
+    viewClient.load({page, values, action: request?.key}, {signal: controller.signal, enabled: FEATURES_ENABLED && options.cache})
+      .then(result => {if (current === generation.current) setData({...result, page});})
+      .catch(err => {if (err.name !== 'AbortError' && current === generation.current) setError(err.message);})
+      .finally(() => {if (current === generation.current) setBusy(false);});
+    return () => controller.abort();
+  }, [page, values, request, options.cache]);
+
+  function change(key, value) {
+    const next = {...values, [key]: value};
+    setValues(next); setRequest(null);
   }
 
-  const Page = pages[active];
-  return (
-    <div className="app-shell">
-      <a className="skip-link" href="#main-content">Skip to main content</a>
-      <header className="site-header">
-        <div className="site-brand">
-          <img src="/api/brand/logo" alt="Gridlocked" />
-          <div className="site-title">F1 Races from 2016 to {new Date().getFullYear()}</div>
-        </div>
-        <div className="runtime" aria-live="polite" role="status">
-          <span className={health?.status === "ok" ? "dot ok" : "dot"} aria-hidden="true" />
-          <div>
-            <strong>{health?.status === "ok" ? "API connected" : "API…"}</strong>
-            <small>{health?.rss_mb ? `${health.rss_mb} MB RSS` : "checking"}</small>
-          </div>
-        </div>
-        <label className="theme-toggle">
-          <input aria-label="Use light theme" type="checkbox" checked={theme === "light"} onChange={event => setTheme(event.target.checked ? "light" : "dark")} />
-          Light theme
-        </label>
+  function restore(view) {
+    setValues(view.values); setPage(view.page); setRequest(null);
+    location.hash = '/' + encodeURIComponent(routes[view.page-1]);
+  }
+
+  function navigate(index) {
+    setPage(index + 1); setRequest(null);
+    location.hash = `/${encodeURIComponent(routes[index])}`;
+    window.scrollTo({top: 0});
+  }
+
+  useEffect(() => {
+    const active = navigation.current?.querySelector('[aria-selected="true"]');
+    if (active) {
+      const parent = navigation.current;
+      if (active.offsetLeft < parent.scrollLeft) parent.scrollLeft = active.offsetLeft;
+      else if (active.offsetLeft + active.offsetWidth > parent.scrollLeft + parent.clientWidth) parent.scrollLeft = active.offsetLeft + active.offsetWidth - parent.clientWidth;
+    }
+  }, [page]);
+
+  const sidebar = Boolean(values.filter_results_main) && !sidebarClosed;
+  const shell = (data?.shell || []).filter(node => ['heading', 'caption'].includes(node.type));
+  const act = key => {
+    const task = key === 'Run Leakage Audit' ? 'leakage-audit' : key === 'Run Bin Count Comparison' ? 'bin-comparison' : null;
+    if (FEATURES_ENABLED && task) {
+      window.dispatchEvent(new CustomEvent('f1analysis:research-task', {detail: task}));
+      return;
+    }
+    setRequest({key, id: Date.now()});
+  };
+
+  return <div className={`app-shell parity-app ${sidebar ? 'with-sidebar' : ''}`}>
+    <a className="skip-link" href="#main-content" onClick={event => {event.preventDefault();document.getElementById('main-content')?.focus();}}>Skip to main content</a>
+    <div className="app-toolbar">
+      {values.filter_results_main && <button aria-label={sidebarClosed ? 'Open sidebar' : 'Close sidebar'} className="sidebar-toggle" style={{left: sidebarClosed ? 16 : 252}} onClick={() => setSidebarClosed(s => !s)}>{sidebarClosed ? '»' : '«'}</button>}
+      <button className="settings-toggle" aria-label="Settings" aria-expanded={settings} onClick={() => setSettings(s => !s)}>⋮</button>
+      {settings && <div className="settings-menu"><label><input aria-label="Use light theme" type="checkbox" checked={theme === 'light'} onChange={e => setTheme(e.target.checked ? 'light' : 'dark')} />Light theme</label></div>}
+    </div>
+    {sidebar && <aside className="filter-sidebar" aria-label="Data filters"><div className="view-flow"><ViewNodes nodes={data?.sidebar} values={values} change={change} action={act} /></div></aside>}
+    <div className="main-shell">
+      {FEATURES_ENABLED && <details><summary>Analysis tools</summary><FeatureBar page={page} values={values} options={options} setOptions={setOptions} restore={restore} navigate={navigate} busy={busy || Boolean(error) || data?.page !== page} analysisRevision={data?.page === page ? data.source_revision : null}/></details>}
+      <header className="parity-header">
+        <img src="/api/brand/logo" alt="Gridlocked" width="450" height="264" />
+        {shell.length ? <div className="view-flow shell-copy"><ViewNodes nodes={shell} /></div> : <h1 className="shell-title">F1 Races from 2016 to {new Date().getFullYear()}</h1>}
       </header>
-      <nav className="section-nav" aria-label="Sections">
-          {Object.keys(pages).map(page => (
-            <button
-              key={page}
-              className={active === page ? "active" : ""}
-              onClick={() => navigate(page)}
-              aria-current={active === page ? "page" : undefined}
-            >
-              <span aria-hidden="true">{icons[page]}</span>{page}
-            </button>
-          ))}
-      </nav>
-      <main className="content" id="main-content" tabIndex={-1}>
-        <Page />
-        <footer className="site-footer">
-          <span>Powered by</span>
-          <a href="https://www.betting-oracle.com" target="_blank" rel="noreferrer">Betting Oracle</a>
-          <span>Sports Prediction Analytics</span>
-          <small>All content is for informational purposes only and does not constitute betting advice. Wager responsibly.</small>
-        </footer>
+      <nav className="parity-nav" aria-label="Sections"><div role="tablist" aria-label="Analysis sections" ref={navigation}>
+        {(data?.tabs?.length ? data.tabs : labels).map((label, i) => <button role="tab" id={`section-tab-${i}`} aria-selected={page === i + 1} aria-controls={`section-panel-${i}`} tabIndex={page === i + 1 ? 0 : -1} key={label} onClick={() => navigate(i)} onKeyDown={event => {if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {event.preventDefault(); const index = event.key === 'Home' ? 0 : event.key === 'End' ? labels.length - 1 : (i + (event.key === 'ArrowRight' ? 1 : -1) + labels.length) % labels.length; navigate(index); navigation.current?.querySelectorAll('button')[index]?.focus();}}}>{label}</button>)}
+      </div><TabScroll target={navigation} /></nav>
+      {FEATURES_ENABLED && <LoadingFeedback busy={busy} hasResults={data?.page === page}/>}
+      <main id="main-content" tabIndex={-1} aria-busy={busy}>
+        {error && <div className="view-notice error" role="alert">{error}<button className="view-button" onClick={() => setRequest({key: null, id: Date.now()})}>Retry</button></div>}
+        {labels.map((_, i) => <div key={i} role="tabpanel" id={`section-panel-${i}`} aria-labelledby={`section-tab-${i}`} hidden={page !== i + 1} className="view-flow">{data?.page === i + 1 && page === i + 1 && <ViewNodes nodes={data.nodes} values={values} change={change} action={act} />}</div>)}
+        {FEATURES_ENABLED && <ResearchJobs page={page} values={values}/>}
+        {busy && !FEATURES_ENABLED && <span className="sr-only" role="status">Loading analysis…</span>}
+        <footer className="parity-footer"><p>Powered by <a href="https://www.betting-oracle.com" target="_blank" rel="noreferrer">Betting Oracle</a></p><p>Sports Prediction Analytics</p><a href="https://www.betting-oracle.com" target="_blank" rel="noreferrer"><picture><source type="image/webp" srcSet="/betting-oracle-logo-60.webp 1x, /betting-oracle-logo-120.webp 2x"/><img src="/betting-oracle-logo.png" alt="Betting Oracle Logo" width="822" height="1255" style={{width: 60 * 822 / 1255}} loading="lazy" decoding="async" /></picture></a></footer>
       </main>
     </div>
-  );
+  </div>;
 }

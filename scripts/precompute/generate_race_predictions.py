@@ -27,12 +27,16 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 # helper for robust json serialization of numpy/pandas scalars used by precompute scripts
 import json_helpers
 
+PREDICTION_MODEL_TYPES = (
+    'xgboost', 'lightgbm', 'catboost', 'ensemble', 'position_group', 'track_weighted'
+)
+
 
 def load_models(models_dir: Path):
     """Load all pre-trained models."""
     models = {}
     
-    for model_type in ['xgboost', 'lightgbm', 'catboost', 'ensemble']:
+    for model_type in PREDICTION_MODEL_TYPES:
         model_path = models_dir / model_type / 'position_model.pkl'
         if model_path.exists():
             with open(model_path, 'rb') as f:
@@ -187,7 +191,7 @@ def generate_predictions(data, models, next_race, output_dir: Path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', type=str, default='data_files/precomputed/predictions/')
-    parser.add_argument('--all-models', action='store_true', help='Generate predictions with all model types')
+    parser.add_argument('--all-models', action='store_true', help='Generate predictions with all available model types')
     args = parser.parse_args()
     
     output_dir = Path(args.output)

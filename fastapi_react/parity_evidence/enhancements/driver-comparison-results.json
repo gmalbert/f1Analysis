@@ -1,0 +1,55 @@
+{
+  "generated_at": "2026-10-04T11:43:00.589Z",
+  "pass": true,
+  "checks": [
+    {
+      "id": "Real metrics and the selected-driver chart use the same three drivers",
+      "evidence": {
+        "race": "Canadian Grand Prix",
+        "year": 2025,
+        "selected": [
+          "George Russell",
+          "Kimi Antonelli",
+          "Esteban Ocon"
+        ],
+        "chart_drivers": [
+          "Esteban Ocon",
+          "Kimi Antonelli",
+          "George Russell"
+        ],
+        "metric": "Tire degradation (s/lap)",
+        "values_match_live_source": true,
+        "screenshot": "screenshots/tire-driver-comparison.png"
+      }
+    },
+    {
+      "id": "Clear or close comparison restores the complete field",
+      "evidence": {
+        "original_drivers": 20,
+        "clearing_restores_all": true,
+        "closing_restores_all": true
+      }
+    },
+    {
+      "id": "Seasonal tire comparison uses the existing race counts and year scope",
+      "evidence": {
+        "driver": "George Russell",
+        "recorded_races": 24,
+        "scope": "2025 season",
+        "fake_summary_row_count": false
+      }
+    },
+    {
+      "id": "Mobile comparison stays within the viewport",
+      "evidence": {
+        "viewport": 390,
+        "width": 390
+      }
+    }
+  ],
+  "errors": [],
+  "expected_events": [
+    "Obsolete request cancelled",
+    "Obsolete request cancelled"
+  ]
+}

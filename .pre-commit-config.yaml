@@ -18,7 +18,7 @@ repos:
 
       - id: mypy-fastapi-backend
         name: mypy --strict (backend)
-        entry: bash -c 'cd fastapi_react/backend && python -m mypy app'
+        entry: bash -c 'cd fastapi_react/backend && python -m mypy --explicit-package-bases app'
         language: system
         files: ^fastapi_react/backend/.*\.py$
         pass_filenames: false

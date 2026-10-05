@@ -1,0 +1,652 @@
+{
+  "generated_at": "2026-10-04T11:42:57.712Z",
+  "frontend": "http://127.0.0.1:5174",
+  "backend": "http://127.0.0.1:8000",
+  "scope": "Installed main application. Real data in normal flows; explicit controlled fixtures only for loading, cancellation, and failure.",
+  "pass": true,
+  "checks": [
+    {
+      "id": "B1-B3",
+      "name": "Real API response reuse, revision, timing, and cache exclusions",
+      "result": "pass",
+      "elapsed_ms": 1007,
+      "evidence": {
+        "revision": "e7267788d4142c1f523f1e9e9c8c08323d950af84427923f424c59237a765a95",
+        "dataset": {
+          "name": "f1ForAnalysis.parquet",
+          "modified_at": "2026-10-04T04:16:44.670774+00:00"
+        },
+        "model_count": 9,
+        "initial_cache": "MISS",
+        "repeated_cache": "HIT",
+        "timing": "backend;dur=21.98",
+        "metrics_unauthorized_status": 403,
+        "metrics_records_checked": 500
+      }
+    },
+    {
+      "id": "D1-D2",
+      "name": "Light contrast, focus, compact brand/header, and sticky navigation",
+      "result": "pass",
+      "elapsed_ms": 162,
+      "evidence": {
+        "background": "rgb(255, 255, 255)",
+        "caption": {
+          "color": "rgb(89, 98, 115)",
+          "opacity": "1"
+        },
+        "active": {
+          "color": "rgb(180, 35, 45)"
+        },
+        "notice": null,
+        "logo_width": 280,
+        "padding_top": "40px",
+        "navigation_position": "sticky",
+        "heading_size": "44px",
+        "caption_contrast": 6.141422322055167,
+        "active_contrast": 6.523836690314784,
+        "focus": {
+          "tag": "INPUT",
+          "width": "3px",
+          "style": "solid"
+        }
+      }
+    },
+    {
+      "id": "D3-F4",
+      "name": "Semantic all-field search, selectable columns, paging, years, and fonts",
+      "result": "pass",
+      "elapsed_ms": 2009,
+      "evidence": {
+        "rows": 4651,
+        "columns": 34,
+        "search_value": "Mechanical",
+        "search_matches": 6,
+        "toolbar": [
+          {
+            "name": "Search table",
+            "width": 44,
+            "height": 44,
+            "opacity": "1",
+            "pointer_events": "auto"
+          },
+          {
+            "name": "Show or hide columns",
+            "width": 44,
+            "height": 44,
+            "opacity": "1",
+            "pointer_events": "auto"
+          },
+          {
+            "name": "Download table as CSV",
+            "width": 44,
+            "height": 44,
+            "opacity": "1",
+            "pointer_events": "auto"
+          },
+          {
+            "name": "Fullscreen table",
+            "width": 44,
+            "height": 44,
+            "opacity": "1",
+            "pointer_events": "auto"
+          }
+        ],
+        "year": "2026",
+        "fonts": {
+          "header": "\"Source Sans\", sans-serif",
+          "cell": "\"Source Sans\", sans-serif"
+        }
+      }
+    },
+    {
+      "id": "F5",
+      "name": "Four-driver maximum and mathematically correct descriptive comparison",
+      "result": "pass",
+      "elapsed_ms": 813,
+      "evidence": {
+        "drivers": [
+          "Alexander Albon",
+          "Antonio Giovinazzi",
+          "Arvid Lindblad",
+          "Brendon Hartley"
+        ],
+        "available_drivers": 53,
+        "fields": [
+          "resultsStartingGridPositionNumber",
+          "resultsFinalPositionNumber",
+          "positionsGained",
+          "DNF"
+        ]
+      }
+    },
+    {
+      "id": "D3-F4-regression",
+      "name": "Original canvas grid search, column visibility, and complete CSV export",
+      "result": "pass",
+      "elapsed_ms": 1322,
+      "evidence": {
+        "download": "2026-10-04T11-42_export.csv",
+        "exported_rows": 4651,
+        "exported_columns": 34
+      }
+    },
+    {
+      "id": "F1",
+      "name": "Named views survive reload and restore both page and filter settings",
+      "result": "pass",
+      "elapsed_ms": 3618,
+      "evidence": {
+        "unicode_name": "Ferrari saved — 東京 🏎️",
+        "reload": true,
+        "restore_true_and_false": true,
+        "delete": true
+      }
+    },
+    {
+      "id": "F2",
+      "name": "Unicode sharing restores settings in a fresh browser and excludes private values",
+      "result": "pass",
+      "elapsed_ms": 2192,
+      "evidence": {
+        "utf8_value": "Écurie 🏎️ — 東京",
+        "excluded": [
+          "upload body",
+          "betting probability",
+          "admin token"
+        ],
+        "fresh_origin_storage": true,
+        "reload": true
+      }
+    },
+    {
+      "id": "F3",
+      "name": "Native command palette opens with keyboard, filters, navigates with Enter, and closes with Escape",
+      "result": "pass",
+      "elapsed_ms": 2259,
+      "evidence": {
+        "native_modal": true,
+        "collapsed_tools": true,
+        "control_k": true,
+        "meta_k": true,
+        "enter_navigation": true,
+        "escape": true
+      }
+    },
+    {
+      "id": "F6",
+      "name": "Context export records safe settings, UTC time, revision and model provenance",
+      "result": "pass",
+      "elapsed_ms": 145,
+      "evidence": {
+        "filename": "analysis-context-2026-10-04.json",
+        "revision": "e7267788d4142c1f523f1e9e9c8c08323d950af84427923f424c59237a765a95",
+        "model_count": 9,
+        "print_invoked": true
+      }
+    },
+    {
+      "id": "B1-client",
+      "name": "Repeated navigation checks revision and reuses the bounded client response",
+      "result": "pass",
+      "elapsed_ms": 2945,
+      "evidence": {
+        "view_posts_avoided": 1,
+        "revision_checked": true,
+        "observed_requests": [
+          {
+            "path": "/api/enhancements/status",
+            "page": null
+          },
+          {
+            "path": "/api/enhancements/status",
+            "page": null
+          },
+          {
+            "path": "/api/views",
+            "page": 3
+          },
+          {
+            "path": "/api/enhancements/status",
+            "page": null
+          },
+          {
+            "path": "/api/enhancements/status",
+            "page": null
+          },
+          {
+            "path": "/api/enhancements/status",
+            "page": null
+          },
+          {
+            "path": "/api/views",
+            "page": 4
+          },
+          {
+            "path": "/api/enhancements/status",
+            "page": null
+          },
+          {
+            "path": "/api/enhancements/status",
+            "page": null
+          },
+          {
+            "path": "/api/enhancements/status",
+            "page": null
+          },
+          {
+            "path": "/api/enhancements/status",
+            "page": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "D1-D2-dark",
+      "name": "Dark contrast and theme controls remain usable",
+      "result": "pass",
+      "elapsed_ms": 355,
+      "evidence": {
+        "background": "rgb(14, 17, 23)",
+        "caption": {
+          "color": "rgb(197, 203, 215)",
+          "opacity": "1"
+        },
+        "active": {
+          "color": "rgb(255, 180, 171)"
+        },
+        "notice": null,
+        "logo_width": 280,
+        "padding_top": "40px",
+        "navigation_position": "sticky",
+        "heading_size": "44px",
+        "caption_contrast": 11.606744889882602,
+        "active_contrast": 11.130568389001583
+      }
+    },
+    {
+      "id": "D1-D2-mobile",
+      "name": "Compact mobile layout, visible navigation, and sidebar controls",
+      "result": "pass",
+      "elapsed_ms": 1690,
+      "evidence": {
+        "background": "rgb(255, 255, 255)",
+        "caption": {
+          "color": "rgb(89, 98, 115)",
+          "opacity": "1"
+        },
+        "active": {
+          "color": "rgb(180, 35, 45)"
+        },
+        "notice": null,
+        "logo_width": 210,
+        "padding_top": "56px",
+        "navigation_position": "sticky",
+        "heading_size": "30px",
+        "overflow": {
+          "scroll": 390,
+          "viewport": 390
+        },
+        "keyboard_navigation": true
+      }
+    },
+    {
+      "id": "D4-loading",
+      "name": "Loading feedback is visible, polite, outside the busy region, and clears on completion",
+      "result": "pass",
+      "elapsed_ms": 2759,
+      "evidence": {
+        "aria_live": "polite",
+        "outside_busy_main": true,
+        "elapsed_time_hidden_from_live_announcements": true
+      }
+    },
+    {
+      "id": "D4-update",
+      "name": "Updating a control retains the existing analysis while its replacement is loading",
+      "result": "pass",
+      "elapsed_ms": 285,
+      "evidence": {
+        "existing_results_retained": true,
+        "replacement_completed": true
+      }
+    },
+    {
+      "id": "D4-stale",
+      "name": "Navigating away aborts a stale request and late content cannot replace current results",
+      "result": "pass",
+      "elapsed_ms": 1040,
+      "evidence": {
+        "browser_abort_observed": true,
+        "stale_result_rejected": true
+      }
+    },
+    {
+      "id": "D4-failure",
+      "name": "A failure has understandable text and Retry recovers",
+      "result": "pass",
+      "elapsed_ms": 425,
+      "evidence": {
+        "expected_http_error": 503,
+        "error_text_preserved": true,
+        "retry_recovered": true
+      }
+    }
+  ],
+  "errors": [],
+  "expected_events": [
+    {
+      "type": "requestfailed",
+      "phase": "Initial main application load",
+      "url": "http://127.0.0.1:5174/api/enhancements/status",
+      "message": "net::ERR_ABORTED",
+      "reason": "Obsolete analysis/provenance fetch canceled by its AbortController"
+    },
+    {
+      "type": "requestfailed",
+      "phase": "Initial main application load",
+      "url": "http://127.0.0.1:5174/api/enhancements/status",
+      "message": "net::ERR_ABORTED",
+      "reason": "Obsolete analysis/provenance fetch canceled by its AbortController"
+    },
+    {
+      "type": "requestfailed",
+      "phase": "Named views survive reload and restore both page and filter settings",
+      "url": "http://127.0.0.1:5174/api/enhancements/status",
+      "message": "net::ERR_ABORTED",
+      "reason": "Obsolete analysis/provenance fetch canceled by its AbortController"
+    },
+    {
+      "type": "requestfailed",
+      "phase": "Named views survive reload and restore both page and filter settings",
+      "url": "http://127.0.0.1:5174/api/enhancements/status",
+      "message": "net::ERR_ABORTED",
+      "reason": "Obsolete analysis/provenance fetch canceled by its AbortController"
+    },
+    {
+      "type": "requestfailed",
+      "phase": "Named views survive reload and restore both page and filter settings",
+      "url": "http://127.0.0.1:5174/api/enhancements/status",
+      "message": "net::ERR_ABORTED",
+      "reason": "Obsolete analysis/provenance fetch canceled by its AbortController"
+    },
+    {
+      "type": "requestfailed",
+      "phase": "Named views survive reload and restore both page and filter settings",
+      "url": "http://127.0.0.1:5174/api/enhancements/status",
+      "message": "net::ERR_ABORTED",
+      "reason": "Obsolete analysis/provenance fetch canceled by its AbortController"
+    },
+    {
+      "type": "requestfailed",
+      "phase": "Named views survive reload and restore both page and filter settings",
+      "url": "http://127.0.0.1:5174/api/enhancements/status",
+      "message": "net::ERR_ABORTED",
+      "reason": "Obsolete analysis/provenance fetch canceled by its AbortController"
+    },
+    {
+      "type": "requestfailed",
+      "phase": "Named views survive reload and restore both page and filter settings",
+      "url": "http://127.0.0.1:5174/api/enhancements/status",
+      "message": "net::ERR_ABORTED",
+      "reason": "Obsolete analysis/provenance fetch canceled by its AbortController"
+    },
+    {
+      "type": "requestfailed",
+      "phase": "Unicode sharing restores settings in a fresh browser and excludes private values",
+      "url": "http://127.0.0.1:5174/api/enhancements/status",
+      "message": "net::ERR_ABORTED",
+      "reason": "Obsolete analysis/provenance fetch canceled by its AbortController"
+    },
+    {
+      "type": "requestfailed",
+      "phase": "Unicode sharing restores settings in a fresh browser and excludes private values",
+      "url": "http://127.0.0.1:5174/api/enhancements/status",
+      "message": "net::ERR_ABORTED",
+      "reason": "Obsolete analysis/provenance fetch canceled by its AbortController"
+    },
+    {
+      "type": "requestfailed",
+      "phase": "Unicode sharing restores settings in a fresh browser and excludes private values",
+      "url": "http://127.0.0.1:5174/api/enhancements/status",
+      "message": "net::ERR_ABORTED",
+      "reason": "Obsolete analysis/provenance fetch canceled by its AbortController"
+    },
+    {
+      "type": "requestfailed",
+      "phase": "Unicode sharing restores settings in a fresh browser and excludes private values",
+      "url": "http://127.0.0.1:5174/api/enhancements/status",
+      "message": "net::ERR_ABORTED",
+      "reason": "Obsolete analysis/provenance fetch canceled by its AbortController"
+    },
+    {
+      "type": "requestfailed",
+      "phase": "Unicode sharing restores settings in a fresh browser and excludes private values",
+      "url": "http://127.0.0.1:5174/api/enhancements/status",
+      "message": "net::ERR_ABORTED",
+      "reason": "Obsolete analysis/provenance fetch canceled by its AbortController"
+    },
+    {
+      "type": "requestfailed",
+      "phase": "Unicode sharing restores settings in a fresh browser and excludes private values",
+      "url": "http://127.0.0.1:5174/api/enhancements/status",
+      "message": "net::ERR_ABORTED",
+      "reason": "Obsolete analysis/provenance fetch canceled by its AbortController"
+    },
+    {
+      "type": "requestfailed",
+      "phase": "Compact mobile layout, visible navigation, and sidebar controls",
+      "url": "http://127.0.0.1:5174/api/enhancements/status",
+      "message": "net::ERR_ABORTED",
+      "reason": "Obsolete analysis/provenance fetch canceled by its AbortController"
+    },
+    {
+      "type": "requestfailed",
+      "phase": "Loading feedback is visible, polite, outside the busy region, and clears on completion",
+      "url": "http://127.0.0.1:5174/api/enhancements/status",
+      "message": "net::ERR_ABORTED",
+      "reason": "Obsolete analysis/provenance fetch canceled by its AbortController"
+    },
+    {
+      "type": "requestfailed",
+      "phase": "Loading feedback is visible, polite, outside the busy region, and clears on completion",
+      "url": "http://127.0.0.1:5174/api/views",
+      "message": "net::ERR_ABORTED",
+      "reason": "Obsolete analysis/provenance fetch canceled by its AbortController"
+    },
+    {
+      "type": "requestfailed",
+      "phase": "Navigating away aborts a stale request and late content cannot replace current results",
+      "url": "http://127.0.0.1:5174/api/views",
+      "message": "net::ERR_ABORTED",
+      "reason": "Obsolete analysis/provenance fetch canceled by its AbortController"
+    },
+    {
+      "type": "http",
+      "phase": "A failure has understandable text and Retry recovers",
+      "url": "http://127.0.0.1:5174/api/views",
+      "status": 503
+    },
+    {
+      "type": "console",
+      "phase": "A failure has understandable text and Retry recovers",
+      "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    }
+  ],
+  "screenshots": [
+    {
+      "name": "desktop-light",
+      "path": "screenshots/desktop-light.png",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "name": "accessible-table",
+      "path": "screenshots/accessible-table.png",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "name": "driver-comparison",
+      "path": "screenshots/driver-comparison.png",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "name": "saved-views",
+      "path": "screenshots/saved-views.png",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "name": "command-palette",
+      "path": "screenshots/command-palette.png",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "name": "desktop-dark",
+      "path": "screenshots/desktop-dark.png",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "name": "mobile-light",
+      "path": "screenshots/mobile-light.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "name": "loading",
+      "path": "screenshots/loading.png",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "name": "failure-retry",
+      "path": "screenshots/failure-retry.png",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      }
+    }
+  ],
+  "observations": {
+    "api": {
+      "revision": "e7267788d4142c1f523f1e9e9c8c08323d950af84427923f424c59237a765a95",
+      "dataset": {
+        "name": "f1ForAnalysis.parquet",
+        "modified_at": "2026-10-04T04:16:44.670774+00:00"
+      },
+      "model_count": 9,
+      "initial_cache": "MISS",
+      "repeated_cache": "HIT",
+      "timing": "backend;dur=21.98",
+      "metrics_unauthorized_status": 403,
+      "metrics_records_checked": 500
+    },
+    "light": {
+      "background": "rgb(255, 255, 255)",
+      "caption": {
+        "color": "rgb(89, 98, 115)",
+        "opacity": "1"
+      },
+      "active": {
+        "color": "rgb(180, 35, 45)"
+      },
+      "notice": null,
+      "logo_width": 280,
+      "padding_top": "40px",
+      "navigation_position": "sticky",
+      "heading_size": "44px",
+      "caption_contrast": 6.141422322055167,
+      "active_contrast": 6.523836690314784,
+      "focus": {
+        "tag": "INPUT",
+        "width": "3px",
+        "style": "solid"
+      }
+    },
+    "table": {
+      "rows": 4651,
+      "columns": 34,
+      "search_value": "Mechanical",
+      "search_matches": 6,
+      "toolbar": [
+        {
+          "name": "Search table",
+          "width": 44,
+          "height": 44,
+          "opacity": "1",
+          "pointer_events": "auto"
+        },
+        {
+          "name": "Show or hide columns",
+          "width": 44,
+          "height": 44,
+          "opacity": "1",
+          "pointer_events": "auto"
+        },
+        {
+          "name": "Download table as CSV",
+          "width": 44,
+          "height": 44,
+          "opacity": "1",
+          "pointer_events": "auto"
+        },
+        {
+          "name": "Fullscreen table",
+          "width": 44,
+          "height": 44,
+          "opacity": "1",
+          "pointer_events": "auto"
+        }
+      ],
+      "year": "2026",
+      "fonts": {
+        "header": "\"Source Sans\", sans-serif",
+        "cell": "\"Source Sans\", sans-serif"
+      }
+    },
+    "dark": {
+      "background": "rgb(14, 17, 23)",
+      "caption": {
+        "color": "rgb(197, 203, 215)",
+        "opacity": "1"
+      },
+      "active": {
+        "color": "rgb(255, 180, 171)"
+      },
+      "notice": null,
+      "logo_width": 280,
+      "padding_top": "40px",
+      "navigation_position": "sticky",
+      "heading_size": "44px",
+      "caption_contrast": 11.606744889882602,
+      "active_contrast": 11.130568389001583
+    }
+  },
+  "fixture_unit_requirements": [
+    "B1 client request deduplication with multiple aborting subscribers, TTL/entry/byte bounds, revision invalidation",
+    "B1 server TTL/entry/byte bounds and actions invalidate",
+    "B2 changed temporary artifact invalidates source loaders/presentation and response caches",
+    "B3 diagnostics bound of 500 records and no query/body/token retention",
+    "D4 Plotly asynchronous error and unmount/resize cleanup"
+  ]
+}

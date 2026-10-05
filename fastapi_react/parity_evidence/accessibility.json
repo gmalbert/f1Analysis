@@ -1,42 +1,266 @@
 {
-  "generated_at": "2026-09-30T00:40:17.033Z",
+  "generated_at": "2026-10-01T22:24:44.334Z",
   "base": "http://127.0.0.1:5174",
   "pages": [
     {
       "page": "Data Explorer",
-      "passes": 48,
-      "violations": []
+      "passes": 42,
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": [
+                ".view-caption:nth-child(2) > p"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.68 (foreground color: #83858c, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".view-caption:nth-child(3) > p"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.68 (foreground color: #83858c, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "#section-tab-0"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.3 (foreground color: #ff4b4b, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ]
     },
     {
       "page": "Analytics",
-      "passes": 53,
-      "violations": []
+      "passes": 44,
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": [
+                ".view-caption:nth-child(2) > p"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.68 (foreground color: #83858c, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".view-caption:nth-child(3) > p"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.68 (foreground color: #83858c, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "#section-tab-1"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.3 (foreground color: #ff4b4b, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "#section-panel-1 > .view-caption > p"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.68 (foreground color: #83858c, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ]
     },
     {
       "page": "Current Season",
-      "passes": 47,
-      "violations": []
+      "passes": 40,
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": [
+                ".view-caption:nth-child(2) > p"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.68 (foreground color: #83858c, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".view-caption:nth-child(3) > p"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.68 (foreground color: #83858c, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "#section-tab-2"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.3 (foreground color: #ff4b4b, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ]
     },
     {
       "page": "Next Race",
-      "passes": 49,
-      "violations": []
+      "passes": 43,
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": [
+                ".view-caption:nth-child(2) > p"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.68 (foreground color: #83858c, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".view-caption:nth-child(3) > p"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.68 (foreground color: #83858c, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "#section-tab-3"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.3 (foreground color: #ff4b4b, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "#section-panel-3 > .view-caption > p"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.68 (foreground color: #83858c, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ]
     },
     {
       "page": "Predictive Models",
-      "passes": 43,
-      "violations": []
+      "passes": 45,
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": [
+                ".view-caption:nth-child(2) > p"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.68 (foreground color: #83858c, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".view-caption:nth-child(3) > p"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.68 (foreground color: #83858c, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "#section-tab-4"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.3 (foreground color: #ff4b4b, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "#section-panel-4 > .view-caption > p"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.68 (foreground color: #83858c, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "#_r_0_-tab-0"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.3 (foreground color: #ff4b4b, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ]
     },
     {
       "page": "Raw Data",
-      "passes": 41,
-      "violations": []
+      "passes": 42,
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": [
+                ".view-caption:nth-child(2) > p"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.68 (foreground color: #83858c, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".view-caption:nth-child(3) > p"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.68 (foreground color: #83858c, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "#section-tab-5"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.3 (foreground color: #ff4b4b, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "#_r_0_-tab-0"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.3 (foreground color: #ff4b4b, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ]
     },
     {
       "page": "Betting Research",
-      "passes": 41,
-      "violations": []
+      "passes": 44,
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": [
+                ".view-caption:nth-child(2) > p"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.68 (foreground color: #83858c, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".view-caption:nth-child(3) > p"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.68 (foreground color: #83858c, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "#section-tab-6"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.3 (foreground color: #ff4b4b, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "#_r_0_-tab-0"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.3 (foreground color: #ff4b4b, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "#_r_0_-panel-0 > .view-caption > p"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.68 (foreground color: #83858c, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ]
     }
   ],
-  "violation_count": 0
+  "violation_count": 7
 }

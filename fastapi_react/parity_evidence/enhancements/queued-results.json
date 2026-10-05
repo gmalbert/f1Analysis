@@ -1,0 +1,126 @@
+{
+  "generated_at": "2026-10-03T22:08:57.836Z",
+  "pass": true,
+  "checks": [
+    {
+      "id": "B4 authorization and explicit synchronous-action guard",
+      "evidence": {
+        "unauthorized": 403,
+        "synchronous_actions": 409,
+        "real_training_executed": false
+      }
+    },
+    {
+      "id": "B5 early aggregate rejection with diagnostic headers",
+      "evidence": {
+        "status": 413,
+        "headers": {
+          "date": "Sat, 03 Oct 2026 22:08:52 GMT",
+          "server": "uvicorn",
+          "content-length": "38",
+          "content-type": "application/json",
+          "x-request-id": "e98e251a33064317bebc5a39ced16f39",
+          "server-timing": "backend;dur=0.05"
+        },
+        "body": "{\"detail\":\"The request is too large.\"}",
+        "actual_upload_bytes": 0
+      }
+    },
+    {
+      "id": "O2 enforced production entry budget and no source maps",
+      "evidence": {
+        "budget_gzip_bytes": 500000,
+        "initial_javascript_gzip_bytes": 229770,
+        "all_javascript_gzip_bytes": 2018037,
+        "compression_level": 5,
+        "source_maps": false,
+        "chunks": [
+          {
+            "name": "assets/data-grid-overlay-editor-Cj3eTA6k.js",
+            "bytes": 3653,
+            "gzip_bytes": 1773
+          },
+          {
+            "name": "assets/embed-DDY34cmj.js",
+            "bytes": 866177,
+            "gzip_bytes": 300463
+          },
+          {
+            "name": "assets/index-DZmw-Xs8.js",
+            "bytes": 708007,
+            "gzip_bytes": 229770
+          },
+          {
+            "name": "assets/number-overlay-editor-CH9rIlSz.js",
+            "bytes": 16352,
+            "gzip_bytes": 6295
+          },
+          {
+            "name": "assets/plotly.min-D2-j3meG.js",
+            "bytes": 4778469,
+            "gzip_bytes": 1479736
+          }
+        ]
+      }
+    },
+    {
+      "id": "B4 browser submit, cancel, completion, output and token privacy",
+      "evidence": {
+        "submitted": [
+          {
+            "task": "leakage-audit",
+            "values": {
+              "Rows to read (0 = all)": 1000
+            }
+          },
+          {
+            "task": "leakage-audit",
+            "values": {
+              "Rows to read (0 = all)": 1000
+            }
+          }
+        ],
+        "token_in_storage": false,
+        "continued_browsing": true,
+        "screenshots": [
+          "screenshots/research-jobs.png"
+        ]
+      }
+    },
+    {
+      "id": "O1 actual 1x and 2x footer assets at the original display size",
+      "evidence": {
+        "original_png_bytes": 1127638,
+        "measurements": [
+          {
+            "density": 1,
+            "bytes": 4938,
+            "source": "http://127.0.0.1:5174/betting-oracle-logo-60.webp",
+            "height": 60,
+            "width": 39.296875,
+            "loading": "lazy"
+          },
+          {
+            "density": 2,
+            "bytes": 15096,
+            "source": "http://127.0.0.1:5174/betting-oracle-logo-120.webp",
+            "height": 60,
+            "width": 39.296875,
+            "loading": "lazy"
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [],
+  "expected_events": [
+    "Expected obsolete request cancellation",
+    "Expected obsolete request cancellation",
+    "Expected obsolete request cancellation",
+    "Expected obsolete request cancellation",
+    "Expected obsolete request cancellation",
+    "Expected obsolete request cancellation",
+    "Expected obsolete request cancellation",
+    "Expected obsolete request cancellation"
+  ]
+}

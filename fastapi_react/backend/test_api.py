@@ -6,6 +6,8 @@ they double as a smoke test for the migration.
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
@@ -58,6 +60,29 @@ def test_data_explorer_schema_returns_filters() -> None:
     assert body["filters"], "schema should return at least one filterable column"
 
 
+def test_data_explorer_display_schema_matches_streamlit() -> None:
+    response = client.get("/api/data-explorer/display-schema")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["labels"]["grandPrixYear"] == "Year"
+    assert body["labels"]["resultsDriverName"] == "Driver"
+    assert body["labels"]["numberOfStops"] == "Number of Stops"
+    assert "round" in body["columns"]
+    assert "numberOfStops" in body["columns"]
+    assert "driverId" not in body["columns"]
+    assert "raceId_results" not in body["columns"]
+
+
+def test_raw_analysis_data_returns_streamlit_joined_table() -> None:
+    response = client.post("/api/raw/analysis-data", json={"offset": 0, "limit": 2})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == len(data_svc.load_streamlit_raw_data())
+    assert len(body["rows"]) == 2
+    assert "numberOfStops" in body["columns"]
+    assert "constructorRank" in body["columns"]
+
+
 def test_data_explorer_query_unfiltered() -> None:
     response = client.post("/api/data-explorer/query", json={"limit": 5})
     assert response.status_code == 200
@@ -67,6 +92,25 @@ def test_data_explorer_query_unfiltered() -> None:
     assert "rows" in body
     assert body["total"] > 0
     assert len(body["rows"]) <= 5
+
+
+def test_main_data_prefers_parquet_when_available(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    parquet_path = tmp_path / "f1ForAnalysis.parquet"
+    csv_path = tmp_path / "f1ForAnalysis.csv"
+    parquet_path.touch()
+    csv_path.touch()
+    expected = pd.DataFrame({"grandPrixYear": [2026]})
+    monkeypatch.setattr(data_svc, "PARQUET_MAIN_DATA", parquet_path)
+    monkeypatch.setattr(data_svc, "MAIN_DATA", csv_path)
+    monkeypatch.setenv("F1_USE_PARQUET", "1")
+    monkeypatch.setattr(data_svc.pd, "read_parquet", lambda _: expected.copy())
+    monkeypatch.setattr(data_svc.pd, "read_csv", lambda *args, **kwargs: pytest.fail("CSV should not be read"))
+    data_svc.load_main_data.cache_clear()
+    try:
+        result = data_svc.load_main_data()
+    finally:
+        data_svc.load_main_data.cache_clear()
+    pd.testing.assert_frame_equal(result, expected)
 
 
 def test_data_explorer_query_with_filters() -> None:
@@ -265,8 +309,10 @@ def test_betting_simulation_endpoint() -> None:
         "seed": 7,
     }
     response = client.post("/api/betting/simulate", json=payload)
-    assert response.status_code == 200
-    body = response.json()
+    assert response.status_code == 404
+    assert "/api/betting/simulate" not in app.openapi()["paths"]
+    from app.schemas import SimulationRequest
+    body = betting.simulate(SimulationRequest(**payload))
     assert "columns" in body
     assert "rows" in body
 
@@ -287,8 +333,9 @@ def test_betting_backtest_endpoint() -> None:
         "outcome": 1,
     }]
     response = client.post("/api/betting/backtest", json={"rows": rows})
-    assert response.status_code == 200
-    body = response.json()
+    assert response.status_code == 404
+    assert "/api/betting/backtest" not in app.openapi()["paths"]
+    body = betting.backtest(rows)
     assert "summary" in body
     assert "ledger" in body
     assert "decisions" in body
@@ -303,8 +350,9 @@ def test_betting_calibration_endpoint() -> None:
         {"probability": 0.9, "outcome": 1},
     ]
     response = client.post("/api/betting/calibration", json={"rows": rows})
-    assert response.status_code == 200
-    body = response.json()
+    assert response.status_code == 404
+    assert "/api/betting/calibration" not in app.openapi()["paths"]
+    body = betting.calibration(rows)
     assert "metrics" in body
     assert "reliability" in body
 

@@ -56,3 +56,9 @@ class RowsPayload(BaseModel):
 class ToolRunRequest(BaseModel):
     tool: str
     args: list[str] = Field(default_factory=list)
+
+
+class ViewRequest(BaseModel):
+    page: int = Field(default=1, ge=1, le=7)
+    values: dict[str, Any] = Field(default_factory=dict)
+    action: str | None = None

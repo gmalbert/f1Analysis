@@ -1,0 +1,46 @@
+{
+  "generated_at": "2026-10-03T22:04:24.091Z",
+  "pass": true,
+  "checks": [
+    {
+      "id": "Live local access without credentials",
+      "evidence": {
+        "mode": "local",
+        "diagnostics": 200,
+        "blocked_probes": 4,
+        "cross_site_preflight": 400,
+        "real_training_executed": false
+      }
+    },
+    {
+      "id": "Local form, original action, queue, cancel, results and continued browsing",
+      "evidence": {
+        "submitted": [
+          {
+            "task": "leakage-audit",
+            "values": {
+              "Rows to read (0 = all)": 1000
+            }
+          },
+          {
+            "task": "leakage-audit",
+            "values": {
+              "Rows to read (0 = all)": 1000
+            }
+          }
+        ],
+        "token_field": false,
+        "credential_header": false,
+        "completed_snapshot": true,
+        "continued_browsing": true,
+        "bin_form_ready": true,
+        "screenshot": "screenshots/trusted-local-research.png"
+      }
+    }
+  ],
+  "errors": [],
+  "expected_events": [
+    "Obsolete request cancelled",
+    "Obsolete request cancelled"
+  ]
+}

@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import json
 import math
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, cast
@@ -13,6 +14,7 @@ import pandas as pd
 from app.config import DATA_DIR, MAX_TABLE_ROWS, PRECOMPUTED_DIR, REPO_ROOT
 
 MAIN_DATA = DATA_DIR / "f1ForAnalysis.csv"
+PARQUET_MAIN_DATA = DATA_DIR / "f1ForAnalysis.parquet"
 
 
 def _clean_scalar(value: Any) -> Any:
@@ -46,9 +48,14 @@ def records(frame: pd.DataFrame, limit: int | None = None) -> list[dict[str, Any
 
 @lru_cache(maxsize=1)
 def load_main_data() -> pd.DataFrame:
-    if not MAIN_DATA.exists():
-        raise FileNotFoundError(f"Missing required dataset: {MAIN_DATA}")
-    df = pd.read_csv(MAIN_DATA, sep="\t", low_memory=False)
+    use_parquet = os.environ.get("F1_USE_PARQUET", "1").strip().lower() in {"1", "true", "yes"}
+    source = PARQUET_MAIN_DATA if use_parquet and PARQUET_MAIN_DATA.exists() else MAIN_DATA
+    if not source.exists():
+        raise FileNotFoundError(f"Missing required dataset: {source}")
+    if source.suffix == ".parquet":
+        df = pd.read_parquet(source)
+    else:
+        df = pd.read_csv(source, sep="\t", low_memory=False)
     for candidate in ("short_date", "date", "grandPrixDate"):
         if candidate in df.columns:
             df[candidate] = pd.to_datetime(df[candidate], errors="coerce")
@@ -125,6 +132,148 @@ def streamlit_filter_rules() -> tuple[dict[str, str], frozenset[str]]:
     suffixes = values.get("suffixes_to_exclude", ())
     excluded.update(column for column in load_main_data().columns if column.endswith(tuple(suffixes)))
     return labels, frozenset(excluded)
+
+
+@lru_cache(maxsize=1)
+def _streamlit_table_definitions() -> tuple[list[str], dict[str, str | None]]:
+    source_path = REPO_ROOT / "raceAnalysis.py"
+    tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
+    display_config: dict[str, str | None] = {}
+    selected_columns: list[str] = []
+
+    for node in tree.body:
+        if (
+            isinstance(node, ast.Assign)
+            and isinstance(node.value, ast.Dict)
+            and any(isinstance(target, ast.Name) and target.id == "columns_to_display" for target in node.targets)
+        ):
+            for key_node, value_node in zip(node.value.keys, node.value.values, strict=True):
+                if not isinstance(key_node, ast.Constant) or not isinstance(key_node.value, str):
+                    continue
+                if isinstance(value_node, ast.Constant) and value_node.value is None:
+                    display_config[key_node.value] = None
+                elif (
+                    isinstance(value_node, ast.Call)
+                    and value_node.args
+                    and isinstance(value_node.args[0], ast.Constant)
+                    and isinstance(value_node.args[0].value, str)
+                ):
+                    display_config[key_node.value] = value_node.args[0].value
+        elif isinstance(node, ast.FunctionDef) and node.name == "load_data":
+            for statement in node.body:
+                if not isinstance(statement, ast.Assign):
+                    continue
+                if any(isinstance(target, ast.Name) and target.id == "selected_columns" for target in statement.targets):
+                    try:
+                        selected_columns = ast.literal_eval(statement.value)
+                    except (ValueError, TypeError):
+                        selected_columns = []
+                    break
+    return selected_columns, display_config
+
+
+@lru_cache(maxsize=1)
+def load_streamlit_raw_data() -> pd.DataFrame:
+    """Build the same joined raw table that the Streamlit Data & Debug tab displays."""
+    selected_columns, _ = _streamlit_table_definitions()
+    source = load_main_data()
+    bin_columns = [column for column in source.columns if column.endswith("_bin")]
+    usecols = list(dict.fromkeys(column for column in selected_columns + bin_columns if column in source.columns))
+    full_results = source[usecols].copy()
+
+    pit_stops = pd.read_csv(
+        DATA_DIR / "f1PitStopsData_Grouped.csv",
+        sep="\t",
+        nrows=10000,
+        usecols=["raceId", "driverId", "constructorId", "numberOfStops", "averageStopTime", "totalStopTime"],
+    )
+    constructor_standings = pd.read_csv(DATA_DIR / "constructor_standings.csv", sep="\t")
+    driver_standings = pd.read_csv(DATA_DIR / "driver_standings.csv", sep="\t")
+    weather = pd.read_csv(
+        DATA_DIR / "f1WeatherData_Grouped.csv",
+        sep="\t",
+        nrows=10000,
+        usecols=["grandPrixId", "id_races", "average_temp", "average_humidity", "average_wind_speed", "total_precipitation"],
+    )
+    grand_prix = pd.read_json(DATA_DIR / "f1db-grands-prix.json")
+    weather = weather.merge(
+        grand_prix,
+        left_on="grandPrixId",
+        right_on="id",
+        how="inner",
+        suffixes=("_weather", "_grandPrix"),
+    )[["id_races", "average_temp", "average_humidity", "average_wind_speed", "total_precipitation"]]
+    qualifying = pd.read_csv(DATA_DIR / "all_qualifying_races.csv", sep="\t")
+
+    full_results = full_results.merge(
+        pit_stops,
+        left_on=["raceId_results", "resultsDriverId"],
+        right_on=["raceId", "driverId"],
+        how="left",
+        suffixes=("_results", "_pitStops"),
+    )
+    full_results = full_results.merge(
+        constructor_standings,
+        left_on="constructorId_results",
+        right_on="id",
+        how="left",
+        suffixes=("_results", "_constructor_standings"),
+    )
+    full_results = full_results.merge(
+        driver_standings,
+        left_on="resultsDriverId",
+        right_on="driverId",
+        how="left",
+        suffixes=("_results", "_driver_standings"),
+    )
+    full_results = full_results.merge(
+        weather,
+        left_on="raceId_results",
+        right_on="id_races",
+        how="left",
+        suffixes=("_results", "_weather"),
+    )
+    full_results = full_results.merge(
+        qualifying,
+        left_on=["raceId_results", "resultsDriverId"],
+        right_on=["raceId", "driverId"],
+        how="left",
+        suffixes=("_results_with_qualifying", "_qualifying"),
+    )
+    full_results = full_results.drop_duplicates(
+        subset=["grandPrixYear", "grandPrixName", "resultsDriverName"]
+    )
+    full_results = full_results.loc[:, ~full_results.columns.duplicated()]
+
+    renamed_columns = {
+        "constructorName_results_with_qualifying": "constructorName",
+        "best_qual_time_results_with_qualifying": "best_qual_time",
+        "teammate_qual_delta_results_with_qualifying": "teammate_qual_delta",
+    }
+    full_results = full_results.rename(columns={old: new for old, new in renamed_columns.items() if old in full_results})
+    return full_results
+
+
+def streamlit_table_schema() -> dict[str, Any]:
+    """Return the raw-data columns and labels configured by the Streamlit app."""
+    _, display_config = _streamlit_table_definitions()
+    columns: list[str] = []
+    labels: dict[str, str] = {}
+    for column in load_streamlit_raw_data().columns:
+        configured_label = display_config.get(column, "visible")
+        if configured_label is None:
+            continue
+        columns.append(column)
+        if isinstance(configured_label, str) and configured_label != "visible":
+            labels[column] = configured_label
+
+    return {"columns": columns, "labels": labels}
+
+
+def query_streamlit_raw_data(offset: int, limit: int) -> dict[str, Any]:
+    frame = load_streamlit_raw_data()
+    page = frame.iloc[offset: offset + limit]
+    return {"total": len(frame), "columns": list(page.columns), "rows": records(page)}
 
 
 def filter_schema() -> list[dict[str, Any]]:

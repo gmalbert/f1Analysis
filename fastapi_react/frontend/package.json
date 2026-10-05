@@ -4,8 +4,13 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "postinstall": "node scripts/patch-glide.mjs",
     "dev": "vite",
-    "build": "vite build",
+    "prebuild": "node scripts/optimize-assets.mjs",
+    "build": "vite build && node scripts/check-budgets.mjs",
+    "assets:optimize": "node scripts/optimize-assets.mjs",
+    "check:budgets": "node scripts/check-budgets.mjs",
+    "check:hosting": "node scripts/check-hosting.mjs",
     "preview": "vite preview",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
@@ -20,13 +25,23 @@
     "benchmark": "node ../parity_evidence/benchmark.mjs"
   },
   "dependencies": {
+    "@glideapps/glide-data-grid": "^6.0.3",
+    "lodash": "^4.18.1",
+    "marked": "^4.3.0",
     "papaparse": "^5.4.1",
+    "plotly.js-dist-min": "^4.1.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "recharts": "^2.15.0"
+    "react-markdown": "^10.1.0",
+    "react-responsive-carousel": "^3.2.23",
+    "recharts": "^2.15.0",
+    "vega": "^6.4.0",
+    "vega-embed": "^7.3.0",
+    "vega-lite": "^6.4.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.13.0",
+    "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@testing-library/user-event": "^14.5.2",

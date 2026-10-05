@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { api, downloadUrl } from "../api";
 import { Card, DataTable, JsonBlock, Status, Tabs } from "../components/UI";
 
-const RAW_TABS = ["Raw Tables", "Temporal Leakage Audit", "Hyperparameter Tuning"];
+const RAW_TABS = ["Raw Data", "Temporal Leakage Audit", "Hyperparameter Tuning", "File Browser"];
 
 export default function RawData() {
   const [tab, setTab] = useState(RAW_TABS[0]);
@@ -17,19 +17,23 @@ export default function RawData() {
   const [toolBusy, setToolBusy] = useState(false);
   const [showDataset, setShowDataset] = useState(false);
   const [dataset, setDataset] = useState(null);
+  const [displaySchema, setDisplaySchema] = useState(null);
+  const [displaySchemaLoading, setDisplaySchemaLoading] = useState(true);
   const [datasetPage, setDatasetPage] = useState(0);
   const datasetPageSize = 50;
 
   useEffect(() => {
     api.get("/api/raw/files").then(r => { setFiles(r.files); setLoading(false); }).catch(e => { setError(e); setLoading(false); });
     api.get("/api/health").then(setHealth).catch(() => {});
+    api.get("/api/data-explorer/display-schema")
+      .then(setDisplaySchema).catch(setError).finally(() => setDisplaySchemaLoading(false));
   }, []);
 
   useEffect(() => {
     if (!showDataset) return;
     let cancelled = false;
     setLoading(true);
-    api.post("/api/data-explorer/query", {
+    api.post("/api/raw/analysis-data", {
       limit: datasetPageSize,
       offset: datasetPage * datasetPageSize,
     }).then(result => {
@@ -59,30 +63,38 @@ export default function RawData() {
   }
 
   const enabled = !!health?.expensive_tools_enabled;
+  const sourceColumns = displaySchema?.columns?.filter(column => dataset?.columns.includes(column)) ?? [];
+  const displayColumns = sourceColumns.map(column => displaySchema?.labels?.[column] ?? column);
+  const displayRows = dataset?.rows.map(row => Object.fromEntries(
+    sourceColumns.map((column, index) => [displayColumns[index], row[column]])
+  )) ?? [];
 
   return (
     <div>
-      <header className="page-header"><div><h1>Data & Debug Tools</h1><p>Raw datasets plus the diagnostic and tuning utilities exposed by the Streamlit application.</p></div></header>
+      <p>Tab 6 START</p>
+      <header className="page-header"><div><h1>Data & Debug Tools</h1></div></header>
       <Tabs tabs={RAW_TABS} active={tab} onChange={setTab} />
 
-      {tab === "Raw Tables" && <div className="raw-grid">
-        <Card title={`Files (${files.length})`}>
-          <label className="dataset-toggle">
-            <input type="checkbox" checked={showDataset} onChange={event => { setShowDataset(event.target.checked); setDatasetPage(0); setError(null); }} />
-            Show complete analysis dataset
-          </label>
-          {showDataset && <>
-            <Status loading={loading} error={error}>
-              {dataset && <>
-                <p className="muted">Rows {dataset.total ? datasetPage * datasetPageSize + 1 : 0}–{Math.min((datasetPage + 1) * datasetPageSize, dataset.total)} of {dataset.total.toLocaleString()}</p>
-                <div className="button-row">
-                  <button disabled={datasetPage === 0 || loading} onClick={() => setDatasetPage(page => page - 1)}>Previous</button>
-                  <button disabled={(datasetPage + 1) * datasetPageSize >= dataset.total || loading} onClick={() => setDatasetPage(page => page + 1)}>Next</button>
-                </div>
-                <DataTable rows={dataset.rows} columns={dataset.columns} maxHeight={620} />
-              </>}
-            </Status>
+      {tab === "Raw Data" && <section>
+        <p>View the complete unfiltered dataset.</p>
+        <label className="dataset-toggle">
+          <input type="checkbox" aria-label="Show Raw Data" checked={showDataset} onChange={event => { setShowDataset(event.target.checked); setDatasetPage(0); setError(null); }} />
+          Show Raw Data
+        </label>
+        {showDataset && <Status loading={loading || displaySchemaLoading} error={error}>
+          {dataset && displaySchema && <>
+            <p>Total number of results: {dataset.total.toLocaleString()}</p>
+            <DataTable rows={displayRows} columns={displayColumns} maxHeight={600} />
+            <div className="button-row">
+              <button disabled={datasetPage === 0 || loading} onClick={() => setDatasetPage(page => page - 1)}>Previous</button>
+              <button disabled={(datasetPage + 1) * datasetPageSize >= dataset.total || loading} onClick={() => setDatasetPage(page => page + 1)}>Next</button>
+            </div>
           </>}
+        </Status>}
+      </section>}
+
+      {tab === "File Browser" && <div className="raw-grid">
+        <Card title={`Files (${files.length})`}>
           <input className="search" aria-label="Filter filenames" placeholder="Filter filenames…" value={query} onChange={e => setQuery(e.target.value)} />
           <div className="file-list">
             {shown.length === 0 ? (

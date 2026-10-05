@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "disable_existing_loggers": false,
+  "formatters": {
+    "text": {"format": "%(levelname)s %(name)s %(message)s"},
+    "json_record": {"format": "%(message)s"}
+  },
+  "handlers": {
+    "console": {"class": "logging.StreamHandler", "formatter": "text", "stream": "ext://sys.stderr"},
+    "requests": {"class": "logging.StreamHandler", "formatter": "json_record", "stream": "ext://sys.stderr"}
+  },
+  "loggers": {
+    "f1.request": {"handlers": ["requests"], "level": "INFO", "propagate": false},
+    "uvicorn": {"handlers": ["console"], "level": "INFO", "propagate": false},
+    "uvicorn.access": {"handlers": [], "level": "WARNING", "propagate": false}
+  },
+  "root": {"handlers": ["console"], "level": "INFO"}
+}

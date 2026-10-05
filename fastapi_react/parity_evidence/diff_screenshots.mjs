@@ -30,7 +30,7 @@ const SL_DIR = join(SNAPSHOT_DIR, 'streamlit');
 const OUT = join(SNAPSHOT_DIR, 'diff');
 
 // \u00A713 tolerance: <=2% diff at desktop, <=3% at tablet.
-const TOLERANCE = { desktop: 0.02, tablet: 0.03 };
+const TOLERANCE = { desktop: 0.02, tablet: 0.03, mobile: 0.03 };
 // Per-channel distance threshold for marking a pixel as "different".
 const PIXEL_THRESHOLD = 24;
 
@@ -78,6 +78,9 @@ async function run() {
   const [reactFiles, slFiles] = await Promise.all([readdir(REACT_DIR), readdir(SL_DIR)]);
   const reactSet = new Set(reactFiles);
   const summary = { generated_at: new Date().toISOString(), pages: [] };
+  const requiredPages=['home','data-explorer','analytics','current-season','next-race','models','raw-data','betting-research'];
+  summary.missing=[];
+  for(const viewport of Object.keys(TOLERANCE))for(const page of requiredPages){const name=`${viewport}-${page}.png`;if(!reactSet.has(name)||!slFiles.includes(name))summary.missing.push(name);}
   for (const f of slFiles) {
     if (!reactSet.has(f)) continue;
     const [viewport, ...rest] = f.split('-');
@@ -96,6 +99,7 @@ async function run() {
   }
   await writeFile(join(OUT, 'summary.json'), JSON.stringify(summary, null, 2));
   console.log(JSON.stringify(summary, null, 2));
+  if(summary.missing.length || summary.pages.some(p=>p.error || !p.within_tolerance))process.exitCode=1;
 }
 
 run().catch((err) => {
