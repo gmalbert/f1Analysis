@@ -5,6 +5,12 @@ import {displayCell} from './Presentation';
 import {useTheme} from './useTheme';
 
 const empty=[];
+const DEFAULT_COLUMN_WIDTH=150;
+const estimateColumnWidth=(column,index,rows)=>{
+  const longest=rows.reduce((max,row)=>Math.max(max,String(row[index]??'').length),String(column.label??'').length);
+  const minimum=column.kind==='NumberColumn'?72:96;
+  return Math.min(320,Math.max(minimum,Math.ceil(longest*6+24)));
+};
 const quote=value=>{const text=value==null?'':String(value);return /[,"\r\n]/.test(text)?`"${text.replaceAll('"','""')}"`:text;};
 function csvValue(value,column){
   if(value==null)return '';
@@ -32,6 +38,16 @@ export function ViewTable({node}) {
   const [pinned,setPinned]=useState([]);
   const [formats,setFormats]=useState(/** @type {Record<string,string>} */ ({}));
   const outer=useRef(null);
+  const [availableWidth,setAvailableWidth]=useState(0);
+  useEffect(()=>{
+    const parent=outer.current?.parentElement;
+    if(!parent)return;
+    const measure=()=>setAvailableWidth(parent.clientWidth);
+    measure();
+    const observer=new ResizeObserver(measure);
+    observer.observe(parent);
+    return()=>observer.disconnect();
+  },[]);
   useEffect(()=>{
     if(!menu && !showColumns)return;
     const close=event=>{if(event.type==='keydown' && event.key==='Escape' || event.type==='pointerdown' && !outer.current?.contains(event.target)){setMenu(null);setShowColumns(false);}};
@@ -50,10 +66,12 @@ export function ViewTable({node}) {
   },[rows,sort]);
   const visible=useMemo(()=>columns.map((column,index)=>({column,index})).filter(c=>!hidden.includes(c.index)).sort((a,b)=>Number(pinned.includes(b.index))-Number(pinned.includes(a.index))),[columns,hidden,pinned]);
   const gridColumns=useMemo(()=>{
-    const result=visible.map(({column,index})=>({id:String(index),title:column.label+(sort?.column===index?(sort.desc?' ↓':' ↑'):''),hasMenu:true,width:widths[index] || (typeof column.width==='number'?column.width:undefined)}));
-    if(!node.hide_index)result.unshift({id:'index',title:node.index_name || '',width:widths.index});
+    const result=visible.map(({column,index})=>({id:String(index),title:column.label+(sort?.column===index?(sort.desc?' ↓':' ↑'):''),hasMenu:true,width:widths[index] || Math.max(typeof column.width==='number'?column.width:0,estimateColumnWidth(column,index,rows))}));
+    if(!node.hide_index)result.unshift({id:'index',title:node.index_name || '',width:widths.index || 80});
     return result;
-  },[visible,widths,sort,node.hide_index,node.index_name]);
+  },[visible,widths,sort,node.hide_index,node.index_name,rows]);
+  const contentWidth=gridColumns.reduce((total,column)=>total+(widths[column.id] || column.width || DEFAULT_COLUMN_WIDTH),0);
+  const tableWidth=Math.min(contentWidth,availableWidth || Infinity,typeof node.width==='number'?node.width:Infinity);
   const dark=useTheme()==='dark';
   const bg=dark?'#0e1117':'#fff',text=dark?'#fafafa':'#31333f';
   /** @type {(cell: import('@glideapps/glide-data-grid').Item) => import('@glideapps/glide-data-grid').GridCell} */
@@ -86,7 +104,7 @@ export function ViewTable({node}) {
   const height=node.height || Math.min(400,(rows.length+1)*35+3);
   const menuColumn=menu?columns[menu.index]:null;
   const numeric=menuColumn?.kind==='NumberColumn';
-  return <div className="view-table canvas-table" ref={outer} style={{maxWidth:typeof node.width==='number'?node.width:undefined}}>
+  return <div className="view-table canvas-table" ref={outer} style={{width:tableWidth,maxWidth:'100%'}}>
     <div className="table-toolbar">
       <button aria-label="Search table" title="Search" onClick={()=>setShowSearch(s=>!s)}>⌕</button>
       <button aria-label="Show or hide columns" title="Columns" onClick={()=>setShowColumns(s=>!s)}>▥</button>
@@ -95,6 +113,6 @@ export function ViewTable({node}) {
     </div>
     {showColumns && <div className="column-picker">{columns.map((col,i)=><label key={i}><input type="checkbox" checked={!hidden.includes(i)} onChange={()=>setHidden(h=>h.includes(i)?h.filter(x=>x!==i):[...h,i])}/>{col.label}</label>)}</div>}
     {menuColumn && <div className="grid-column-menu" role="group" aria-label={`${menuColumn.label} column options`} style={{left:menu.left}}><strong>{menuColumn.label}</strong><button onClick={()=>{setSort({column:menu.index,desc:false});setMenu(null);}}>Sort ascending</button><button onClick={()=>{setSort({column:menu.index,desc:true});setMenu(null);}}>Sort descending</button><button onClick={()=>{setSort(null);setMenu(null);}}>Clear sorting</button><button onClick={()=>{setPinned(p=>p.includes(menu.index)?p.filter(i=>i!==menu.index):[...p,menu.index]);setMenu(null);}}>{pinned.includes(menu.index)?'Unpin column':'Pin column'}</button><button onClick={()=>{setHidden(h=>[...h,menu.index]);setMenu(null);}}>Hide column</button>{numeric && <label>Number format<select value={formats[menu.index] || ''} onChange={event=>setFormats(f=>({...f,[menu.index]:event.target.value}))}><option value="">Default</option><option value="%d">Integer</option>{[1,2,3,4].map(n=><option key={n} value={`%.${n}f`}>{n} decimal places</option>)}<option value="percent">Percent</option></select></label>}<small>{rows.length.toLocaleString()} rows · {rows.filter(r=>r[menu.index]==null).length.toLocaleString()} missing · {new Set(rows.map(r=>r[menu.index])).size.toLocaleString()} unique</small></div>}
-    <DataEditor columns={gridColumns} rows={rows.length} getCellContent={getCell} getCellsForSelection={true} width="100%" height={height} rowHeight={35} headerHeight={35} rowMarkers="none" minColumnWidth={50} maxColumnWidth={500} freezeColumns={pinned.length+(node.hide_index?0:1)} showSearch={showSearch} onSearchClose={()=>setShowSearch(false)} onHeaderMenuClick={(col,bounds)=>{const selected=visible[col-(node.hide_index?0:1)];if(selected)setMenu({index:selected.index,left:Math.max(0,Math.min(bounds.x-(outer.current?.getBoundingClientRect().x || 0),(outer.current?.clientWidth || 240)-240))});}} onColumnResize={(column,width)=>setWidths(old=>({...old,[column.id]:width}))} onColumnResizeEnd={(column,width)=>setWidths(old=>({...old,[column.id]:width}))} onHeaderClicked={col=>{const selected=visible[col-(node.hide_index?0:1)];if(selected)setSort(s=>s?.column===selected.index?(s.desc?null:{...s,desc:true}):{column:selected.index,desc:false});}} theme={{fontFamily:'Source Sans',baseFontStyle:'13px',headerFontStyle:'13px',cellHorizontalPadding:8,cellVerticalPadding:3,bgCell:bg,bgHeader:dark?'#262730':'#f7f9fc',bgHeaderHovered:dark?'#3a3d46':'#eff1f6',bgHeaderHasFocus:dark?'#3a3d46':'#eff1f6',textDark:text,textHeader:dark?'#bfc2ce':'#808495',textMedium:text,textLight:'#808495',borderColor:dark?'#3a3d46':'#e6e7eb',accentColor:'#ff4b4b',accentLight:dark?'#ff4b4b33':'#ff4b4b1a',accentFg:'#fff',headerBottomBorderColor:dark?'#3a3d46':'#d6d8df',roundingRadius:0}} />
+    <DataEditor columns={gridColumns} rows={rows.length} getCellContent={getCell} getCellsForSelection={true} width={tableWidth} height={height} rowHeight={35} headerHeight={35} rowMarkers="none" minColumnWidth={50} maxColumnWidth={500} freezeColumns={pinned.length+(node.hide_index?0:1)} showSearch={showSearch} onSearchClose={()=>setShowSearch(false)} onHeaderMenuClick={(col,bounds)=>{const selected=visible[col-(node.hide_index?0:1)];if(selected)setMenu({index:selected.index,left:Math.max(0,Math.min(bounds.x-(outer.current?.getBoundingClientRect().x || 0),(outer.current?.clientWidth || 240)-240))});}} onColumnResize={(column,width)=>setWidths(old=>({...old,[column.id]:width}))} onColumnResizeEnd={(column,width)=>setWidths(old=>({...old,[column.id]:width}))} onHeaderClicked={col=>{const selected=visible[col-(node.hide_index?0:1)];if(selected)setSort(s=>s?.column===selected.index?(s.desc?null:{...s,desc:true}):{column:selected.index,desc:false});}} theme={{fontFamily:'Source Sans',baseFontStyle:'13px',headerFontStyle:'13px',cellHorizontalPadding:8,cellVerticalPadding:3,bgCell:bg,bgHeader:dark?'#262730':'#f7f9fc',bgHeaderHovered:dark?'#3a3d46':'#eff1f6',bgHeaderHasFocus:dark?'#3a3d46':'#eff1f6',textDark:text,textHeader:dark?'#bfc2ce':'#555965',textMedium:text,textLight:'#808495',borderColor:dark?'#3a3d46':'#e6e7eb',accentColor:'#ff4b4b',accentLight:dark?'#ff4b4b33':'#ff4b4b1a',accentFg:'#fff',headerBottomBorderColor:dark?'#3a3d46':'#d6d8df',roundingRadius:0}} />
   </div>;
 }

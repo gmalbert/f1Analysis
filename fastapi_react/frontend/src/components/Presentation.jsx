@@ -222,7 +222,7 @@ export function ViewNodes({ nodes = [], values = {}, change = (_key, _value) => 
       case 'json': return <pre key={key} className="view-json">{JSON.stringify(node.value, null, 2)}</pre>;
       case 'notice':
         if (node.text === 'Research controls are disabled in hosted mode. Enable F1_RESEARCH_MODE=1 only for a trusted local/admin session; precomputed analyses remain available below.') return null;
-        return <div key={key} className={`view-notice ${node.severity}`} role={node.severity === 'error' ? 'alert' : 'status'}>{node.icon && <span>{node.icon}</span>}<Markdown>{node.text}</Markdown></div>;
+        return <div key={key} className={`view-notice ${node.severity}`} role={node.severity === 'error' ? 'alert' : 'status'}>{node.icon && <span>{node.icon}</span>}<div className="view-notice-content"><Markdown>{node.text}</Markdown></div></div>;
       case 'metric': return <div key={key} className="view-metric"><span>{node.label}</span><strong>{node.value}</strong>{node.delta != null && <small>{node.delta}</small>}</div>;
       case 'divider': return <hr key={key} className="view-divider" />;
       case 'image': return <img key={key} alt={node.alt || 'Analysis visualization'} src={node.src} className="view-image" style={{width: node.width === 'stretch' ? '100%' : node.width, maxWidth: '100%'}} />;
