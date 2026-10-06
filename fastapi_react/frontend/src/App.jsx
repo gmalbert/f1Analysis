@@ -138,7 +138,6 @@ export default function App() {
     </div>
     {sidebar && <aside className="filter-sidebar" aria-label="Data filters"><div className="view-flow"><ViewNodes nodes={data?.sidebar} values={values} change={change} action={act} /></div></aside>}
     <div className="main-shell">
-      {FEATURES_ENABLED && <details><summary>Analysis tools</summary><FeatureBar page={page} values={values} options={options} setOptions={setOptions} restore={restore} navigate={navigate} busy={busy || Boolean(error) || data?.page !== page} analysisRevision={data?.page === page ? data.source_revision : null}/></details>}
       <header className="parity-header">
         <img src="/api/brand/logo" alt="Gridlocked" width="450" height="264" />
         {shell.length ? <div className="view-flow shell-copy"><ViewNodes nodes={shell} /></div> : <h1 className="shell-title">F1 Races from 2016 to {new Date().getFullYear()}</h1>}
@@ -154,6 +153,7 @@ export default function App() {
         {busy && !FEATURES_ENABLED && <span className="sr-only" role="status">Loading analysis…</span>}
         <footer className="parity-footer"><p>Powered by <a href="https://www.betting-oracle.com" target="_blank" rel="noreferrer">Betting Oracle</a></p><p>Sports Prediction Analytics</p><a href="https://www.betting-oracle.com" target="_blank" rel="noreferrer"><picture><source type="image/webp" srcSet="/betting-oracle-logo-60.webp 1x, /betting-oracle-logo-120.webp 2x"/><img src="/betting-oracle-logo.png" alt="Betting Oracle Logo" width="822" height="1255" style={{width: 60 * 822 / 1255}} loading="lazy" decoding="async" /></picture></a></footer>
       </main>
+      {FEATURES_ENABLED && <details className="analysis-tools"><summary>Analysis tools</summary><FeatureBar page={page} values={values} options={options} setOptions={setOptions} restore={restore} navigate={navigate} busy={busy || Boolean(error) || data?.page !== page} analysisRevision={data?.page === page ? data.source_revision : null}/></details>}
     </div>
   </div>;
 }

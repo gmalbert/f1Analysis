@@ -6426,15 +6426,11 @@ with tab5:
 
                     # Notes (render in a shaded info box)
                     st.info(
-                        """
-                        **Color scale**: darker/warmer colors indicate larger average absolute error.
-
-                        **Missing cells**: blank or neutral color means insufficient data (no races for that pair).
-
-                        **Sample size**: confidence intervals are empirical percentiles computed only when a group has at least 5 residuals.
-                    
-                        **Interpretation**: cells with darker colors indicate that the model has higher prediction errors for that driver/constructor at that circuit, suggesting potential areas for model improvement or unique performance characteristics.
-                        """
+                        "**How to read these heatmaps**\n\n"
+                        "- **Color:** Darker, warmer cells indicate higher average absolute error.\n"
+                        "- **Blank cells:** There were not enough races for that driver or constructor at that circuit.\n"
+                        "- **Sample size:** Each cell averages the available races; confidence intervals are shown only for groups with at least 5 residuals.\n"
+                        "- **Interpretation:** Treat higher-error cells as leads for further investigation. They can reflect model weaknesses or unusual race conditions."
                     )
 
                     # Heatmaps

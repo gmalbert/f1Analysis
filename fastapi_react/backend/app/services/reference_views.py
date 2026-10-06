@@ -3124,7 +3124,13 @@ if ui.page == 5:
                                         ui.image(str(mae_img), width=1000)
                             except Exception:
                                 pass
-                        ui.info('\n                        **Color scale**: darker/warmer colors indicate larger average absolute error.\n\n                        **Missing cells**: blank or neutral color means insufficient data (no races for that pair).\n\n                        **Sample size**: confidence intervals are empirical percentiles computed only when a group has at least 5 residuals.\n                    \n                        **Interpretation**: cells with darker colors indicate that the model has higher prediction errors for that driver/constructor at that circuit, suggesting potential areas for model improvement or unique performance characteristics.\n                        ')
+                        ui.info(
+                            '**How to read these heatmaps**\n\n'
+                            '- **Color:** Darker, warmer cells indicate higher average absolute error.\n'
+                            '- **Blank cells:** There were not enough races for that driver or constructor at that circuit.\n'
+                            '- **Sample size:** Each cell averages the available races; confidence intervals are shown only for groups with at least 5 residuals.\n'
+                            '- **Interpretation:** Treat higher-error cells as leads for further investigation. They can reflect model weaknesses or unusual race conditions.'
+                        )
                         for img_name, title in [('heatmap_driver_by_circuit.png', 'Driver x Circuit heatmap'), ('heatmap_constructor_by_circuit.png', 'Constructor x Circuit heatmap')]:
                             img_path = OUT_DIR / img_name
                             if img_path.exists():
