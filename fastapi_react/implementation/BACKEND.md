@@ -2063,7 +2063,7 @@ try {
 
 ## docker-compose.yml
 
-[Editable source](../docker-compose.yml) — SHA-256: `cb675ac9dd34e80eee81175862e1df4e262000d6ef7e4c11744930b3df85df73`
+[Editable source](../docker-compose.yml) — SHA-256: `9e2c6aa950a99e92aae7b0efdad77ca3dc10a3b819ac114e7b0a025d2bbc77f4`
 
 ```yaml
 services:
@@ -2091,7 +2091,7 @@ services:
     depends_on:
       - backend
     ports:
-      - "8080:80"
+      - "8081:80"
     restart: unless-stopped
     mem_limit: 128m
 ```
