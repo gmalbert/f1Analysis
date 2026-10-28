@@ -23,6 +23,6 @@ services:
     depends_on:
       - backend
     ports:
-      - "8080:80"
+      - "8081:80"
     restart: unless-stopped
     mem_limit: 128m
