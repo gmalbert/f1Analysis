@@ -1714,7 +1714,7 @@ if (import.meta.url.startsWith('file:') && process.argv[1] && resolve(process.ar
 
 ## frontend/scripts/check-hosting.mjs
 
-[Editable source](../frontend/scripts/check-hosting.mjs) — SHA-256: `2ea2cce58a5f0ce8d8fb4c4ffe8341b899b250d74d1af89ac5c821333656ed50`
+[Editable source](../frontend/scripts/check-hosting.mjs) — SHA-256: `292d22c82c511518124581231104471f022719e1a897605855788604e282518f`
 
 ```javascript
 /* global fetch, AbortSignal */
@@ -1723,7 +1723,7 @@ import process from 'node:process';
 import console from 'node:console';
 
 // Verify actual Nginx headers, not the Vite development proxy's policies.
-const base = process.argv[2] || 'http://127.0.0.1:8080';
+const base = process.argv[2] || 'http://127.0.0.1:8081';
 const get = (path, options) => fetch(base + path, {...options, signal: AbortSignal.timeout(15000)});
 const checks = [];
 async function expectCache(path, cache, status = 200) {
@@ -1811,13 +1811,14 @@ server {
 
 ## frontend/Dockerfile
 
-[Editable source](../frontend/Dockerfile) — SHA-256: `7bd7d10e8efb8414f09b53882ac8b63f436fab55bb786abd103d9fac79c094e8`
+[Editable source](../frontend/Dockerfile) — SHA-256: `10fdd0ae35f4921ce52088c9fc99ae7eb22992dc62155f8d590e0f3fda56ad4b`
 
 ```dockerfile
 FROM node:22-alpine AS build
 WORKDIR /app
-COPY fastapi_react/frontend/package.json ./
-RUN npm install
+COPY fastapi_react/frontend/package.json fastapi_react/frontend/package-lock.json fastapi_react/frontend/.npmrc ./
+COPY fastapi_react/frontend/scripts ./scripts
+RUN npm ci
 COPY fastapi_react/frontend/ ./
 RUN npm run build
 

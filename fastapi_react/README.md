@@ -92,7 +92,7 @@ From the repository root:
     cd fastapi_react
     docker compose up --build
 
-Open http://localhost:8080. Compose explicitly keeps trusted local mode off;
+Open http://localhost:8081. Compose explicitly keeps trusted local mode off;
 research jobs and diagnostics require server-configured administrator credentials.
 Compose mounts the repository read-only at /repo
 and sets F1_REPO_ROOT=/repo. This avoids copying large data/model artifacts into

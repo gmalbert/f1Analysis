@@ -1,7 +1,8 @@
 FROM node:22-alpine AS build
 WORKDIR /app
-COPY fastapi_react/frontend/package.json ./
-RUN npm install
+COPY fastapi_react/frontend/package.json fastapi_react/frontend/package-lock.json fastapi_react/frontend/.npmrc ./
+COPY fastapi_react/frontend/scripts ./scripts
+RUN npm ci
 COPY fastapi_react/frontend/ ./
 RUN npm run build
 

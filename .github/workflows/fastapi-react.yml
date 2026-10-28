@@ -69,8 +69,8 @@ jobs:
         run: npm run build
       - name: Check production HTTP caching
         run: |
-          docker run -d --name f1-nginx-check --add-host backend:127.0.0.1 -p 8080:80 -v "$PWD/dist:/usr/share/nginx/html:ro" -v "$PWD/nginx.conf:/etc/nginx/conf.d/default.conf:ro" nginx:1.27-alpine
-          for attempt in {1..20}; do curl --silent --fail http://127.0.0.1:8080/index.html >/dev/null && break; sleep 1; done
+          docker run -d --name f1-nginx-check --add-host backend:127.0.0.1 -p 8081:80 -v "$PWD/dist:/usr/share/nginx/html:ro" -v "$PWD/nginx.conf:/etc/nginx/conf.d/default.conf:ro" nginx:1.27-alpine
+          for attempt in {1..20}; do curl --silent --fail http://127.0.0.1:8081/index.html >/dev/null && break; sleep 1; done
           npm run check:hosting
       - name: Stop caching check container
         if: always()

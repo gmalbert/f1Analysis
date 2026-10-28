@@ -4,7 +4,7 @@ import process from 'node:process';
 import console from 'node:console';
 
 // Verify actual Nginx headers, not the Vite development proxy's policies.
-const base = process.argv[2] || 'http://127.0.0.1:8080';
+const base = process.argv[2] || 'http://127.0.0.1:8081';
 const get = (path, options) => fetch(base + path, {...options, signal: AbortSignal.timeout(15000)});
 const checks = [];
 async function expectCache(path, cache, status = 200) {
