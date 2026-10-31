@@ -2,8 +2,8 @@
   "calibration_end_event": null,
   "calibration_method": null,
   "calibration_start_event": null,
-  "code_revision": "10a5120b78a907471a5495ad3db091d97891a782",
-  "data_sha256": "081f0aa9fbfc8b8160a17654aa1df3d6628e52fcf79237bc07b3e5aa23b30729",
+  "code_revision": "f995c9ef50b1b3ee9883fd39269485fbc33040f8",
+  "data_sha256": "e8e460b200190c4d4619a2de5c4b61ad4b2140788b764949f3e9cfc31d7bda88",
   "dependency_versions": {
     "numpy": "2.4.6",
     "pandas": "2.3.3",
@@ -104,6 +104,7 @@
     "recent_form_x_qual",
     "practice_std_x_qual",
     "qualPos_x_last_practicePos",
+    "driver_rank_x_constructor_rank",
     "qualPos_x_avg_practicePos",
     "recent_form_median_3_races",
     "recent_form_median_5_races",
@@ -315,6 +316,8 @@
     "Round",
     "raceId_qualifying",
     "DriverNumber",
+    "best_qual_time_qualifying",
+    "teammate_qual_delta_qualifying",
     "total_qualifying_laps",
     "valid_laps",
     "deleted_laps",
@@ -339,22 +342,22 @@
   ],
   "hyperparameters": {},
   "metrics": {
-    "mae": 2.24619811994257,
-    "mse": 12.026662734638762,
-    "r2": 0.6117976274389243
+    "mae": 2.3475481426550355,
+    "mse": 13.092174944104547,
+    "r2": 0.5842984172037367
   },
   "model_name": "position",
   "model_version": "track-weighted-v3.3",
   "notes": [
     "Legacy finishing-position artifact; not a calibrated market probability model.",
-    "Embargoed events: ('2024-1118-R',)"
+    "Embargoed events: ('2024-1120-R',)"
   ],
   "random_seed": 42,
   "schema_version": "legacy-wide-v1",
   "search_trials": 0,
   "source_manifest_ids": [],
   "target": "resultsFinalPositionNumber",
-  "trained_at": "2026-10-25T09:42:33.009018+00:00",
-  "training_end_event": "2024-1117-R",
+  "trained_at": "2026-10-31T09:00:28.772406+00:00",
+  "training_end_event": "2024-1119-R",
   "training_start_event": "2016-936-R"
 }
